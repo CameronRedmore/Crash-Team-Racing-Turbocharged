@@ -500,6 +500,7 @@ void MainFreeze_MenuPtrQuit(struct RectMenu *menu);
 void MainFreeze_MenuPtrDefault(struct RectMenu *menu);
 void MainFreeze_BeginAdventureCharacterChange(void);
 b32 MainFreeze_ConsumeAdventureCharacterChange(void);
+s16 MainFreeze_GetAdventureCharacterReturnLevel(void);
 void MainFreeze_IfPressStart(void);
 
 void MainGameStart_Initialize(struct GameTracker *gGT, b32 boolStopAudio);

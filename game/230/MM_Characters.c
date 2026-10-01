@@ -1763,9 +1763,12 @@ void MM_Characters_MenuProc(struct RectMenu *unused)
 			// to the hub level instead of continuing through the main menu flow.
 			if (MainFreeze_ConsumeAdventureCharacterChange())
 			{
+				// The hub menu was loaded in between; preserve the newly selected
+				// driver and return to the hub captured before entering the menu.
+				sdata->advProgress.characterID = data.characterIDs[0];
 				sdata->Loading.OnBegin.AddBitsConfig0 |= ADVENTURE_ARENA;
 				sdata->Loading.OnBegin.RemBitsConfig0 |= MAIN_MENU;
-				MainRaceTrack_RequestLoad(gGT->prevLEV);
+				MainRaceTrack_RequestLoad(MainFreeze_GetAdventureCharacterReturnLevel());
 				return;
 			}
 

@@ -1,6 +1,7 @@
 #include <common.h>
 
 static b32 s_returnToAdventureHubAfterCharacterSelect;
+static s16 s_adventureCharacterReturnLevel;
 static struct MenuRow s_adventureHubRowsWithCharacter[] =
 {
 	{LNG_RESUME, 4, 1, 0, 0},
@@ -14,6 +15,12 @@ static struct MenuRow s_adventureHubRowsWithCharacter[] =
 void MainFreeze_BeginAdventureCharacterChange(void)
 {
 	s_returnToAdventureHubAfterCharacterSelect = true;
+	s_adventureCharacterReturnLevel = sdata->gGT->levelID;
+}
+
+s16 MainFreeze_GetAdventureCharacterReturnLevel(void)
+{
+	return s_adventureCharacterReturnLevel;
 }
 
 b32 MainFreeze_ConsumeAdventureCharacterChange(void)
