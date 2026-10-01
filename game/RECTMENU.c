@@ -380,6 +380,16 @@ static char *RECTMENU_GetString(s16 stringIndex)
 		return (char *)displayMode[gNativeBorderlessEnabled != 0];
 	case NATIVE_MENU_STRING_PGXP:
 		return (char *)pgxp[languageRow][gNativePgxpMode];
+	case NATIVE_MENU_STRING_ENHANCEMENTS:
+		return "ENHANCEMENTS";
+	case NATIVE_MENU_STRING_AI_PHYSICS:
+		return gNativeSmoothedAIEnabled ? "AI: SMOOTHED" : "AI: ORIGINAL";
+	case NATIVE_MENU_STRING_COLLISION_PHYSICS:
+		return gNativeSmoothedCollisionEnabled ? "COLLISIONS: SMOOTHED" : "COLLISIONS: ORIGINAL";
+	case NATIVE_MENU_STRING_STEERING_PHYSICS:
+		return gNativeSmoothedSteeringEnabled ? "STEERING: SMOOTHED" : "STEERING: ORIGINAL";
+	case NATIVE_MENU_STRING_PHYSICS:
+		return gNativeSmoothedPhysicsEnabled ? "PLAYER PHYSICS: SMOOTHED" : "PLAYER PHYSICS: ORIGINAL";
 	case NATIVE_MENU_STRING_MAX_LOD:
 		return (char *)maxLod[languageRow][CTR_NATIVE_MAX_LOD_ACTIVE];
 #endif
@@ -790,7 +800,13 @@ static b32 RECTMENU_NativeOptionsHorizontalInput(struct RectMenu *menu)
 	s16 stringIndex = menu->rows[menu->rowSelected].stringIndex & MENU_ROW_LNG_MASK;
 	return ((stringIndex >= NATIVE_MENU_STRING_AUDIO_FX) &&
 	        (stringIndex <= NATIVE_MENU_STRING_AUDIO_MODE)) ||
-	       (stringIndex == NATIVE_MENU_STRING_AI_RACERS);
+	       (stringIndex == NATIVE_MENU_STRING_AI_RACERS) ||
+	       (stringIndex == NATIVE_MENU_STRING_PGXP) ||
+	       (stringIndex == NATIVE_MENU_STRING_MAX_LOD) ||
+	       (stringIndex == NATIVE_MENU_STRING_PHYSICS) ||
+	       (stringIndex == NATIVE_MENU_STRING_AI_PHYSICS) ||
+	       (stringIndex == NATIVE_MENU_STRING_COLLISION_PHYSICS) ||
+	       (stringIndex == NATIVE_MENU_STRING_STEERING_PHYSICS);
 }
 #endif
 

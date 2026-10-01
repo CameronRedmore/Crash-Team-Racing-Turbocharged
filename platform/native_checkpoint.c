@@ -159,6 +159,7 @@ internal void NativeCheckpoint_ClearPointerSlots(void)
 
 void NativeCheckpoint_OnMempackArenaReset(void)
 {
+	NativePhysics_Reset();
 	NativeCheckpoint_ClearPointerSlots();
 }
 
@@ -2212,6 +2213,7 @@ internal int NativeCheckpoint_RestoreMode(const void *src, int srcSize, b32 incl
 	// NOTE(aalhendi): 233 checkpoints store only mutable overlay state. Restore
 	// the source-owned static image first, then overlay the captured runtime
 	// fields below.
+	NativePhysics_Reset();
 	OVR233_ResetRuntimeState();
 
 	for (i = 0; i < header->regionCount; i++)

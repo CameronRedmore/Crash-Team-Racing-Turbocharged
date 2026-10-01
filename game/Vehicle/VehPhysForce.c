@@ -1,4 +1,5 @@
 #include <common.h>
+#include <vehicle_physics_constants.h>
 
 #if defined(CTR_NATIVE)
 #include "platform/native_adhoc.h"
@@ -8,6 +9,14 @@
 // NOTE(aalhendi): ASM-verified helper for NTSC-U 926 0x8005e104-0x8005e214.
 void VehPhysForce_ConvertSpeedToVecOut(struct Driver *driver, Vec3 *vel)
 {
+#if defined(CTR_NATIVE) && !defined(__vita__)
+	if (CTR_NATIVE_SMOOTHED_PHYSICS_ACTIVE || CTR_NATIVE_SMOOTHED_STEERING_ACTIVE)
+	{
+		NativePhysics_ConvertSpeedToVec(driver, vel);
+		return;
+	}
+#endif
+
 	int yAngle = driver->axisRotationY;
 	int ySine = MATH_Sin(yAngle);
 	int yCos = MATH_Cos(yAngle);
@@ -26,53 +35,6 @@ void VehPhysForce_ConvertSpeedToVec(struct Driver *driver)
 {
 	VehPhysForce_ConvertSpeedToVecOut(driver, &driver->velocity);
 }
-
-enum
-{
-	VEH_PHYS_FORCE_QUAD_LOW_GRAVITY = 0x2,
-	VEH_PHYS_FORCE_LOW_GRAVITY_DIVISOR = 100,
-	VEH_PHYS_FORCE_MUD_TERMINAL_SPEED = 0x100,
-	VEH_PHYS_FORCE_SKID_SPEED_THRESHOLD = 0x300,
-	VEH_PHYS_FORCE_TERRAIN_SCALE_NEUTRAL = 0x100,
-	VEH_PHYS_FORCE_TERRAIN_SIDE_LOCK_TIMER = -0x140,
-	VEH_PHYS_FORCE_TERRAIN_RUMBLE_FRAMES = 4,
-	VEH_PHYS_FORCE_TERRAIN_RUMBLE_FORCE = 0x7f,
-	VEH_PHYS_FORCE_ROLLBACK_WINDOW_TIMER = 0x280,
-	VEH_PHYS_FORCE_MATRIX_BLEND_FULL = 0x100,
-	VEH_PHYS_FORCE_KART_SCALE_BASE = 0xccc,
-	VEH_PHYS_FORCE_MASK_GRAB_SCALE_XZ_FACTOR = 0x28,
-	VEH_PHYS_FORCE_MIN_SQUASH_XZ_SCALE = 0x400,
-	VEH_PHYS_FORCE_TARGET_SQUISH_DEFAULT = -800,
-	VEH_PHYS_FORCE_SQUISH_DEADBAND = 0x960,
-	VEH_PHYS_FORCE_AIR_SQUISH_MIN = -800,
-	VEH_PHYS_FORCE_LANDING_SQUISH_MIN = -0x640,
-	VEH_PHYS_FORCE_SQUISH_MAX = 800,
-	VEH_PHYS_FORCE_HAZARD_BLINK_MASK = 0x80,
-	VEH_PHYS_FORCE_FALL_STRETCH_HEIGHT_MAX = 0xa00,
-	VEH_PHYS_FORCE_FALL_STRETCH_MIN = 0x280,
-	VEH_PHYS_FORCE_FALL_STRETCH_MAX = 0x320,
-	VEH_PHYS_FORCE_TNT_SCALE_Y_THRESHOLD = 2500,
-	VEH_PHYS_FORCE_TNT_SCALE_Y_BASE = 0x800,
-	VEH_PHYS_FORCE_SQUISH_INTERP_SPEED = 300,
-	VEH_PHYS_FORCE_SQUISH_SCALE_INTERP_SPEED = 0xa0,
-	VEH_PHYS_FORCE_SQUISH_SCALE_XZ_FACTOR = 0xa0,
-	VEH_PHYS_FORCE_SQUISH_RESTORE_SFX = 0x5b,
-	VEH_PHYS_FORCE_SQUISH_OFFSET_NORMAL_SCALE = 0x13,
-	VEH_PHYS_FORCE_WAKE_PARTICLE_ICON_GROUP = 9,
-	VEH_PHYS_FORCE_WAKE_WATERLINE_Y = 0,
-	VEH_PHYS_FORCE_WAKE_VISIBLE_MIN_Y = -0x4f,
-	VEH_PHYS_FORCE_WAKE_INITIAL_SCALE = 0x1000,
-	VEH_PHYS_FORCE_WAKE_PARTICLE_SPEED_MIN = 0xc00,
-	VEH_PHYS_FORCE_WAKE_PARTICLE_PREV_Y_MIN = -0x200,
-	VEH_PHYS_FORCE_WAKE_BURST_PARTICLE_COUNT = 10,
-	VEH_PHYS_FORCE_TURBO_PAD_RESERVES = 0x3c0,
-	VEH_PHYS_FORCE_SUPER_TURBO_PAD_RESERVES = 0x78,
-	VEH_PHYS_FORCE_TURBO_PAD_FIRE_LEVEL = 0x100,
-	VEH_PHYS_FORCE_SUPER_TURBO_PAD_FIRE_LEVEL = 0x800,
-	VEH_PHYS_FORCE_COLLISION_BEST_DIST_INIT = 0x7fffffff,
-	VEH_PHYS_FORCE_SURFACE_PUSHBACK_Y_BIAS = 4,
-	VEH_PHYS_FORCE_SURFACE_PUSHBACK_SHIFT = 6,
-};
 
 CTR_STATIC_ASSERT(VEH_PHYS_FORCE_QUAD_LOW_GRAVITY == 0x2);
 CTR_STATIC_ASSERT(VEH_PHYS_FORCE_LOW_GRAVITY_DIVISOR == 100);
@@ -174,6 +136,17 @@ static Vec3 VehPhysForce_OnGravity_RotateVector(const MATRIX *m, s16 vx, s16 vy,
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8005e214-0x8005ea60
 void VehPhysForce_OnGravity(struct Driver *driver, Vec3 *velocity)
 {
+#if defined(CTR_NATIVE) && !defined(__vita__)
+	if (CTR_NATIVE_SMOOTHED_PHYSICS_ACTIVE)
+	{
+		// Collision code still consumes the legacy GTE matrix registers.
+		gte_SetRotMatrix(&driver->matrixMovingDir);
+		VehPhysForce_OnGravity_SetLightMatrixTranspose(&driver->matrixMovingDir);
+		NativePhysics_Gravity(driver, velocity);
+		return;
+	}
+#endif
+
 	int elapsedTimeMS = sdata->gGT->elapsedTimeMS;
 
 	gte_SetRotMatrix(&driver->matrixMovingDir);
@@ -609,6 +582,17 @@ void VehPhysForce_OnApplyForces(struct Thread *thread, struct Driver *driver)
 	driver->collisionFlags = 0;
 	driver->currBlockTouching = nullptr;
 
+#if defined(CTR_NATIVE) && !defined(__vita__)
+	if (CTR_NATIVE_SMOOTHED_PHYSICS_ACTIVE || CTR_NATIVE_SMOOTHED_STEERING_ACTIVE)
+	{
+		NativePhysicsVec v = NativePhysics_ReadVelocity(driver);
+		v.x += CTR_NATIVE_SMOOTHED_STEERING_ACTIVE ? NATIVE_PHYSICS_READ(driver,accel.x) : driver->accel.x;
+		v.y += CTR_NATIVE_SMOOTHED_STEERING_ACTIVE ? NATIVE_PHYSICS_READ(driver,accel.y) : driver->accel.y;
+		v.z += CTR_NATIVE_SMOOTHED_STEERING_ACTIVE ? NATIVE_PHYSICS_READ(driver,accel.z) : driver->accel.z;
+		NativePhysics_WriteVelocity(driver, v);
+		return;
+	}
+#endif
 	driver->velocity.x = CTR_MipsAddLo(driver->velocity.x, driver->accel.x);
 	driver->velocity.z = CTR_MipsAddLo(driver->velocity.z, driver->accel.z);
 	driver->velocity.y = CTR_MipsAddLo(driver->velocity.y, driver->accel.y);
@@ -664,14 +648,22 @@ void VehPhysForce_CollideDrivers(struct Thread *thread, struct Driver *driver)
 		search.bucket.th = NULL;
 		search.bucket.bestDistSq = VEH_PHYS_FORCE_COLLISION_BEST_DIST_INIT;
 
+		#if defined(CTR_NATIVE) && !defined(__vita__)
+		if (CTR_NATIVE_SMOOTHED_COLLISION_ACTIVE) NativeCollision_CarSearch(driver, thread->siblingThread, &search.bucket);
+		else
+#endif
 		PROC_CollidePointWithBucket(thread->siblingThread, &search.bucket);
+		#if defined(CTR_NATIVE) && !defined(__vita__)
+		if (CTR_NATIVE_SMOOTHED_COLLISION_ACTIVE) NativeCollision_CarSearch(driver, sdata->gGT->threadBuckets[ROBOT].thread, &search.bucket);
+		else
+#endif
 		PROC_CollidePointWithBucket(sdata->gGT->threadBuckets[ROBOT].thread, &search.bucket);
 
 		if (search.bucket.th != NULL)
 		{
 			int radiusSum = CTR_MipsAddLo(thread->driverHitRadius, search.bucket.th->driverHitRadius);
 
-			if (search.bucket.bestDistSq < CTR_MipsMulLo(radiusSum, radiusSum))
+			if (CTR_NATIVE_SMOOTHED_COLLISION_ACTIVE || search.bucket.bestDistSq < CTR_MipsMulLo(radiusSum, radiusSum))
 			{
 				VehPhysCrash_AnyTwoCars(thread, &search, &driver->velocity);
 			}
@@ -1257,6 +1249,10 @@ static SVec3 VehPhysForce_CounterSteer_RotateVector(const MATRIX *m, s16 vx, s16
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8005fb4c-0x8005fc8c.
 void VehPhysForce_CounterSteer(struct Driver *driver)
 {
+#if defined(CTR_NATIVE) && !defined(__vita__)
+	if (CTR_NATIVE_SMOOTHED_STEERING_ACTIVE) { NativePhysics_CounterSteer(driver); return; }
+#endif
+
 	driver->accel.x = 0;
 	driver->accel.y = 0;
 	driver->accel.z = 0;

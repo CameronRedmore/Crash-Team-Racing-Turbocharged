@@ -337,6 +337,10 @@ internal void Platform_HandleKey(int key, char down)
 			break;
 #endif
 #ifndef __vita__
+		case SDL_SCANCODE_DELETE:
+			NativePhysics_SetEnabled(!gNativeSmoothedPhysicsEnabled);
+			Platform_LogWarn("[CTR Native] physics: %s\n", gNativeSmoothedPhysicsEnabled ? "smoothed" : "original");
+			break;
 		case SDL_SCANCODE_HOME:
 			gNativeMaxLodEnabled ^= 1;
 			Platform_LogWarn("[CTR Native] max detail: %d\n", gNativeMaxLodEnabled);

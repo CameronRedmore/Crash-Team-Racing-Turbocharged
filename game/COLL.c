@@ -1,4 +1,7 @@
 #include <common.h>
+#if defined(CTR_NATIVE)
+#include <math.h>
+#endif
 
 #if defined(CTR_NATIVE)
 #include "platform/native_adhoc.h"
@@ -655,6 +658,14 @@ void COLL_FIXED_TRIANGL_UNUSED(struct ScratchpadStruct *sps, struct BspSearchVer
 internal void COLL_FIXED_TRIANGL_TestPoint_Body(struct ScratchpadStruct *sps, struct BspSearchVertex *v1, struct BspSearchVertex *v2,
                                                 struct BspSearchVertex *v3, s32 normalZW)
 {
+#if defined(CTR_NATIVE) && !defined(__vita__)
+	if (CTR_NATIVE_SMOOTHED_COLLISION_ACTIVE)
+	{
+		NativeCollision_FixedTriangle(sps, v1, v2, v3);
+		return;
+	}
+#endif
+
 	struct CollTriangleProjection projection;
 
 	s32 startX = sps->Union.QuadBlockColl.pos.x;
@@ -1870,6 +1881,14 @@ s32 COLL_MOVED_TRIANGL_ReorderNormals(struct BspSearchResult *candidate, struct 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8001fc40-0x80020064
 void COLL_MOVED_TRIANGL_TestPoint(struct ScratchpadStruct *sps, struct BspSearchVertex *v1, struct BspSearchVertex *v2, struct BspSearchVertex *v3)
 {
+#if defined(CTR_NATIVE) && !defined(__vita__)
+	if (CTR_NATIVE_SMOOTHED_COLLISION_ACTIVE)
+	{
+		NativeCollision_MovedTriangle(sps, v1, v2, v3);
+		return;
+	}
+#endif
+
 	s32 usedSegmentProjection;
 
 	sps->numTrianglesTested = (s16)CTR_MipsAddLo(sps->numTrianglesTested, 1);
@@ -2275,11 +2294,11 @@ internal void CollMoved_PlayerSearch_StoreHitbox(struct ScratchpadStruct *sps)
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80020410-0x80020c58
-void COLL_MOVED_PlayerSearch(struct Thread *t, struct Driver *d)
+static void CollMoved_PlayerSearch_Run(struct Thread *t, struct Driver *d)
 {
 	struct GameTracker *gGT = sdata->gGT;
 	struct ScratchpadStruct *sps = CTR_SCRATCHPAD_PTR(struct ScratchpadStruct, 0x108);
-	s32 multiplier = COLL_FRACTION_ONE;
+	double multiplier = COLL_FRACTION_ONE;
 	s16 hitRadius = COLL_MOVED_PLAYER_HIT_RADIUS;
 
 	sps->Input1.hitRadius = hitRadius;
@@ -2310,6 +2329,17 @@ void COLL_MOVED_PlayerSearch(struct Thread *t, struct Driver *d)
 		    .z = CollMoved_PlayerSearch_StepVelocity(d->velocity.z, gGT->elapsedTimeMS, multiplier),
 		};
 
+#if defined(CTR_NATIVE) && !defined(__vita__)
+		NativePhysicsVec preciseStep = {0, 0, 0};
+		if ((CTR_NATIVE_SMOOTHED_PHYSICS_ACTIVE || CTR_NATIVE_SMOOTHED_COLLISION_ACTIVE))
+		{
+			preciseStep = NativePhysics_Step(d, gGT->elapsedTimeMS, multiplier);
+			velocity.x = (s32)round(preciseStep.x);
+			velocity.y = (s32)round(preciseStep.y);
+			velocity.z = (s32)round(preciseStep.z);
+		}
+#endif
+
 		sps->boolDidTouchQuadblock = 0;
 		sps->numTrianglesTested = 0;
 		sps->boolDidTouchHitbox = 0;
@@ -2330,17 +2360,39 @@ void COLL_MOVED_PlayerSearch(struct Thread *t, struct Driver *d)
 		    .z = (s16)CTR_MipsAddLo((u16)d->originToCenter.z, CTR_MipsSra(CTR_MipsAddLo(d->posCurr.z, velocity.z), 8)),
 		};
 
+#if defined(CTR_NATIVE) && !defined(__vita__)
+		if (CTR_NATIVE_SMOOTHED_COLLISION_ACTIVE)
+		{
+			NativePhysicsVec start=NativePhysics_ReadPosition(d);
+			start.x=start.x/256.0+d->originToCenter.x;
+			start.y=start.y/256.0+d->originToCenter.y;
+			start.z=start.z/256.0+d->originToCenter.z;
+			NativePhysicsVec step={preciseStep.x/256.0,preciseStep.y/256.0,preciseStep.z/256.0};
+			NativeCollision_BeginSweep(sps,start,step);
+		}
+#endif
 		sps->Union.QuadBlockColl.pos = current;
 		sps->Input1.pos = next;
 
-		if ((next.x == current.x) && (next.y == current.y) && (next.z == current.z))
+		if (!CTR_NATIVE_SMOOTHED_COLLISION_ACTIVE && (next.x == current.x) && (next.y == current.y) && (next.z == current.z))
 		{
+#if defined(CTR_NATIVE) && !defined(__vita__)
+			if ((CTR_NATIVE_SMOOTHED_PHYSICS_ACTIVE || CTR_NATIVE_SMOOTHED_COLLISION_ACTIVE)) NativePhysics_Move(d, preciseStep, 1.0);
+#endif
 			break;
 		}
 
 		CollMoved_PlayerSearch_SetBBoxAxis(sps, 0, current.x, next.x);
 		CollMoved_PlayerSearch_SetBBoxAxis(sps, 1, current.y, next.y);
 		CollMoved_PlayerSearch_SetBBoxAxis(sps, 2, current.z, next.z);
+		if (CTR_NATIVE_SMOOTHED_COLLISION_ACTIVE)
+		{
+			for (int axis=0;axis<3;axis++)
+			{
+				if (sps->bbox.min.v[axis] > -32768) sps->bbox.min.v[axis]--;
+				if (sps->bbox.max.v[axis] < 32767) sps->bbox.max.v[axis]++;
+			}
+		}
 
 		sps->Union.QuadBlockColl.hitPos = sps->Input1.pos;
 
@@ -2356,11 +2408,24 @@ void COLL_MOVED_PlayerSearch(struct Thread *t, struct Driver *d)
 			d->collisionFlags |= DRIVER_COLL_FLAG_TOUCHED_QUADBLOCK;
 		}
 
-		if (sps->hitFraction > 0)
+		double acceptedFraction = sps->hitFraction / 4096.0;
+#if defined(CTR_NATIVE) && !defined(__vita__)
+		if (CTR_NATIVE_SMOOTHED_COLLISION_ACTIVE) acceptedFraction = NativeCollision_HitFraction(sps);
+#endif
+		if (acceptedFraction > 0)
 		{
-			d->posCurr.x = CTR_MipsAddLo(d->posCurr.x, CTR_MipsSra(CTR_MipsMulLo(velocity.x, sps->hitFraction), 12));
-			d->posCurr.y = CTR_MipsAddLo(d->posCurr.y, CTR_MipsSra(CTR_MipsMulLo(velocity.y, sps->hitFraction), 12));
-			d->posCurr.z = CTR_MipsAddLo(d->posCurr.z, CTR_MipsSra(CTR_MipsMulLo(velocity.z, sps->hitFraction), 12));
+#if defined(CTR_NATIVE) && !defined(__vita__)
+			if ((CTR_NATIVE_SMOOTHED_PHYSICS_ACTIVE || CTR_NATIVE_SMOOTHED_COLLISION_ACTIVE))
+			{
+				NativePhysics_Move(d, preciseStep, acceptedFraction);
+			}
+			else
+#endif
+			{
+				d->posCurr.x = CTR_MipsAddLo(d->posCurr.x, CTR_MipsSra(CTR_MipsMulLo(velocity.x, sps->hitFraction), 12));
+				d->posCurr.y = CTR_MipsAddLo(d->posCurr.y, CTR_MipsSra(CTR_MipsMulLo(velocity.y, sps->hitFraction), 12));
+				d->posCurr.z = CTR_MipsAddLo(d->posCurr.z, CTR_MipsSra(CTR_MipsMulLo(velocity.z, sps->hitFraction), 12));
+			}
 		}
 
 		if (sps->boolDidTouchHitbox != 0)
@@ -2442,9 +2507,14 @@ void COLL_MOVED_PlayerSearch(struct Thread *t, struct Driver *d)
 				return;
 			}
 
-			if (sps->hitFraction > 0)
+			if (acceptedFraction > 0)
 			{
-				multiplier = CTR_MipsSubLo(multiplier, CTR_MipsSra(CTR_MipsMulLo(multiplier, sps->hitFraction), 12));
+#if defined(CTR_NATIVE) && !defined(__vita__)
+				if (CTR_NATIVE_SMOOTHED_COLLISION_ACTIVE)
+					multiplier *= 1.0-acceptedFraction;
+				else
+#endif
+					multiplier = CTR_MipsSubLo(multiplier, CTR_MipsSra(CTR_MipsMulLo(multiplier, sps->hitFraction), 12));
 				if (multiplier < 100)
 				{
 					break;
@@ -2456,6 +2526,15 @@ void COLL_MOVED_PlayerSearch(struct Thread *t, struct Driver *d)
 	}
 
 	d->stepFlagSet = sps->collision.stepFlags;
+}
+
+
+void COLL_MOVED_PlayerSearch(struct Thread *t, struct Driver *d)
+{
+	CollMoved_PlayerSearch_Run(t,d);
+#if defined(CTR_NATIVE)
+	NativeCollision_EndSweep();
+#endif
 }
 
 
@@ -2528,6 +2607,10 @@ internal void CollMoved_ScrubImpact_ProjectWallVelocity(const SVec3 *normal, s32
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80020c58-0x80021500
 u32 COLL_MOVED_ScrubImpact(struct Driver *d, struct Thread *t, struct ScratchpadStruct *sps, struct Scrub *scrub, Vec3 *velocity)
 {
+#if defined(CTR_NATIVE) && !defined(__vita__)
+	if (CTR_NATIVE_SMOOTHED_COLLISION_ACTIVE) return NativeCollision_Impact(d,t,sps,scrub,velocity);
+#endif
+
 	SVec3 normal = sps->hit.plane.normal;
 
 	if ((d->vShiftCount != 0) && (sps->boolDidTouchQuadblock != 0) && ((sps->hit.ptrQuadblock->quadFlags & QUADBLOCK_FLAG_GROUND) != 0) &&

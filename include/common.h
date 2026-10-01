@@ -15,6 +15,8 @@
 
 #if defined(CTR_NATIVE)
 #include <platform.h>
+#include <platform/native_physics.h>
+#include <platform/native_collision.h>
 #endif
 
 // Game declarations and GPU helpers that depend on the layout headers above.

@@ -5,6 +5,7 @@
 #include "platform/native_audio.h"
 #include "platform/native_gpu.h"
 #include "platform/native_input.h"
+#include "platform/native_physics.h"
 
 #include <string.h>
 
@@ -13,10 +14,11 @@
 // NOTE(aalhendi): Snapshot tags are stored as little-endian four-character IDs
 // in native replay/state blobs. `CTRS` means CTR native State bundle.
 #define NATIVE_STATE_MAGIC              NATIVE_STATE_FOURCC('C', 'T', 'R', 'S')
-#define NATIVE_STATE_VERSION            1u
+#define NATIVE_STATE_VERSION            3u
 
 enum NativeStateRegionKind
 {
+	NATIVE_STATE_REGION_PHYSICS = NATIVE_STATE_FOURCC('P', 'H', 'Y', 'S'),
 	NATIVE_STATE_REGION_INPUT = NATIVE_STATE_FOURCC('I', 'N', 'P', 'T'), // input snapshot region
 	NATIVE_STATE_REGION_AUDIO = NATIVE_STATE_FOURCC('A', 'U', 'D', 'O'), // audio/SPU/XA snapshot region
 	NATIVE_STATE_REGION_GPU = NATIVE_STATE_FOURCC('G', 'P', 'U', ' '),   // GPU/VRAM snapshot region
@@ -35,7 +37,7 @@ struct NativeStateHeader
 	u32 version;
 	u32 size;
 	u32 regionCount;
-	struct NativeStateRegion regions[3];
+	struct NativeStateRegion regions[4];
 };
 
 internal u32 NativeState_Align4(u32 value)
@@ -47,6 +49,8 @@ internal int NativeState_GetRegionSize(u32 kind)
 {
 	switch (kind)
 	{
+	case NATIVE_STATE_REGION_PHYSICS:
+		return NativePhysics_GetStateSize();
 	case NATIVE_STATE_REGION_INPUT:
 		return Platform_InputGetStateSize();
 	case NATIVE_STATE_REGION_AUDIO:
@@ -62,6 +66,8 @@ internal int NativeState_CaptureRegion(u32 kind, void *dst, int dstSize)
 {
 	switch (kind)
 	{
+	case NATIVE_STATE_REGION_PHYSICS:
+		return NativePhysics_CaptureState(dst, dstSize);
 	case NATIVE_STATE_REGION_INPUT:
 		return Platform_InputCaptureState(dst, dstSize);
 	case NATIVE_STATE_REGION_AUDIO:
@@ -77,6 +83,8 @@ internal int NativeState_RestoreRegion(u32 kind, const void *src, int srcSize)
 {
 	switch (kind)
 	{
+	case NATIVE_STATE_REGION_PHYSICS:
+		return NativePhysics_RestoreState(src, srcSize);
 	case NATIVE_STATE_REGION_INPUT:
 		return Platform_InputRestoreState(src, srcSize);
 	case NATIVE_STATE_REGION_AUDIO:
@@ -96,6 +104,7 @@ internal int NativeState_InitHeader(struct NativeStateHeader *header)
 	    NATIVE_STATE_REGION_INPUT,
 	    NATIVE_STATE_REGION_AUDIO,
 	    NATIVE_STATE_REGION_GPU,
+	    NATIVE_STATE_REGION_PHYSICS,
 	};
 
 	memset(header, 0, sizeof(*header));
@@ -183,7 +192,7 @@ int NativeState_Restore(const void *src, int srcSize)
 	{
 		return 0;
 	}
-	if (header->regionCount > len(header->regions))
+	if (header->regionCount != len(header->regions))
 	{
 		return 0;
 	}

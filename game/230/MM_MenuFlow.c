@@ -229,7 +229,7 @@ static struct MenuRow s_nativeOptionsRows[] =
 	{NATIVE_MENU_STRING_AI_RACERS, 9, 11, 10, 10},
 	{NATIVE_MENU_STRING_MIRROR_MODE, 10, 0, 11, 11},
 #else
-	{LNG_LANGUAGE, 16, 1, 0, 0},
+	{LNG_LANGUAGE, 15, 1, 0, 0},
 	{NATIVE_MENU_STRING_CONTROLS, 0, 2, 1, 1},
 	{NATIVE_MENU_STRING_CHEATS, 1, 3, 2, 2},
 	{NATIVE_MENU_STRING_AUDIO_FX, 2, 4, 3, 3},
@@ -239,16 +239,28 @@ static struct MenuRow s_nativeOptionsRows[] =
 	{NATIVE_MENU_STRING_FRAME_RATE, 6, 8, 7, 7},
 	{NATIVE_MENU_STRING_ANTI_ALIASING, 7, 9, 8, 8},
 	{NATIVE_MENU_STRING_DITHERING, 8, 10, 9, 9},
-	{NATIVE_MENU_STRING_PGXP, 9, 11, 10, 10},
-	{NATIVE_MENU_STRING_MAX_LOD, 10, 12, 11, 11},
-	{NATIVE_MENU_STRING_BORDERLESS, 11, 13, 12, 12},
-	{NATIVE_MENU_STRING_DEFAULT_CAMERA, 12, 14, 13, 13},
-	{NATIVE_MENU_STRING_DEFAULT_HUD, 13, 15, 14, 14},
-	{NATIVE_MENU_STRING_AI_RACERS, 14, 16, 15, 15},
-	{NATIVE_MENU_STRING_MIRROR_MODE, 15, 0, 16, 16},
+	{NATIVE_MENU_STRING_ENHANCEMENTS, 9, 11, 10, 10},
+	{NATIVE_MENU_STRING_BORDERLESS, 10, 12, 11, 11},
+	{NATIVE_MENU_STRING_DEFAULT_CAMERA, 11, 13, 12, 12},
+	{NATIVE_MENU_STRING_DEFAULT_HUD, 12, 14, 13, 13},
+	{NATIVE_MENU_STRING_AI_RACERS, 13, 15, 14, 14},
+	{NATIVE_MENU_STRING_MIRROR_MODE, 14, 0, 15, 15},
 #endif
 	{RECTMENU_STRING_NONE},
 };
+
+#ifndef __vita__
+static struct MenuRow s_nativeEnhancementsRows[] =
+{
+	{NATIVE_MENU_STRING_PGXP, 5, 1, 0, 0},
+	{NATIVE_MENU_STRING_MAX_LOD, 0, 2, 1, 1},
+	{NATIVE_MENU_STRING_PHYSICS, 1, 3, 2, 2},
+	{NATIVE_MENU_STRING_AI_PHYSICS, 2, 4, 3, 3},
+	{NATIVE_MENU_STRING_COLLISION_PHYSICS, 3, 5, 4, 4},
+	{NATIVE_MENU_STRING_STEERING_PHYSICS, 4, 0, 5, 5},
+	{RECTMENU_STRING_NONE},
+};
+#endif
 
 static struct MenuRow s_nativeCheatsRows[] =
 {
@@ -351,6 +363,17 @@ static struct RectMenu s_nativeOptionsMenu =
 	.funcPtr = MM_NativeOptionsMenuProc,
 	.drawStyle = RECTMENU_DRAW_STYLE_NATIVE_OPTIONS,
 };
+
+#ifndef __vita__
+static struct RectMenu s_nativeEnhancementsMenu =
+{
+	.stringIndexTitle = NATIVE_MENU_STRING_ENHANCEMENTS,
+	.state = CENTER_ON_X | USE_SMALL_FONT | BIG_TEXT_IN_TITLE,
+	.rows = s_nativeEnhancementsRows,
+	.funcPtr = MM_NativeOptionsMenuProc,
+	.drawStyle = RECTMENU_DRAW_STYLE_NATIVE_OPTIONS,
+};
+#endif
 
 static struct RectMenu s_nativeCheatsMenu =
 {
@@ -953,6 +976,28 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 		return;
 	}
 #ifndef __vita__
+	if (choose == NATIVE_MENU_STRING_ENHANCEMENTS)
+	{
+		s_nativeEnhancementsMenu.rowSelected = 0;
+		s_nativeEnhancementsMenu.state = CENTER_ON_X | USE_SMALL_FONT | BIG_TEXT_IN_TITLE;
+		s_nativeEnhancementsMenu.ptrNextBox_InHierarchy = NULL;
+		s_nativeEnhancementsMenu.ptrPrevBox_InHierarchy = menu;
+		menu->ptrNextBox_InHierarchy = &s_nativeEnhancementsMenu;
+		menu->state |= ONLY_DRAW_TITLE | DRAW_NEXT_MENU_IN_HIERARCHY;
+		return;
+	}
+
+	if (choose == NATIVE_MENU_STRING_AI_PHYSICS || choose == NATIVE_MENU_STRING_COLLISION_PHYSICS || choose == NATIVE_MENU_STRING_STEERING_PHYSICS)
+	{
+		enum NativePhysicsDomain domain = NATIVE_PHYSICS_AI;
+		int enabled = gNativeSmoothedAIEnabled;
+		if (choose == NATIVE_MENU_STRING_COLLISION_PHYSICS) { domain = NATIVE_PHYSICS_COLLISION; enabled = gNativeSmoothedCollisionEnabled; }
+		if (choose == NATIVE_MENU_STRING_STEERING_PHYSICS) { domain = NATIVE_PHYSICS_STEERING; enabled = gNativeSmoothedSteeringEnabled; }
+		NativePhysics_SetDomain(domain, !enabled);
+		save_config();
+		return;
+	}
+
 	if (choose == NATIVE_MENU_STRING_ANTI_ALIASING)
 	{
 		gNativeAntiAliasingEnabled ^= 1;
@@ -982,6 +1027,13 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 				OtherFX_Play(0, 1);
 			}
 		}
+		save_config();
+		return;
+	}
+
+	if (choose == NATIVE_MENU_STRING_PHYSICS)
+	{
+		NativePhysics_SetEnabled(!gNativeSmoothedPhysicsEnabled);
 		save_config();
 		return;
 	}

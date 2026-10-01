@@ -190,6 +190,9 @@ static int VehBirth_ScaleTrig(int trig, int scale)
 // NOTE(aalhendi): PSX path ASM-verified NTSC-U 926 0x80057c8c-0x80058898.
 void VehBirth_TeleportSelf(struct Driver *d, u8 spawnFlag, int spawnPosY)
 {
+#if defined(CTR_NATIVE)
+	NativePhysics_ResetDriver(d);
+#endif
 	SVec3 posTop;
 	SVec3 posBottom;
 	SVec3 warppadPos;
@@ -775,6 +778,9 @@ void VehBirth_NonGhost(struct Thread *t, int index)
 	}
 
 	d->driverID = index;
+#if defined(CTR_NATIVE)
+	NativePhysics_ResetDriver(d);
+#endif
 	d->instSelf = inst;
 
 	VehBirth_TireSprites(t);

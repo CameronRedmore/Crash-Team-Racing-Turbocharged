@@ -4,41 +4,8 @@
 #include "platform/native_adhoc.h"
 #endif
 
-enum
-{
-	VEH_PHYS_CRASH_FAST_SQRT_ITERATIONS = 0x10,
-	VEH_PHYS_CRASH_VECTOR_SPEED_SHIFT = 8,
-	VEH_PHYS_CRASH_MATRIX_FRAC_SHIFT = 0xc,
-	VEH_PHYS_CRASH_UNIT_VECTOR_SCALE = 0x1000,
-	VEH_PHYS_CRASH_BOUNCE_Y_CLAMP = 0x3200,
-	VEH_PHYS_CRASH_BOT_NAV_ROT_SHIFT = 4,
-	VEH_PHYS_CRASH_BOT_SPEED_SHIFT = 8,
+#include <vehicle_physics_constants.h>
 
-	VEH_PHYS_CRASH_DAMAGE_TYPE_MASK = 2,
-	VEH_PHYS_CRASH_DAMAGE_TYPE_TURBO = 3,
-	VEH_PHYS_CRASH_DAMAGE_REASON_SHIELD = 0,
-	VEH_PHYS_CRASH_DAMAGE_REASON_TURBO = 5,
-	VEH_PHYS_CRASH_DAMAGE_REASON_MASK = 6,
-	VEH_PHYS_CRASH_TURBO_DAMAGE_IMPACT = 0xa00,
-
-	VEH_PHYS_CRASH_BUBBLE_POP_FX = 0x4f,
-	VEH_PHYS_CRASH_VOICELINE_CRASH = 1,
-	VEH_PHYS_CRASH_VOICELINE_HARD_CRASH = 5,
-	VEH_PHYS_CRASH_VOICELINE_PRIORITY = 0x10,
-
-	VEH_PHYS_CRASH_FEEDBACK_MIN_IMPACT = 0x200,
-	VEH_PHYS_CRASH_VOLUME_IMPACT_MAX = 0x1900,
-	VEH_PHYS_CRASH_VOLUME_MIN = 0x3f,
-	VEH_PHYS_CRASH_VOLUME_MAX = 0xff,
-	VEH_PHYS_CRASH_HARD_CRASH_VOLUME = 0xdc,
-	VEH_PHYS_CRASH_FEEDBACK_COOLDOWN_FRAMES = 3,
-
-	VEH_PHYS_CRASH_RUMBLE_CHANNEL = 8,
-	VEH_PHYS_CRASH_RUMBLE_FORCE = 0x7f,
-	VEH_PHYS_CRASH_JOG_TURNING = 0x29,
-	VEH_PHYS_CRASH_JOG_STRAIGHT = 0x19,
-	VEH_PHYS_CRASH_JOG_DURATION = 0x60,
-};
 
 CTR_STATIC_ASSERT(VEH_PHYS_CRASH_FAST_SQRT_ITERATIONS == 0x10);
 CTR_STATIC_ASSERT(VEH_PHYS_CRASH_VECTOR_SPEED_SHIFT == 8);
@@ -87,6 +54,14 @@ static s32 VehPhysCrash_Dot3(s32 ax, s32 ay, s32 az, s32 bx, s32 by, s32 bz)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8005cd1c-0x8005cf64.
 void VehPhysCrash_ConvertVecToSpeed(struct Driver *d, Vec3 *vel)
 {
+#if defined(CTR_NATIVE) && !defined(__vita__)
+	if (CTR_NATIVE_SMOOTHED_PHYSICS_ACTIVE || CTR_NATIVE_SMOOTHED_STEERING_ACTIVE || CTR_NATIVE_SMOOTHED_COLLISION_ACTIVE)
+	{
+		NativePhysics_ConvertVecToSpeed(d, (NativePhysicsVec){vel->x, vel->y, vel->z});
+		return;
+	}
+#endif
+
 	int speed2D = VehCalc_FastSqrt(VehPhysCrash_LengthSq2(vel->x, vel->z), VEH_PHYS_CRASH_FAST_SQRT_ITERATIONS);
 	s16 speed3D =
 	    (s16)(VehCalc_FastSqrt(VehPhysCrash_LengthSq3(vel->x, vel->y, vel->z), VEH_PHYS_CRASH_FAST_SQRT_ITERATIONS) >> VEH_PHYS_CRASH_VECTOR_SPEED_SHIFT);
@@ -373,6 +348,10 @@ static void VehPhysCrash_PlayHumanFeedback(struct Thread *selfThread, struct Thr
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8005d404-0x8005e104
 void VehPhysCrash_AnyTwoCars(struct Thread *thread, struct DriverCollisionSearch *search, Vec3 *selfVel)
 {
+#if defined(CTR_NATIVE) && !defined(__vita__)
+	if (CTR_NATIVE_SMOOTHED_COLLISION_ACTIVE) { NativeCollision_Cars(thread,search,selfVel); return; }
+#endif
+
 	int distance = VehCalc_FastSqrt(search->bucket.bestDistSq, 0);
 	const SVec3 *dist = &search->bucket.dist;
 	SVec3 *hitDir = &search->hitDir;

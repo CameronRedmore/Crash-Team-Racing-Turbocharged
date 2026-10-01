@@ -32,6 +32,7 @@
 #include "CDSYS.c"
 
 #include "COLL.c"
+#include "NativeCollisionImpact.c"
 
 #include "CTR/CTR_Box.c"
 #include "CTR/CTR_CycleTex.c"
@@ -226,14 +227,17 @@
 #include "Vehicle/VehFrame.c"
 #include "Vehicle/VehLap.c"
 #include "Vehicle/VehPhysCrash.c"
+#include "Vehicle/VehCarCollisionSmoothed.c"
 
 #include "Vehicle/VehPhysForce.c"
 #include "Vehicle/VehGroundShadow.c"
 #include "Vehicle/VehPhysGeneral.c"
+#include "Vehicle/VehPhysSmoothed.c"
 #include "Vehicle/VehPhysJoystick.c"
 #include "Vehicle/VehGroundSkids.c"
 
 #include "Vehicle/VehPhysProc.c"
+#include "Vehicle/VehSteeringSmoothed.c"
 
 #include "Vehicle/VehPickupItem.c"
 #include "Vehicle/VehPickState.c"

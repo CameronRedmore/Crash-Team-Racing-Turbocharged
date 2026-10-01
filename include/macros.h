@@ -78,6 +78,22 @@ extern int gNativeGhostReplayFpsOverride;
 #define FPS_RIGHTSHIFT(x)           (x)
 #endif
 
+#if defined(CTR_NATIVE) && !defined(__vita__)
+extern int gNativeSmoothedPhysicsEnabled;
+extern int gNativeSmoothedAIEnabled;
+extern int gNativeSmoothedCollisionEnabled;
+extern int gNativeSmoothedSteeringEnabled;
+#define CTR_NATIVE_SMOOTHED_AI_ACTIVE (gNativeSmoothedAIEnabled != 0)
+#define CTR_NATIVE_SMOOTHED_COLLISION_ACTIVE (gNativeSmoothedCollisionEnabled != 0)
+#define CTR_NATIVE_SMOOTHED_STEERING_ACTIVE (gNativeSmoothedSteeringEnabled != 0)
+#define CTR_NATIVE_SMOOTHED_PHYSICS_ACTIVE (gNativeSmoothedPhysicsEnabled != 0)
+#else
+#define CTR_NATIVE_SMOOTHED_PHYSICS_ACTIVE 0
+#define CTR_NATIVE_SMOOTHED_AI_ACTIVE 0
+#define CTR_NATIVE_SMOOTHED_COLLISION_ACTIVE 0
+#define CTR_NATIVE_SMOOTHED_STEERING_ACTIVE 0
+#endif
+
 // Max detail option: level geometry and models always use their highest LOD.
 #if defined(CTR_NATIVE) && !defined(__vita__)
 extern int gNativeMaxLodEnabled;

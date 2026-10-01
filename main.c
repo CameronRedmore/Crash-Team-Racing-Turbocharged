@@ -92,6 +92,8 @@ int gNativeRelicRaceResultTier = -1;
 #include "platform/native_gpu.c"
 #include "platform/native_gte_core.c"
 #include "platform/native_pgxp.c"
+#include "platform/native_physics.c"
+#include "platform/native_collision.c"
 #if !defined(__EMSCRIPTEN__)
 #include "platform/native_glad.c"
 #endif
@@ -310,6 +312,22 @@ void load_config(void)
 			{
 				gNativeBorderlessEnabled = (value != 0);
 			}
+			else if (strcmp("smoothed_ai", buffer) == 0)
+			{
+				NativePhysics_SetDomain(NATIVE_PHYSICS_AI, value);
+			}
+			else if (strcmp("smoothed_collisions", buffer) == 0)
+			{
+				NativePhysics_SetDomain(NATIVE_PHYSICS_COLLISION, value);
+			}
+			else if (strcmp("smoothed_steering", buffer) == 0)
+			{
+				NativePhysics_SetDomain(NATIVE_PHYSICS_STEERING, value);
+			}
+			else if (strcmp("smoothed_physics", buffer) == 0)
+			{
+				NativePhysics_SetEnabled(value);
+			}
 			else if (strcmp("max_lod", buffer) == 0)
 			{
 				gNativeMaxLodEnabled = (value != 0);
@@ -352,6 +370,10 @@ void save_config(void)
 		fprintf(config, "%s=%d\n", "borderless", gNativeBorderlessEnabled != 0);
 		fprintf(config, "%s=%d\n", "pgxp", gNativePgxpMode);
 		fprintf(config, "%s=%d\n", "max_lod", gNativeMaxLodEnabled != 0);
+		fprintf(config, "%s=%d\n", "smoothed_physics", gNativeSmoothedPhysicsEnabled != 0);
+		fprintf(config, "%s=%d\n", "smoothed_ai", gNativeSmoothedAIEnabled != 0);
+		fprintf(config, "%s=%d\n", "smoothed_collisions", gNativeSmoothedCollisionEnabled != 0);
+		fprintf(config, "%s=%d\n", "smoothed_steering", gNativeSmoothedSteeringEnabled != 0);
 #endif
 		for (u32 i = 0; i < (u32)(sizeof(s_nativeCheatConfig) / sizeof(s_nativeCheatConfig[0])); i++)
 		{
