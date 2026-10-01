@@ -2827,11 +2827,27 @@ static void DrawLevelOvr1P_PgxpLoadClipSource(int slot, const struct DrawLevelOv
 	if (NATIVE_PGXP_ACTIVE())
 	{
 		const s16 vector[3] = {source->vx, source->vy, source->vz};
-		const void *key = (DrawLevelOvr1P_GetClipRecordSourceDelta(projected) < 0) ? (const void *)&projected->posScreen[0] : (const void *)&projected->pos[0];
+		const b32 fromScreen = DrawLevelOvr1P_GetClipRecordSourceDelta(projected) < 0;
+		const void *key = fromScreen ? (const void *)&projected->posScreen[0] : (const void *)&projected->pos[0];
+		// Retail re-projects vertices nearer than the threshold from doubled
+		// view coordinates (0x800aaad0) so the GTE divide cannot overflow, and
+		// the interpolated near-plane vertices are built in that doubled space.
+		// The identity projection is scale invariant for SX/SY but not for
+		// the depth PGXP uses as W, so one polygon would mix 1x and 2x depths
+		// and warp its perspective mapping. Feed the true view-space position.
+		const uintptr_t clipVertices = (uintptr_t)DrawLevelOvr1P_TerminalClipVertex(0);
+		const b32 interpolated = ((uintptr_t)projected - clipVertices) < 3 * sizeof(struct DrawLevelOvr1PScratchVertex);
+		const b32 doubled = fromScreen || interpolated;
 		float precise[3];
 
-		if (NativePgxp_GetPosition(key, vector, precise))
+		if (NativePgxp_GetPosition(key, vector, precise) || doubled)
 		{
+			if (doubled)
+			{
+				precise[0] *= 0.5f;
+				precise[1] *= 0.5f;
+				precise[2] *= 0.5f;
+			}
 			NativePgxp_GteSetInput(slot, vector, precise);
 		}
 	}

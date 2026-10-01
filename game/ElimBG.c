@@ -46,12 +46,61 @@ enum ElimBGConstants
 	ELIM_BG_TILE_CLUT = 0x3fe0,
 	ELIM_BG_U_LIMIT = 0x100,
 	ELIM_BG_VRAM_U_WRAP = 0x80,
+	ELIM_BG_HD_TEXTURE_W = 0x100,
+	ELIM_BG_HD_PAUSE_MODE_SMOOTH = 2,
 };
 
 CTR_STATIC_ASSERT(ELIM_BG_PRIMMEM_PAUSE_BYTES == 0xc800);
 CTR_STATIC_ASSERT(ELIM_BG_RAW_STRIP_OFFSET == 0x800);
 CTR_STATIC_ASSERT(ELIM_BG_TEXTURE_BACKUP_OFFSET == 0x4800);
 CTR_STATIC_ASSERT(ELIM_BG_CHUNK_SOURCE_PIXELS == 0x1000);
+
+#ifdef CTR_NATIVE
+// The retail VRAM capture always runs; this only selects what is drawn while paused.
+static b32 sElimBG_HdValid;
+
+// Draw the full-resolution greyscale capture as one quad instead of the 4bpp tile grid.
+static b32 ElimBG_DrawHdBackground(struct GameTracker *gGT)
+{
+	u32 texture = NativeGpu_GetPauseBackgroundTexture();
+	DR_PSYX_TEX *setTexture = (DR_PSYX_TEX *)gGT->backBuffer->primMem.cursor;
+	POLY_FT4 *p = (POLY_FT4 *)(setTexture + 1);
+	DR_PSYX_TEX *resetTexture = (DR_PSYX_TEX *)(p + 1);
+	u32 *ot = (u32 *)&gGT->pushBuffer_UI.ptrOT[4];
+	u32 oldTag = *ot;
+
+	if (texture == 0)
+	{
+		return false;
+	}
+
+	SetPsyXTexture(setTexture, texture, ELIM_BG_HD_TEXTURE_W, ELIM_BG_SCREEN_H);
+
+	setPolyFT4(p);
+	setRGB0(p, ELIM_BG_TILE_COLOR, ELIM_BG_TILE_COLOR, ELIM_BG_TILE_COLOR);
+	setXY4(p, 0, 0, ELIM_BG_SCREEN_W, 0, 0, ELIM_BG_SCREEN_H, ELIM_BG_SCREEN_W, ELIM_BG_SCREEN_H);
+	// u8 coordinates cannot reach the screen width, so the texture is declared 256 wide.
+	p->u0 = 0;
+	p->u1 = 0xff;
+	p->u2 = 0;
+	p->u3 = 0xff;
+	p->v0 = 0;
+	p->v1 = 0;
+	p->v2 = ELIM_BG_SCREEN_H;
+	p->v3 = ELIM_BG_SCREEN_H;
+	p->clut = 0;
+	// Keep the draw-mode side effect of the retail tiles.
+	p->tpage = getTPage(TEXPAGE_COLOR_15BIT, TRANS_50, ELIM_BG_TEXTURE_LEFT_X, 0);
+
+	SetPsyXTexture(resetTexture, 0, 0, 0);
+	setTexture->tag = CtrGpu_PackOTTag(CtrGpu_PrimToOTLink24(p), 0x02000000);
+	p->tag = CtrGpu_PackOTTag(CtrGpu_PrimToOTLink24(resetTexture), 0x09000000);
+	resetTexture->tag = CtrGpu_PackOTTag(oldTag, 0x02000000);
+	*ot = (u32)CtrGpu_PrimToOTLink24(setTexture);
+	gGT->backBuffer->primMem.cursor = resetTexture + 1;
+	return true;
+}
+#endif
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80024524-0x8002459c.
 void ElimBG_SaveScreenshot_Chunk(u16 *packedStrip, u16 *rawStrip, int rawPixelCount)
@@ -131,6 +180,10 @@ void ElimBG_SaveScreenshot_Full(struct GameTracker *gGT)
 
 #ifdef CTR_NATIVE
 	NativeGpu_SyncVRAMToCPU(rSrc.x, rSrc.y, ELIM_BG_SCREEN_W, ELIM_BG_SCREEN_H);
+
+	// The render target still holds the frame VRAM was just packed from.
+	sElimBG_HdValid = (CTR_NATIVE_HD_PAUSE_MODE != 0) &&
+	                  NativeGpu_CapturePauseBackground(data.pauseScreenStrip, CTR_NATIVE_HD_PAUSE_MODE == ELIM_BG_HD_PAUSE_MODE_SMOOTH);
 #endif
 
 	rDst.x = ELIM_BG_CAPTURE_VRAM_X;
@@ -281,6 +334,10 @@ void ElimBG_HandleState(struct GameTracker *gGT)
 		// Enable all instances
 		ElimBG_ToggleAllInstances(gGT, 0);
 
+#ifdef CTR_NATIVE
+		sElimBG_HdValid = false;
+#endif
+
 		// game is not paused anymore
 		sdata->pause_state = ELIM_BG_PAUSE_STATE_NONE;
 	}
@@ -304,6 +361,13 @@ void ElimBG_HandleState(struct GameTracker *gGT)
 			// you are now ready to draw the screenshot
 			sdata->pause_state = ELIM_BG_PAUSE_STATE_DRAW;
 		}
+#ifdef CTR_NATIVE
+		if (sElimBG_HdValid && ElimBG_DrawHdBackground(gGT))
+		{
+			return;
+		}
+#endif
+
 		// rest of the function is for drawing screenshot
 		tileX = 0;
 		do

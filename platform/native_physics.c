@@ -5,7 +5,11 @@
 
 int gNativeSmoothedPhysicsEnabled = 0;
 int gNativeSmoothedAIEnabled = 0;
+#if defined(__vita__)
 int gNativeSmoothedCollisionEnabled = 0;
+#else
+int gNativeSmoothedCollisionEnabled = 1;
+#endif
 int gNativeSmoothedSteeringEnabled = 0;
 
 static int NativePhysics_ModeMask(void)

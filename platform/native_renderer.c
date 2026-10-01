@@ -94,6 +94,7 @@ global_variable BlendMode s_previousBlendMode = BM_NONE;
 global_variable int s_previousMixedSTPBlend = 0;
 global_variable int s_previousDepthMode = 0;
 global_variable int s_previousDepthWrite = 1;
+global_variable int s_previousDepthAlwaysPass = 0;
 global_variable int s_previousStencilMode = 0;
 global_variable int s_previousScissorState = 0;
 global_variable int s_previousScissorRectValid = 0;
@@ -283,6 +284,11 @@ struct NativeRenderTarget
 
 global_variable struct NativeRenderTarget s_mainRenderTarget;
 global_variable struct NativeRenderTarget s_offscreenRenderTarget;
+#ifndef __vita__
+// Full-resolution greyscale copy of the main target, used as the pause backdrop.
+global_variable struct NativeRenderTarget s_pauseBackgroundTarget;
+global_variable b32 s_pauseBackgroundTargetReady = false;
+#endif
 
 global_variable TextureID s_whiteTexture = (TextureID)-1;
 global_variable TextureID s_lastBoundTexture = (TextureID)-1;
@@ -374,6 +380,12 @@ int g_cfg_bilinearFiltering = 0;
 // texture on the GPU instead of a GPU-to-CPU-to-GPU round trip.
 global_variable GLuint s_packShader = 0;
 global_variable GLint s_packFlipYLoc = -1;
+#ifndef __vita__
+global_variable GLuint s_pauseBackgroundShader = 0;
+global_variable GLint s_pauseBackgroundFlipYLoc = -1;
+global_variable GLint s_pauseBackgroundPaletteLoc = -1;
+global_variable GLint s_pauseBackgroundSmoothLoc = -1;
+#endif
 global_variable GLuint s_presentVramShader = 0;
 global_variable GLint s_presentVramSourceRectLoc = -1;
 global_variable GLuint s_presentRgbaShader = 0;
@@ -528,6 +540,13 @@ void NativeRenderer_Shutdown(void)
 
 	NativeRenderer_DestroyRenderTarget(&s_mainRenderTarget);
 	NativeRenderer_DestroyRenderTarget(&s_offscreenRenderTarget);
+#ifndef __vita__
+	if (s_pauseBackgroundTargetReady)
+	{
+		NativeRenderer_DestroyRenderTarget(&s_pauseBackgroundTarget);
+		s_pauseBackgroundTargetReady = false;
+	}
+#endif
 	glDeleteFramebuffers(1, &s_glVramFramebuffer);
 
 	NativeRenderer_DestroyTexture(s_vram.texture);
@@ -555,6 +574,9 @@ void NativeRenderer_Shutdown(void)
 #endif
 	NativeRenderer_DestroyPSXShaders();
 	glDeleteProgram(s_packShader);
+#ifndef __vita__
+	glDeleteProgram(s_pauseBackgroundShader);
+#endif
 	glDeleteProgram(s_presentVramShader);
 	glDeleteProgram(s_presentRgbaShader);
 	glDeleteVertexArrays(1, &s_vramQuadVAO);
@@ -1914,6 +1936,40 @@ global_variable const char *ctr_present_vram_shader = "#ifdef VERTEX\n"
                                                       "\tgl_FragColor = vec4(vec3(color8) / 255.0, stp);\n"
                                                       "}\n"
                                                       "#endif\n";
+
+// Pause backdrop. Reduces the presented frame to the retail pause palette: the
+// posterised mode picks the same entry as retail (top 4 bits of the 8-bit
+// green), the smooth mode blends neighbouring entries. Alpha stays opaque.
+global_variable const char *ctr_pause_bg_shader = "#ifdef VERTEX\n"
+                                                  "attribute vec2 a_position;\n"
+                                                  "varying vec2 v_uv;\n"
+                                                  "uniform int flipY;\n"
+                                                  "void main() {\n"
+                                                  "\tv_uv = a_position * 0.5 + 0.5;\n"
+                                                  "\tif (flipY != 0) { v_uv.y = 1.0 - v_uv.y; }\n"
+                                                  "\tgl_Position = vec4(a_position, 0.0, 1.0);\n"
+                                                  "}\n"
+                                                  "#endif\n"
+                                                  "#ifdef FRAGMENT\n"
+                                                  "varying vec2 v_uv;\n"
+                                                  "uniform sampler2D s_src;\n"
+                                                  "uniform vec3 palette[16];\n"
+                                                  "uniform int smoothMode;\n"
+                                                  "void main() {\n"
+                                                  "\tfloat g = clamp(texture2D(s_src, v_uv).g, 0.0, 1.0);\n"
+                                                  "\tvec3 rgb;\n"
+                                                  "\tif (smoothMode != 0) {\n"
+                                                  "\t\tfloat f = g * 15.0;\n"
+                                                  "\t\tfloat base = floor(f);\n"
+                                                  "\t\tint lo = int(base);\n"
+                                                  "\t\tint hi = min(lo + 1, 15);\n"
+                                                  "\t\trgb = mix(palette[lo], palette[hi], f - base);\n"
+                                                  "\t} else {\n"
+                                                  "\t\trgb = palette[int(floor(floor(g * 255.0 + 0.5) / 16.0))];\n"
+                                                  "\t}\n"
+                                                  "\tgl_FragColor = vec4(rgb, 1.0);\n"
+                                                  "}\n"
+                                                  "#endif\n";
 #endif
 
 #ifdef __vita__
@@ -1984,6 +2040,16 @@ internal void NativeRenderer_InitVRAMPipelines(void)
 	s_packFlipYLoc = glGetUniformLocation(s_packShader, "flipY");
 	glUniform1i(packSrcLoc, 0);
 	glUseProgram(0);
+
+#ifndef __vita__
+	s_pauseBackgroundShader = NativeRenderer_Shader_Compile(ctr_pause_bg_shader, false, NULL);
+	glUseProgram(s_pauseBackgroundShader);
+	glUniform1i(glGetUniformLocation(s_pauseBackgroundShader, "s_src"), 0);
+	s_pauseBackgroundFlipYLoc = glGetUniformLocation(s_pauseBackgroundShader, "flipY");
+	s_pauseBackgroundPaletteLoc = glGetUniformLocation(s_pauseBackgroundShader, "palette");
+	s_pauseBackgroundSmoothLoc = glGetUniformLocation(s_pauseBackgroundShader, "smoothMode");
+	glUseProgram(0);
+#endif
 
 	s_presentVramShader = NativeRenderer_Shader_Compile(ctr_present_vram_shader, false, NULL);
 	s_presentVramSourceRectLoc = glGetUniformLocation(s_presentVramShader, "sourceRect");
@@ -2073,6 +2139,7 @@ int NativeRenderer_InitialisePSX(void)
 #endif
 
 	glDepthFunc(GL_LEQUAL);
+	s_previousDepthAlwaysPass = 0;
 	glEnable(GL_STENCIL_TEST);
 #ifndef __vita__
 	glBlendColor(0.5f, 0.5f, 0.5f, 0.25f);
@@ -3349,6 +3416,122 @@ void NativeRenderer_StoreFrameBuffer(int x, int y, int w, int h)
 	NativePerf_EndScope(NATIVE_PERF_BUCKET_FRAMEBUFFER_STORE);
 }
 
+#ifndef __vita__
+// Convert the full-resolution main render target into the greyscale pause
+// backdrop. Saves and restores the render state like the VRAM pack pass.
+int NativeRenderer_CapturePauseBackground(const u16 *bgr555Palette16, int smooth)
+{
+	if ((bgr555Palette16 == NULL) || (s_mainRenderTarget.texture == (TextureID)-1) || (s_mainRenderTarget.width < 2) ||
+	    (s_mainRenderTarget.height < 2))
+	{
+		return 0;
+	}
+
+	const ShaderID previousShader = s_previousShader;
+	const TextureID previousTexture = s_lastBoundTexture;
+	const BlendMode previousBlendMode = s_previousBlendMode;
+	const int previousMixedSTPBlend = s_previousMixedSTPBlend;
+	const int previousDepthMode = s_previousDepthMode;
+	const int previousDepthWrite = s_previousDepthWrite;
+	const int previousScissorState = s_previousScissorState;
+	const GLboolean previousStencilEnabled = glIsEnabled(GL_STENCIL_TEST);
+
+	if (!s_pauseBackgroundTargetReady)
+	{
+		NativeRenderer_InitRenderTarget(&s_pauseBackgroundTarget);
+		s_pauseBackgroundTargetReady = true;
+	}
+	NativeRenderer_EnsureRenderTarget(&s_pauseBackgroundTarget, s_mainRenderTarget.width, s_mainRenderTarget.height);
+
+	// The backdrop is sampled as a streaming texture, so keep it smooth if the window is resized while paused.
+	glBindTexture(GL_TEXTURE_2D, s_pauseBackgroundTarget.texture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	float palette[16 * 3];
+	for (int i = 0; i < 16; i++)
+	{
+		const int r5 = bgr555Palette16[i] & 31;
+		const int g5 = (bgr555Palette16[i] >> 5) & 31;
+		const int b5 = (bgr555Palette16[i] >> 10) & 31;
+		// Same 5-to-8 bit expansion as the VRAM present path.
+		palette[i * 3 + 0] = (float)((r5 << 3) | (r5 >> 2)) / 255.0f;
+		palette[i * 3 + 1] = (float)((g5 << 3) | (g5 >> 2)) / 255.0f;
+		palette[i * 3 + 2] = (float)((b5 << 3) | (b5 >> 2)) / 255.0f;
+	}
+
+	glBindFramebuffer(GL_FRAMEBUFFER, s_pauseBackgroundTarget.framebuffer);
+	NativeRenderer_SetDepthState(0, 0);
+	glDisable(GL_BLEND);
+	glDisable(GL_SCISSOR_TEST);
+	glDisable(GL_STENCIL_TEST);
+	glViewport(0, 0, s_pauseBackgroundTarget.width, s_pauseBackgroundTarget.height);
+
+	glUseProgram(s_pauseBackgroundShader);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, s_mainRenderTarget.texture);
+	// Row 0 of the backdrop is the top of the screen, like a streaming texture.
+	// The main target stores the top of the screen at its last row, so flip,
+	// as StoreFrameBuffer does when packing it into VRAM.
+	glUniform1i(s_pauseBackgroundFlipYLoc, 1);
+	glUniform1i(s_pauseBackgroundSmoothLoc, smooth != 0);
+	glUniform3fv(s_pauseBackgroundPaletteLoc, 16, palette);
+
+	glBindVertexArray(s_vramQuadVAO);
+	NativeRenderer_DrawTriangles(0, 2);
+	if (s_boundVertexBuffer >= 0)
+	{
+		glBindVertexArray(s_glVertexArray[s_boundVertexBuffer]);
+	}
+	else
+	{
+		glBindVertexArray(0);
+	}
+
+	if (s_previousOffscreenState)
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, s_offscreenRenderTarget.framebuffer);
+		glViewport(0, 0, s_offscreenRenderTarget.width, s_offscreenRenderTarget.height);
+	}
+	else
+	{
+		NativeRenderer_BindMainRenderTarget();
+		glViewport(0, 0, s_mainRenderTarget.width, s_mainRenderTarget.height);
+	}
+	if (previousStencilEnabled)
+	{
+		glEnable(GL_STENCIL_TEST);
+	}
+
+	glUseProgram(previousShader == (ShaderID)-1 ? 0 : previousShader);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, previousTexture == (TextureID)-1 ? 0 : previousTexture);
+	s_previousShader = previousShader;
+	s_lastBoundTexture = previousTexture;
+	s_previousBlendMode = BM_NONE;
+	s_previousMixedSTPBlend = 0;
+	s_previousScissorState = 0;
+	if (previousMixedSTPBlend)
+	{
+		NativeRenderer_SetMixedSTPBlendMode(previousBlendMode);
+	}
+	else
+	{
+		NativeRenderer_SetBlendMode(previousBlendMode);
+	}
+	NativeRenderer_SetDepthState(previousDepthMode, previousDepthWrite);
+	NativeRenderer_SetScissorState(previousScissorState);
+	return 1;
+}
+
+TextureID NativeRenderer_GetPauseBackgroundTexture(void)
+{
+	return s_pauseBackgroundTargetReady ? s_pauseBackgroundTarget.texture : (TextureID)-1;
+}
+#endif
+
 void NativeRenderer_CopyVRAM(u16 *src, int x, int y, int w, int h, int dst_x, int dst_y)
 {
 	int stride = w;
@@ -3948,6 +4131,17 @@ void NativeRenderer_SetDepthState(int enable, int write)
 	{
 		s_previousDepthWrite = write;
 		glDepthMask(write ? GL_TRUE : GL_FALSE);
+	}
+}
+
+// Always passing still writes depth, unlike disabling the test, so geometry
+// drawn later is occluded by what was drawn in retail order.
+void NativeRenderer_SetDepthAlwaysPass(int alwaysPass)
+{
+	if (s_previousDepthAlwaysPass != alwaysPass)
+	{
+		s_previousDepthAlwaysPass = alwaysPass;
+		glDepthFunc(alwaysPass ? GL_ALWAYS : GL_LEQUAL);
 	}
 }
 

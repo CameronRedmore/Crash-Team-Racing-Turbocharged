@@ -10,6 +10,12 @@ static const u32 s_nativeCheatMenuBits[] =
 	CHEAT_WUMPA, CHEAT_MASK, CHEAT_TURBO, CHEAT_BOMBS, CHEAT_INVISIBLE, CHEAT_ENGINE,
 	CHEAT_ICY, CHEAT_TURBOPAD, CHEAT_ADV, CHEAT_TURBOCOUNT,
 };
+
+static const u32 s_nativeCharacterUnlockMask[GAME_PROGRESS_UNLOCK_WORD_COUNT] =
+{
+	UNLOCK_CHARACTERS,
+	MEMCARD_BIT_MASK(GAME_UNLOCK_BIT_OXIDE - 32),
+};
 #endif
 
 u32 NativeCheat_GetMenuBit(int index)
@@ -23,6 +29,50 @@ u32 NativeCheat_GetMenuBit(int index)
 #else
 	(void)index;
 	return 0;
+#endif
+}
+
+void NativeCheat_ToggleAllCharacters(void)
+{
+#if defined(CTR_NATIVE)
+	if (sdata == NULL)
+	{
+		return;
+	}
+
+	b32 allUnlocked = NativeCheat_AreAllCharactersUnlocked();
+	for (u32 word = 0; word < GAME_PROGRESS_UNLOCK_WORD_COUNT; word++)
+	{
+		if (allUnlocked)
+		{
+			sdata->gameProgress.unlocks[word] &= ~s_nativeCharacterUnlockMask[word];
+		}
+		else
+		{
+			sdata->gameProgress.unlocks[word] |= s_nativeCharacterUnlockMask[word];
+		}
+	}
+#endif
+}
+
+b32 NativeCheat_AreAllCharactersUnlocked(void)
+{
+#if defined(CTR_NATIVE)
+	if (sdata == NULL)
+	{
+		return false;
+	}
+
+	for (u32 word = 0; word < GAME_PROGRESS_UNLOCK_WORD_COUNT; word++)
+	{
+		if ((sdata->gameProgress.unlocks[word] & s_nativeCharacterUnlockMask[word]) != s_nativeCharacterUnlockMask[word])
+		{
+			return false;
+		}
+	}
+	return true;
+#else
+	return false;
 #endif
 }
 

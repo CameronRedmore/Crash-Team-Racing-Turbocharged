@@ -45,10 +45,10 @@ You can play it from Web Browser as well from this link: [Web Browser Build](htt
 - High precision physics and collision options, level-of-detail overrides, and optional depth buffering.
 - Adventure Mode character switching and automatic progress saving.
 - [PC Only] PGXP option (Options > Enhancements): sub-pixel vertex precision removes polygon wobble, and the Perspective setting also removes affine texture warping.
-- [PC/Web] Options > Enhancements groups PGXP, detail level, and independent Original/Smoothed settings for player physics, AI, collisions, and steering. Smoothed uses floating-point calculations; Original remains the default. Delete toggles player physics in development builds.
+- [PC/Web] Options > Enhancements groups PGXP, detail level, and independent Original/Smoothed settings for player physics, AI, collisions, and steering. Smoothed uses floating-point calculations; Original remains the default for player physics, AI and steering, while collisions default to Smoothed. Delete toggles player physics in development builds.
 - [PC Only] Detail option (Options > Enhancements): Maximum keeps tracks and models at their highest level of detail at every distance (sharpest textures, no low-poly models).
-- [PC/Web] Backface Culling (Options > Enhancements): Off draws both sides of track and model polygons. Page Up toggles it during play; the setting is saved, and culling stays on by default.
-- [PC/Web] Depth Buffer (Options > Enhancements): optional per-pixel depth testing corrects overlapping world polygons. Works with every PGXP setting; Off retains original polygon ordering and remains the default.
+- [PC/Web] Backface Culling (Options > Enhancements): Off draws both sides of track and model polygons. Page Up toggles it during play; the setting is saved, and culling is off by default.
+- [PC/Web] Depth Buffer (Options > Enhancements): optional per-pixel depth testing corrects overlapping world polygons. Works with every PGXP setting; Off retains original polygon ordering; the default is On.
 
 ## Online leaderboard
 

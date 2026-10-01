@@ -125,7 +125,7 @@ void AA_EndEvent_DrawMenu(void)
 			lerpStartY = hudCTR->y;
 			lerpEndX = lerpStartX + 0x10;
 			lerpEndY = lerpStartY + 0x10;
-			lerpFrames = AA_CTR_LETTER_FLYIN_FRAMES;
+			lerpFrames = FPS_DOUBLE(AA_CTR_LETTER_FLYIN_FRAMES);
 
 			// If you have not unlocked this CTR Token
 			rewardBit = gGT->levelID + ADV_REWARD_FIRST_CTR_TOKEN;
@@ -212,7 +212,7 @@ void AA_EndEvent_DrawMenu(void)
 					lerpStartY = hudCTR->y + 0x10;
 					lerpEndX = -400;
 					lerpEndY = lerpStartY;
-					lerpFrames = AA_CTR_LETTER_FLYOUT_FRAMES;
+					lerpFrames = FPS_DOUBLE(AA_CTR_LETTER_FLYOUT_FRAMES);
 				}
 
 				UI_Lerp2D_Linear(letterPos.v, lerpStartX, lerpStartY, lerpEndX, lerpEndY, elapsedFrames, lerpFrames);
@@ -378,7 +378,7 @@ void AA_EndEvent_DrawMenu(void)
 	}
 
 	// 0x78 + 0x6e = 0xe6 (230) frames waited for Token Race
-	if ((elapsedFrames - lerpStartY) < AA_CONTINUE_DELAY_FRAMES)
+	if ((elapsedFrames - FPS_DOUBLE(lerpStartY)) < FPS_DOUBLE(AA_CONTINUE_DELAY_FRAMES))
 	{
 		return;
 	}
@@ -664,7 +664,7 @@ void AA_EndEvent_DisplayTime(s16 driverId, s16 timeOffsetFrames)
 	if (isLateDisplay)
 	{
 		currFrame = framesElapsed + timeOffsetFrames - FPS_DOUBLE(AA_TIME_DISPLAY_LATE_FRAME);
-		endFrame = AA_TIME_DISPLAY_FLYOUT_FRAMES;
+		endFrame = FPS_DOUBLE(AA_TIME_DISPLAY_FLYOUT_FRAMES);
 
 		lerpStartX = -0xae;
 		lerpEndX = UI_ConvertX_2(-100, hud[AA_TIME_DISPLAY_BIG_NUM_SLOT].z);

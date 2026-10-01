@@ -100,7 +100,8 @@ typedef struct
 	bool psxDrawMaskSet;
 	bool superTurboTint;
 #if NATIVE_PGXP_SUPPORTED
-	bool worldDepth;
+	// NativeGpuWorldDepth; zero when the split has no world depth.
+	u8 worldDepth;
 #endif
 #ifdef __vita__
 	bool psxTextureFullyOpaque;
@@ -197,10 +198,19 @@ global_variable NativeGpuState s_gpu;
 internal void NativeGpu_DrawPreparedFrame(GrVertex *vertices, GPUDrawSplit *splits, int vertexCount, int splitCount);
 
 #if NATIVE_PGXP_SUPPORTED
-internal void NativeGpu_SetWorldDepthSplit(bool enabled)
+typedef enum
+{
+	NATIVE_GPU_WORLD_DEPTH_NONE,
+	// Depth tested, opaque and translucent passes reordered around it.
+	NATIVE_GPU_WORLD_DEPTH_TESTED,
+	// Drawn in retail OT order and always passing, but still writing depth.
+	NATIVE_GPU_WORLD_DEPTH_RETAIL_ORDER,
+} NativeGpuWorldDepth;
+
+internal void NativeGpu_SetWorldDepthSplit(NativeGpuWorldDepth mode)
 {
 	GPUDrawSplit *current = &s_gpu.splits[s_gpu.splitIndex];
-	if (current->worldDepth == enabled) return;
+	if (current->worldDepth == mode) return;
 	if (s_gpu.vertexIndex != (int)current->startVertex)
 	{
 		if (s_gpu.splitIndex + 1 >= MAX_DRAW_SPLITS) return;
@@ -211,7 +221,7 @@ internal void NativeGpu_SetWorldDepthSplit(bool enabled)
 		next->numVerts = 0;
 		current = next;
 	}
-	current->worldDepth = enabled;
+	current->worldDepth = mode;
 }
 #endif
 
@@ -494,6 +504,29 @@ void NativeGpu_SyncVRAMToCPU(int x, int y, int w, int h)
 #endif
 }
 
+int NativeGpu_CapturePauseBackground(const u16 *bgr555Palette16, int smooth)
+{
+#ifdef __vita__
+	(void)bgr555Palette16;
+	(void)smooth;
+	return 0;
+#else
+	return NativeRenderer_CapturePauseBackground(bgr555Palette16, smooth);
+#endif
+}
+
+u32 NativeGpu_GetPauseBackgroundTexture(void)
+{
+#ifdef __vita__
+	return 0;
+#else
+	{
+		TextureID texture = NativeRenderer_GetPauseBackgroundTexture();
+		return (texture == (TextureID)-1) ? 0 : (u32)texture;
+	}
+#endif
+}
+
 void NativeGpu_ShutdownBackend(void)
 {
 #ifdef __vita__
@@ -755,7 +788,7 @@ void ClearSplits(void)
 	s_gpu.splits[0].psxDrawMaskSet = false;
 	s_gpu.splits[0].superTurboTint = false;
 #if NATIVE_PGXP_SUPPORTED
-	s_gpu.splits[0].worldDepth = false;
+	s_gpu.splits[0].worldDepth = NATIVE_GPU_WORLD_DEPTH_NONE;
 #endif
 #ifdef __vita__
 	s_gpu.splits[0].psxTextureFullyOpaque = false;
@@ -902,7 +935,7 @@ void LineSwapSourceVerts(VERTTYPE **p0, VERTTYPE **p1, u8 **c0, u8 **c1)
 void MakeLineArray(GrVertex *vertex, VERTTYPE *p0, VERTTYPE *p1)
 {
 #if NATIVE_PGXP_SUPPORTED
-	NativeGpu_SetWorldDepthSplit(false);
+	NativeGpu_SetWorldDepthSplit(NATIVE_GPU_WORLD_DEPTH_NONE);
 #endif
 	const VERTTYPE dx = p1[0] - p0[0];
 	const VERTTYPE dy = p1[1] - p0[1];
@@ -948,13 +981,15 @@ void MakeLineArray(GrVertex *vertex, VERTTYPE *p0, VERTTYPE *p1)
 // words were built from (see native_pgxp.h). Lookups are keyed by the packet
 // address of each x field and checked against the integer stored there.
 // Depth is only applied when every corner has one, so a partially recovered
-// polygon keeps retail affine mapping instead of guessing.
+// polygon keeps retail affine mapping instead of guessing. Negative depth
+// marks geometry that keeps its retail draw order (see native_pgxp.h).
 internal void NativeGpu_ApplyPgxp(GrVertex *vertex, VERTTYPE *const *points, int count, float ofsX, float ofsY)
 {
 	float w[4];
 	float depth[4];
 	b32 perspective = gNativePgxpMode == NATIVE_PGXP_MODE_PERSPECTIVE;
 	b32 worldDepth = gNativeDepthBufferEnabled;
+	b32 retailOrder = 0;
 	int recovered = 0;
 
 	for (int i = 0; i < count; i++)
@@ -970,9 +1005,10 @@ internal void NativeGpu_ApplyPgxp(GrVertex *vertex, VERTTYPE *const *points, int
 				vertex[i].y = precise.y + ofsY;
 			}
 			w[i] = precise.w;
-			depth[i] = precise.depth;
+			depth[i] = fabsf(precise.depth);
 			perspective &= precise.w > 0.0f;
-			worldDepth &= isfinite(precise.depth) && precise.depth > 0.0f;
+			worldDepth &= isfinite(depth[i]) && depth[i] > 0.0f;
+			retailOrder |= precise.depth < 0.0f;
 			recovered++;
 		}
 		else
@@ -985,7 +1021,9 @@ internal void NativeGpu_ApplyPgxp(GrVertex *vertex, VERTTYPE *const *points, int
 	{
 		for (int i = 0; i < count; i++) vertex[i].depth = depth[i];
 	}
-	NativeGpu_SetWorldDepthSplit(worldDepth != 0);
+	NativeGpu_SetWorldDepthSplit(!worldDepth ? NATIVE_GPU_WORLD_DEPTH_NONE
+	                             : retailOrder ? NATIVE_GPU_WORLD_DEPTH_RETAIL_ORDER
+	                                           : NATIVE_GPU_WORLD_DEPTH_TESTED);
 
 	if (perspective)
 	{
@@ -1066,7 +1104,7 @@ void MakeVertexQuad(GrVertex *vertex, VERTTYPE *p0, VERTTYPE *p1, VERTTYPE *p2, 
 void MakeVertexRect(GrVertex *vertex, VERTTYPE *p0, s16 w, s16 h)
 {
 #if NATIVE_PGXP_SUPPORTED
-	NativeGpu_SetWorldDepthSplit(false);
+	NativeGpu_SetWorldDepthSplit(NATIVE_GPU_WORLD_DEPTH_NONE);
 #endif
 	assert(p0);
 
@@ -1677,7 +1715,7 @@ internal void AddSplit(bool semiTrans, bool textured, bool framebufferFeedback, 
 	split->psxDrawMaskSet = s_gpu.psxDrawMaskSet;
 	split->superTurboTint = superTurboTint;
 #if NATIVE_PGXP_SUPPORTED
-	split->worldDepth = false;
+	split->worldDepth = NATIVE_GPU_WORLD_DEPTH_NONE;
 #endif
 #ifdef __vita__
 	split->psxTextureFullyOpaque = false;
@@ -1924,6 +1962,7 @@ internal void NativeGpu_DrawSplitRangePass(const GPUDrawSplit *split, int semiTr
 	NativeRenderer_SetDepthState(1, depthWrite);
 #else
 	NativeRenderer_SetDepthState(gNativeDepthBufferEnabled && split->worldDepth && drawOnScreen, depthWrite);
+	NativeRenderer_SetDepthAlwaysPass(split->worldDepth == NATIVE_GPU_WORLD_DEPTH_RETAIL_ORDER);
 #endif
 	NativeRenderer_DrawTriangles(startVertex, numVerts / 3);
 
@@ -2697,10 +2736,11 @@ internal void NativeGpu_DrawWorldDepthSplits(void)
 		{
 			if (s_gpuDrawSplits[i].worldDepth) last = i;
 		}
+		// Retail-order splits draw every pass here, at their OT position.
 		for (int i = first; i <= last; i++)
 		{
 			const GPUDrawSplit *split = &s_gpuDrawSplits[i];
-			if (!split->worldDepth) DrawSplit(split);
+			if (split->worldDepth != NATIVE_GPU_WORLD_DEPTH_TESTED) DrawSplit(split);
 			else if (split->psxTexturedSemiTrans)
 			{
 				if (split->psxSemiTransPassMask & 1) NativeGpu_DrawSplitPass(split, 1, BM_NONE, true);
@@ -2715,7 +2755,7 @@ internal void NativeGpu_DrawWorldDepthSplits(void)
 		for (int i = first; i <= last; i++)
 		{
 			const GPUDrawSplit *split = &s_gpuDrawSplits[i];
-			if (!split->worldDepth) continue;
+			if (split->worldDepth != NATIVE_GPU_WORLD_DEPTH_TESTED) continue;
 			if (split->psxTexturedSemiTrans)
 			{
 				if (split->psxSemiTransPassMask & 2) NativeGpu_DrawSplitPass(split, 2, split->blendMode, false);

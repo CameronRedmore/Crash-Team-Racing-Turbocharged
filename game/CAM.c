@@ -1530,13 +1530,13 @@ void CAM_FollowDriver_Normal(struct CameraDC *cDC, struct Driver *d, SVec3 *push
 		// if frame countdown is not finished
 		if (cDC->BlastedLerp.framesRemaining != 0)
 		{
-			cam->pos.x += FPS_HALF(cDC->BlastedLerp.desiredPos.x * cDC->BlastedLerp.framesRemaining) >> 3;
-			cam->pos.y += FPS_HALF(cDC->BlastedLerp.desiredPos.y * cDC->BlastedLerp.framesRemaining) >> 3;
-			cam->pos.z += FPS_HALF(cDC->BlastedLerp.desiredPos.z * cDC->BlastedLerp.framesRemaining) >> 3;
+			cam->pos.x += CTR_FRAME_STEP((cDC->BlastedLerp.desiredPos.x * cDC->BlastedLerp.framesRemaining) >> 3, sdata->gGT->timer);
+			cam->pos.y += CTR_FRAME_STEP((cDC->BlastedLerp.desiredPos.y * cDC->BlastedLerp.framesRemaining) >> 3, sdata->gGT->timer);
+			cam->pos.z += CTR_FRAME_STEP((cDC->BlastedLerp.desiredPos.z * cDC->BlastedLerp.framesRemaining) >> 3, sdata->gGT->timer);
 
-			cam->delta.x += FPS_HALF(cDC->BlastedLerp.desiredRot.x * cDC->BlastedLerp.framesRemaining) >> 3;
-			cam->delta.y += FPS_HALF(cDC->BlastedLerp.desiredRot.y * cDC->BlastedLerp.framesRemaining) >> 3;
-			cam->delta.z += FPS_HALF(cDC->BlastedLerp.desiredRot.z * cDC->BlastedLerp.framesRemaining) >> 3;
+			cam->delta.x += CTR_FRAME_STEP((cDC->BlastedLerp.desiredRot.x * cDC->BlastedLerp.framesRemaining) >> 3, sdata->gGT->timer);
+			cam->delta.y += CTR_FRAME_STEP((cDC->BlastedLerp.desiredRot.y * cDC->BlastedLerp.framesRemaining) >> 3, sdata->gGT->timer);
+			cam->delta.z += CTR_FRAME_STEP((cDC->BlastedLerp.desiredRot.z * cDC->BlastedLerp.framesRemaining) >> 3, sdata->gGT->timer);
 
 			// decrease frame countdown
 			cDC->BlastedLerp.framesRemaining--;
@@ -1616,7 +1616,7 @@ LAB_8001ab04:
 
 		if (pb->rot.x < 0x800)
 		{
-			pb->rot.x += FPS_HALF(0x10);
+			pb->rot.x += CTR_FRAME_STEP(0x10, sdata->gGT->timer);
 			if (pb->rot.x > 0x800)
 			{
 				pb->rot.x = 0x800;

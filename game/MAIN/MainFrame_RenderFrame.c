@@ -872,10 +872,18 @@ void RenderAllNormalParticles(struct GameTracker *gGT)
 		return;
 	}
 
+#if defined(CTR_NATIVE)
+	// NOTE: Particle_RenderList projects positions relative to the camera
+	// shifted left by 2, so view Z is 4x too far.
+	float nativeDepthContext = NativePgxp_SetDepthContext(0.25f);
+#endif
 #if defined(__vita__)
 	if (NativeAdhoc_IsSingleViewRenderActive())
 	{
 		Particle_RenderList(NativeAdhoc_GetRenderPushBuffer(), gGT->particleList_ordinary);
+#if defined(CTR_NATIVE)
+		NativePgxp_SetDepthContext(nativeDepthContext);
+#endif
 		return;
 	}
 #endif
@@ -884,6 +892,9 @@ void RenderAllNormalParticles(struct GameTracker *gGT)
 	{
 		Particle_RenderList(&gGT->pushBuffer[i], gGT->particleList_ordinary);
 	}
+#if defined(CTR_NATIVE)
+	NativePgxp_SetDepthContext(nativeDepthContext);
+#endif
 }
 
 void RenderDispEnv_World(struct GameTracker *gGT)

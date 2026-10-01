@@ -400,6 +400,13 @@ void VehGroundShadow_Main(void)
 	}
 	scratch->sentinelDriver = NULL;
 
+#if defined(CTR_NATIVE)
+	// NOTE: The camera delta is always scaled by four, whatever the screen
+	// size, so view Z is 4x too far. Shadows are decals a few units above the
+	// floor: keep their retail OT order (negative scale) instead of depth
+	// testing them against the surface they sit on.
+	float nativeDepthContext = NativePgxp_SetDepthContext(-0.25f);
+#endif
 	int playerFirst = numPlayers - 1;
 	int playerLast = 0;
 #if defined(__vita__)
@@ -430,9 +437,6 @@ void VehGroundShadow_Main(void)
 		CTC2((u32)pb->distanceToScreen_PREV, 26);
 		VehGroundShadow_LoadGteRotMatrix(&pb->matrix_ViewProj);
 		isLargeGeomScreen = pb->distanceToScreen_PREV > VEH_GROUND_SHADOW_LARGE_GEOM_SCREEN_THRESHOLD;
-#if defined(CTR_NATIVE)
-		NativePgxp_SetDepthContext(isLargeGeomScreen ? 0.25f : 1.0f);
-#endif
 
 		for (int driverIndex = 0; driverIndex < VEH_GROUND_SHADOW_MAX_DRIVERS; driverIndex++)
 		{
@@ -555,5 +559,8 @@ void VehGroundShadow_Main(void)
 		}
 	}
 
+#if defined(CTR_NATIVE)
+	NativePgxp_SetDepthContext(nativeDepthContext);
+#endif
 	primMem->cursor = prim;
 }

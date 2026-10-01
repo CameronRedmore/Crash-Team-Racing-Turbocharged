@@ -1250,6 +1250,8 @@ void MM_Cheat_TurboCounter(void);
 b32 NativeCheat_DisablesRecords(void);
 void NativeCheat_ApplyConfigured(void);
 u32 NativeCheat_GetMenuBit(int index);
+void NativeCheat_ToggleAllCharacters(void);
+b32 NativeCheat_AreAllCharactersUnlocked(void);
 
 void UI_Map_DrawMap_ExtraFunc(struct Icon *icon, POLY_FT4 *p, s16 posX, s16 empty, struct PrimMem *primMem, uint32_t *otMem, u32 transparency);
 

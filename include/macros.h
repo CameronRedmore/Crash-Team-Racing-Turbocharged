@@ -114,6 +114,14 @@ extern int gNativeBackfaceCullingDisabled;
 #else
 #define CTR_NATIVE_NO_BACKFACE_CULLING_ACTIVE 0
 #endif
+
+// Pause screen backdrop: 0 = retail VRAM copy, 1 = full resolution (posterised), 2 = full resolution (smooth).
+#if defined(CTR_NATIVE) && !defined(__vita__)
+extern int gNativeHdPauseMode;
+#define CTR_NATIVE_HD_PAUSE_MODE (gNativeHdPauseMode)
+#else
+#define CTR_NATIVE_HD_PAUSE_MODE 0
+#endif
 #define CTR_SECONDS_TO_FRAMES(sec) ((s32)((sec) * FPS))
 
 #define SECONDS(x)                 ((s32)(((f32)(x)) * SECOND))

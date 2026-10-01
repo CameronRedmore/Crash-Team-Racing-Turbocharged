@@ -2334,7 +2334,7 @@ dontDrawSelectCharacter:
 		}
 
 		// spin the character
-		D230.characterSelectPlayerState.angle[playerIndex] += FPS_HALF(MM_CHARACTER_SELECT_SPIN_STEP);
+		D230.characterSelectPlayerState.angle[playerIndex] += CTR_FRAME_STEP(MM_CHARACTER_SELECT_SPIN_STEP, sdata->gGT->timer);
 	}
 
 	// reset

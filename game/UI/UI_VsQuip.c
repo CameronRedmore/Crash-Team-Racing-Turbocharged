@@ -94,7 +94,7 @@ void UI_VsQuipAssign(struct Driver *driver, struct QuipMeta *meta, struct Driver
 	driver->EndOfRaceComment_ptrQuip = (s16 *)selected;
 	driver->EndOfRaceComment_characterID = characterID;
 
-	sdata->gGT->timerEndOfRaceVS = ((sdata->gGT->gameMode1 & BATTLE_MODE) != 0) ? 150 : 300;
+	sdata->gGT->timerEndOfRaceVS = FPS_DOUBLE(((sdata->gGT->gameMode1 & BATTLE_MODE) != 0) ? 150 : 300);
 }
 
 #define UI_QUIP_DATA_BASE_PSX 0x800864dcu
@@ -620,7 +620,7 @@ void UI_VsWaitForPressX(void)
 
 			if (
 			    // ready to continue, after cooldown
-			    (gGT->timerEndOfRaceVS < UI_VS_WAIT_READY_COOLDOWN_FRAMES) && ((buttonsTapped & (BTN_CROSS_one | BTN_START)) != 0))
+			    (gGT->timerEndOfRaceVS < FPS_DOUBLE(UI_VS_WAIT_READY_COOLDOWN_FRAMES)) && ((buttonsTapped & (BTN_CROSS_one | BTN_START)) != 0))
 			{
 				// invert &2 bit
 				*pressState = *pressState ^ UI_VS_WAIT_PLAYER_READY;

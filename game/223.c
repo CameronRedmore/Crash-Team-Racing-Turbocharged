@@ -274,9 +274,9 @@ void RR_EndEvent_DrawMenu(void)
 
 			if (relic->scale.x < RR_RELIC_FULL_SCALE)
 			{
-				relic->scale.x += FPS_HALF(RR_RELIC_GROW_STEP);
-				relic->scale.y += FPS_HALF(RR_RELIC_GROW_STEP);
-				relic->scale.z += FPS_HALF(RR_RELIC_GROW_STEP);
+				relic->scale.x += CTR_FRAME_STEP(RR_RELIC_GROW_STEP, sdata->gGT->timer);
+				relic->scale.y += CTR_FRAME_STEP(RR_RELIC_GROW_STEP, sdata->gGT->timer);
+				relic->scale.z += CTR_FRAME_STEP(RR_RELIC_GROW_STEP, sdata->gGT->timer);
 			}
 
 			UI_Lerp2D_Linear(pos.v, UI_ConvertX_2(0x100, RR_SCREEN_DEPTH), UI_ConvertY_2(0xa2, RR_SCREEN_DEPTH), UI_ConvertX_2(0x100, RR_SCREEN_DEPTH),

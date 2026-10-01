@@ -807,8 +807,11 @@ void UI_RenderFrame_Racing()
 				}
 			}
 
-			// Set display position value
-			sdata->TurboDisplayPos_Only1P = sVar1;
+			// Set display position value (the slide is authored as one step per 30 FPS frame)
+			if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+			{
+				sdata->TurboDisplayPos_Only1P = sVar1;
+			}
 
 			// If display counter is on screen (fully or not fully)
 			if (sdata->TurboDisplayPos_Only1P != 0)

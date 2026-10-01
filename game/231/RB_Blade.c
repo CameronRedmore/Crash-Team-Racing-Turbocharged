@@ -14,7 +14,7 @@ void RB_Blade_ThTick(struct Thread *t)
 	rot.y = bladeInst->instDef->rot.y + 0x400;
 	rot.z = bladeObj->angle;
 
-	bladeObj->angle += FPS_HALF(0x100);
+	bladeObj->angle += CTR_FRAME_STEP(0x100, sdata->gGT->timer);
 
 	// converted to TEST in rebuildPS1
 	ConvertRotToMatrix(&bladeInst->matrix, &rot);

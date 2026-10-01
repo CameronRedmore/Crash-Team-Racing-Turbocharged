@@ -1142,7 +1142,7 @@ SkipSetSteer:
 
 	// Change wheel rotation based on StickLX
 	scratchValue = VehPhysJoystick_GetStrengthAbsolute(scratchValue, VEH_PHYS_PROC_WHEEL_ROTATION_STRENGTH, ptrgamepad->rwd);
-	driverBaseSpeedUshort = VehCalc_InterpBySpeed((int)driver->wheelRotation, FPS_HALF(VEH_PHYS_PROC_WHEEL_ROTATION_INTERP_STEP), CTR_MipsNegLo(scratchValue));
+	driverBaseSpeedUshort = VehCalc_InterpBySpeed((int)driver->wheelRotation, CTR_FRAME_STEP(VEH_PHYS_PROC_WHEEL_ROTATION_INTERP_STEP, sdata->gGT->timer), CTR_MipsNegLo(scratchValue));
 	driver->wheelRotation = (s16)driverBaseSpeedUshort;
 
 	scratchValue = (int)driver->fireSpeed;
@@ -2262,7 +2262,12 @@ void VehPhysProc_SlamWall_Animate(struct Thread *t, struct Driver *d)
 {
 	struct Instance *inst = t->inst;
 
-	inst->animFrame = (s16)CTR_MipsAddLo((u16)inst->animFrame, 1);
+#if CTR_NATIVE_60FPS
+	// The crash-fall anim is half-rate: animFrame counts 30 FPS frames, so it
+	// must step on the retail tick like the baked matrix index below.
+	if (INSTANCE_AnimFramesScaled(inst, inst->animIndex) || CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+#endif
+		inst->animFrame = (s16)CTR_MipsAddLo((u16)inst->animFrame, 1);
 
 #if CTR_NATIVE_60FPS
 	if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))

@@ -233,6 +233,12 @@ static void VehGroundSkids_TryEmitSegment(struct VehGroundSkidsScratch *scratch,
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8005c354-0x8005ca24.
 void VehGroundSkids_Main(struct Thread *thread, struct PushBuffer *pb)
 {
+#if defined(CTR_NATIVE)
+	// NOTE: Points are scaled by four before projecting (see ScaleRelative), so
+	// view Z is 4x too far. Skid marks lie on the floor: keep retail OT order
+	// (negative scale) rather than depth testing against the surface itself.
+	float nativeDepthContext = NativePgxp_SetDepthContext(-0.25f);
+#endif
 	gte_SetGeomOffset(pb->rect.w >> 1, pb->rect.h >> 1);
 	gte_SetGeomScreen(pb->distanceToScreen_PREV);
 
@@ -334,4 +340,7 @@ void VehGroundSkids_Main(struct Thread *thread, struct PushBuffer *pb)
 
 		thread = thread->siblingThread;
 	}
+#if defined(CTR_NATIVE)
+	NativePgxp_SetDepthContext(nativeDepthContext);
+#endif
 }

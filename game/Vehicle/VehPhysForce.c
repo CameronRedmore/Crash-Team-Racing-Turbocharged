@@ -794,6 +794,7 @@ static void VehPhysForce_TranslateMatrix_UpdateSquashStretch(struct Instance *in
 		return;
 	}
 
+	const int scaleInterpSpeed = CTR_FRAME_STEP(VEH_PHYS_FORCE_SQUISH_SCALE_INTERP_SPEED, sdata->gGT->timer);
 	int jumpHeightCurr = d->jumpHeightCurr;
 	int targetSquish = VEH_PHYS_FORCE_TARGET_SQUISH_DEFAULT;
 
@@ -855,8 +856,12 @@ static void VehPhysForce_TranslateMatrix_UpdateSquashStretch(struct Instance *in
 		d->jumpSquishStretch = targetSquish;
 	}
 
-	d->jumpSquishStretch = VehCalc_InterpBySpeed(d->jumpSquishStretch, VEH_PHYS_FORCE_SQUISH_INTERP_SPEED, 0);
-	d->jumpSquishStretch2 = (s16)CTR_MipsSra(CTR_MipsAddLo(CTR_MipsMulLo(d->jumpSquishStretch2, 9), CTR_MipsMulLo(jumpHeightCurr, 7)), 4);
+	// Squash/stretch decay and height smoothing are tuned per 30 FPS frame.
+	if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+	{
+		d->jumpSquishStretch = VehCalc_InterpBySpeed(d->jumpSquishStretch, VEH_PHYS_FORCE_SQUISH_INTERP_SPEED, 0);
+		d->jumpSquishStretch2 = (s16)CTR_MipsSra(CTR_MipsAddLo(CTR_MipsMulLo(d->jumpSquishStretch2, 9), CTR_MipsMulLo(jumpHeightCurr, 7)), 4);
+	}
 
 	if (d->squishTimer != 0)
 	{
@@ -880,18 +885,20 @@ static void VehPhysForce_TranslateMatrix_UpdateSquashStretch(struct Instance *in
 	}
 	else
 	{
-		inst->scale.y =
-		    VehCalc_InterpBySpeed(inst->scale.y, VEH_PHYS_FORCE_SQUISH_SCALE_INTERP_SPEED, CTR_MipsAddLo(d->jumpSquishStretch, VEH_PHYS_FORCE_KART_SCALE_BASE));
+		inst->scale.y = VehCalc_InterpBySpeed(inst->scale.y, scaleInterpSpeed, CTR_MipsAddLo(d->jumpSquishStretch, VEH_PHYS_FORCE_KART_SCALE_BASE));
 	}
 
 	int scaleXZ = CTR_MipsSubLo(VEH_PHYS_FORCE_KART_SCALE_BASE,
 	                            VehPhysForce_TranslateMatrix_Div256TowardZero(CTR_MipsMulLo(d->jumpSquishStretch, VEH_PHYS_FORCE_SQUISH_SCALE_XZ_FACTOR)));
-	inst->scale.x = VehCalc_InterpBySpeed(inst->scale.x, VEH_PHYS_FORCE_SQUISH_SCALE_INTERP_SPEED, scaleXZ);
-	inst->scale.z = VehCalc_InterpBySpeed(inst->scale.z, VEH_PHYS_FORCE_SQUISH_SCALE_INTERP_SPEED, scaleXZ);
+	inst->scale.x = VehCalc_InterpBySpeed(inst->scale.x, scaleInterpSpeed, scaleXZ);
+	inst->scale.z = VehCalc_InterpBySpeed(inst->scale.z, scaleInterpSpeed, scaleXZ);
 }
 
 static void VehPhysForce_TranslateMatrix_UpdateMatrixAnimation(struct Driver *d)
 {
+	// Baked matrix indices are authored at 30 FPS, so they only advance on retail ticks.
+	const b32 stepMatrixIndex = CTR_RETAIL_FRAME_TICK(sdata->gGT->timer);
+
 	if ((d->reserves == 0) || (d->fireSpeed < d->const_Speed_ClassStat) || ((d->actionsFlagSet & ACTION_TURBO_INPUT_LATCH) != 0))
 	{
 		if (d->matrixArray == BAKED_GTE_MATRIX_WHEELIE_HOLD)
@@ -906,10 +913,13 @@ static void VehPhysForce_TranslateMatrix_UpdateMatrixAnimation(struct Driver *d)
 		}
 		else if (d->matrixArray == BAKED_GTE_MATRIX_WHEELIE_RECOVER)
 		{
-			d->matrixIndex++;
-			if (d->matrixIndex >= data.bakedGteMath[BAKED_GTE_MATRIX_WHEELIE_RECOVER].numEntries)
+			if (stepMatrixIndex)
 			{
-				VehPhysForce_TranslateMatrix_ResetMatrixAnim(d);
+				d->matrixIndex++;
+				if (d->matrixIndex >= data.bakedGteMath[BAKED_GTE_MATRIX_WHEELIE_RECOVER].numEntries)
+				{
+					VehPhysForce_TranslateMatrix_ResetMatrixAnim(d);
+				}
 			}
 		}
 	}
@@ -917,11 +927,14 @@ static void VehPhysForce_TranslateMatrix_UpdateMatrixAnimation(struct Driver *d)
 	{
 		if (d->matrixArray == BAKED_GTE_MATRIX_WHEELIE_START)
 		{
-			d->matrixIndex++;
-			if (d->matrixIndex >= data.bakedGteMath[BAKED_GTE_MATRIX_WHEELIE_START].numEntries)
+			if (stepMatrixIndex)
 			{
-				d->matrixArray = BAKED_GTE_MATRIX_WHEELIE_HOLD;
-				d->matrixIndex = 0;
+				d->matrixIndex++;
+				if (d->matrixIndex >= data.bakedGteMath[BAKED_GTE_MATRIX_WHEELIE_START].numEntries)
+				{
+					d->matrixArray = BAKED_GTE_MATRIX_WHEELIE_HOLD;
+					d->matrixIndex = 0;
+				}
 			}
 		}
 		else if (d->matrixArray == BAKED_GTE_MATRIX_WHEELIE_RECOVER)
@@ -938,10 +951,13 @@ static void VehPhysForce_TranslateMatrix_UpdateMatrixAnimation(struct Driver *d)
 
 	if (d->matrixArray == BAKED_GTE_MATRIX_SQUISH_RECOVER)
 	{
-		d->matrixIndex++;
-		if (d->matrixIndex >= data.bakedGteMath[BAKED_GTE_MATRIX_SQUISH_RECOVER].numEntries)
+		if (stepMatrixIndex)
 		{
-			VehPhysForce_TranslateMatrix_ResetMatrixAnim(d);
+			d->matrixIndex++;
+			if (d->matrixIndex >= data.bakedGteMath[BAKED_GTE_MATRIX_SQUISH_RECOVER].numEntries)
+			{
+				VehPhysForce_TranslateMatrix_ResetMatrixAnim(d);
+			}
 		}
 	}
 }

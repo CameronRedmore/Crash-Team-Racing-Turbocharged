@@ -159,9 +159,9 @@ void RB_GenericMine_ThTick(struct Thread *t)
 	if (inst->scale.x < 0x1000)
 	{
 		// make scale larger each frame
-		inst->scale.x += FPS_HALF(0x200);
-		inst->scale.y += FPS_HALF(0x200);
-		inst->scale.z += FPS_HALF(0x200);
+		inst->scale.x += CTR_FRAME_STEP(0x200, sdata->gGT->timer);
+		inst->scale.y += CTR_FRAME_STEP(0x200, sdata->gGT->timer);
+		inst->scale.z += CTR_FRAME_STEP(0x200, sdata->gGT->timer);
 	}
 	else
 	{

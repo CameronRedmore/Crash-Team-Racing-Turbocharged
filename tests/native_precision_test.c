@@ -93,10 +93,62 @@ static void model_translation_boundaries(void)
 	close_to(translation[2], 99.25);
 }
 
+static void project_near_vertex(s16 x, s16 y, s16 z, const float *precise, NativePgxpVertex *vertex)
+{
+	MTC2((u32)(u16)x | ((u32)(u16)y << 16), 0);
+	MTC2((u32)(u16)z, 1);
+	if (precise != NULL)
+	{
+		const s16 vector[3] = {x, y, z};
+		NativePgxp_GteSetInput(0, vector, precise);
+	}
+	GTE_operator(0x80001); // RTPS, sf=1
+	u32 packed = MFC2(14);
+	NativePgxp_StoreGteSXY(&packed, 14, packed);
+	assert(NativePgxp_Lookup(&packed, packed, vertex));
+}
+
+static void near_projection(void)
+{
+	NativePgxp_EndFrame();
+	MATRIX identity = {0};
+	identity.m[0][0] = identity.m[1][1] = identity.m[2][2] = 4096;
+	gte_SetRotMatrix(&identity);
+	gte_SetTransMatrix(&identity);
+	CTC2(256u << 16, 24);
+	CTC2(120u << 16, 25);
+	CTC2(256, 26);
+	NativePgxpVertex vertex;
+
+	// Saturated SX keeps the retail clamp, but the precise vertex keeps its
+	// real position and depth so the polygon stays perspective-correct.
+	project_near_vertex(1000, 0, 200, NULL, &vertex);
+	assert((s16)MFC2(14) == 1023);
+	close_to(vertex.x, 256.0 + 1000.0 * 256.0 / 200.0);
+	close_to(vertex.w, 200);
+
+	// Divide overflow has no usable depth and stays retail.
+	project_near_vertex(1000, 0, 100, NULL, &vertex);
+	close_to(vertex.x, 1023);
+	close_to(vertex.w, 0);
+
+	// The near clipper projects doubled view coordinates through an identity
+	// matrix. Halved precise input keeps SX/SY and recovers the true depth.
+	project_near_vertex(100, 50, 150, NULL, &vertex);
+	const NativePgxpVertex single = vertex;
+	const float view[3] = {100, 50, 150};
+	project_near_vertex(200, 100, 300, view, &vertex);
+	close_to(vertex.x, single.x);
+	close_to(vertex.y, single.y);
+	close_to(vertex.w, 150);
+	NativePgxp_EndFrame();
+}
+
 int main(void)
 {
 	portal_translation();
 	model_translation_boundaries();
+	near_projection();
 	// Compound camera rotation order and fractional-angle orthonormality.
 	const float angles[3] = {1024, 1024, 0};
 	double camera[9];
@@ -176,6 +228,8 @@ int main(void)
 	gte_SetRotMatrix(&matrix);
 	gte_SetTransMatrix(&matrix);
 	gNativePgxpMode = NATIVE_PGXP_MODE_OFF;
+	// Depth tracking defaults to on; this check needs both trackers off.
+	gNativeDepthBufferEnabled = 0;
 	MTC2(1u | (2u << 16), 0);
 	MTC2(100, 1);
 	GTE_operator(0x80001);

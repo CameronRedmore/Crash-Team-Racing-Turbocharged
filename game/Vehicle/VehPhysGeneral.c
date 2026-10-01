@@ -134,7 +134,7 @@ void VehPhysGeneral_PhysAngular(struct Thread *thread, struct Driver *driver)
 		                  terrain->turnResponseScale),
 		    8);
 
-		rotCurrW_interp = VehCalc_InterpBySpeed(rotCurrW_original, FPS_HALF(rate), 0);
+		rotCurrW_interp = VehCalc_InterpBySpeed(rotCurrW_original, CTR_FRAME_STEP(rate, sdata->gGT->timer), 0);
 
 		forwardDir = (s16)rotCurrW_interp;
 	}
@@ -390,7 +390,7 @@ LAB_80060284:
 		{
 			rotCurrW_interp = CTR_MipsNegLo(rotCurrW_original);
 		}
-		rotCurrW_interp = VehCalc_InterpBySpeed(turnResistMax, FPS_HALF(rotCurrW_interp), 0);
+		rotCurrW_interp = VehCalc_InterpBySpeed(turnResistMax, CTR_FRAME_STEP(rotCurrW_interp, sdata->gGT->timer), 0);
 		forwardDir = (s16)rotCurrW_interp;
 	}
 	else

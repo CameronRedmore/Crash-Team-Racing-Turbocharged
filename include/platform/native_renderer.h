@@ -14,6 +14,10 @@ void NativeRenderer_FinishGpuMeasurements(void);
 void NativeRenderer_UpdateSwapIntervalState(int swapInterval);
 void NativeRenderer_SwapWindow(void);
 void NativeRenderer_StoreFrameBuffer(int x, int y, int w, int h);
+#ifndef __vita__
+int NativeRenderer_CapturePauseBackground(const u16 *bgr555Palette16, int smooth);
+TextureID NativeRenderer_GetPauseBackgroundTexture(void);
+#endif
 void NativeRenderer_PresentMainRenderTarget(void);
 void NativeRenderer_DrawGhostReplayOverlay(void);
 void NativeRenderer_PresentVRAMDisplay(void);
@@ -44,6 +48,7 @@ void NativeRenderer_DestroyStreamingTexture(TextureID texture);
 void NativeRenderer_SetBlendMode(BlendMode blendMode);
 void NativeRenderer_SetMixedSTPBlendMode(BlendMode blendMode);
 void NativeRenderer_SetDepthState(int enable, int write);
+void NativeRenderer_SetDepthAlwaysPass(int alwaysPass);
 void NativeRenderer_SetStencilMode(int drawPrim);
 void NativeRenderer_SetOffscreenState(const RECT16 *offscreenRect, int enable);
 void NativeRenderer_SetProjection(const RECT16 *drawRect, const DISPENV *displayEnv, int offscreen);

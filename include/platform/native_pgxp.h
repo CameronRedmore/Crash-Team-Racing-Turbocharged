@@ -38,6 +38,8 @@ typedef struct
 	// View-space depth; <= 0 when the projection has no usable depth.
 	float w;
 	// Camera-space depth in world units; 0 for HUD, sky, or unknown geometry.
+	// Negative for geometry kept in retail draw order: it writes |depth| but
+	// always passes the depth test.
 	float depth;
 	// Retail packed SXY (x low, y high) this vertex was truncated to.
 	u32 value;
@@ -73,6 +75,7 @@ void NativePgxp_BindWrittenXY(const void *dst, u32 value);
 void NativePgxp_SetWorldPhase(int active);
 // Retail model/tire transforms can scale view coordinates by four. Normalize
 // their depth without changing the divisor used for texture interpolation.
+// A negative scale keeps the geometry in retail draw order (see depth above).
 float NativePgxp_SetDepthContext(float scale);
 void NativePgxp_SetModelDepthScale(const void *key, float scale);
 float NativePgxp_GetModelDepthScale(const void *key);

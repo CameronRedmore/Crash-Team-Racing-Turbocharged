@@ -196,6 +196,13 @@ void RedBeaker_RenderRain(struct PushBuffer *pb, struct PrimMem *primMem, struct
 		return;
 	}
 
+#if defined(CTR_NATIVE)
+	// NOTE: The cloud translation is its queued MVP view position, which is
+	// shifted left by 2 for near instances, while the rain offsets are not. The
+	// cloud is queued after this runs, so its per-model depth scale is not known
+	// yet: use retail order (no depth) instead of a depth 4x too far.
+	float nativeDepthContext = NativePgxp_SetDepthContext(0.0f);
+#endif
 	scratch->centerXY = RED_BEAKER_CENTER_XY;
 	scratch->colorTop = 0;
 	scratch->colorBottom = 0;
@@ -313,5 +320,8 @@ void RedBeaker_RenderRain(struct PushBuffer *pb, struct PrimMem *primMem, struct
 		}
 	}
 
+#if defined(CTR_NATIVE)
+	NativePgxp_SetDepthContext(nativeDepthContext);
+#endif
 	primMem->cursor = prim;
 }

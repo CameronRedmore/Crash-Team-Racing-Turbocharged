@@ -14,7 +14,12 @@ int gNativePgxpMode = NATIVE_PGXP_MODE_OFF;
 #endif
 
 int gNativePgxpIntegerNclipEnabled = 0;
+// Enabled by default on PC builds; Vita keeps the retail polygon ordering.
+#if defined(__vita__)
 int gNativeDepthBufferEnabled = 0;
+#else
+int gNativeDepthBufferEnabled = 1;
+#endif
 
 #if NATIVE_PGXP_SUPPORTED
 

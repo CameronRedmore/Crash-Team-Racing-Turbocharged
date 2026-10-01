@@ -566,14 +566,14 @@ void MainFrame_GameLogic(struct GameTracker *gGT, struct GamepadSystem *gGamepad
 	}
 	else if ((uVar3 & ARCADE_MODE) == 0)
 	{
-		if (gGT->timerEndOfRaceVS < 0x96)
+		if (gGT->timerEndOfRaceVS < FPS_DOUBLE(0x96))
 		{
 #if defined(CTR_NATIVE)
 			UI_VsQuipDrawAll();
 			UI_VsWaitForPressX();
 #endif
 		}
-		if (0x1e < gGT->timerEndOfRaceVS)
+		if (FPS_DOUBLE(0x1e) < gGT->timerEndOfRaceVS)
 		{
 			gGT->timerEndOfRaceVS--;
 		}

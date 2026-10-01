@@ -360,16 +360,16 @@ void AH_Door_ThTick(struct Thread *t)
 							if (keyInst->scale.x < AH_DOOR_KEY_TARGET_SCALE)
 							{
 								// increase scale on X, Y, Z
-								keyInst->scale.x += FPS_HALF(AH_DOOR_KEY_SCALE_STEP);
-								keyInst->scale.y += FPS_HALF(AH_DOOR_KEY_SCALE_STEP);
-								keyInst->scale.z += FPS_HALF(AH_DOOR_KEY_SCALE_STEP);
+								keyInst->scale.x += CTR_FRAME_STEP(AH_DOOR_KEY_SCALE_STEP, sdata->gGT->timer);
+								keyInst->scale.y += CTR_FRAME_STEP(AH_DOOR_KEY_SCALE_STEP, sdata->gGT->timer);
+								keyInst->scale.z += CTR_FRAME_STEP(AH_DOOR_KEY_SCALE_STEP, sdata->gGT->timer);
 							}
 
 							// if key posY is below its hover height over the player
 							if (keyInst->matrix.t[1] < (driver->instSelf->matrix.t[1] + AH_DOOR_KEY_RAISE_HEIGHT))
 							{
 								// increase key posY
-								keyInst->matrix.t[1] += FPS_HALF(AH_DOOR_KEY_RAISE_STEP);
+								keyInst->matrix.t[1] += CTR_FRAME_STEP(AH_DOOR_KEY_RAISE_STEP, sdata->gGT->timer);
 							}
 
 							if (1 < numKeys)
@@ -403,10 +403,10 @@ void AH_Door_ThTick(struct Thread *t)
 				}
 
 				door->keyRot.x = 0;
-				door->keyRot.y += FPS_HALF(AH_DOOR_KEY_ROT_STEP);
+				door->keyRot.y += CTR_FRAME_STEP(AH_DOOR_KEY_ROT_STEP, sdata->gGT->timer);
 				door->keyRot.z = 0;
 
-				door->keyOrbit += FPS_HALF(AH_DOOR_KEY_ORBIT_STEP);
+				door->keyOrbit += CTR_FRAME_STEP(AH_DOOR_KEY_ORBIT_STEP, sdata->gGT->timer);
 
 				door->frameCount_doorOpenAnim++;
 
@@ -478,7 +478,7 @@ void AH_Door_ThTick(struct Thread *t)
 
 	if (door->doorRot.y < AH_DOOR_OPEN_ROTATION)
 	{
-		door->doorRot.y += FPS_HALF(AH_DOOR_OPEN_ROTATION_STEP);
+		door->doorRot.y += CTR_FRAME_STEP(AH_DOOR_OPEN_ROTATION_STEP, sdata->gGT->timer);
 
 		// right-hand door rot[x,y,z]
 		desiredRot.x = door->doorRot.x;

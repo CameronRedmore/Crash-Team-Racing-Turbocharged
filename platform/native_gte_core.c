@@ -310,8 +310,10 @@ internal int Lm_H(s64 value, int sf)
 // NOTE: Repeats the RTPS/RTPT projection without the truncations the
 // hardware applies (MAC >> 12, IR clamp to integers, UNR division, SX/SY >> 16)
 // so the GPU can place the vertex at its sub-pixel position. Divide overflow
-// and screen clamping keep their retail results so the polygon shape matches
-// what the game culled and sorted.
+// keeps its retail result so the polygon shape matches what the game culled
+// and sorted. Screen saturation does not: SXY still clamps for the game, but
+// the precise vertex keeps its real position and depth (see below).
+#define NATIVE_PGXP_SCREEN_GUARD 16384.0
 internal void GTE_PgxpRotTransPers(double viewX, double viewY, double viewZ, u32 hOverSz3, int lm)
 {
 	const double irScale = m_sf ? (1.0 / 4096.0) : 1.0;
@@ -338,9 +340,16 @@ internal void GTE_PgxpRotTransPers(double viewX, double viewY, double viewZ, u32
 	double screenX = (double)C2_OFX / 65536.0 + ir1 * hOverDepth;
 	double screenY = (double)C2_OFY / 65536.0 + ir2 * hOverDepth;
 
-	// A saturated vertex was drawn clamped on hardware; its depth no longer
-	// matches its position, so leave that polygon affine.
-	if ((screenX < -1024.0) || (screenX > 1023.0) || (screenY < -1024.0) || (screenY > 1023.0))
+	// Hardware draws a saturated vertex at the clamped SX/SY, which bends the
+	// polygon. Near the camera that hits most large track polygons (CTR's near
+	// plane magnifies about 4x), and clamping them here would also force the
+	// whole polygon affine. The host rasteriser clips, so keep the unclamped
+	// position and its depth. Only a vertex without usable depth, or one too
+	// far out for float precision, keeps the retail clamp.
+	const b32 unprojected = !(w > 0.0f);
+	const b32 outsideGuard = (screenX < -NATIVE_PGXP_SCREEN_GUARD) || (screenX > NATIVE_PGXP_SCREEN_GUARD) || (screenY < -NATIVE_PGXP_SCREEN_GUARD) ||
+	                         (screenY > NATIVE_PGXP_SCREEN_GUARD);
+	if ((unprojected || outsideGuard) && ((screenX < -1024.0) || (screenX > 1023.0) || (screenY < -1024.0) || (screenY > 1023.0)))
 	{
 		screenX = screenX < -1024.0 ? -1024.0 : (screenX > 1023.0 ? 1023.0 : screenX);
 		screenY = screenY < -1024.0 ? -1024.0 : (screenY > 1023.0 ? 1023.0 : screenY);

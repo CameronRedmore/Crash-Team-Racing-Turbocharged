@@ -123,7 +123,7 @@ void AH_MaskHint_SetAnim(int scale)
 
 	((struct MaskHint *)mhInst->thread->object)->scale = scale * 4 - 1;
 
-	angle = (sdata->frameCounter + gGT->timer) * FPS_HALF(0x20);
+	angle = FPS_HALF((sdata->frameCounter + gGT->timer) * 0x20);
 	sin = MATH_Sin(angle);
 	posCurr.y += (s16)(((sin << 4) >> 0xc) * scale >> 0xc);
 

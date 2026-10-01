@@ -252,15 +252,14 @@ static struct MenuRow s_nativeOptionsRows[] =
 #ifndef __vita__
 static struct MenuRow s_nativeEnhancementsRows[] =
 {
-	{NATIVE_MENU_STRING_PGXP, 8, 1, 0, 0},
-	{NATIVE_MENU_STRING_INTEGER_NCLIP, 0, 2, 1, 1},
-	{NATIVE_MENU_STRING_MAX_LOD, 1, 3, 2, 2},
-	{NATIVE_MENU_STRING_PHYSICS, 2, 4, 3, 3},
-	{NATIVE_MENU_STRING_AI_PHYSICS, 3, 5, 4, 4},
-	{NATIVE_MENU_STRING_COLLISION_PHYSICS, 4, 6, 5, 5},
-	{NATIVE_MENU_STRING_STEERING_PHYSICS, 5, 7, 6, 6},
-	{NATIVE_MENU_STRING_BACKFACE_CULLING, 6, 8, 7, 7},
-	{NATIVE_MENU_STRING_DEPTH_BUFFER, 7, 0, 8, 8},
+	{NATIVE_MENU_STRING_PGXP, 7, 1, 0, 0},
+	{NATIVE_MENU_STRING_MAX_LOD, 0, 2, 1, 1},
+	{NATIVE_MENU_STRING_PHYSICS, 1, 3, 2, 2},
+	{NATIVE_MENU_STRING_AI_PHYSICS, 2, 4, 3, 3},
+	{NATIVE_MENU_STRING_COLLISION_PHYSICS, 3, 5, 4, 4},
+	{NATIVE_MENU_STRING_STEERING_PHYSICS, 4, 6, 5, 5},
+	{NATIVE_MENU_STRING_DEPTH_BUFFER, 5, 7, 6, 6},
+	{NATIVE_MENU_STRING_HD_PAUSE, 6, 0, 7, 7},
 	{RECTMENU_STRING_NONE},
 };
 #endif
@@ -276,7 +275,8 @@ static struct MenuRow s_nativeCheatsRows[] =
 	{NATIVE_MENU_STRING_CHEAT_ICY, 5, 7, 6, 6},
 	{NATIVE_MENU_STRING_CHEAT_TURBOPAD, 6, 8, 7, 7},
 	{NATIVE_MENU_STRING_CHEAT_ADV, 7, 9, 8, 8},
-	{NATIVE_MENU_STRING_CHEAT_TURBOCOUNT, 8, 9, 9, 9},
+	{NATIVE_MENU_STRING_CHEAT_TURBOCOUNT, 8, 10, 9, 9},
+	{NATIVE_MENU_STRING_CHEAT_CHARACTERS, 9, 10, 10, 10},
 	{RECTMENU_STRING_NONE},
 };
 
@@ -1015,23 +1015,28 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 		return;
 	}
 
-	if (choose == NATIVE_MENU_STRING_INTEGER_NCLIP)
-	{
-		gNativePgxpIntegerNclipEnabled ^= 1;
-		save_config();
-		return;
-	}
-
-	if (choose == NATIVE_MENU_STRING_BACKFACE_CULLING)
-	{
-		gNativeBackfaceCullingDisabled ^= 1;
-		save_config();
-		return;
-	}
-
 	if (choose == NATIVE_MENU_STRING_DEPTH_BUFFER)
 	{
 		gNativeDepthBufferEnabled ^= 1;
+		save_config();
+		return;
+	}
+
+	if (choose == NATIVE_MENU_STRING_HD_PAUSE)
+	{
+		if (button & BTN_LEFT)
+		{
+			gNativeHdPauseMode = (gNativeHdPauseMode + 2) % 3;
+			OtherFX_Play(0, 1);
+		}
+		else
+		{
+			gNativeHdPauseMode = (gNativeHdPauseMode + 1) % 3;
+			if (button & BTN_RIGHT)
+			{
+				OtherFX_Play(0, 1);
+			}
+		}
 		save_config();
 		return;
 	}
@@ -1090,6 +1095,11 @@ static void MM_NativeCheatsMenuProc(struct RectMenu *menu)
 	}
 
 	u32 cheatBit = NativeCheat_GetMenuBit(menu->rowSelected);
+	if (menu->rowSelected == 10)
+	{
+		NativeCheat_ToggleAllCharacters();
+		return;
+	}
 	if (cheatBit == 0) return;
 
 	gNativeCheatConfigMask ^= cheatBit;

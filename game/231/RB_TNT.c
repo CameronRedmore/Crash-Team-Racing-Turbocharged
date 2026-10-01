@@ -317,7 +317,7 @@ void RB_TNT_ThTick_ThrowOnHead(struct Thread *t)
 	}
 
 	// rotation
-	mw->tntSpinY += FPS_HALF(0x100);
+	mw->tntSpinY += CTR_FRAME_STEP(0x100, sdata->gGT->timer);
 
 	// if scale is small
 	if (inst->scale.x < 0x801)
@@ -332,9 +332,9 @@ void RB_TNT_ThTick_ThrowOnHead(struct Thread *t)
 	else
 	{
 		// reduce scale
-		inst->scale.x -= FPS_HALF(0x100);
-		inst->scale.y -= FPS_HALF(0x100);
-		inst->scale.z -= FPS_HALF(0x100);
+		inst->scale.x -= CTR_FRAME_STEP(0x100, sdata->gGT->timer);
+		inst->scale.y -= CTR_FRAME_STEP(0x100, sdata->gGT->timer);
+		inst->scale.z -= CTR_FRAME_STEP(0x100, sdata->gGT->timer);
 	}
 	return;
 }

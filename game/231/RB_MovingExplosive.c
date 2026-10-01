@@ -210,13 +210,13 @@ LAB_800adc08:;
 		// if bomb is forwards
 		if ((tw->flags & TRACKER_FLAG_BOMB_BACKWARD) == 0)
 		{
-			tw->dir.x += FPS_HALF(0x200);
+			tw->dir.x += CTR_FRAME_STEP(0x200, sdata->gGT->timer);
 		}
 
 		// if bomb is backwards
 		else
 		{
-			tw->dir.x -= FPS_HALF(0x200);
+			tw->dir.x -= CTR_FRAME_STEP(0x200, sdata->gGT->timer);
 		}
 
 		// convert 3 rotation shorts into rotation matrix

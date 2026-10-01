@@ -5646,8 +5646,14 @@ void RenderBucket_Execute(void *param_1, struct PrimMem *param_2)
 #if defined(CTR_NATIVE)
 		int nativeMirrorState = gNativeMirrorModeRenderActive;
 		int nativeMirrorDoubleFlipState = gNativeMirrorModeDoubleFlipActive;
-		float nativeDepthContext = NativePgxp_SetDepthContext(
-			(ctx.inst->flags & SCREENSPACE_INSTANCE) != 0 ? 0.0f : NativePgxp_GetModelDepthScale(ctx.idpp));
+		float nativeDepthScale = (ctx.inst->flags & SCREENSPACE_INSTANCE) != 0 ? 0.0f : NativePgxp_GetModelDepthScale(ctx.idpp);
+		// The hint mask is placed at ground height and sinks into the floor;
+		// retail OT ordering draws it over the floor, so keep that order.
+		if (sdata->boolIsMaskThreadAlive && ctx.inst == sdata->instMaskHints3D)
+		{
+			nativeDepthScale = -nativeDepthScale;
+		}
+		float nativeDepthContext = NativePgxp_SetDepthContext(nativeDepthScale);
 		if ((ctx.inst->flags & SCREENSPACE_INSTANCE) != 0)
 		{
 			gNativeMirrorModeRenderActive = 0;

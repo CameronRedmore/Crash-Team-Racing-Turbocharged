@@ -583,7 +583,7 @@ void AH_Pause_Draw(s32 pageID, s32 posX)
 		}
 
 		rot->y = inst->matrix.t[0] * AH_PAUSE_MODEL_ROT_X_WEIGHT + inst->matrix.t[1] * AH_PAUSE_MODEL_ROT_Y_WEIGHT +
-		         sdata->frameCounter * FPS_HALF(AH_PAUSE_MODEL_ROT_FRAME_WEIGHT);
+		         FPS_HALF(sdata->frameCounter * AH_PAUSE_MODEL_ROT_FRAME_WEIGHT);
 
 		rot->y &= AH_PAUSE_MODEL_ROT_MASK;
 	}
@@ -691,14 +691,14 @@ void AH_Pause_Update(void)
 	if (D232.pausePageTimer < FPS_DOUBLE(AH_PAUSE_PAGE_FLIP_SECOND_HALF))
 	{
 		pageID = D232.pausePageCurr;
-		posX = D232.pausePageTimer * D232.pausePageDir * -FPS_HALF(AH_PAUSE_PAGE_FLIP_X_STEP);
+		posX = FPS_HALF(D232.pausePageTimer * D232.pausePageDir * -AH_PAUSE_PAGE_FLIP_X_STEP);
 	}
 
 	// first half
 	else
 	{
 		pageID = D232.pausePagePrev;
-		posX = (FPS_DOUBLE(AH_PAUSE_PAGE_FLIP_FRAMES) - D232.pausePageTimer) * D232.pausePageDir * FPS_HALF(AH_PAUSE_PAGE_FLIP_X_STEP);
+		posX = FPS_HALF((FPS_DOUBLE(AH_PAUSE_PAGE_FLIP_FRAMES) - D232.pausePageTimer) * D232.pausePageDir * AH_PAUSE_PAGE_FLIP_X_STEP);
 	}
 
 	AH_Pause_Draw(pageID, posX);
