@@ -1110,10 +1110,15 @@ struct Model *MM_Characters_GetModelByName(const char *name)
 		return NULL;
 	}
 
-	// loop through all models in array
-	// of model pointers, until nullptr
-	for (model = models[0]; model != NULL; models++, model = models[0])
+	// The LEV model table has numModels entries, without a guaranteed null
+	// terminator. A missing preview must not read past the table.
+	for (s32 modelIndex = 0; modelIndex < level1->numModels; modelIndex++)
 	{
+		model = models[modelIndex];
+		if (model == NULL)
+		{
+			continue;
+		}
 		if ((ModelName_ReadWord(model->name, 0) == ModelName_ReadWord(name, 0)) && (ModelName_ReadWord(model->name, 1) == ModelName_ReadWord(name, 1)) &&
 		    (ModelName_ReadWord(model->name, 2) == ModelName_ReadWord(name, 2)) && (ModelName_ReadWord(model->name, 3) == ModelName_ReadWord(name, 3)))
 		{
@@ -1666,9 +1671,8 @@ void MM_Characters_HideDrivers(void)
 	return;
 }
 
-void MM_Characters_MenuProc(struct RectMenu *unused)
+void MM_Characters_MenuProc(struct RectMenu *menu)
 {
-	(void)unused;
 	b32 candidateInUseByOtherPlayer;
 	b32 deadEndCandidateAvailable;
 	s16 nextIcon;
@@ -1768,6 +1772,10 @@ void MM_Characters_MenuProc(struct RectMenu *unused)
 				sdata->advProgress.characterID = data.characterIDs[0];
 				sdata->Loading.OnBegin.AddBitsConfig0 |= ADVENTURE_ARENA;
 				sdata->Loading.OnBegin.RemBitsConfig0 |= MAIN_MENU;
+				// Stop preview updates before the hub replaces the menu LEV and
+				// its models. Menu state survives the level load.
+				MM_Characters_HideDrivers();
+				RECTMENU_Hide(menu);
 				MainRaceTrack_RequestLoad(MainFreeze_GetAdventureCharacterReturnLevel());
 				return;
 			}
