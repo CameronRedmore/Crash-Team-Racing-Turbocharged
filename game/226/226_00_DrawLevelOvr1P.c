@@ -3482,6 +3482,10 @@ static int Ovr226_800aa790_TerminalPreamble(struct PushBuffer *pb, const u8 *cur
 		CTC2(DrawLevelOvr1P_ReadWord(&pb->matrix_ViewProj, controlWordIndex * 4), 8 + controlWordIndex);
 	}
 
+#if defined(CTR_NATIVE)
+	NativePgxp_LoadTransform(&pb->matrix_ViewProj, &pb->matrix_ViewProj.m[0][0], pb->matrix_ViewProj.t, 1);
+	NativePgxp_LoadTransform(&pb->matrix_ViewProj, &pb->matrix_ViewProj.m[0][0], pb->matrix_ViewProj.t, 5);
+#endif
 	CTC2((u32)(s32)pb->rect.w << 15, 24);
 	CTC2((u32)(s32)pb->rect.h << 15, 25);
 	CTC2((u32)pb->distanceToScreen_PREV, 26);
@@ -9985,6 +9989,11 @@ static void Ovr226_800a0d34_SetEntryGteAndCameraScratch(struct PushBuffer *pb)
 	{
 		CTC2(DrawLevelOvr1P_ReadWord(&pb->matrix_ViewProj, (u32)(controlWordIndex * 4)), controlWordIndex);
 	}
+#if defined(CTR_NATIVE)
+	NativePgxp_LoadTransform(&pb->matrix_ViewProj, &pb->matrix_ViewProj.m[0][0], pb->matrix_ViewProj.t, 0);
+	NativePgxp_LoadTransform(&pb->matrix_ViewProj, &pb->matrix_ViewProj.m[0][0], pb->matrix_ViewProj.t, 4);
+#endif
+
 
 	for (s32 centerIndex = 0; centerIndex < 3; centerIndex++)
 	{

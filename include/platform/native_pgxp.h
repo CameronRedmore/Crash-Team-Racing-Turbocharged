@@ -95,6 +95,15 @@ int NativePgxp_GteGetInput(int slot, s16 vx, s16 vy, s16 vz, double *out);
 void NativePgxp_GteSetMvmvaResult(const double *precise, s16 ir1, s16 ir2, s16 ir3);
 int NativePgxp_GteGetMvmvaResult(const s16 *ir, float *out);
 
+void NativePgxp_CameraRotation(const float *angles, double *rotation);
+
+// Camera transforms retain fractional rotation and translation outside PS1 layouts.
+void NativePgxp_SetTransform(const void *key, const s16 *rotation, const s32 *translation, const double *preciseRotation, const double *preciseTranslation);
+void NativePgxp_GetTransform(const void *key, const s16 *rotation, const s32 *translation, double *pr, double *pt);
+void NativePgxp_LoadTransform(const void *key, const s16 *rotation, const s32 *translation, int bank);
+void NativePgxp_InvalidateTransform(int reg);
+void NativePgxp_Transform(int mx, int cv, const double *rotation, const double *translation, const double *input, double *result);
+
 // GPU side.
 int NativePgxp_Lookup(const void *addr, u32 value, NativePgxpVertex *out);
 void NativePgxp_EndFrame(void);
@@ -219,6 +228,17 @@ static inline int NativePgxp_GteGetMvmvaResult(const s16 *ir, float *out)
 	(void)out;
 	return 0;
 }
+static inline void NativePgxp_CameraRotation(const float *angles, double *rotation)
+{ (void)angles; (void)rotation; }
+static inline void NativePgxp_SetTransform(const void *key, const s16 *r, const s32 *t, const double *pr, const double *pt)
+{ (void)key; (void)r; (void)t; (void)pr; (void)pt; }
+static inline void NativePgxp_GetTransform(const void *key, const s16 *r, const s32 *t, double *pr, double *pt)
+{ (void)key; for (int i = 0; i < 9; i++) pr[i] = r[i]; for (int i = 0; i < 3; i++) pt[i] = t[i]; }
+static inline void NativePgxp_LoadTransform(const void *key, const s16 *r, const s32 *t, int bank)
+{ (void)key; (void)r; (void)t; (void)bank; }
+static inline void NativePgxp_InvalidateTransform(int reg) { (void)reg; }
+static inline void NativePgxp_Transform(int mx, int cv, const double *rotation, const double *translation, const double *input, double *result)
+{ (void)mx; (void)cv; (void)rotation; (void)translation; (void)input; (void)result; }
 static inline int NativePgxp_Lookup(const void *addr, u32 value, NativePgxpVertex *out)
 {
 	(void)addr;

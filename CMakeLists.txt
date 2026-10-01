@@ -192,6 +192,18 @@ endif()
 
 include(CTest)
 if(BUILD_TESTING AND NOT EMSCRIPTEN)
+    add_executable(ctr_native_precision_test
+        tests/native_precision_test.c
+        platform/native_pgxp.c
+        platform/native_gte_core.c
+        platform/native_inline_c.c
+    )
+    target_include_directories(ctr_native_precision_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
+    target_compile_definitions(ctr_native_precision_test PRIVATE CTR_NATIVE BUILD=926)
+    if(NOT CTR_NATIVE_MSVC_FRONTEND)
+        target_link_libraries(ctr_native_precision_test PRIVATE m)
+    endif()
+    add_test(NAME ctr_native_precision COMMAND ctr_native_precision_test)
     add_test(NAME ctr_native_version COMMAND $<TARGET_FILE:ctr_native> --version)
     set_tests_properties(ctr_native_version PROPERTIES PASS_REGULAR_EXPRESSION "^CTR Native ")
 endif()

@@ -174,6 +174,7 @@ void MTC2_S(s32 value, s32 reg)
 
 void CTC2(u32 value, s32 reg)
 {
+	NativePgxp_InvalidateTransform(reg);
 	switch (reg)
 	{
 	case 4:
@@ -200,6 +201,7 @@ void CTC2(u32 value, s32 reg)
 
 void CTC2_S(s32 value, s32 reg)
 {
+	NativePgxp_InvalidateTransform(reg);
 	switch (reg)
 	{
 	case 4:

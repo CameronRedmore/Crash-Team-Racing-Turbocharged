@@ -1,4 +1,7 @@
 #include <common.h>
+#if defined(CTR_NATIVE)
+#include <platform/native_pgxp.h>
+#endif
 
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800426f8-0x80042910.
@@ -428,6 +431,37 @@ void PushBuffer_SetMatrixVP(struct PushBuffer *pb)
 	pb->matrix_ViewProj.m[0][0] = CTR_WIDESCREEN_SCALE_X(pb->matrix_ViewProj.m[0][0]);
 	pb->matrix_ViewProj.m[0][1] = CTR_WIDESCREEN_SCALE_X(pb->matrix_ViewProj.m[0][1]);
 	pb->matrix_ViewProj.m[0][2] = CTR_WIDESCREEN_SCALE_X(pb->matrix_ViewProj.m[0][2]);
+#endif
+
+#if defined(CTR_NATIVE)
+	if (NATIVE_PGXP_ACTIVE())
+	{
+		float pos[3], rot[3];
+		NativePgxp_GetPosition(&pb->pos, pb->pos.v, pos);
+		NativePgxp_GetPosition(&pb->rot, pb->rot.v, rot);
+		double camera[9];
+		NativePgxp_CameraRotation(rot, camera);
+		double view[9], translation[3], cameraPos[3] = {pos[0], pos[1], pos[2]};
+		for (int row = 0; row < 3; row++)
+		{
+			translation[row] = 0.0;
+			for (int col = 0; col < 3; col++)
+			{
+				view[row*3+col] = camera[col*3+row] * 4096.0;
+				translation[row] -= camera[col*3+row] * pos[col];
+			}
+		}
+		for (int i = 0; i < 9; i++) camera[i] *= 4096.0;
+		NativePgxp_SetTransform(&pb->matrix_Camera, &pb->matrix_Camera.m[0][0], pb->matrix_Camera.t, camera, cameraPos);
+		NativePgxp_SetTransform(&pb->matrix_CameraTranspose, &pb->matrix_CameraTranspose.m[0][0], pb->matrix_CameraTranspose.t, view, translation);
+		for (int col = 0; col < 3; col++) view[3+col] *= (double)r360 / r600;
+		translation[1] *= (double)r360 / r600;
+#if CTR_NATIVE_WIDESCREEN
+		for (int col = 0; col < 3; col++) view[col] *= 34.0 / 45.0;
+		translation[0] *= 34.0 / 45.0;
+#endif
+		NativePgxp_SetTransform(&pb->matrix_ViewProj, &pb->matrix_ViewProj.m[0][0], pb->matrix_ViewProj.t, view, translation);
+	}
 #endif
 
 	// store camera matrix,

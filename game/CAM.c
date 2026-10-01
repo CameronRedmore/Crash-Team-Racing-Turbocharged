@@ -1,4 +1,8 @@
 #include <common.h>
+#if defined(CTR_NATIVE)
+#include <math.h>
+#include <platform/native_pgxp.h>
+#endif
 
 #if defined(CTR_NATIVE)
 extern int gNativeDefaultCameraFar;
@@ -611,6 +615,23 @@ static s32 CAM_MulLo(s32 a, s32 b)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80018fec-0x80019128
 void CAM_ProcessTransition(SVec3 *currPos, SVec3 *currRot, SVec3 *startPos, SVec3 *startRot, SVec3 *endPos, SVec3 *endRot, s32 frame)
 {
+#if defined(CTR_NATIVE)
+	float precisePos[3], preciseRot[3];
+	if (NATIVE_PGXP_ACTIVE())
+	{
+		float start[3], end[3], startAngle[3], endAngle[3];
+		NativePgxp_GetPosition(startPos, startPos->v, start);
+		NativePgxp_GetPosition(endPos, endPos->v, end);
+		NativePgxp_GetPosition(startRot, startRot->v, startAngle);
+		NativePgxp_GetPosition(endRot, endRot->v, endAngle);
+		for (int i = 0; i < 3; i++)
+		{
+			precisePos[i] = start[i] + (end[i] - start[i]) * ((float)frame / 4096.0f);
+			float delta = fmodf(endAngle[i] - startAngle[i] + 6144.0f, 4096.0f) - 2048.0f;
+			preciseRot[i] = startAngle[i] + delta * ((float)frame / 4096.0f);
+		}
+	}
+#endif
 	s32 deltaRot;
 
 	currPos->x = startPos->x + (s16)(CAM_MulLo((s32)endPos->x - (s32)startPos->x, frame) >> 0xc);
@@ -636,6 +657,14 @@ void CAM_ProcessTransition(SVec3 *currPos, SVec3 *currRot, SVec3 *startPos, SVec
 		deltaRot -= 0x1000;
 	}
 	currRot->z = (startRot->z + (s16)(CAM_MulLo(deltaRot, frame) >> 0xc)) & 0xfff;
+#if defined(CTR_NATIVE)
+	if (NATIVE_PGXP_ACTIVE())
+	{
+		NativePgxp_SetPosition(currPos, currPos->v, precisePos);
+		NativePgxp_SetPosition(currRot, currRot->v, preciseRot);
+	}
+#endif
+
 }
 
 
@@ -1131,6 +1160,11 @@ void CAM_SetDesiredPosRot(struct CameraDC *cDC, const SVec3 *pos, const SVec3 *r
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8001a0bc-0x8001b254.
 void CAM_FollowDriver_Normal(struct CameraDC *cDC, struct Driver *d, SVec3 *pushBufferPos, struct CameraScratchWork *scratchWork, struct ZoomData *zoom)
 {
+#if defined(CTR_NATIVE)
+	float eyeFraction[3] = {0}, sideFraction[3] = {0}, targetFraction[3] = {0};
+	s32 unconstrainedEyeY = 0;
+#endif
+
 	struct PushBuffer *pb = (struct PushBuffer *)pushBufferPos;
 	struct ScratchpadStruct *sps = (struct ScratchpadStruct *)scratchWork;
 	struct CameraScratch *cam = &scratchWork->camera;
@@ -1284,6 +1318,16 @@ void CAM_FollowDriver_Normal(struct CameraDC *cDC, struct Driver *d, SVec3 *push
 	CTR_GteLoadSVec3V0(&cam->rot);
 	gte_rtv0();
 	CTR_GteStoreMAC(cam->pos.v);
+#if defined(CTR_NATIVE)
+	if (NATIVE_PGXP_ACTIVE())
+	{
+		s16 ir[3] = {(s16)MFC2(9), (s16)MFC2(10), (s16)MFC2(11)};
+		float precise[3];
+		if (NativePgxp_GteGetMvmvaResult(ir, precise))
+			for (int i = 0; i < 3; i++) eyeFraction[i] = precise[i] - cam->pos.v[i];
+	}
+#endif
+
 
 	cam->rot.x = 0;
 	cam->rot.y = 0x40;
@@ -1292,6 +1336,16 @@ void CAM_FollowDriver_Normal(struct CameraDC *cDC, struct Driver *d, SVec3 *push
 	CTR_GteLoadSVec3V0(&cam->rot);
 	gte_rtv0();
 	CTR_GteStoreMAC(scratchWork->sideOffset.v);
+#if defined(CTR_NATIVE)
+	if (NATIVE_PGXP_ACTIVE())
+	{
+		s16 ir[3] = {(s16)MFC2(9), (s16)MFC2(10), (s16)MFC2(11)};
+		float precise[3];
+		if (NativePgxp_GteGetMvmvaResult(ir, precise))
+			for (int i = 0; i < 3; i++) sideFraction[i] = precise[i] - scratchWork->sideOffset.v[i];
+	}
+#endif
+
 
 	cam->delta.x = CTR_MipsSra(d->posCurr.x, 8);
 	cam->delta.y = CTR_MipsSra(d->posCurr.y, 8);
@@ -1314,6 +1368,10 @@ void CAM_FollowDriver_Normal(struct CameraDC *cDC, struct Driver *d, SVec3 *push
 	}
 
 	cam->pos.z += cam->delta.z;
+#if defined(CTR_NATIVE)
+	unconstrainedEyeY = cam->pos.y;
+#endif
+
 
 	uVar8 = 0;
 	if (gGT->numPlyrCurrGame != 2)
@@ -1365,6 +1423,16 @@ void CAM_FollowDriver_Normal(struct CameraDC *cDC, struct Driver *d, SVec3 *push
 	CTR_GteLoadSVec3V0(&cam->rot);
 	gte_rtv0();
 	CTR_GteStoreS16Triplet(cam->rot.v);
+#if defined(CTR_NATIVE)
+	if (NATIVE_PGXP_ACTIVE())
+	{
+		s16 ir[3] = {(s16)MFC2(9), (s16)MFC2(10), (s16)MFC2(11)};
+		float precise[3];
+		if (NativePgxp_GteGetMvmvaResult(ir, precise))
+			for (int i = 0; i < 3; i++) targetFraction[i] = precise[i] - cam->rot.v[i];
+	}
+#endif
+
 
 	cam->delta.x += (s32)cam->rot.x;
 	cam->delta.z += (s32)cam->rot.z;
@@ -1621,6 +1689,30 @@ LAB_8001ab04:
 		pb->pos.y += (s16)cam->posCopy.y + cDC->pushBufferPosCorrection.y;
 		pb->pos.z += (s16)cam->posCopy.z + cDC->pushBufferPosCorrection.z;
 	}
+
+#if defined(CTR_NATIVE)
+	if (NATIVE_PGXP_ACTIVE() && d->kartState != KS_MASK_GRABBED)
+	{
+		float pos[3], rot[3];
+		for (int i = 0; i < 3; i++)
+		{
+			// Driver positions already contain eight fractional bits. Carry
+			// them into the visual camera instead of discarding them at >> 8.
+			pos[i] = (float)cam->pos.v[i] + (float)(d->posCurr.v[i] & 255) / 256.0f + eyeFraction[i];
+			if (i != 1) pos[i] += sideFraction[i];
+			rot[i] = (float)pb->rot.v[i];
+		}
+		// Terrain/mask height constraints retain their resolved height.
+		if (cam->pos.y != unconstrainedEyeY || (cDC->flags & CAMERA_FLAG_MASK_GRAB) != 0)
+			pos[1] = (float)cam->pos.y;
+		const double angleScale = 4096.0 / 6.28318530717958647692;
+		rot[1] = (float)(atan2((double)cam->dir.x + eyeFraction[0] - targetFraction[0], (double)cam->dir.z + eyeFraction[2] - targetFraction[2]) * angleScale);
+		rot[0] = (float)(2048.0 - atan2((double)cam->dir.y + (pos[1] - cam->pos.y) - (float)(d->posCurr.y & 255) / 256.0f - targetFraction[1], hypot((double)cam->dir.x + eyeFraction[0] - targetFraction[0], (double)cam->dir.z + eyeFraction[2] - targetFraction[2])) * angleScale);
+		rot[2] = (float)zoom->angle[0] * cDC->desiredRot.x / 256.0f;
+		NativePgxp_SetPosition(&pb->pos, pb->pos.v, pos);
+		NativePgxp_SetPosition(&pb->rot, pb->rot.v, rot);
+	}
+#endif
 
 	cDC->cameraPos.x = cam->pos.x;
 	cDC->cameraPos.y = cam->pos.y;

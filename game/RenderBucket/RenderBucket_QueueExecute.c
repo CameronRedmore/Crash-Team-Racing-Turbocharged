@@ -1266,7 +1266,7 @@ static void RenderBucket_AdjustViewPositionForMvp(struct Instance *inst, VECTOR 
 	}
 }
 
-static void RenderBucket_StoreMvpTranslation(struct InstDrawPerPlayer *idpp, const VECTOR *viewPos)
+static void RenderBucket_StoreMvpTranslation(struct InstDrawPerPlayer *idpp, const VECTOR *viewPos, struct Instance *inst, struct PushBuffer *pb, int viewDepth)
 {
 	// NOTE(aalhendi): Retail writes IDPP MVP translation and GTE TRX/TRY/TRZ
 	// before LOD selection, so exhausted-LOD exits keep this side effect.
@@ -1276,6 +1276,27 @@ static void RenderBucket_StoreMvpTranslation(struct InstDrawPerPlayer *idpp, con
 	CTC2(viewPos->vx, 5);
 	CTC2(viewPos->vy, 6);
 	CTC2(viewPos->vz, 7);
+#if defined(CTR_NATIVE)
+	if (NATIVE_PGXP_ACTIVE() && (inst->flags & SCREENSPACE_INSTANCE) == 0)
+	{
+		double view[9], unused[3], result[3], rotation[9];
+		float cameraPos[3];
+		NativePgxp_GetPosition(&pb->pos, pb->pos.v, cameraPos);
+		NativePgxp_GetTransform(&pb->matrix_ViewProj, &pb->matrix_ViewProj.m[0][0], pb->matrix_ViewProj.t, view, unused);
+		const double scale = (viewDepth < 4096 ? 4.0 : 1.0) * ((inst->flags & DRAW_HUGE) != 0 ? 0.25 : 1.0);
+		for (int row = 0; row < 3; row++)
+		{
+			result[row] = 0.0;
+			for (int col = 0; col < 3; col++)
+				result[row] += view[row*3+col] * (inst->matrix.t[col] - (double)cameraPos[col]) / 4096.0;
+			result[row] *= scale;
+		}
+		for (int i = 0; i < 9; i++) rotation[i] = (&idpp->mvp.m[0][0])[i];
+		NativePgxp_SetTransform(&idpp->mvp, &idpp->mvp.m[0][0], idpp->mvp.t, rotation, result);
+		NativePgxp_LoadTransform(&idpp->mvp, &idpp->mvp.m[0][0], idpp->mvp.t, 4);
+	}
+#endif
+
 }
 
 #if defined(CTR_NATIVE)
@@ -1430,6 +1451,10 @@ static void RenderBucket_GteLoadLightMatrixWords(const MATRIX *m)
 	Unknown_8006c600(RenderBucket_ReadMatrixWord(m, offsetof(MATRIX, m[0][0])), RenderBucket_ReadMatrixWord(m, offsetof(MATRIX, m[0][2])),
 	                 RenderBucket_ReadMatrixWord(m, offsetof(MATRIX, m[1][1])), RenderBucket_ReadMatrixWord(m, offsetof(MATRIX, m[2][0])),
 	                 RenderBucket_ReadMatrixWord(m, offsetof(MATRIX, m[2][2])));
+#if defined(CTR_NATIVE)
+	NativePgxp_LoadTransform(m, &m->m[0][0], m->t, 1);
+#endif
+
 }
 
 static void RenderBucket_GteScaleMatrixColumns(u32 *m0, u32 *m1, u32 *m2, u32 *m3, u32 *m4)
@@ -1522,8 +1547,31 @@ static void RenderBucket_BuildM3x3(struct Instance *inst, struct ModelHeader *mh
 	matrixState->m4 = m4;
 }
 
+#if defined(CTR_NATIVE)
+static void RenderBucket_PreciseMvp(struct PushBuffer *pb, struct InstDrawPerPlayer *idpp, MATRIX *dst, const double *translation)
+{
+	if (!NATIVE_PGXP_ACTIVE()) return;
+	double view[9], unused[3], result[9];
+	NativePgxp_GetTransform(&pb->matrix_ViewProj, &pb->matrix_ViewProj.m[0][0], pb->matrix_ViewProj.t, view, unused);
+	for (int row = 0; row < 3; row++)
+		for (int col = 0; col < 3; col++)
+		{
+			result[row*3+col] = 0.0;
+			for (int k = 0; k < 3; k++)
+				result[row*3+col] += view[row*3+k] * idpp->m3x3.m[k][col] / 4096.0;
+		}
+	NativePgxp_SetTransform(dst, &dst->m[0][0], dst->t, result, translation);
+	NativePgxp_LoadTransform(dst, &dst->m[0][0], dst->t, 0);
+}
+#endif
+
 static void RenderBucket_BuildMvp(struct PushBuffer *pb, struct InstDrawPerPlayer *idpp, MATRIX *projectionMvp)
 {
+#if defined(CTR_NATIVE)
+	double oldRotation[9], translation[3];
+	NativePgxp_GetTransform(&idpp->mvp, &idpp->mvp.m[0][0], idpp->mvp.t, oldRotation, translation);
+#endif
+
 	u32 m0;
 	u32 m1;
 	u32 m2;
@@ -1540,6 +1588,11 @@ static void RenderBucket_BuildMvp(struct PushBuffer *pb, struct InstDrawPerPlaye
 	RenderBucket_StoreMatrixWords(&idpp->mvp, m0, m1, m2, m3, m4);
 	*projectionMvp = idpp->mvp;
 	RenderBucket_GteLoadRotMatrixWords(m0, m1, m2, m3, m4);
+#if defined(CTR_NATIVE)
+	RenderBucket_PreciseMvp(pb, idpp, &idpp->mvp, translation);
+	RenderBucket_PreciseMvp(pb, idpp, projectionMvp, translation);
+#endif
+
 }
 
 static void RenderBucket_BuildSplitViewMvp(struct PushBuffer *pb, struct InstDrawPerPlayer *idpp, MATRIX *projectionMvp)
@@ -2222,7 +2275,7 @@ static struct RenderBucketEntry *RenderBucket_QueueDraw(struct Instance *inst, s
 	}
 
 	RenderBucket_AdjustViewPositionForMvp(inst, &viewPos);
-	RenderBucket_StoreMvpTranslation(idpp, &viewPos);
+	RenderBucket_StoreMvpTranslation(idpp, &viewPos, inst, pb, viewDepth);
 	mh = RenderBucket_SelectModelHeader(inst, pb, &lodIndex, &lodExhausted, viewDepth);
 	if (mh == 0)
 	{

@@ -368,9 +368,10 @@ internal void GTE_PgxpMvmva(int mx, int v, int cv, int lm)
 
 	NativePgxp_GteGetInput(v, (s16)VX(v), (s16)VY(v), (s16)VZ(v), input);
 
-	result[0] = ((double)CV1(cv) * 4096.0 + MX11(mx) * input[0] + MX12(mx) * input[1] + MX13(mx) * input[2]) * scale;
-	result[1] = ((double)CV2(cv) * 4096.0 + MX21(mx) * input[0] + MX22(mx) * input[1] + MX23(mx) * input[2]) * scale;
-	result[2] = ((double)CV3(cv) * 4096.0 + MX31(mx) * input[0] + MX32(mx) * input[1] + MX33(mx) * input[2]) * scale;
+	const double rotation[9] = {MX11(mx), MX12(mx), MX13(mx), MX21(mx), MX22(mx), MX23(mx), MX31(mx), MX32(mx), MX33(mx)};
+	const double translation[3] = {CV1(cv), CV2(cv), CV3(cv)};
+	NativePgxp_Transform(mx, cv, rotation, translation, input, result);
+	for (int i = 0; i < 3; i++) result[i] *= scale;
 
 	for (int i = 0; i < 3; i++)
 	{
@@ -416,19 +417,14 @@ internal int GTE_RotTransPers(int idx, int lm)
 #if NATIVE_PGXP_SUPPORTED
 	if (NATIVE_PGXP_ACTIVE())
 	{
-		double input[3];
-		double preciseX = (double)viewX;
-		double preciseY = (double)viewY;
-		double preciseZ = (double)viewZ;
+		double input[3] = {VX(idx), VY(idx), VZ(idx)};
+		double result[3];
+		const double rotation[9] = {C2_R11, C2_R12, C2_R13, C2_R21, C2_R22, C2_R23, C2_R31, C2_R32, C2_R33};
+		const double translation[3] = {C2_TRX, C2_TRY, C2_TRZ};
+		NativePgxp_GteGetInput(idx, (s16)VX(idx), (s16)VY(idx), (s16)VZ(idx), input);
+		NativePgxp_Transform(0, 0, rotation, translation, input, result);
 
-		if (NativePgxp_GteGetInput(idx, (s16)VX(idx), (s16)VY(idx), (s16)VZ(idx), input))
-		{
-			preciseX = (double)C2_TRX * 4096.0 + C2_R11 * input[0] + C2_R12 * input[1] + C2_R13 * input[2];
-			preciseY = (double)C2_TRY * 4096.0 + C2_R21 * input[0] + C2_R22 * input[1] + C2_R23 * input[2];
-			preciseZ = (double)C2_TRZ * 4096.0 + C2_R31 * input[0] + C2_R32 * input[1] + C2_R33 * input[2];
-		}
-
-		GTE_PgxpRotTransPers(preciseX, preciseY, preciseZ, (u32)h_over_sz3, lm);
+		GTE_PgxpRotTransPers(result[0], result[1], result[2], (u32)h_over_sz3, lm);
 	}
 #endif
 

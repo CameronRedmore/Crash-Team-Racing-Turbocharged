@@ -259,6 +259,7 @@ extern int doCOP2(int op);
 		CTC2(CTR_ReadU32LE((char *)(r0) + 8), 2);  \
 		CTC2(CTR_ReadU32LE((char *)(r0) + 12), 3); \
 		CTC2(CTR_ReadU32LE((char *)(r0) + 16), 4); \
+		NativePgxp_LoadTransform((r0), (const s16 *)(r0), (const s32 *)((const char *)(r0) + 20), 0); \
 	}
 
 // load ctc2 5-7
@@ -275,6 +276,7 @@ extern int doCOP2(int op);
 		CTC2(CTR_ReadU32LE((char *)(r0) + 20), 5); \
 		CTC2(CTR_ReadU32LE((char *)(r0) + 24), 6); \
 		CTC2(CTR_ReadU32LE((char *)(r0) + 28), 7); \
+		NativePgxp_LoadTransform((r0), (const s16 *)(r0), (const s32 *)((const char *)(r0) + 20), 4); \
 	}
 
 // ctc2 8-12
@@ -285,6 +287,7 @@ extern int doCOP2(int op);
 		CTC2(CTR_ReadU32LE((char *)(r0) + 8), 10);  \
 		CTC2(CTR_ReadU32LE((char *)(r0) + 12), 11); \
 		CTC2(CTR_ReadU32LE((char *)(r0) + 16), 12); \
+		NativePgxp_LoadTransform((r0), (const s16 *)(r0), (const s32 *)((const char *)(r0) + 20), 1); \
 	}
 
 // ctc2 16-20
