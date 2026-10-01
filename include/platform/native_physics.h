@@ -50,6 +50,7 @@ void NativePhysics_ConvertVecToSpeed(struct Driver *d, NativePhysicsVec value);
 void NativePhysics_ConvertSpeedToVec(struct Driver *d, Vec3 *velocity);
 void NativePhysics_Gravity(struct Driver *d, Vec3 *velocity);
 void NativePhysics_JumpAndFriction(struct Driver *d);
+void NativePhysics_SurfacePushback(struct Driver *d);
 NativePhysicsVec NativePhysics_Step(struct Driver *d, double elapsedMS, double multiplier);
 void NativePhysics_Move(struct Driver *d, NativePhysicsVec step, double fraction);
 int NativePhysics_GetStateSize(void);

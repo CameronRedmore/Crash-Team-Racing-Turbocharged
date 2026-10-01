@@ -430,6 +430,9 @@ void VehGroundShadow_Main(void)
 		CTC2((u32)pb->distanceToScreen_PREV, 26);
 		VehGroundShadow_LoadGteRotMatrix(&pb->matrix_ViewProj);
 		isLargeGeomScreen = pb->distanceToScreen_PREV > VEH_GROUND_SHADOW_LARGE_GEOM_SCREEN_THRESHOLD;
+#if defined(CTR_NATIVE)
+		NativePgxp_SetDepthContext(isLargeGeomScreen ? 0.25f : 1.0f);
+#endif
 
 		for (int driverIndex = 0; driverIndex < VEH_GROUND_SHADOW_MAX_DRIVERS; driverIndex++)
 		{

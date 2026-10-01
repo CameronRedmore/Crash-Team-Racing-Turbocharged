@@ -355,8 +355,16 @@ void VehPhysForce_OnGravity(struct Driver *driver, Vec3 *velocity)
 			}
 		}
 
-		perpendicularFriction = CTR_MipsSra(CTR_MipsMulLo(perpendicularFriction, elapsedTimeMS), 5);
-		forwardFriction = CTR_MipsSra(CTR_MipsMulLo(forwardFriction, elapsedTimeMS), 5);
+		int frictionElapsedTimeMS = elapsedTimeMS;
+		if (CTR_NATIVE_60FPS_ACTIVE && ((actionsFlagSet & ACTION_MASK_WEAPON) == 0) && ((terrainFlags & TERRAIN_FLAG_MUD_PHYSICS) != 0))
+		{
+			// Mud takes the maximum of constant and proportional drag. Sample
+			// both together at 30 Hz; otherwise the intervening constant drag
+			// would be added on top of the authored proportional minimum.
+			frictionElapsedTimeMS = CTR_RETAIL_FRAME_TICK(sdata->gGT->timer) ? ELAPSED_MS : 0;
+		}
+		perpendicularFriction = CTR_MipsSra(CTR_MipsMulLo(perpendicularFriction, frictionElapsedTimeMS), 5);
+		forwardFriction = CTR_MipsSra(CTR_MipsMulLo(forwardFriction, frictionElapsedTimeMS), 5);
 
 		int terrainFrictionScale = driver->terrainMeta1->groundFrictionScale;
 		if (terrainFrictionScale != VEH_PHYS_FORCE_TERRAIN_SCALE_NEUTRAL)
@@ -417,7 +425,10 @@ void VehPhysForce_OnGravity(struct Driver *driver, Vec3 *velocity)
 			}
 		}
 
-		if (((actionsFlagSet & ACTION_MASK_WEAPON) == 0) && ((terrainFlags & TERRAIN_FLAG_MUD_PHYSICS) != 0))
+		// Speed-dependent mud damping is authored per 30 Hz step. Keep its
+		// original signed shifts on retail ticks instead of damping at render Hz.
+		if (((actionsFlagSet & ACTION_MASK_WEAPON) == 0) && ((terrainFlags & TERRAIN_FLAG_MUD_PHYSICS) != 0) &&
+		    CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
 		{
 			int absSideSpeed = VehPhysForce_OnGravity_Abs(CTR_MipsSra(localX, 3));
 			if (perpendicularFriction < absSideSpeed)
@@ -670,6 +681,13 @@ void VehPhysForce_CollideDrivers(struct Thread *thread, struct Driver *driver)
 		}
 	}
 
+#if defined(CTR_NATIVE) && !defined(__vita__)
+	if (CTR_NATIVE_SMOOTHED_PHYSICS_ACTIVE || CTR_NATIVE_SMOOTHED_COLLISION_ACTIVE)
+	{
+		NativePhysics_SurfacePushback(driver);
+		return;
+	}
+#endif
 	if ((driver->collisionFlags & DRIVER_COLL_FLAG_SURFACE_PUSHBACK) != 0)
 	{
 		int diffX = CTR_MipsSubLo(CTR_MipsSra(driver->posCurr.x, FRACTIONAL_BITS_8), driver->spsHitPos.x);
@@ -682,9 +700,10 @@ void VehPhysForce_CollideDrivers(struct Thread *thread, struct Driver *driver)
 		{
 			int diffY = CTR_MipsSubLo(CTR_MipsSra(driver->posCurr.y, FRACTIONAL_BITS_8), driver->spsHitPos.y);
 
-			driver->velocity.x = CTR_MipsAddLo(driver->velocity.x, CTR_MipsSll(diffX, VEH_PHYS_FORCE_SURFACE_PUSHBACK_SHIFT));
-			driver->velocity.y = CTR_MipsAddLo(driver->velocity.y, CTR_MipsSll(diffY, VEH_PHYS_FORCE_SURFACE_PUSHBACK_SHIFT));
-			driver->velocity.z = CTR_MipsAddLo(driver->velocity.z, CTR_MipsSll(diffZ, VEH_PHYS_FORCE_SURFACE_PUSHBACK_SHIFT));
+			// Recovery acceleration must have the same strength per second.
+			driver->velocity.x = CTR_MipsAddLo(driver->velocity.x, CTR_FRAME_STEP(CTR_MipsSll(diffX, VEH_PHYS_FORCE_SURFACE_PUSHBACK_SHIFT), sdata->gGT->timer));
+			driver->velocity.y = CTR_MipsAddLo(driver->velocity.y, CTR_FRAME_STEP(CTR_MipsSll(diffY, VEH_PHYS_FORCE_SURFACE_PUSHBACK_SHIFT), sdata->gGT->timer));
+			driver->velocity.z = CTR_MipsAddLo(driver->velocity.z, CTR_FRAME_STEP(CTR_MipsSll(diffZ, VEH_PHYS_FORCE_SURFACE_PUSHBACK_SHIFT), sdata->gGT->timer));
 		}
 	}
 }

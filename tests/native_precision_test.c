@@ -20,8 +20,83 @@ static void close_to(double actual, double expected)
 	assert(fabs(actual - expected) < 0.0001);
 }
 
+static void portal_translation(void)
+{
+	const double view[9] = {4096, 0, 0, 0, 4096, 0, 0, 0, 4096};
+	const s16 camera[3] = {-100, 200, 300};
+	const float preciseCamera[3] = {-99.5f, 200.25f, 300.75f};
+	// SpinRewards stores a negative sine in u32 before its logical shifts.
+	// The resulting high bits disappear when QueueDraw writes GTE IR1..IR3.
+	const u32 negativeSine = (u32)-4096;
+	const s32 position[3] = {
+		camera[0] + ((negativeSine * 0xa0u) >> 12),
+		camera[1] + 512 + ((negativeSine << 6) >> 12),
+		camera[2] + 800
+	};
+	double translation[3];
+	NativePgxp_ModelViewTranslation(view, position, camera, preciseCamera, translation);
+	close_to(translation[0], -160.5);
+	close_to(translation[1], 447.75);
+	close_to(translation[2], 799.25);
+
+	// Exercise the same IR-vector transform as QueueDraw's integer path.
+	MATRIX matrix = {0};
+	matrix.m[0][0] = matrix.m[1][1] = matrix.m[2][2] = 4096;
+	gte_SetLightMatrix(&matrix);
+	for (int i = 0; i < 3; i++) MTC2((u32)position[i] - (u32)(s32)camera[i], 9 + i);
+	GTE_operator(0x04be012);
+	for (int i = 0; i < 3; i++)
+	{
+		const s32 retail = MFC2_S(9 + i);
+		close_to(translation[i], retail - (preciseCamera[i] - camera[i]));
+		matrix.t[i] = retail * 4;
+		translation[i] *= 4.0;
+	}
+	NativePgxp_SetTransform(&matrix, &matrix.m[0][0], matrix.t, view, translation);
+	gte_SetRotMatrix(&matrix);
+	gte_SetTransMatrix(&matrix);
+	CTC2(256u << 16, 24);
+	CTC2(120u << 16, 25);
+	CTC2(256, 26);
+	MTC2(0, 0);
+	MTC2(0, 1);
+	GTE_operator(0x80001);
+	u32 packed = MFC2(14);
+	NativePgxpVertex vertex;
+	NativePgxp_StoreGteSXY(&packed, 14, packed);
+	assert(NativePgxp_Lookup(&packed, packed, &vertex));
+	close_to(vertex.x, 256.0 - 160.5 * 256.0 / 799.25);
+	close_to(vertex.y, 120.0 + 447.75 * 256.0 / 799.25);
+	close_to(vertex.w, 799.25 * 4.0);
+	NativePgxp_EndFrame();
+}
+
+static void model_translation_boundaries(void)
+{
+	const double view[9] = {4096, 0, 0, 0, 4096, 0, 0, 0, 4096};
+	const s16 camera[3] = {32760, -32760, 0};
+	const float preciseCamera[3] = {32760.75f, -32760.5f, 0.25f};
+	const s32 position[3] = {-32760, 32760, 65536 + 100};
+	double translation[3];
+	NativePgxp_ModelViewTranslation(view, position, camera, preciseCamera, translation);
+	close_to(translation[0], 15.25);
+	close_to(translation[1], -15.5);
+	close_to(translation[2], 99.75);
+
+	const double scaledView[9] = {8192, 0, 0, 0, 8192, 0, 0, 0, 4096};
+	const s16 zeroCamera[3] = {0};
+	const float fractionalCamera[3] = {0.5f, -0.25f, 0.75f};
+	const s32 farPosition[3] = {20000, -20000, 100};
+	NativePgxp_ModelViewTranslation(scaledView, farPosition, zeroCamera, fractionalCamera, translation);
+	close_to(translation[0], 32767);
+	close_to(translation[1], -32768);
+	close_to(translation[2], 99.25);
+}
+
 int main(void)
 {
+	portal_translation();
+	model_translation_boundaries();
 	// Compound camera rotation order and fractional-angle orthonormality.
 	const float angles[3] = {1024, 1024, 0};
 	double camera[9];
@@ -107,6 +182,55 @@ int main(void)
 	packed = MFC2(14);
 	NativePgxp_StoreGteSXY(&packed, 14, packed);
 	assert(!NativePgxp_Lookup(&packed, packed, &vertex));
+
+	// Depth-only tracking retains PGXP Off's integer screen coordinates and
+	// winding while carrying the Z which PS1 packets normally discard.
+	NativePgxp_EndFrame();
+	MATRIX depthMatrix = {0};
+	depthMatrix.m[0][0] = depthMatrix.m[1][1] = depthMatrix.m[2][2] = 4096;
+	gte_SetRotMatrix(&depthMatrix);
+	gte_SetTransMatrix(&depthMatrix);
+	MTC2(1u | (2u << 16), 0);
+	MTC2(1000, 1);
+	GTE_operator(0x80001);
+	u32 retailXY = MFC2(14);
+	gNativeDepthBufferEnabled = 1;
+	NativePgxp_SetWorldPhase(1);
+	NativePgxp_SetDepthContext(0.25f);
+	GTE_operator(0x80001);
+	packed = MFC2(14);
+	assert(packed == retailXY);
+	gte_stsxy_reg(&packed, 14);
+	assert(NativePgxp_Lookup(&packed, packed, &vertex));
+	close_to(vertex.x, (s16)packed);
+	close_to(vertex.y, (s16)(packed >> 16));
+	close_to(vertex.w, 1000);
+	close_to(vertex.depth, 250);
+	assert(NATIVE_VERTEX_TRACKING_ACTIVE() && !NATIVE_PGXP_ACTIVE());
+
+	// Different projections can land on exactly the same screen coordinate.
+	// CPU-written packets must recover the latest depth rather than treating
+	// that projection as a repeated read of the earlier vertex.
+	packed = 42u | (33u << 16);
+	NativePgxp_GteProject(42, 33, 200, packed);
+	NativePgxp_GteReadSXY(14, packed);
+	NativePgxp_GteProject(42, 33, 800, packed);
+	NativePgxp_GteReadSXY(14, packed);
+	NativePgxp_BindWrittenXY(&packed, packed);
+	assert(NativePgxp_Lookup(&packed, packed, &vertex));
+	close_to(vertex.depth, 200);
+
+	// A HUD projection has precision but does not take part in world depth.
+	NativePgxp_SetWorldPhase(0);
+	GTE_operator(0x80001);
+	gte_stsxy_reg(&packed, 14);
+	assert(NativePgxp_Lookup(&packed, packed, &vertex));
+	close_to(vertex.depth, 0);
+	NativePgxp_SetModelDepthScale(&depthMatrix, 0.25f);
+	close_to(NativePgxp_GetModelDepthScale(&depthMatrix), 0.25f);
+	NativePgxp_EndFrame();
+	close_to(NativePgxp_GetModelDepthScale(&depthMatrix), 0);
+	gNativeDepthBufferEnabled = 0;
 	puts("Native precision checks passed");
 	return 0;
 }

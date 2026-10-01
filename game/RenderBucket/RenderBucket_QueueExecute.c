@@ -1305,18 +1305,21 @@ static void RenderBucket_StoreMvpTranslation(struct InstDrawPerPlayer *idpp, con
 	CTC2(viewPos->vy, 6);
 	CTC2(viewPos->vz, 7);
 #if defined(CTR_NATIVE)
+	if (gNativeDepthBufferEnabled)
+	{
+		const float scale = (viewDepth < 4096 ? 0.25f : 1.0f) * ((inst->flags & DRAW_HUGE) != 0 ? 4.0f : 1.0f);
+		NativePgxp_SetModelDepthScale(idpp, scale);
+	}
 	if (NATIVE_PGXP_ACTIVE() && (inst->flags & SCREENSPACE_INSTANCE) == 0)
 	{
 		double view[9], unused[3], result[3], rotation[9];
 		float cameraPos[3];
 		NativePgxp_GetPosition(&pb->pos, pb->pos.v, cameraPos);
 		NativePgxp_GetTransform(&pb->matrix_ViewProj, &pb->matrix_ViewProj.m[0][0], pb->matrix_ViewProj.t, view, unused);
+		NativePgxp_ModelViewTranslation(view, inst->matrix.t, pb->pos.v, cameraPos, result);
 		const double scale = (viewDepth < 4096 ? 4.0 : 1.0) * ((inst->flags & DRAW_HUGE) != 0 ? 0.25 : 1.0);
 		for (int row = 0; row < 3; row++)
 		{
-			result[row] = 0.0;
-			for (int col = 0; col < 3; col++)
-				result[row] += view[row*3+col] * (inst->matrix.t[col] - (double)cameraPos[col]) / 4096.0;
 			result[row] *= scale;
 		}
 		for (int i = 0; i < 9; i++) rotation[i] = (&idpp->mvp.m[0][0])[i];
@@ -3026,7 +3029,7 @@ static int RenderBucket_CheckProjectedPrim(struct RenderBucketDrawContext *ctx, 
 		}
 
 		cullXor = (s32)cullFlags ^ (s32)(command << 2);
-		if ((s32)((u32)opZ ^ (u32)cullXor) <= 0)
+		if (!CTR_NATIVE_NO_BACKFACE_CULLING_ACTIVE && (s32)((u32)opZ ^ (u32)cullXor) <= 0)
 		{
 			return 0;
 		}
@@ -3545,7 +3548,7 @@ static int RenderBucket_DrawInstPrim_LitTextureAtRange(struct RenderBucketDrawCo
 		// NOTE(aalhendi): Retail tests raw OT pointer bits here. Native uses the
 		// 24-bit OT/tag address domain so host pointer high bits cannot affect
 		// primitive visibility.
-		if ((s32)(otSide & (u32)signedTest) < 0)
+		if (!CTR_NATIVE_NO_BACKFACE_CULLING_ACTIVE && (s32)(otSide & (u32)signedTest) < 0)
 		{
 			return 0;
 		}
@@ -4157,7 +4160,7 @@ static int RenderBucket_DrawSplitPrimitiveLitTextureAtRange(struct RenderBucketD
 	{
 		u32 otSide = RenderBucket_OTAddress(otEntry) << 3;
 
-		if ((s32)(otSide & (u32)signedTest) < 0)
+		if (!CTR_NATIVE_NO_BACKFACE_CULLING_ACTIVE && (s32)(otSide & (u32)signedTest) < 0)
 		{
 			return 0;
 		}
@@ -5643,6 +5646,8 @@ void RenderBucket_Execute(void *param_1, struct PrimMem *param_2)
 #if defined(CTR_NATIVE)
 		int nativeMirrorState = gNativeMirrorModeRenderActive;
 		int nativeMirrorDoubleFlipState = gNativeMirrorModeDoubleFlipActive;
+		float nativeDepthContext = NativePgxp_SetDepthContext(
+			(ctx.inst->flags & SCREENSPACE_INSTANCE) != 0 ? 0.0f : NativePgxp_GetModelDepthScale(ctx.idpp));
 		if ((ctx.inst->flags & SCREENSPACE_INSTANCE) != 0)
 		{
 			gNativeMirrorModeRenderActive = 0;
@@ -5656,6 +5661,7 @@ void RenderBucket_Execute(void *param_1, struct PrimMem *param_2)
 #if defined(CTR_NATIVE)
 		gNativeMirrorModeDoubleFlipActive = nativeMirrorDoubleFlipState;
 		gNativeMirrorModeRenderActive = nativeMirrorState;
+		NativePgxp_SetDepthContext(nativeDepthContext);
 #endif
 	}
 }

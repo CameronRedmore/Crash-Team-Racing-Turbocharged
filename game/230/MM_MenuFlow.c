@@ -252,13 +252,15 @@ static struct MenuRow s_nativeOptionsRows[] =
 #ifndef __vita__
 static struct MenuRow s_nativeEnhancementsRows[] =
 {
-	{NATIVE_MENU_STRING_PGXP, 6, 1, 0, 0},
+	{NATIVE_MENU_STRING_PGXP, 8, 1, 0, 0},
 	{NATIVE_MENU_STRING_INTEGER_NCLIP, 0, 2, 1, 1},
 	{NATIVE_MENU_STRING_MAX_LOD, 1, 3, 2, 2},
 	{NATIVE_MENU_STRING_PHYSICS, 2, 4, 3, 3},
 	{NATIVE_MENU_STRING_AI_PHYSICS, 3, 5, 4, 4},
 	{NATIVE_MENU_STRING_COLLISION_PHYSICS, 4, 6, 5, 5},
-	{NATIVE_MENU_STRING_STEERING_PHYSICS, 5, 0, 6, 6},
+	{NATIVE_MENU_STRING_STEERING_PHYSICS, 5, 7, 6, 6},
+	{NATIVE_MENU_STRING_BACKFACE_CULLING, 6, 8, 7, 7},
+	{NATIVE_MENU_STRING_DEPTH_BUFFER, 7, 0, 8, 8},
 	{RECTMENU_STRING_NONE},
 };
 #endif
@@ -1016,6 +1018,20 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 	if (choose == NATIVE_MENU_STRING_INTEGER_NCLIP)
 	{
 		gNativePgxpIntegerNclipEnabled ^= 1;
+		save_config();
+		return;
+	}
+
+	if (choose == NATIVE_MENU_STRING_BACKFACE_CULLING)
+	{
+		gNativeBackfaceCullingDisabled ^= 1;
+		save_config();
+		return;
+	}
+
+	if (choose == NATIVE_MENU_STRING_DEPTH_BUFFER)
+	{
+		gNativeDepthBufferEnabled ^= 1;
 		save_config();
 		return;
 	}

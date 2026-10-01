@@ -167,6 +167,14 @@ enum NativeGhostReplayOverlayButtonBits
 b32 NativeGhostInput_GetReplayOverlayState(u32 *buttonsHeld, u8 *stickLX, u8 *stickLY, u8 *stickRX, u8 *stickRY);
 void NativeGhostInput_SetLeaderboardReplaySource(const char *nickname);
 b32 NativeGhostInput_IsLeaderboardReplay(void);
+#if defined(CTR_NATIVE)
+void NativeAutoSave_Refresh(void);
+b32 NativeAutoSave_Exists(void);
+b32 NativeAutoSave_Read(struct AdvProgress *adv);
+b32 NativeAutoSave_Apply(void);
+b32 NativeAutoSave_Write(void);
+void NativeAutoSave_OnHubLoaded(void);
+#endif
 const char *NativeGhostInput_GetLeaderboardReplayName(void);
 void NativeGhostInput_ClearSelection(void);
 b32 NativeGhostInput_SelectGhost(const char *ghostName, u16 trackID, u16 characterID);

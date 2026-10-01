@@ -37,6 +37,8 @@ typedef struct
 	float y;
 	// View-space depth; <= 0 when the projection has no usable depth.
 	float w;
+	// Camera-space depth in world units; 0 for HUD, sky, or unknown geometry.
+	float depth;
 	// Retail packed SXY (x low, y high) this vertex was truncated to.
 	u32 value;
 } NativePgxpVertex;
@@ -44,10 +46,12 @@ typedef struct
 extern int gNativePgxpMode;
 // Use retail integer winding calculations while retaining PGXP geometry.
 extern int gNativePgxpIntegerNclipEnabled;
+extern int gNativeDepthBufferEnabled;
 
 #if NATIVE_PGXP_SUPPORTED
 
 #define NATIVE_PGXP_ACTIVE() (gNativePgxpMode != NATIVE_PGXP_MODE_OFF)
+#define NATIVE_VERTEX_TRACKING_ACTIVE() (NATIVE_PGXP_ACTIVE() || gNativeDepthBufferEnabled)
 
 // Host range holding the double-buffered primitive memory. Lookups inside it
 // use a collision-free direct map; everything else goes through a small cache.
@@ -67,6 +71,11 @@ void NativePgxp_BindWrittenXY(const void *dst, u32 value);
 // World rendering phases may bind CPU-written SXY words to recent GTE results
 // by value. HUD and menu drawing never does, so 2D packets stay retail.
 void NativePgxp_SetWorldPhase(int active);
+// Retail model/tire transforms can scale view coordinates by four. Normalize
+// their depth without changing the divisor used for texture interpolation.
+float NativePgxp_SetDepthContext(float scale);
+void NativePgxp_SetModelDepthScale(const void *key, float scale);
+float NativePgxp_GetModelDepthScale(const void *key);
 
 // CPU-side precision, like DuckStation's "PGXP CPU" mode, for the vertices
 // CTR builds itself (subdivision midpoints, LOD fades, near-plane clipping).
@@ -98,6 +107,8 @@ void NativePgxp_GteSetMvmvaResult(const double *precise, s16 ir1, s16 ir2, s16 i
 int NativePgxp_GteGetMvmvaResult(const s16 *ir, float *out);
 
 void NativePgxp_CameraRotation(const float *angles, double *rotation);
+// Model translation follows the GTE's signed input and IR saturation boundaries.
+void NativePgxp_ModelViewTranslation(const double *view, const s32 *position, const s16 *camera, const float *preciseCamera, double *translation);
 
 // Camera transforms retain fractional rotation and translation outside PS1 layouts.
 void NativePgxp_SetTransform(const void *key, const s16 *rotation, const s32 *translation, const double *preciseRotation, const double *preciseTranslation);
@@ -116,6 +127,7 @@ void NativePgxp_DebugCountPolygon(int vertexCount, int recoveredCount, int persp
 #else
 
 #define NATIVE_PGXP_ACTIVE() 0
+#define NATIVE_VERTEX_TRACKING_ACTIVE() 0
 
 static inline void NativePgxp_SetPrimRegion(const void *start, size_t size)
 {
@@ -173,6 +185,21 @@ static inline void NativePgxp_BindWrittenXY(const void *dst, u32 value)
 static inline void NativePgxp_SetWorldPhase(int active)
 {
 	(void)active;
+}
+static inline float NativePgxp_SetDepthContext(float scale)
+{
+	(void)scale;
+	return 1.0f;
+}
+static inline void NativePgxp_SetModelDepthScale(const void *key, float scale)
+{
+	(void)key;
+	(void)scale;
+}
+static inline float NativePgxp_GetModelDepthScale(const void *key)
+{
+	(void)key;
+	return 0.0f;
 }
 static inline void NativePgxp_SetPosition(const void *key, const s16 *vector, const float *precise)
 {
@@ -232,6 +259,8 @@ static inline int NativePgxp_GteGetMvmvaResult(const s16 *ir, float *out)
 }
 static inline void NativePgxp_CameraRotation(const float *angles, double *rotation)
 { (void)angles; (void)rotation; }
+static inline void NativePgxp_ModelViewTranslation(const double *view, const s32 *position, const s16 *camera, const float *preciseCamera, double *translation)
+{ (void)view; (void)position; (void)camera; (void)preciseCamera; (void)translation; }
 static inline void NativePgxp_SetTransform(const void *key, const s16 *r, const s32 *t, const double *pr, const double *pt)
 { (void)key; (void)r; (void)t; (void)pr; (void)pt; }
 static inline void NativePgxp_GetTransform(const void *key, const s16 *r, const s32 *t, double *pr, double *pt)

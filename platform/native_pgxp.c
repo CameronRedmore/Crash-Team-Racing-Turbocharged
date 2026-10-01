@@ -14,6 +14,7 @@ int gNativePgxpMode = NATIVE_PGXP_MODE_OFF;
 #endif
 
 int gNativePgxpIntegerNclipEnabled = 0;
+int gNativeDepthBufferEnabled = 0;
 
 #if NATIVE_PGXP_SUPPORTED
 
@@ -57,6 +58,52 @@ global_variable uintptr_t s_pgxpPrimSize;
 // parses every frame's packets before the next frame starts building.
 global_variable u32 s_pgxpGeneration = 1;
 global_variable b32 s_pgxpWorldPhase;
+global_variable float s_pgxpDepthScale = 1.0f;
+
+#define NATIVE_PGXP_MODEL_DEPTH_COUNT 4096
+typedef struct
+{
+	const void *key;
+	float scale;
+	u32 generation;
+} NativePgxpModelDepth;
+static NativePgxpModelDepth s_pgxpModelDepth[NATIVE_PGXP_MODEL_DEPTH_COUNT];
+
+float NativePgxp_SetDepthContext(float scale)
+{
+	float previous = s_pgxpDepthScale;
+	s_pgxpDepthScale = scale;
+	return previous;
+}
+
+void NativePgxp_SetModelDepthScale(const void *key, float scale)
+{
+	u32 index = ((u32)((uintptr_t)key >> 2) * 2654435761u) & (NATIVE_PGXP_MODEL_DEPTH_COUNT - 1);
+	for (u32 probe = 0; probe < NATIVE_PGXP_MODEL_DEPTH_COUNT; probe++)
+	{
+		NativePgxpModelDepth *slot = &s_pgxpModelDepth[index];
+		if (slot->generation != s_pgxpGeneration || slot->key == key)
+		{
+			*slot = (NativePgxpModelDepth){key, scale, s_pgxpGeneration};
+			return;
+		}
+		index = (index + 1) & (NATIVE_PGXP_MODEL_DEPTH_COUNT - 1);
+	}
+}
+
+float NativePgxp_GetModelDepthScale(const void *key)
+{
+	u32 index = ((u32)((uintptr_t)key >> 2) * 2654435761u) & (NATIVE_PGXP_MODEL_DEPTH_COUNT - 1);
+	for (u32 probe = 0; probe < NATIVE_PGXP_MODEL_DEPTH_COUNT; probe++)
+	{
+		const NativePgxpModelDepth *slot = &s_pgxpModelDepth[index];
+		if (slot->generation != s_pgxpGeneration) break;
+		if (slot->key == key) return slot->scale;
+		index = (index + 1) & (NATIVE_PGXP_MODEL_DEPTH_COUNT - 1);
+	}
+	// An untracked model retains retail ordering instead of guessing its units.
+	return 0.0f;
+}
 
 void NativePgxp_SetPrimRegion(const void *start, size_t size)
 {
@@ -171,7 +218,7 @@ internal void NativePgxp_RememberRecent(const NativePgxpVertex *vertex)
 	// Culling helpers read the same SXY registers right before the packet
 	// writer does; do not let those repeats flush the history.
 	if ((s_pgxpRecentGeneration[last] == s_pgxpGeneration) && (s_pgxpRecent[last].value == vertex->value) && (s_pgxpRecent[last].x == vertex->x) &&
-	    (s_pgxpRecent[last].y == vertex->y))
+	    (s_pgxpRecent[last].y == vertex->y) && (s_pgxpRecent[last].w == vertex->w) && (s_pgxpRecent[last].depth == vertex->depth))
 	{
 		return;
 	}
@@ -201,6 +248,7 @@ void NativePgxp_GteProject(float x, float y, float w, u32 value)
 	s_pgxpFifo[2].vertex.x = x;
 	s_pgxpFifo[2].vertex.y = y;
 	s_pgxpFifo[2].vertex.w = w;
+	s_pgxpFifo[2].vertex.depth = s_pgxpWorldPhase ? w * s_pgxpDepthScale : 0.0f;
 	s_pgxpFifo[2].vertex.value = value;
 	s_pgxpFifo[2].valid = 1;
 }
@@ -345,6 +393,7 @@ void NativePgxp_BindWrittenXY(const void *dst, u32 value)
 void NativePgxp_SetWorldPhase(int active)
 {
 	s_pgxpWorldPhase = active != 0;
+	s_pgxpDepthScale = 1.0f;
 }
 
 #define NATIVE_PGXP_POSITION_BITS  13
@@ -515,6 +564,29 @@ void NativePgxp_CameraRotation(const float *rot, double *rotation)
 	memcpy(rotation, camera, sizeof(camera));
 }
 
+void NativePgxp_ModelViewTranslation(const double *view, const s32 *position, const s16 *camera, const float *preciseCamera, double *translation)
+{
+	double relative[3];
+	for (int col = 0; col < 3; col++)
+	{
+		// QueueDraw writes the integer camera-relative position to IR1..IR3,
+		// which sign-extend only the low 16 bits. Portal reward animation can
+		// leave high bits from unsigned trig shifts in Instance.matrix.t.
+		// Wrap the integer input first, then retain the camera's residual.
+		relative[col] = (s16)((u32)position[col] - (u32)(s32)camera[col]);
+		relative[col] -= (double)preciseCamera[col] - camera[col];
+	}
+	for (int row = 0; row < 3; row++)
+	{
+		translation[row] = 0.0;
+		for (int col = 0; col < 3; col++)
+			translation[row] += view[row*3+col] * relative[col] / 4096.0;
+		// The view-position MVMVA saturates IR before near/DRAW_HUGE scaling.
+		translation[row] = translation[row] < -32768.0 ? -32768.0 :
+			(translation[row] > 32767.0 ? 32767.0 : translation[row]);
+	}
+}
+
 // Address and full integer snapshots prevent stale scratch/stack transforms
 // from applying to another matrix. Register writes invalidate loaded shadows.
 #define NATIVE_PGXP_TRANSFORM_COUNT 4096
@@ -589,11 +661,25 @@ void NativePgxp_InvalidateTransform(int reg)
 
 void NativePgxp_Transform(int mx, int cv, const double *rotation, const double *translation, const double *input, double *result)
 {
+	b32 usePreciseTransforms = 1;
+#if defined(CTR_INTERNAL)
+	static int retailTransforms = -1;
+	if (retailTransforms < 0)
+	{
+		const char *env = getenv("CTR_PGXP_RETAIL_TRANSFORMS");
+		retailTransforms = (env != NULL) && (env[0] != '\0') && (env[0] != '0');
+		if (retailTransforms)
+		{
+			Platform_Log("[CTR PGXP] using retail transforms for geometry diagnostics\n");
+		}
+	}
+	usePreciseTransforms = !retailTransforms;
+#endif
 	for (int row = 0; row < 3; row++)
 	{
-		const double *r = (mx < 3 && s_pgxpRotationValid[mx]) ?
+		const double *r = (usePreciseTransforms && mx < 3 && s_pgxpRotationValid[mx]) ?
 			&s_pgxpTransformBanks[mx].preciseRotation[row * 3] : &rotation[row * 3];
-		const double t = (cv < 3 && s_pgxpTranslationValid[cv]) ?
+		const double t = (usePreciseTransforms && cv < 3 && s_pgxpTranslationValid[cv]) ?
 			s_pgxpTransformBanks[cv].preciseTranslation[row] : translation[row];
 		result[row] = r[0] * input[0] + r[1] * input[1] + r[2] * input[2] + t * 4096.0;
 	}
@@ -695,6 +781,7 @@ void NativePgxp_EndFrame(void)
 		s_pgxpGeneration = 1;
 	}
 	s_pgxpWorldPhase = 0;
+	s_pgxpDepthScale = 1.0f;
 	memset(s_pgxpFifo, 0, sizeof(s_pgxpFifo));
 	memset(s_pgxpInputs, 0, sizeof(s_pgxpInputs));
 	s_pgxpMvmvaResult.valid = 0;

@@ -6,6 +6,10 @@
 
 extern int gNativeGhostReplayMode;
 
+#if defined(CTR_NATIVE)
+static struct SelectProfileLoadSaveIcon s_autoSaveIcons[3];
+#endif
+
 static char *SelectProfile_NativeGhostFormatText(int ghostFps, int ghostMode)
 {
 	if (ghostFps > 60)
@@ -48,14 +52,24 @@ void SelectProfile_ThTick(struct Thread *t)
 	int i;
 
 	obj = (struct SelectProfileLoadSaveObj *)t->object;
-	icon = obj->icons;
-
-	for (i = 0; i < 12; i++, icon++)
+	for (i = 0; i <
+#if defined(CTR_NATIVE)
+	     15
+#else
+	     12
+#endif
+	     ; i++)
 	{
 		int slot = i % 3;
-		struct Instance *inst = icon->inst;
+		struct SelectProfileLoadSaveIcon *activeIcon;
+#if defined(CTR_NATIVE)
+		activeIcon = (i >= 12) ? &s_autoSaveIcons[i - 12] : &obj->icons[i];
+#else
+		activeIcon = &obj->icons[i];
+#endif
+		struct Instance *inst = activeIcon->inst;
 
-		icon->rot.y = (s16)(icon->rot.y + CTR_FRAME_STEP(sdata->LoadSave_SpinRateY[slot], sdata->gGT->timer));
+		activeIcon->rot.y = (s16)(activeIcon->rot.y + CTR_FRAME_STEP(sdata->LoadSave_SpinRateY[slot], sdata->gGT->timer));
 
 #if defined(CTR_NATIVE)
 		// NOTE(aalhendi): Menu-storage can keep this thread alive when the
@@ -66,11 +80,11 @@ void SelectProfile_ThTick(struct Thread *t)
 		}
 #endif
 
-		ConvertRotToMatrix(&inst->matrix, &icon->rot);
+		ConvertRotToMatrix(&inst->matrix, &activeIcon->rot);
 
 		if (slot != 1)
 		{
-			Vector_SpecLightSpin3D(inst, &icon->rot, &data.MetaDataLoadSave[i].vec3_specular_inverted);
+			Vector_SpecLightSpin3D(inst, &activeIcon->rot, &data.MetaDataLoadSave[i % 12].vec3_specular_inverted);
 		}
 	}
 }
@@ -122,7 +136,13 @@ int SelectProfile_UI_ConvertY(int screenY, int scale)
 
 static void SelectProfile_DrawAdvProfile_UpdateIcon(struct SelectProfileLoadSaveObj *obj, int index, int posX, int posY)
 {
-	struct Instance *inst = obj->icons[index].inst;
+	struct SelectProfileLoadSaveIcon *icon;
+#if defined(CTR_NATIVE)
+	icon = (index >= 12) ? &s_autoSaveIcons[index - 12] : &obj->icons[index];
+#else
+	icon = &obj->icons[index];
+#endif
+	struct Instance *inst = icon->inst;
 
 #if defined(CTR_NATIVE)
 	if (inst == NULL)
@@ -192,9 +212,16 @@ void SelectProfile_DrawAdvProfile(struct AdvProgress *adv, int posX, int posY, s
 
 		DecalFont_DrawLine((char *)&sdata->s_percent_sign, posX + 0x70, posY + 0x17, FONT_BIG, percentColor);
 
-		SelectProfile_DrawAdvProfile_UpdateIcon(obj, slotIndex, posX + 0xc3, posY + 0x1f);
-		SelectProfile_DrawAdvProfile_UpdateIcon(obj, slotIndex + 1, posX + 0x78, posY + 0xd);
-		SelectProfile_DrawAdvProfile_UpdateIcon(obj, slotIndex + 2, posX + 0xc3, posY + 0xd);
+#if defined(CTR_NATIVE)
+		if (slotIndex + 2 < 12
+		    || slotIndex == 12
+		)
+#endif
+		{
+			SelectProfile_DrawAdvProfile_UpdateIcon(obj, slotIndex, posX + 0xc3, posY + 0x1f);
+			SelectProfile_DrawAdvProfile_UpdateIcon(obj, slotIndex + 1, posX + 0x78, posY + 0xd);
+			SelectProfile_DrawAdvProfile_UpdateIcon(obj, slotIndex + 2, posX + 0xc3, posY + 0xd);
+		}
 	}
 
 	profileRect.x = posX;
@@ -287,16 +314,26 @@ void SelectProfile_Init(u16 flags)
 	}
 
 	gGT = sdata->gGT;
-	icon = obj->icons;
-
-	for (i = 0; i < 12; i++, icon++)
+	for (i = 0; i <
+#if defined(CTR_NATIVE)
+	     15
+#else
+	     12
+#endif
+	     ; i++)
 	{
 		struct Instance *inst;
 		int slot;
+		struct SelectProfileLoadSaveIcon *activeIcon;
+#if defined(CTR_NATIVE)
+		activeIcon = (i >= 12) ? &s_autoSaveIcons[i - 12] : &obj->icons[i];
+#else
+		activeIcon = &obj->icons[i];
+#endif
 
-		if (icon->inst == NULL)
+		if (activeIcon->inst == NULL)
 		{
-			struct Model *model = gGT->modelPtr[data.MetaDataLoadSave[i].modelID];
+			struct Model *model = gGT->modelPtr[data.MetaDataLoadSave[i % 12].modelID];
 #ifdef CTR_NATIVE
 			char *instName = &s_SelectProfileInstName[0];
 #else
@@ -312,7 +349,7 @@ void SelectProfile_Init(u16 flags)
 					struct InstDrawPerPlayer *idpp;
 					int player;
 
-					icon->inst = inst;
+					activeIcon->inst = inst;
 					slot = i % 3;
 
 					inst->flags |= HIDE_MODEL | SCREENSPACE_INSTANCE;
@@ -328,21 +365,21 @@ void SelectProfile_Init(u16 flags)
 						idpp[player].pushBuffer = NULL;
 					}
 
-					inst->colorRGBA = SelectProfile_LoadSave_Color(i, flags);
-					inst->scale.x = data.MetaDataLoadSave[i].scale;
-					inst->scale.y = data.MetaDataLoadSave[i].scale;
-					inst->scale.z = data.MetaDataLoadSave[i].scale;
+					inst->colorRGBA = SelectProfile_LoadSave_Color(i % 12, flags);
+					inst->scale.x = data.MetaDataLoadSave[i % 12].scale;
+					inst->scale.y = data.MetaDataLoadSave[i % 12].scale;
+					inst->scale.z = data.MetaDataLoadSave[i % 12].scale;
 
-					icon->rot.x = 0;
-					icon->rot.y = 0;
-					icon->rot.z = data.spinOffset_LoadSave[slot];
+					activeIcon->rot.x = 0;
+					activeIcon->rot.y = 0;
+					activeIcon->rot.z = data.spinOffset_LoadSave[slot];
 
 					CTR_MatrixSetRotIdentity(&inst->matrix);
 				}
 			}
 		}
 
-		inst = icon->inst;
+		inst = activeIcon->inst;
 		if (inst != NULL)
 		{
 			inst->flags |= HIDE_MODEL;
@@ -359,16 +396,27 @@ void SelectProfile_Destroy(void)
 	obj = (struct SelectProfileLoadSaveObj *)sdata->ptrLoadSaveObj;
 	if (obj != NULL)
 	{
-		struct SelectProfileLoadSaveIcon *icon = obj->icons;
 		int i;
 
-		for (i = 0; i < 12; i++, icon++)
-		{
-			if (icon->inst != NULL)
-			{
-				INSTANCE_Death(icon->inst);
+		for (i = 0; i <
 #if defined(CTR_NATIVE)
-				icon->inst = NULL;
+		     15
+#else
+		     12
+#endif
+		     ; i++)
+		{
+			struct SelectProfileLoadSaveIcon *activeIcon;
+#if defined(CTR_NATIVE)
+			activeIcon = (i >= 12) ? &s_autoSaveIcons[i - 12] : &obj->icons[i];
+#else
+			activeIcon = &obj->icons[i];
+#endif
+			if (activeIcon->inst != NULL)
+			{
+				INSTANCE_Death(activeIcon->inst);
+#if defined(CTR_NATIVE)
+				activeIcon->inst = NULL;
 #endif
 			}
 		}
@@ -521,6 +569,12 @@ void SelectProfile_ToggleMode(u32 mode)
 		                  : sdata->gGT->currLEV;
 		RefreshCard_ActivateGhostProfilesForLEV(trackID);
 	}
+#if defined(CTR_NATIVE)
+	if (*SelectProfile_Mode() == SELECT_PROFILE_SCREEN_ADV_LOAD)
+	{
+		NativeAutoSave_Refresh();
+	}
+#endif
 	sdata->selectProfileState.exitToPrevious = 0;
 	sdata->selectProfileState.actionDone = 0;
 	sdata->selectProfileState.overwritePrompt = 0;
@@ -695,8 +749,25 @@ static int SelectProfile_IsGhostMode(void)
 	return *SelectProfile_AllProfiles_Mode() == SELECT_PROFILE_SCREEN_GHOST;
 }
 
+#define SELECT_PROFILE_ADV_SLOT_COUNT 4
+#define SELECT_PROFILE_AUTOSAVE_ROW 4
+
+#if defined(CTR_NATIVE)
+// The native autosave row is shown only on the main menu Adventure Load screen.
+static b32 SelectProfile_AutoSaveRowVisible(void)
+{
+	return (*SelectProfile_AllProfiles_Mode() == SELECT_PROFILE_SCREEN_ADV_LOAD) && (sdata->memcardAction == SELECT_PROFILE_ACTION_LOAD) &&
+	       NativeAutoSave_Exists();
+}
+#endif
+
 static int SelectProfile_AdvProfileOccupied(int slot)
 {
+	if ((slot < 0) || (slot >= SELECT_PROFILE_ADV_SLOT_COUNT))
+	{
+		return 0;
+	}
+
 	return SelectProfile_MemcardProfile()->advProgress[slot].characterID >= 0;
 }
 
@@ -946,19 +1017,56 @@ static void SelectProfile_DrawAdvRows(struct RectMenu *menu, int color)
 	int i;
 	int subtitleVisible = strlen(sdata->lngStrings[data.lngStringsSaveLoadDelete[(sdata->memcardAction * 2) + 1]]) != 0;
 	struct MemcardProfile *memcard = SelectProfile_MemcardProfile();
+#if defined(CTR_NATIVE)
+	b32 autoSave = SelectProfile_AutoSaveRowVisible();
+#else
+	b32 autoSave = false;
+#endif
 
-	DecalFont_DrawLine(sdata->lngStrings[data.lngStringsSaveLoadDelete[sdata->memcardAction * 2]], 0x100, subtitleVisible ? 0x12 : 0x1a, FONT_BIG,
-	                   JUSTIFY_CENTER | color);
-
-	if (subtitleVisible != 0)
+	if (autoSave)
 	{
-		DecalFont_DrawLine(sdata->lngStrings[data.lngStringsSaveLoadDelete[(sdata->memcardAction * 2) + 1]], 0x100, 0x22, FONT_BIG, JUSTIFY_CENTER | color);
+		// Compressed layout so a fifth, centered row fits in the 216 line screen.
+		DecalFont_DrawLine(sdata->lngStrings[data.lngStringsSaveLoadDelete[sdata->memcardAction * 2]], 0x100, subtitleVisible ? 2 : 6, FONT_BIG,
+		                   JUSTIFY_CENTER | color);
+
+		if (subtitleVisible != 0)
+		{
+			DecalFont_DrawLine(sdata->lngStrings[data.lngStringsSaveLoadDelete[(sdata->memcardAction * 2) + 1]], 0x100, 0x12, FONT_SMALL,
+			                   JUSTIFY_CENTER | color);
+		}
+	}
+	else
+	{
+		DecalFont_DrawLine(sdata->lngStrings[data.lngStringsSaveLoadDelete[sdata->memcardAction * 2]], 0x100, subtitleVisible ? 0x12 : 0x1a, FONT_BIG,
+		                   JUSTIFY_CENTER | color);
+
+		if (subtitleVisible != 0)
+		{
+			DecalFont_DrawLine(sdata->lngStrings[data.lngStringsSaveLoadDelete[(sdata->memcardAction * 2) + 1]], 0x100, 0x22, FONT_BIG,
+			                   JUSTIFY_CENTER | color);
+		}
 	}
 
-	for (i = 0; i < 4; i++)
+	for (i = 0; i < SELECT_PROFILE_ADV_SLOT_COUNT; i++)
 	{
-		SelectProfile_DrawAdvProfile(&memcard->advProgress[i], ((i & 1) * 0xea) + 0x1a, ((i >> 1) * 0x43) + 0x3c, i == menu->rowSelected, i, menu->drawStyle);
+		int posY = autoSave ? ((i >> 1) * 0x3d) + 0x1c : ((i >> 1) * 0x43) + 0x3c;
+
+		SelectProfile_DrawAdvProfile(&memcard->advProgress[i], ((i & 1) * 0xea) + 0x1a, posY, i == menu->rowSelected, i, menu->drawStyle);
 	}
+
+#if defined(CTR_NATIVE)
+	if (autoSave)
+	{
+		struct AdvProgress autoAdv;
+
+		if (NativeAutoSave_Read(&autoAdv))
+		{
+			SelectProfile_DrawAdvProfile(&autoAdv, 0x92, 0x96, menu->rowSelected == SELECT_PROFILE_AUTOSAVE_ROW, SELECT_PROFILE_AUTOSAVE_ROW,
+			                             menu->drawStyle);
+			DecalFont_DrawLine("AUTOSAVE", 0x49, 0x96 + 0x1a, FONT_SMALL, JUSTIFY_CENTER | color);
+		}
+	}
+#endif
 
 	if ((sdata->memcardAction == SELECT_PROFILE_ACTION_SAVE) && (sdata->boolMemcardDataValid != 0))
 	{
@@ -1202,6 +1310,16 @@ static int SelectProfile_HandleSelection(struct RectMenu *menu, int rowCount)
 			*SelectProfile_AllProfiles_ActionActive() = 1;
 			*SelectProfile_AllProfiles_ExitToPrevious() = 1;
 		}
+#if defined(CTR_NATIVE)
+		else if ((menu->rowSelected == SELECT_PROFILE_AUTOSAVE_ROW) && SelectProfile_AutoSaveRowVisible() && NativeAutoSave_Apply())
+		{
+			// Row 4 is not a real advProgress slot; keep the saved-row memory in range.
+			sdata->unk_8008d73C_relatedToRowHighlighted = 0;
+			*SelectProfile_AllProfiles_ActionActive() = 1;
+			*SelectProfile_AllProfiles_ActionDone() = 1;
+			sdata->boolError = 1;
+		}
+#endif
 		else if (SelectProfile_AdvProfileOccupied(menu->rowSelected))
 		{
 			SelectProfile_LoadAdvProfile(menu->rowSelected);
@@ -1523,7 +1641,9 @@ static void SelectProfile_FinalizeAdventure(struct RectMenu *menu)
 			return;
 		}
 
-		sdata->advProfileIndex = menu->rowSelected;
+		// The native autosave row is not a card slot; 0xffff (as for a new game) makes
+		// any later manual save to an occupied slot ask for overwrite confirmation.
+		sdata->advProfileIndex = ((menu->rowSelected >= 0) && (menu->rowSelected < SELECT_PROFILE_ADV_SLOT_COUNT)) ? menu->rowSelected : 0xffff;
 		// NOTE(aalhendi): Retail 0x8004a848-0x8004a864 stores saved/fallback hub in currLEV.
 		if (sdata->advProgress.HubLevYouSavedOn != 0)
 		{
@@ -1562,10 +1682,11 @@ void SelectProfile_AllProfiles_MenuProc(struct RectMenu *menu)
 	int color = ((menu->drawStyle & SELECT_PROFILE_DRAW_STYLE_GREEN) != 0) ? LIGHT_GREEN : ORANGE;
 	int savedGhostCount = sdata->numGhostProfilesSaved;
 	b32 canChooseEmptySlot = false;
-	int rowCount = SelectProfile_IsGhostMode() ? SelectProfile_GhostRowCount(&savedGhostCount, &canChooseEmptySlot) : 4;
+	int rowCount = SelectProfile_IsGhostMode() ? SelectProfile_GhostRowCount(&savedGhostCount, &canChooseEmptySlot) : SELECT_PROFILE_ADV_SLOT_COUNT;
 	b32 handled = false;
 	b32 doSave = false;
 
+	/*DBG*/ if (sdata->buttonTapPerPlayer[0]) fprintf(stderr, "SPDBG tap=%x row=%d rc=%d act=%d msg=%d 95c=%d 928=%d fs=%d\n", sdata->buttonTapPerPlayer[0], menu->rowSelected, rowCount, *SelectProfile_AllProfiles_ActionActive(), sdata->mcScreenText, (s16)CTR_ReadU16LE(&sdata->unk8008d95c), (s16)CTR_ReadU16LE(&sdata->unk_memcardRelated_8008d928[0]), menu->funcState);
 	if (sdata->mcScreenText == MC_SCREEN_WARNING_NOCARD)
 	{
 		*SelectProfile_AllProfiles_OverwritePrompt() = 0;
@@ -1589,9 +1710,20 @@ void SelectProfile_AllProfiles_MenuProc(struct RectMenu *menu)
 		goto draw_and_finish;
 	}
 
+#if defined(CTR_NATIVE)
+	if (!SelectProfile_IsGhostMode() && SelectProfile_AutoSaveRowVisible())
+	{
+		rowCount = SELECT_PROFILE_ADV_SLOT_COUNT + 1;
+	}
+#endif
+
 	if (SelectProfile_IsGhostMode())
 	{
 		SelectProfile_ClampRow(menu, rowCount);
+	}
+	else if ((menu->rowSelected > 0) && (menu->rowSelected >= rowCount))
+	{
+		menu->rowSelected = rowCount - 1;
 	}
 
 	if (*SelectProfile_AllProfiles_ActionActive() == 0)

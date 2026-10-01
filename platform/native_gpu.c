@@ -17,6 +17,7 @@
 #include "platform/native_renderer.h"
 
 #include <assert.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -98,6 +99,9 @@ typedef struct
 	bool psxTextureOutputSTP;
 	bool psxDrawMaskSet;
 	bool superTurboTint;
+#if NATIVE_PGXP_SUPPORTED
+	bool worldDepth;
+#endif
 #ifdef __vita__
 	bool psxTextureFullyOpaque;
 	bool p4CacheEligible;
@@ -191,6 +195,25 @@ global_variable int s_gpuDrawSplitCount;
 global_variable NativeGpuState s_gpu;
 
 internal void NativeGpu_DrawPreparedFrame(GrVertex *vertices, GPUDrawSplit *splits, int vertexCount, int splitCount);
+
+#if NATIVE_PGXP_SUPPORTED
+internal void NativeGpu_SetWorldDepthSplit(bool enabled)
+{
+	GPUDrawSplit *current = &s_gpu.splits[s_gpu.splitIndex];
+	if (current->worldDepth == enabled) return;
+	if (s_gpu.vertexIndex != (int)current->startVertex)
+	{
+		if (s_gpu.splitIndex + 1 >= MAX_DRAW_SPLITS) return;
+		current->numVerts = s_gpu.vertexIndex - current->startVertex;
+		GPUDrawSplit *next = &s_gpu.splits[++s_gpu.splitIndex];
+		*next = *current;
+		next->startVertex = s_gpu.vertexIndex;
+		next->numVerts = 0;
+		current = next;
+	}
+	current->worldDepth = enabled;
+}
+#endif
 
 void NativeGpu_ResetOrderDepth(void)
 {
@@ -731,6 +754,9 @@ void ClearSplits(void)
 	s_gpu.splits[0].psxTextureOutputSTP = false;
 	s_gpu.splits[0].psxDrawMaskSet = false;
 	s_gpu.splits[0].superTurboTint = false;
+#if NATIVE_PGXP_SUPPORTED
+	s_gpu.splits[0].worldDepth = false;
+#endif
 #ifdef __vita__
 	s_gpu.splits[0].psxTextureFullyOpaque = false;
 	s_gpu.splits[0].p4CacheEligible = false;
@@ -875,6 +901,9 @@ void LineSwapSourceVerts(VERTTYPE **p0, VERTTYPE **p1, u8 **c0, u8 **c1)
 
 void MakeLineArray(GrVertex *vertex, VERTTYPE *p0, VERTTYPE *p1)
 {
+#if NATIVE_PGXP_SUPPORTED
+	NativeGpu_SetWorldDepthSplit(false);
+#endif
 	const VERTTYPE dx = p1[0] - p0[0];
 	const VERTTYPE dy = p1[1] - p0[1];
 
@@ -923,7 +952,9 @@ void MakeLineArray(GrVertex *vertex, VERTTYPE *p0, VERTTYPE *p1)
 internal void NativeGpu_ApplyPgxp(GrVertex *vertex, VERTTYPE *const *points, int count, float ofsX, float ofsY)
 {
 	float w[4];
+	float depth[4];
 	b32 perspective = gNativePgxpMode == NATIVE_PGXP_MODE_PERSPECTIVE;
+	b32 worldDepth = gNativeDepthBufferEnabled;
 	int recovered = 0;
 
 	for (int i = 0; i < count; i++)
@@ -933,17 +964,28 @@ internal void NativeGpu_ApplyPgxp(GrVertex *vertex, VERTTYPE *const *points, int
 
 		if (NativePgxp_Lookup(points[i], value, &precise))
 		{
-			vertex[i].x = precise.x + ofsX;
-			vertex[i].y = precise.y + ofsY;
+			if (NATIVE_PGXP_ACTIVE())
+			{
+				vertex[i].x = precise.x + ofsX;
+				vertex[i].y = precise.y + ofsY;
+			}
 			w[i] = precise.w;
+			depth[i] = precise.depth;
 			perspective &= precise.w > 0.0f;
+			worldDepth &= isfinite(precise.depth) && precise.depth > 0.0f;
 			recovered++;
 		}
 		else
 		{
 			perspective = 0;
+			worldDepth = 0;
 		}
 	}
+	if (worldDepth)
+	{
+		for (int i = 0; i < count; i++) vertex[i].depth = depth[i];
+	}
+	NativeGpu_SetWorldDepthSplit(worldDepth != 0);
 
 	if (perspective)
 	{
@@ -979,7 +1021,7 @@ void MakeVertexTriangle(GrVertex *vertex, VERTTYPE *p0, VERTTYPE *p1, VERTTYPE *
 	vertex[2].y = p2[1] + ofsY;
 
 #if NATIVE_PGXP_SUPPORTED
-	if (NATIVE_PGXP_ACTIVE())
+	if (NATIVE_VERTEX_TRACKING_ACTIVE())
 	{
 		VERTTYPE *const points[3] = {p0, p1, p2};
 		NativeGpu_ApplyPgxp(vertex, points, 3, ofsX, ofsY);
@@ -1013,7 +1055,7 @@ void MakeVertexQuad(GrVertex *vertex, VERTTYPE *p0, VERTTYPE *p1, VERTTYPE *p2, 
 	vertex[3].y = p3[1] + ofsY;
 
 #if NATIVE_PGXP_SUPPORTED
-	if (NATIVE_PGXP_ACTIVE())
+	if (NATIVE_VERTEX_TRACKING_ACTIVE())
 	{
 		VERTTYPE *const points[4] = {p0, p1, p2, p3};
 		NativeGpu_ApplyPgxp(vertex, points, 4, ofsX, ofsY);
@@ -1023,6 +1065,9 @@ void MakeVertexQuad(GrVertex *vertex, VERTTYPE *p0, VERTTYPE *p1, VERTTYPE *p2, 
 
 void MakeVertexRect(GrVertex *vertex, VERTTYPE *p0, s16 w, s16 h)
 {
+#if NATIVE_PGXP_SUPPORTED
+	NativeGpu_SetWorldDepthSplit(false);
+#endif
 	assert(p0);
 
 	float ofsX, ofsY;
@@ -1631,6 +1676,9 @@ internal void AddSplit(bool semiTrans, bool textured, bool framebufferFeedback, 
 	split->psxTextureOutputSTP = psxTextureOutputSTP;
 	split->psxDrawMaskSet = s_gpu.psxDrawMaskSet;
 	split->superTurboTint = superTurboTint;
+#if NATIVE_PGXP_SUPPORTED
+	split->worldDepth = false;
+#endif
 #ifdef __vita__
 	split->psxTextureFullyOpaque = false;
 	split->p4CacheEligible = p4CacheEligible;
@@ -1872,7 +1920,11 @@ internal void NativeGpu_DrawSplitRangePass(const GPUDrawSplit *split, int semiTr
 	NativeRenderer_SetupClipMode(&split->drawenv.clip, &split->dispenv, drawOnScreen);
 	NativeRenderer_SetOffscreenState(&split->drawenv.clip, !drawOnScreen);
 	NativeGpu_SetSplitShaderState(split, semiTransPass, blendMode, !drawOnScreen);
+#ifdef __vita__
 	NativeRenderer_SetDepthState(1, depthWrite);
+#else
+	NativeRenderer_SetDepthState(gNativeDepthBufferEnabled && split->worldDepth && drawOnScreen, depthWrite);
+#endif
 	NativeRenderer_DrawTriangles(startVertex, numVerts / 3);
 
 	if (split->debugText)
@@ -2618,6 +2670,66 @@ internal void SetPSXMaskState(u32 code)
 	s_gpu.psxDrawMaskSet = (code & 1) != 0;
 }
 
+#if NATIVE_PGXP_SUPPORTED
+internal bool NativeGpu_SameWorldDepthDomain(const GPUDrawSplit *first, const GPUDrawSplit *second)
+{
+	return second->drawenv.dfe && !second->drawPrimMode &&
+	       memcmp(&first->drawenv.clip, &second->drawenv.clip, sizeof(first->drawenv.clip)) == 0 &&
+	       memcmp(&first->dispenv, &second->dispenv, sizeof(first->dispenv)) == 0;
+}
+
+internal void NativeGpu_DrawWorldDepthSplits(void)
+{
+	for (int first = 1; first <= s_gpuDrawSplitCount;)
+	{
+		const GPUDrawSplit *start = &s_gpuDrawSplits[first];
+		if (!start->worldDepth || !start->drawenv.dfe || start->drawPrimMode)
+		{
+			DrawSplit(start);
+			first++;
+			continue;
+		}
+
+		// Keep each viewport/target independent. Leave trailing 2D/HUD draws
+		// after the world, so translucent geometry cannot paint over them.
+		int last = first;
+		for (int i = first + 1; i <= s_gpuDrawSplitCount && NativeGpu_SameWorldDepthDomain(start, &s_gpuDrawSplits[i]); i++)
+		{
+			if (s_gpuDrawSplits[i].worldDepth) last = i;
+		}
+		for (int i = first; i <= last; i++)
+		{
+			const GPUDrawSplit *split = &s_gpuDrawSplits[i];
+			if (!split->worldDepth) DrawSplit(split);
+			else if (split->psxTexturedSemiTrans)
+			{
+				if (split->psxSemiTransPassMask & 1) NativeGpu_DrawSplitPass(split, 1, BM_NONE, true);
+			}
+			else if (split->blendMode == BM_NONE)
+			{
+				NativeGpu_DrawSplitPass(split, 0, BM_NONE, true);
+			}
+		}
+		// Blend only after opaque visibility is known; retain the retail OT
+		// order between transparent surfaces and never let them write depth.
+		for (int i = first; i <= last; i++)
+		{
+			const GPUDrawSplit *split = &s_gpuDrawSplits[i];
+			if (!split->worldDepth) continue;
+			if (split->psxTexturedSemiTrans)
+			{
+				if (split->psxSemiTransPassMask & 2) NativeGpu_DrawSplitPass(split, 2, split->blendMode, false);
+			}
+			else if (split->blendMode != BM_NONE)
+			{
+				NativeGpu_DrawSplitPass(split, 0, split->blendMode, false);
+			}
+		}
+		first = last + 1;
+	}
+}
+#endif
+
 //
 // Draws all polygons after AggregatePTAG
 //
@@ -2677,7 +2789,11 @@ internal void NativeGpu_DrawPreparedFrame(GrVertex *vertices, GPUDrawSplit *spli
 		}
 	}
 #else
-	for (int i = 1; i <= s_gpuDrawSplitCount; i++)
+	if (gNativeDepthBufferEnabled)
+	{
+		NativeGpu_DrawWorldDepthSplits();
+	}
+	else for (int i = 1; i <= s_gpuDrawSplitCount; i++)
 	{
 		DrawSplit(&s_gpuDrawSplits[i]);
 	}

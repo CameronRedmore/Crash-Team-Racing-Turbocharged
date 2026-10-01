@@ -621,7 +621,7 @@ extern int doCOP2(int op);
 	{                                                                \
 		const uint32_t gteStsxyValue = MFC2(reg);                    \
 		CTR_WriteU32LE((char *)(r0), gteStsxyValue);                 \
-		if (NATIVE_PGXP_ACTIVE())                                    \
+		if (NATIVE_VERTEX_TRACKING_ACTIVE())                                    \
 		{                                                            \
 			NativePgxp_StoreGteSXY((void *)(r0), reg, gteStsxyValue); \
 		}                                                            \

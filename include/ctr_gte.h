@@ -120,7 +120,7 @@ static inline void CTR_GteStoreSXYReg(void *xy, int reg)
 
 	CTR_GteStoreU32(xy, sxy);
 #if defined(CTR_NATIVE)
-	if (NATIVE_PGXP_ACTIVE())
+	if (NATIVE_VERTEX_TRACKING_ACTIVE())
 	{
 		NativePgxp_StoreGteSXY(xy, reg, sxy);
 	}

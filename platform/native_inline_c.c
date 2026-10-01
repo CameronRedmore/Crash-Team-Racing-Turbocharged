@@ -45,7 +45,7 @@ u32 MFC2(s32 reg)
 		break;
 	}
 
-	if ((reg >= 12) && (reg <= 15) && NATIVE_PGXP_ACTIVE())
+	if ((reg >= 12) && (reg <= 15) && NATIVE_VERTEX_TRACKING_ACTIVE())
 	{
 		NativePgxp_GteReadSXY(reg, gteRegs.CP2D.p[reg].d);
 	}
@@ -86,7 +86,7 @@ s32 MFC2_S(s32 reg)
 		break;
 	}
 
-	if ((reg >= 12) && (reg <= 15) && NATIVE_PGXP_ACTIVE())
+	if ((reg >= 12) && (reg <= 15) && NATIVE_VERTEX_TRACKING_ACTIVE())
 	{
 		NativePgxp_GteReadSXY(reg, gteRegs.CP2D.p[reg].d);
 	}
@@ -96,7 +96,7 @@ s32 MFC2_S(s32 reg)
 
 void MTC2(u32 value, s32 reg)
 {
-	if (NATIVE_PGXP_ACTIVE())
+	if (NATIVE_VERTEX_TRACKING_ACTIVE())
 	{
 		if (reg <= 5)
 		{
@@ -135,7 +135,7 @@ void MTC2(u32 value, s32 reg)
 
 void MTC2_S(s32 value, s32 reg)
 {
-	if (NATIVE_PGXP_ACTIVE())
+	if (NATIVE_VERTEX_TRACKING_ACTIVE())
 	{
 		if (reg <= 5)
 		{

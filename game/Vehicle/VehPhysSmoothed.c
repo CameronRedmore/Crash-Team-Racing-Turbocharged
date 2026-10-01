@@ -18,6 +18,23 @@ static double Smoothed_JumpVelY(s16 *normal, NativePhysicsVec *velocity)
 	if (abs(normal[1]) < VEH_PHYS_JUMP_NORMAL_Y_MIN) return 0;
 	return (velocity->x * normal[0] + velocity->z * normal[2]) / normal[1];
 }
+void NativePhysics_SurfacePushback(struct Driver *d)
+{
+	if (!(d->collisionFlags & DRIVER_COLL_FLAG_SURFACE_PUSHBACK)) return;
+	NativePhysicsVec position = NativePhysics_ReadPosition(d);
+	double diffX = position.x / 256.0 - d->spsHitPos.x;
+	double diffZ = position.z / 256.0 - d->spsHitPos.z;
+	double floorDiffY = d->quadBlockHeight / 256.0 - d->spsHitPos.y + VEH_PHYS_FORCE_SURFACE_PUSHBACK_Y_BIAS;
+	if (d->spsNormalVec.x * diffX + d->spsNormalVec.y * floorDiffY + d->spsNormalVec.z * diffZ >= 0) return;
+	// Recovery acceleration retains fractional impulses and scales with the
+	// simulation duration rather than applying it once per rendered frame.
+	double scale = ldexp(NativePhysics_ElapsedMS(sdata->gGT->elapsedTimeMS) / 32.0, VEH_PHYS_FORCE_SURFACE_PUSHBACK_SHIFT);
+	NativePhysicsVec velocity = NativePhysics_ReadVelocity(d);
+	velocity.x += diffX * scale;
+	velocity.y += (position.y / 256.0 - d->spsHitPos.y) * scale;
+	velocity.z += diffZ * scale;
+	NativePhysics_WriteVelocity(d, velocity);
+}
 void NativePhysics_Gravity(struct Driver *driver, Vec3 *output)
 {
 	double elapsedTimeMS = NativePhysics_ElapsedMS(sdata->gGT->elapsedTimeMS);
@@ -292,7 +309,11 @@ void NativePhysics_Gravity(struct Driver *driver, Vec3 *output)
 
 		if (((actionsFlagSet & ACTION_MASK_WEAPON) == 0) && ((terrainFlags & TERRAIN_FLAG_MUD_PHYSICS) != 0))
 		{
-			double absSideSpeed = fabs(Smoothed_Down(localX, 3));
+			// These minimum drags are proportional decay, not constant forces.
+			// Fractional powers preserve the retail 7/8 and 1/2 retention over
+			// equal time intervals, including at non-integral rates such as 144 Hz.
+			double frameScale = elapsedTimeMS / 32.0;
+			double absSideSpeed = fabs(localX) * (1.0 - pow(0.875, frameScale));
 			if (perpendicularFriction < absSideSpeed)
 			{
 				perpendicularFriction = absSideSpeed;
@@ -306,11 +327,11 @@ void NativePhysics_Gravity(struct Driver *driver, Vec3 *output)
 					goto APPLY_TERRAIN_FRICTION;
 				}
 
-				minForwardFriction = Smoothed_Down(fabs((localZ - baseSpeed)), 1);
+				minForwardFriction = fabs(localZ - baseSpeed) * (1.0 - pow(0.5, frameScale));
 			}
 			else
 			{
-				minForwardFriction = fabs(Smoothed_Down(localZ, 1));
+				minForwardFriction = fabs(localZ) * (1.0 - pow(0.5, frameScale));
 			}
 
 			if (forwardFriction < minForwardFriction)
@@ -599,6 +620,7 @@ CHECK_FOR_ANY_JUMP:
 					}
 
 					double antiGravVelY = Smoothed_Down((d->underDriver->mulNormVecY * speedApprox), 8);
+					antiGravVelY *= NativePhysics_ElapsedMS(sdata->gGT->elapsedTimeMS) / 32.0;
 					NativePhysicsVec rotated = NativePhysics_RotateDriver(d, (NativePhysicsVec){0, antiGravVelY, 0}, 0);
 
 					movement.x = (movement.x + rotated.x);

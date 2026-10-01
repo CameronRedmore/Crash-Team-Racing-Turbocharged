@@ -37,6 +37,8 @@ typedef struct
 	float x, y;
 	// Perspective divisor for PGXP polygons; 0 keeps retail affine mapping.
 	float w;
+	// Optional world depth, independent of the texture perspective divisor.
+	float depth;
 	s16 page, clut;
 #else
 	s16 x, y, page, clut;

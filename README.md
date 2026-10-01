@@ -10,7 +10,7 @@ You can play it from Web Browser as well from this link: [Web Browser Build](htt
 - True widescreen with no stretching.
 - Internal resolution of the renderer bumped to 960x544.
 - MSAA 4x (PSVita) / FXAA (PC) for anti-aliasing.
-- Selectable 30, 60, 90, 120, 144, and 240 FPS in the Options menu, with scaled game timing and animation interpolation. Higher rates need sufficient CPU/GPU performance; pacing retains the original NTSC clock (approximately 59.82 FPS for the 60 FPS setting).
+- Selectable 30, 60, 90, 120, 144, and 240 FPS in the Options menu, with scaled game timing, interpolated model animation, and frame-rate-correct menu, UI, and effect animations. Higher rates need sufficient CPU/GPU performance; pacing retains the original NTSC clock (approximately 59.82 FPS for the 60 FPS setting).
 - Penta Penguin has its stats set to its PAL/NTSC-J counterpart (6/6/6).
 - Playable Nitrous Oxide (Unlockable via the original Spyro 2 Demo cheatcode). (Credits: [Original mod](https://github.com/CTR-tools/CTR-ModSDK/tree/main/mods/Modules/OxideFix))
 - Reserves Meter (Credits: [Original mod](https://github.com/CTR-tools/CTR-ModSDK/tree/main/mods/Modules/ReservesMeter))
@@ -23,6 +23,8 @@ You can play it from Web Browser as well from this link: [Web Browser Build](htt
 - [PC Only] PGXP option (Options > Enhancements): sub-pixel vertex precision removes polygon wobble, and the Perspective setting also removes affine texture warping.
 - [PC/Web] Options > Enhancements groups PGXP, detail level, and independent Original/Smoothed settings for player physics, AI, collisions, and steering. Smoothed uses floating-point calculations; Original remains the default. Delete toggles player physics in development builds.
 - [PC Only] Detail option (Options > Enhancements): Maximum keeps tracks and models at their highest level of detail at every distance (sharpest textures, no low-poly models).
+- [PC/Web] Backface Culling (Options > Enhancements): Off draws both sides of track and model polygons. Page Up toggles it during play; the setting is saved, and culling stays on by default.
+- [PC/Web] Depth Buffer (Options > Enhancements): optional per-pixel depth testing corrects overlapping world polygons. Works with every PGXP setting; Off retains original polygon ordering and remains the default.
 - Boss Fight option: Challenge Adventure mode bossfights on any track.
 - [PSVITA Only] AdHoc Netplay support for two PSVitas multiplayer without the need of a router.
 - Several vanilla game bugfixes (eg: PVS related glitches and Penta-Penguin wrong mask powerup HUD icon).

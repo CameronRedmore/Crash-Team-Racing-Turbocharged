@@ -106,6 +106,14 @@ extern int gNativeMaxLodEnabled;
 #else
 #define CTR_NATIVE_MAX_LOD_ACTIVE 0
 #endif
+
+// Keep clipping and degenerate rejection, but draw either polygon winding.
+#if defined(CTR_NATIVE) && !defined(__vita__)
+extern int gNativeBackfaceCullingDisabled;
+#define CTR_NATIVE_NO_BACKFACE_CULLING_ACTIVE (gNativeBackfaceCullingDisabled != 0)
+#else
+#define CTR_NATIVE_NO_BACKFACE_CULLING_ACTIVE 0
+#endif
 #define CTR_SECONDS_TO_FRAMES(sec) ((s32)((sec) * FPS))
 
 #define SECONDS(x)                 ((s32)(((f32)(x)) * SECOND))

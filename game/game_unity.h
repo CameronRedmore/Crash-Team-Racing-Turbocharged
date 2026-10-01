@@ -64,6 +64,7 @@
 
 #if defined(CTR_NATIVE)
 #include "NativeReverseTrack.c"
+#include "NativeAutoSave.c"
 #endif
 
 #include "NativeGhostInput.c"

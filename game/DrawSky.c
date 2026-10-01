@@ -116,6 +116,9 @@ static u32 *DrawSky_Piece(struct Skybox *skybox, struct DrawSkyContext *ctx, int
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80069bb0-0x80069cc4
 void DrawSky_Full(void *skybox, struct PushBuffer *pb, struct PrimMem *primMem)
 {
+#if defined(CTR_NATIVE)
+	float nativeDepthContext = NativePgxp_SetDepthContext(0.0f);
+#endif
 	struct Skybox *sky = skybox;
 	u32 *prim = (u32 *)primMem->cursor;
 
@@ -173,4 +176,7 @@ void DrawSky_Full(void *skybox, struct PushBuffer *pb, struct PrimMem *primMem)
 	}
 
 	primMem->cursor = prim;
+#if defined(CTR_NATIVE)
+	NativePgxp_SetDepthContext(nativeDepthContext);
+#endif
 }

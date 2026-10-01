@@ -644,11 +644,7 @@ void NativeRenderer_BeginScene(void)
 	{
 		const GLboolean previousScissorEnabled = glIsEnabled(GL_SCISSOR_TEST);
 		glDisable(GL_SCISSOR_TEST);
-#ifdef __vita__
 		glClear(GL_STENCIL_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-#else
-		glClear(GL_STENCIL_BUFFER_BIT);
-#endif
 		if (previousScissorEnabled)
 		{
 			glEnable(GL_SCISSOR_TEST);
@@ -798,24 +794,16 @@ internal void NativeRenderer_InitRenderTarget(struct NativeRenderTarget *target)
 
 	glGenRenderbuffers(1, &target->stencilBuffer);
 	glBindRenderbuffer(GL_RENDERBUFFER, target->stencilBuffer);
-#ifdef __vita__
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, 1, 1);
-#else
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_STENCIL_INDEX8, 1, 1);
-#endif
 	glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
 	glGenFramebuffers(1, &target->framebuffer);
 	glBindFramebuffer(GL_FRAMEBUFFER, target->framebuffer);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, target->texture, 0);
-#ifdef __vita__
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, target->stencilBuffer);
-#else
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, target->stencilBuffer);
-#endif
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 	{
-		NATIVE_RENDERER_ERROR("%s\n", "failed to create RGBA/stencil render target");
+		NATIVE_RENDERER_ERROR("%s\n", "failed to create RGBA/depth/stencil render target");
 	}
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	target->logicalWidth = 0;
@@ -852,11 +840,7 @@ internal void NativeRenderer_EnsureRenderTarget(struct NativeRenderTarget *targe
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 	glBindRenderbuffer(GL_RENDERBUFFER, target->stencilBuffer);
-#ifdef __vita__
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
-#else
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_STENCIL_INDEX8, width, height);
-#endif
 	glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
 	target->width = width;
@@ -919,10 +903,7 @@ internal void NativeRenderer_LoadRenderTargetFromVRAM(struct NativeRenderTarget 
 	glDisable(GL_STENCIL_TEST);
 	glViewport(0, 0, target->width, target->height);
 	NativeRenderer_DrawVRAMRegion(x, y, logicalWidth, logicalHeight);
-	glClear(GL_STENCIL_BUFFER_BIT);
-#ifdef __vita__
-	glClear(GL_DEPTH_BUFFER_BIT);
-#endif
+	glClear(GL_STENCIL_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	if (previousStencilEnabled)
 	{
 		glEnable(GL_STENCIL_TEST);
@@ -1463,14 +1444,20 @@ const char *gte_shader_32_rgba = "	uniform sampler2D s_texture;\n"
 // NOTE: a_position.z is the PGXP view depth (0 = affine). Scaling the whole
 // clip position by it leaves the screen position unchanged after the divide
 // but makes the rasteriser interpolate texture coordinates in perspective.
+// World depth uses an infinite-far reciprocal projection with near=32, below
+// CTR's normal clip distance. Affine UVs still use W=1; their depth interpolates
+// 1/Z in screen space, just as it does after the perspective divide.
 #define GTE_PERSPECTIVE_CORRECTION                                                                 \
 	"\tgl_Position = Projection * vec4(a_position.xy, 0.0, 1.0);\n"                           \
-	"\tgl_Position *= (a_position.z > 0.0) ? a_position.z : 1.0;\n"
+	"\tgl_Position *= (a_position.z > 0.0) ? a_position.z : 1.0;\n"                         \
+	"\tif (a_position.w > 0.0) {\n"                                                       \
+	"\t\tgl_Position.z = (1.0 - 64.0 / max(a_position.w, 32.0)) * gl_Position.w;\n"       \
+	"\t}\n"
 #endif
 
 #if NATIVE_PGXP_SUPPORTED
 #define GTE_POSITION_ATTRIBUTES                                                                    \
-	"	attribute vec3 a_position; // x, y, PGXP w\n"                                             \
+	"	attribute vec4 a_position; // x, y, PGXP w, world depth\n"                                \
 	"	attribute vec2 a_page_clut;\n"
 #define GTE_PAGE_ATTRIBUTE "a_page_clut.x"
 #define GTE_CLUT_ATTRIBUTE "a_page_clut.y"
@@ -2158,7 +2145,7 @@ int NativeRenderer_InitialisePSX(void)
 
 #if NATIVE_PGXP_SUPPORTED
 			glEnableVertexAttribArray(a_page_clut);
-			glVertexAttribPointer(a_position, 3, GL_FLOAT, GL_FALSE, sizeof(GrVertex), &((GrVertex *)NULL)->x);
+			glVertexAttribPointer(a_position, 4, GL_FLOAT, GL_FALSE, sizeof(GrVertex), &((GrVertex *)NULL)->x);
 			glVertexAttribPointer(a_page_clut, 2, GL_SHORT, GL_FALSE, sizeof(GrVertex), &((GrVertex *)NULL)->page);
 #else
 			glVertexAttribPointer(a_position, 4, GL_SHORT, GL_FALSE, sizeof(GrVertex), &((GrVertex *)NULL)->x);
@@ -3947,7 +3934,6 @@ void NativeRenderer_SetDepthState(int enable, int write)
 	if (s_previousDepthMode != enable)
 	{
 		s_previousDepthMode = enable;
-#ifdef __vita__
 		if (enable)
 		{
 			glEnable(GL_DEPTH_TEST);
@@ -3956,25 +3942,25 @@ void NativeRenderer_SetDepthState(int enable, int write)
 		{
 			glDisable(GL_DEPTH_TEST);
 		}
-#else
-		glDisable(GL_DEPTH_TEST);
-#endif
 	}
 
-#ifdef __vita__
 	if (s_previousDepthWrite != write)
 	{
 		s_previousDepthWrite = write;
 		glDepthMask(write ? GL_TRUE : GL_FALSE);
 	}
-#else
-	(void)write;
-#endif
 }
 
 internal void NativeRenderer_EnableDepth(int enable)
 {
+#ifdef __vita__
 	NativeRenderer_SetDepthState(enable, enable);
+#else
+	// Blits, presentation and legacy 2D draws have no world depth. The GPU
+	// parser explicitly enables testing only for recovered world polygons.
+	(void)enable;
+	NativeRenderer_SetDepthState(0, 1);
+#endif
 }
 
 void NativeRenderer_SetStencilMode(int drawPrim)

@@ -714,6 +714,10 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 		// One of the maps on Adventure Arena
 		if ((u32)(currentLevelID - GEM_STONE_VALLEY) < LOAD_ADV_HUB_COUNT)
 		{
+#if defined(CTR_NATIVE)
+			// Rewards are committed to advProgress in-race, so the hub load is after them.
+			NativeAutoSave_OnHubLoaded();
+#endif
 			audioState = AUDIO_ADV_HUB_WAIT;
 
 			// podium reward

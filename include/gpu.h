@@ -74,7 +74,7 @@ force_inline void CtrGpu_WritePackedXY(VERTTYPE *x, u32 xy)
 #ifdef CTR_NATIVE
 	// NOTE: World effects write MFC2 results straight into packets; pair them
 	// with the precise GTE vertex they came from (see native_pgxp.h).
-	if (NATIVE_PGXP_ACTIVE())
+	if (NATIVE_VERTEX_TRACKING_ACTIVE())
 	{
 		NativePgxp_BindWrittenXY(x, xy);
 	}
@@ -87,7 +87,7 @@ force_inline void CtrGpu_CopyPackedXY(VERTTYPE *x, const void *src, u32 xy)
 {
 	CtrGpu_StorePackedXY(x, xy);
 #ifdef CTR_NATIVE
-	if (NATIVE_PGXP_ACTIVE())
+	if (NATIVE_VERTEX_TRACKING_ACTIVE())
 	{
 		NativePgxp_CopyXY(x, src, xy);
 	}

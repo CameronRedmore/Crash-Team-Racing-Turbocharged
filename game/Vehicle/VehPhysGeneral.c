@@ -786,9 +786,11 @@ CHECK_FOR_ANY_JUMP:
 					s16 antiGravVelY = (s16)CTR_MipsSra(CTR_MipsMulLo(d->underDriver->mulNormVecY, speedApprox), 8);
 					Vec3 rotated = VehPhysGeneral_Jump_RotateLoadedVector(0, antiGravVelY, 0);
 
-					movement.x = CTR_MipsAddLo(movement.x, rotated.x);
-					movement.y = CTR_MipsAddLo(movement.y, rotated.y);
-					movement.z = CTR_MipsAddLo(movement.z, rotated.z);
+					// Authored adhesion is a force per retail frame. Scale after
+					// rotation to retain the retail impulse and signed rounding.
+					movement.x = CTR_MipsAddLo(movement.x, CTR_FRAME_STEP(rotated.x, sdata->gGT->timer));
+					movement.y = CTR_MipsAddLo(movement.y, CTR_FRAME_STEP(rotated.y, sdata->gGT->timer));
+					movement.z = CTR_MipsAddLo(movement.z, CTR_FRAME_STEP(rotated.z, sdata->gGT->timer));
 				}
 			}
 

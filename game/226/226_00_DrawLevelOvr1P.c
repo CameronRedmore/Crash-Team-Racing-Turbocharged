@@ -1114,7 +1114,7 @@ static void DrawLevelOvr1P_CopyProjectedScreenDepth(struct DrawLevelOvr1PScratch
 	dst->clipNear = src->clipNear;
 	dst->clipHalfNear = src->clipHalfNear;
 #if defined(CTR_NATIVE)
-	if (NATIVE_PGXP_ACTIVE())
+	if (NATIVE_VERTEX_TRACKING_ACTIVE())
 	{
 		NativePgxp_CopyXY(&dst->posScreen[0], &src->posScreen[0], (u16)src->posScreen[0] | ((u32)(u16)src->posScreen[1] << 16));
 	}
@@ -2722,7 +2722,7 @@ static int DrawLevelOvr1P_ShouldEmitClipRecordNclip(s32 nclip, const struct Draw
 		return 0;
 	}
 
-	if (header < 0)
+	if (CTR_NATIVE_NO_BACKFACE_CULLING_ACTIVE || header < 0)
 	{
 		return 1;
 	}
@@ -3585,6 +3585,11 @@ static int DrawLevelOvr1P_ConsumeClipRecords(struct PushBuffer *pb, struct PrimM
 static int DrawLevelOvr1P_SelectDirectBit(s32 nclipResult, u32 tableWord, u32 drawOrderLow, int negateResult, u32 directBit)
 {
 	u32 resultBits;
+
+	if (CTR_NATIVE_NO_BACKFACE_CULLING_ACTIVE && nclipResult != 0)
+	{
+		return directBit;
+	}
 
 	if (nclipResult == 0)
 	{

@@ -285,6 +285,16 @@ internal void Platform_HandleKey(int key, char down)
 		SubmitName_UseKeyboard(key);
 	}
 
+#ifndef __vita__
+	if ((key == SDL_SCANCODE_PAGEUP) && (down == 0))
+	{
+		gNativeBackfaceCullingDisabled ^= 1;
+		save_config();
+		Platform_LogWarn("[CTR Native] backface culling: %s\n", gNativeBackfaceCullingDisabled ? "off" : "on");
+		return;
+	}
+#endif
+
 #ifdef CTR_INTERNAL
 	if (!down)
 	{

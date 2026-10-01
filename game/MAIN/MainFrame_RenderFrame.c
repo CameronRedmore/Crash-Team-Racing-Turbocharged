@@ -154,9 +154,18 @@ void MainFrame_RenderFrame(struct GameTracker *gGT, struct GamepadSystem *gGamep
 	MAINFRAME_PERF_END(NATIVE_PERF_BUCKET_MAINFRAME_EXECUTE_INSTANCES);
 
 	MAINFRAME_PERF_BEGIN(NATIVE_PERF_BUCKET_MAINFRAME_EFFECTS);
+#if defined(CTR_NATIVE)
+	NativePgxp_SetDepthContext(0.25f);
+#endif
 	RenderAllTires(gGT);
+#if defined(CTR_NATIVE)
+	NativePgxp_SetDepthContext(1.0f);
+#endif
 
 	RenderAllShadows(gGT);
+#if defined(CTR_NATIVE)
+	NativePgxp_SetDepthContext(1.0f);
+#endif
 
 	RenderAllHeatParticles(gGT);
 

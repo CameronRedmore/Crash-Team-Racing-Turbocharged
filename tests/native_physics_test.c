@@ -79,6 +79,18 @@ static void test_frame_rates(void)
 			NativePhysics_Gravity(&d,&d.velocity);
 		}
 		near(NativePhysics_ReadVelocity(&d).y,-90);
+		// Oxide Station's low-gravity quads retain the same 41% gravity at
+		// every simulation rate, independently of the adhesion multiplier.
+		struct QuadBlock lowGravity={.quadFlags=QUADBLOCK_FLAG_LOW_GRAVITY};
+		d.underDriver=&lowGravity;
+		NativePhysics_WriteVelocity(&d,(NativePhysicsVec){0});
+		for (int frame=0;frame<rate;frame++)
+		{
+			sdata->gGT->timer=frame;
+			sdata->gGT->elapsedTimeMS=CTR_FRAME_STEP(32,frame);
+			NativePhysics_Gravity(&d,&d.velocity);
+		}
+		near(NativePhysics_ReadVelocity(&d).y,-36.9);
 		// A single steering impulse uses the same retail time scale at every rate.
 		memset(&d,0,sizeof(d)); d.driverID=8;
 		d.terrainMeta1=&terrain; d.AxisAngle1_normalVec.y=4096;
@@ -110,6 +122,130 @@ static void test_frame_rates(void)
 	gNative60FpsEnabled=0;
 	NativePhysics_SetEnabled(0);
 	NativePhysics_SetDomain(NATIVE_PHYSICS_AI,0);
+}
+
+static void test_mud_drag(void)
+{
+	// Isolate the speed-dependent mud rules from ordinary constant friction.
+	struct Terrain terrain={.flags=TERRAIN_FLAG_MUD_PHYSICS,.groundFrictionScale=512,.speedMultiplier=256};
+	NativePhysics_SetEnabled(1);
+	NativePhysics_SetDomain(NATIVE_PHYSICS_STEERING,0);
+	for (int option=0;option<NATIVE_FRAME_RATE_COUNT;option++)
+	{
+		gNative60FpsEnabled=option;
+		int rate=CTR_FRAMES_PER_SECOND;
+		for (int direction=-1;direction<=1;direction+=2)
+		{
+			struct Driver d={.driverID=12,.terrainMeta1=&terrain,.terrainMeta2=&terrain,
+				.actionsFlagSet=ACTION_TOUCH_GROUND,.actionsFlagSetPrevFrame=ACTION_TOUCH_GROUND,
+				.baseSpeed=direction*4096,.const_SlopeForwardSpeedBonus=30000,
+				.const_SideSpeedClamp=30000,.const_TerminalVelocity=30000};
+			d.matrixMovingDir.m[0][0]=d.matrixMovingDir.m[1][1]=d.matrixMovingDir.m[2][2]=4096;
+			// Also exercise braking against the direction of travel.
+			for (int opposing=0;opposing<=1;opposing++)
+			{
+				d.baseSpeed=direction*(opposing ? -4096 : 4096);
+				NativePhysics_ResetDriver(&d);
+				NativePhysics_WriteVelocity(&d,(NativePhysicsVec){direction*8192,0,direction*8192});
+				for (int frame=0;frame<rate;frame++)
+				{
+					sdata->gGT->timer=frame;
+					sdata->gGT->elapsedTimeMS=CTR_FRAME_STEP(32,frame);
+					d.speedApprox=d.velocity.z;
+					NativePhysics_Gravity(&d,&d.velocity);
+				}
+				NativePhysicsVec v=NativePhysics_ReadVelocity(&d);
+				near(v.x,direction*8192*pow(0.875,30));
+				near(v.z,direction*(opposing ? 8192*pow(0.5,30) : 4096+4096*pow(0.5,30)));
+			}
+			// Mask protection bypasses mud damping.
+			d.actionsFlagSet|=ACTION_MASK_WEAPON;
+			NativePhysics_WriteVelocity(&d,(NativePhysicsVec){direction*8192,0,direction*8192});
+			NativePhysics_Gravity(&d,&d.velocity);
+			near(NativePhysics_ReadVelocity(&d).x,direction*8192);
+			near(NativePhysics_ReadVelocity(&d).z,direction*8192);
+		}
+	}
+	gNative60FpsEnabled=0;
+	NativePhysics_SetEnabled(0);
+}
+
+static void test_surface_forces(void)
+{
+	struct Driver d={.driverID=11, .actionsFlagSet=ACTION_TOUCH_GROUND, .baseSpeed=4096};
+	struct Terrain terrain={.slowUntilSpeed=256};
+	struct QuadBlock quad={.mulNormVecY=-127}; // Sewer Speedway's authored adhesion.
+	d.terrainMeta1=&terrain;
+	d.underDriver=&quad;
+	// A banked ramp: adhesion has both a sideways and a downward component.
+	d.matrixMovingDir.m[0][0]=d.matrixMovingDir.m[1][1]=3276;
+	d.matrixMovingDir.m[0][1]=2457;
+	d.matrixMovingDir.m[1][0]=-2457;
+	d.matrixMovingDir.m[2][2]=4096;
+	NativePhysics_SetEnabled(1);
+	NativePhysics_SetDomain(NATIVE_PHYSICS_STEERING,0);
+	for (int option=0;option<NATIVE_FRAME_RATE_COUNT;option++)
+	{
+		gNative60FpsEnabled=option;
+		int rate=CTR_FRAMES_PER_SECOND;
+		for (int direction=-1;direction<=1;direction+=2)
+		{
+			NativePhysicsVec total={0};
+			for (int frame=0;frame<rate;frame++)
+			{
+				sdata->gGT->timer=frame;
+				sdata->gGT->elapsedTimeMS=CTR_FRAME_STEP(32,frame);
+				// Hold approach speed constant to measure the authored force,
+				// independently of acceleration and subsequent contact responses.
+				d.speedApprox=direction*4096;
+				NativePhysics_WriteVelocity(&d,(NativePhysicsVec){0,0,direction*4096});
+				NativePhysics_JumpAndFriction(&d);
+				NativePhysicsVec v=NativePhysics_ReadVelocity(&d);
+				total.x+=v.x; total.y+=v.y;
+				near(v.z,direction*4096);
+				assert(!(d.actionsFlagSet & ACTION_JUMP_STARTED));
+			}
+			near(total.x,-2032.0*2457/4096*30);
+			near(total.y,-2032.0*3276/4096*30);
+		}
+		// Tiger Temple has three quads using the same rule at -64 strength.
+		quad.mulNormVecY=-64;
+		d.speedApprox=4096;
+		NativePhysics_WriteVelocity(&d,(NativePhysicsVec){0,0,4096});
+		NativePhysics_JumpAndFriction(&d);
+		near(NativePhysics_ReadVelocity(&d).x,-1024.0*2457/4096*30/rate);
+		near(NativePhysics_ReadVelocity(&d).y,-1024.0*3276/4096*30/rate);
+		quad.mulNormVecY=-127;
+		// Persistent penetration recovery produces the same total impulse.
+		d.collisionFlags=DRIVER_COLL_FLAG_SURFACE_PUSHBACK;
+		d.spsNormalVec=(SVec3){.x=4096};
+		d.spsHitPos=(SVec3){.x=10,.y=20,.z=30};
+		NativePhysics_WritePosition(&d,(NativePhysicsVec){9.5*256,21.25*256,28.5*256});
+		NativePhysics_WriteVelocity(&d,(NativePhysicsVec){0.25,-0.5,0.75});
+		for (int frame=0;frame<rate;frame++)
+		{
+			sdata->gGT->timer=frame;
+			sdata->gGT->elapsedTimeMS=CTR_FRAME_STEP(32,frame);
+			NativePhysics_SurfacePushback(&d);
+		}
+		NativePhysicsVec v=NativePhysics_ReadVelocity(&d);
+		near(v.x,0.25-32*30); near(v.y,-0.5+80*30); near(v.z,0.75-96*30);
+		// No correction without a contact, or once on the allowed side.
+		d.collisionFlags=0;
+		NativePhysics_SurfacePushback(&d);
+		near(NativePhysics_ReadVelocity(&d).x,v.x);
+		d.collisionFlags=DRIVER_COLL_FLAG_SURFACE_PUSHBACK;
+		NativePhysics_WritePosition(&d,(NativePhysicsVec){11*256,21.25*256,28.5*256});
+		NativePhysics_SurfacePushback(&d);
+		near(NativePhysics_ReadVelocity(&d).x,v.x);
+	}
+	// The ramp force ceases when the kart leaves the surface.
+	d.actionsFlagSet=0;
+	NativePhysics_WriteVelocity(&d,(NativePhysicsVec){0,0,4096});
+	NativePhysics_JumpAndFriction(&d);
+	near(NativePhysics_ReadVelocity(&d).x,0); near(NativePhysics_ReadVelocity(&d).y,0);
+	gNative60FpsEnabled=0;
+	NativePhysics_SetEnabled(0);
 }
 
 static void test_collision_response(void)
@@ -356,6 +492,8 @@ int main(void)
 	test_steering();
 	test_collisions();
 	test_collision_response();
+	test_surface_forces();
+	test_mud_drag();
 	test_frame_rates();
 	puts("Smoothed physics, AI, steering and collision checks passed");
 	return 0;
