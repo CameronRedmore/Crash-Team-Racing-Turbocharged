@@ -13,6 +13,7 @@
 
 #include "platform/native_log.h"
 #include "platform/native_perf.h"
+#include "platform/native_pgxp.h"
 #include "platform/native_renderer.h"
 
 #include <assert.h>
@@ -106,13 +107,18 @@ typedef struct
 #endif
 	u8 psxSemiTransPassMask;
 
-	u16 startVertex;
-	u16 numVerts;
+	u32 startVertex;
+	u32 numVerts;
 
 	const char *debugText;
 } GPUDrawSplit;
 
+#if defined(__vita__)
 #define MAX_DRAW_SPLITS 4096
+#else
+// Max detail reached ~3400 splits in a 1P race; split screen multiplies that.
+#define MAX_DRAW_SPLITS 16384
+#endif
 
 typedef struct
 {
@@ -908,6 +914,49 @@ void MakeLineArray(GrVertex *vertex, VERTTYPE *p0, VERTTYPE *p1)
 	} // TODO diagonal line alignment
 }
 
+#if NATIVE_PGXP_SUPPORTED
+// NOTE: Swap retail integer corners for the precise GTE vertices the packet
+// words were built from (see native_pgxp.h). Lookups are keyed by the packet
+// address of each x field and checked against the integer stored there.
+// Depth is only applied when every corner has one, so a partially recovered
+// polygon keeps retail affine mapping instead of guessing.
+internal void NativeGpu_ApplyPgxp(GrVertex *vertex, VERTTYPE *const *points, int count, float ofsX, float ofsY)
+{
+	float w[4];
+	b32 perspective = gNativePgxpMode == NATIVE_PGXP_MODE_PERSPECTIVE;
+	int recovered = 0;
+
+	for (int i = 0; i < count; i++)
+	{
+		NativePgxpVertex precise;
+		const u32 value = (u16)points[i][0] | ((u32)(u16)points[i][1] << 16);
+
+		if (NativePgxp_Lookup(points[i], value, &precise))
+		{
+			vertex[i].x = precise.x + ofsX;
+			vertex[i].y = precise.y + ofsY;
+			w[i] = precise.w;
+			perspective &= precise.w > 0.0f;
+			recovered++;
+		}
+		else
+		{
+			perspective = 0;
+		}
+	}
+
+	if (perspective)
+	{
+		for (int i = 0; i < count; i++)
+		{
+			vertex[i].w = w[i];
+		}
+	}
+
+	NativePgxp_DebugCountPolygon(count, recovered, perspective);
+}
+#endif
+
 void MakeVertexTriangle(GrVertex *vertex, VERTTYPE *p0, VERTTYPE *p1, VERTTYPE *p2)
 {
 	assert(p0);
@@ -928,6 +977,14 @@ void MakeVertexTriangle(GrVertex *vertex, VERTTYPE *p0, VERTTYPE *p1, VERTTYPE *
 
 	vertex[2].x = p2[0] + ofsX;
 	vertex[2].y = p2[1] + ofsY;
+
+#if NATIVE_PGXP_SUPPORTED
+	if (NATIVE_PGXP_ACTIVE())
+	{
+		VERTTYPE *const points[3] = {p0, p1, p2};
+		NativeGpu_ApplyPgxp(vertex, points, 3, ofsX, ofsY);
+	}
+#endif
 }
 
 void MakeVertexQuad(GrVertex *vertex, VERTTYPE *p0, VERTTYPE *p1, VERTTYPE *p2, VERTTYPE *p3)
@@ -954,6 +1011,14 @@ void MakeVertexQuad(GrVertex *vertex, VERTTYPE *p0, VERTTYPE *p1, VERTTYPE *p2, 
 
 	vertex[3].x = p3[0] + ofsX;
 	vertex[3].y = p3[1] + ofsY;
+
+#if NATIVE_PGXP_SUPPORTED
+	if (NATIVE_PGXP_ACTIVE())
+	{
+		VERTTYPE *const points[4] = {p0, p1, p2, p3};
+		NativeGpu_ApplyPgxp(vertex, points, 4, ofsX, ofsY);
+	}
+#endif
 }
 
 void MakeVertexRect(GrVertex *vertex, VERTTYPE *p0, s16 w, s16 h)
@@ -1661,7 +1726,7 @@ typedef struct
 	int batchIndex;
 } NativeGpuDepthHashEntry;
 
-#define NATIVE_GPU_DEPTH_HASH_CAPACITY 8192
+#define NATIVE_GPU_DEPTH_HASH_CAPACITY (MAX_DRAW_SPLITS * 2)
 
 typedef struct
 {
@@ -2578,7 +2643,7 @@ internal void NativeGpu_DrawPreparedFrame(GrVertex *vertices, GPUDrawSplit *spli
 
 			NATIVE_GPU_LOG("%s\n", "==========================================");
 			NATIVE_GPU_LOG("POLYGON: %d\n", g_dbg_polygonSelected);
-			NATIVE_GPU_LOG("X: %d Y: %d\n", vert->x, vert->y);
+			NATIVE_GPU_LOG("X: %d Y: %d\n", (int)vert->x, (int)vert->y);
 			NATIVE_GPU_LOG("U: %d V: %d\n", vert->u, vert->v);
 			NATIVE_GPU_LOG("TP: %d CLT: %d\n", vert->page, vert->clut);
 
@@ -2715,9 +2780,32 @@ internal void NativeGpu_FormatPointerRegion(char *dst, size_t dstSize, uintptr_t
 	snprintf(dst, dstSize, "unknown");
 }
 
+// More than any single packet can emit (tiled sprites, polylines).
+#define NATIVE_GPU_PACKET_VERTEX_HEADROOM 1024
+
+// Primitive writers don't bounds-check the vertex buffer, so an overfull frame
+// drops its remaining primitives instead of running past the end.
+internal bool NativeGpu_HasPacketVertexRoom(void)
+{
+	local_persist bool s_reported;
+
+	if (s_gpu.vertexIndex <= (int)(MAX_VERTEX_BUFFER_SIZE - NATIVE_GPU_PACKET_VERTEX_HEADROOM))
+	{
+		return true;
+	}
+
+	if (!s_reported)
+	{
+		s_reported = true;
+		NATIVE_GPU_ERROR("%s\n", "MAX_VERTEX_BUFFER_SIZE reached, dropping primitives");
+	}
+
+	return false;
+}
+
 void ParsePrimitivesLinkedList(u32 *p, int singlePrimitive)
 {
-	if (!p)
+	if (!p || !NativeGpu_HasPacketVertexRoom())
 	{
 		return;
 	}
@@ -2753,7 +2841,7 @@ void ParsePrimitivesLinkedList(u32 *p, int singlePrimitive)
 	{
 		// walk OT_TAG linked list
 		u8 *basePacket = (u8 *)p;
-		while (true)
+		while (NativeGpu_HasPacketVertexRoom())
 		{
 			const int tagLength = getlen(basePacket);
 			if (tagLength > 0)

@@ -89,6 +89,24 @@ static char *RECTMENU_GetString(s16 stringIndex)
 		"DISPLAY: WINDOWED",
 		"DISPLAY: BORDERLESS",
 	};
+	static const char *pgxp[6][NATIVE_PGXP_MODE_COUNT] =
+	{
+		{"PGXP: OFF", "PGXP: GEOMETRY", "PGXP: PERSPECTIVE"},
+		{"PGXP: NON", "PGXP: GEOMETRIE", "PGXP: PERSPECTIVE"},
+		{"PGXP: AUS", "PGXP: GEOMETRIE", "PGXP: PERSPEKTIVE"},
+		{"PGXP: NO", "PGXP: GEOMETRIA", "PGXP: PROSPETTIVA"},
+		{"PGXP: NO", "PGXP: GEOMETRIA", "PGXP: PERSPECTIVA"},
+		{"PGXP: UIT", "PGXP: GEOMETRIE", "PGXP: PERSPECTIEF"},
+	};
+	static const char *maxLod[6][2] =
+	{
+		{"DETAIL: ORIGINAL", "DETAIL: MAXIMUM"},
+		{"DETAILS: ORIGINE", "DETAILS: MAXIMUM"},
+		{"DETAILS: ORIGINAL", "DETAILS: MAXIMUM"},
+		{"DETTAGLI: ORIGINALI", "DETTAGLI: MASSIMI"},
+		{"DETALLE: ORIGINAL", "DETALLE: MAXIMO"},
+		{"DETAILS: ORIGINEEL", "DETAILS: MAXIMAAL"},
+	};
 #endif
 	static const char *superHard[6] =
 	{
@@ -360,6 +378,10 @@ static char *RECTMENU_GetString(s16 stringIndex)
 		return (char *)dithering[languageRow][gNativeDitheringEnabled != 0];
 	case NATIVE_MENU_STRING_BORDERLESS:
 		return (char *)displayMode[gNativeBorderlessEnabled != 0];
+	case NATIVE_MENU_STRING_PGXP:
+		return (char *)pgxp[languageRow][gNativePgxpMode];
+	case NATIVE_MENU_STRING_MAX_LOD:
+		return (char *)maxLod[languageRow][CTR_NATIVE_MAX_LOD_ACTIVE];
 #endif
 	case NATIVE_MENU_STRING_SUPER_HARD:
 		return (char *)superHard[languageRow];
@@ -391,7 +413,6 @@ static char *RECTMENU_GetString(s16 stringIndex)
 		return sdata->lngStrings[stringIndex & MENU_ROW_LNG_MASK];
 	}
 }
-
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80044ef8-0x80044f90.
 void RECTMENU_DrawPolyGT4(struct Icon *icon, s16 posX, s16 posY, struct PrimMem *primMem, uint32_t *ot, u32 color0, u32 color1, u32 color2, u32 color3,

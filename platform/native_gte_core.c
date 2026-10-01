@@ -8,6 +8,8 @@
 #include <psx/gtereg.h>
 #include <psx/libgte.h>
 
+#include "platform/native_pgxp.h"
+
 GTERegisters gteRegs;
 
 #if defined(CTR_NATIVE)
@@ -304,13 +306,91 @@ internal int Lm_H(s64 value, int sf)
 	return value_12;
 }
 
+#if NATIVE_PGXP_SUPPORTED
+// NOTE: Repeats the RTPS/RTPT projection without the truncations the
+// hardware applies (MAC >> 12, IR clamp to integers, UNR division, SX/SY >> 16)
+// so the GPU can place the vertex at its sub-pixel position. Divide overflow
+// and screen clamping keep their retail results so the polygon shape matches
+// what the game culled and sorted.
+internal void GTE_PgxpRotTransPers(double viewX, double viewY, double viewZ, u32 hOverSz3, int lm)
+{
+	const double irScale = m_sf ? (1.0 / 4096.0) : 1.0;
+	const double irMin = lm ? 0.0 : -32768.0;
+	const double depth = viewZ / 4096.0;
+	double ir1 = viewX * irScale;
+	double ir2 = viewY * irScale;
+	double hOverDepth;
+	float w = (float)depth;
+
+	ir1 = ir1 < irMin ? irMin : (ir1 > 32767.0 ? 32767.0 : ir1);
+	ir2 = ir2 < irMin ? irMin : (ir2 > 32767.0 ? 32767.0 : ir2);
+
+	if ((hOverSz3 >= 0x1ffff) || !(depth > 0.0))
+	{
+		hOverDepth = (double)hOverSz3 / 65536.0;
+		w = 0.0f;
+	}
+	else
+	{
+		hOverDepth = (double)(u16)C2_H / depth;
+	}
+
+	double screenX = (double)C2_OFX / 65536.0 + ir1 * hOverDepth;
+	double screenY = (double)C2_OFY / 65536.0 + ir2 * hOverDepth;
+
+	// A saturated vertex was drawn clamped on hardware; its depth no longer
+	// matches its position, so leave that polygon affine.
+	if ((screenX < -1024.0) || (screenX > 1023.0) || (screenY < -1024.0) || (screenY > 1023.0))
+	{
+		screenX = screenX < -1024.0 ? -1024.0 : (screenX > 1023.0 ? 1023.0 : screenX);
+		screenY = screenY < -1024.0 ? -1024.0 : (screenY > 1023.0 ? 1023.0 : screenY);
+		w = 0.0f;
+	}
+
+#if defined(CTR_NATIVE)
+	if (gNativeMirrorModeRenderActive)
+	{
+		screenX = (double)((C2_OFX >> 16) << 1) - screenX;
+	}
+#endif
+
+	NativePgxp_GteProject((float)screenX, (float)screenY, w, (u32)C2_SXY2);
+}
+
+// MVMVA counterpart: keeps the exact matrix product so CPU code that reads IR
+// back (CTR's near-plane clipper) can stay sub-unit precise.
+internal void GTE_PgxpMvmva(int mx, int v, int cv, int lm)
+{
+	const double scale = m_sf ? (1.0 / 4096.0) : 1.0;
+	const double irMin = lm ? 0.0 : -32768.0;
+	double input[3] = {(double)VX(v), (double)VY(v), (double)VZ(v)};
+	double result[3];
+
+	NativePgxp_GteGetInput(v, (s16)VX(v), (s16)VY(v), (s16)VZ(v), input);
+
+	result[0] = ((double)CV1(cv) * 4096.0 + MX11(mx) * input[0] + MX12(mx) * input[1] + MX13(mx) * input[2]) * scale;
+	result[1] = ((double)CV2(cv) * 4096.0 + MX21(mx) * input[0] + MX22(mx) * input[1] + MX23(mx) * input[2]) * scale;
+	result[2] = ((double)CV3(cv) * 4096.0 + MX31(mx) * input[0] + MX32(mx) * input[1] + MX33(mx) * input[2]) * scale;
+
+	for (int i = 0; i < 3; i++)
+	{
+		result[i] = result[i] < irMin ? irMin : (result[i] > 32767.0 ? 32767.0 : result[i]);
+	}
+
+	NativePgxp_GteSetMvmvaResult(result, C2_IR1, C2_IR2, C2_IR3);
+}
+#endif
+
 internal int GTE_RotTransPers(int idx, int lm)
 {
 	int h_over_sz3;
+	const s64 viewX = (s64)((s64)C2_TRX << 12) + (C2_R11 * VX(idx)) + (C2_R12 * VY(idx)) + (C2_R13 * VZ(idx));
+	const s64 viewY = (s64)((s64)C2_TRY << 12) + (C2_R21 * VX(idx)) + (C2_R22 * VY(idx)) + (C2_R23 * VZ(idx));
+	const s64 viewZ = (s64)((s64)C2_TRZ << 12) + (C2_R31 * VX(idx)) + (C2_R32 * VY(idx)) + (C2_R33 * VZ(idx));
 
-	C2_MAC1 = A1(/*int44*/ (s64)((s64)C2_TRX << 12) + (C2_R11 * VX(idx)) + (C2_R12 * VY(idx)) + (C2_R13 * VZ(idx)));
-	C2_MAC2 = A2(/*int44*/ (s64)((s64)C2_TRY << 12) + (C2_R21 * VX(idx)) + (C2_R22 * VY(idx)) + (C2_R23 * VZ(idx)));
-	C2_MAC3 = A3(/*int44*/ (s64)((s64)C2_TRZ << 12) + (C2_R31 * VX(idx)) + (C2_R32 * VY(idx)) + (C2_R33 * VZ(idx)));
+	C2_MAC1 = A1(/*int44*/ viewX);
+	C2_MAC2 = A2(/*int44*/ viewY);
+	C2_MAC3 = A3(/*int44*/ viewZ);
 	C2_IR1 = Lm_B1(C2_MAC1, lm);
 	C2_IR2 = Lm_B2(C2_MAC2, lm);
 	C2_IR3 = Lm_B3_sf(m_mac3, m_sf, lm);
@@ -332,6 +412,25 @@ internal int GTE_RotTransPers(int idx, int lm)
 #endif
 	C2_SX2 = screenX;
 	C2_SY2 = Lm_G2(F((s64)C2_OFY + ((s64)C2_IR2 * h_over_sz3)) >> 16);
+
+#if NATIVE_PGXP_SUPPORTED
+	if (NATIVE_PGXP_ACTIVE())
+	{
+		double input[3];
+		double preciseX = (double)viewX;
+		double preciseY = (double)viewY;
+		double preciseZ = (double)viewZ;
+
+		if (NativePgxp_GteGetInput(idx, (s16)VX(idx), (s16)VY(idx), (s16)VZ(idx), input))
+		{
+			preciseX = (double)C2_TRX * 4096.0 + C2_R11 * input[0] + C2_R12 * input[1] + C2_R13 * input[2];
+			preciseY = (double)C2_TRY * 4096.0 + C2_R21 * input[0] + C2_R22 * input[1] + C2_R23 * input[2];
+			preciseZ = (double)C2_TRZ * 4096.0 + C2_R31 * input[0] + C2_R32 * input[1] + C2_R33 * input[2];
+		}
+
+		GTE_PgxpRotTransPers(preciseX, preciseY, preciseZ, (u32)h_over_sz3, lm);
+	}
+#endif
 
 	return h_over_sz3;
 }
@@ -364,6 +463,10 @@ int GTE_operator(int op)
 	{
 		s64 nclip = (s64)(C2_SX0 * C2_SY1) + (C2_SX1 * C2_SY2) + (C2_SX2 * C2_SY0) -
 		            (C2_SX0 * C2_SY2) - (C2_SX1 * C2_SY0) - (C2_SX2 * C2_SY1);
+		if (NATIVE_PGXP_ACTIVE())
+		{
+			NativePgxp_GteNclip(C2_SXY0, C2_SXY1, C2_SXY2, &nclip);
+		}
 #if defined(CTR_NATIVE)
 		if ((gNativeMirrorModeRenderActive != 0) != (gNativeMirrorModeDoubleFlipActive != 0))
 		{
@@ -444,6 +547,12 @@ int GTE_operator(int op)
 		C2_IR1 = Lm_B1(C2_MAC1, lm);
 		C2_IR2 = Lm_B2(C2_MAC2, lm);
 		C2_IR3 = Lm_B3(C2_MAC3, lm);
+#if NATIVE_PGXP_SUPPORTED
+		if (NATIVE_PGXP_ACTIVE() && (cv != 2) && (mx < 3) && (v < 3))
+		{
+			GTE_PgxpMvmva(mx, v, cv, lm);
+		}
+#endif
 		return 1;
 
 	case 0x13:

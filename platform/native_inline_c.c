@@ -9,6 +9,8 @@
 #include <psx/inline_c.h>
 #include <psx/libgte.h>
 
+#include "platform/native_pgxp.h"
+
 extern u32 gte_leadingzerocount(u32 lzcs);
 
 u32 MFC2(s32 reg)
@@ -41,6 +43,11 @@ u32 MFC2(s32 reg)
 	case 29:
 		gteRegs.CP2D.p[reg].d = LIM(C2_IR1 >> 7, 0x1f, 0, 0) | (LIM(C2_IR2 >> 7, 0x1f, 0, 0) << 5) | (LIM(C2_IR3 >> 7, 0x1f, 0, 0) << 10);
 		break;
+	}
+
+	if ((reg >= 12) && (reg <= 15) && NATIVE_PGXP_ACTIVE())
+	{
+		NativePgxp_GteReadSXY(reg, gteRegs.CP2D.p[reg].d);
 	}
 
 	return gteRegs.CP2D.p[reg].d;
@@ -79,11 +86,28 @@ s32 MFC2_S(s32 reg)
 		break;
 	}
 
+	if ((reg >= 12) && (reg <= 15) && NATIVE_PGXP_ACTIVE())
+	{
+		NativePgxp_GteReadSXY(reg, gteRegs.CP2D.p[reg].d);
+	}
+
 	return gteRegs.CP2D.p[reg].sd;
 }
 
 void MTC2(u32 value, s32 reg)
 {
+	if (NATIVE_PGXP_ACTIVE())
+	{
+		if (reg <= 5)
+		{
+			NativePgxp_GteInvalidateInput(reg);
+		}
+		else if ((reg >= 12) && (reg <= 15))
+		{
+			NativePgxp_GteWriteSXY(reg, value);
+		}
+	}
+
 	switch (reg)
 	{
 	case 15:
@@ -111,6 +135,18 @@ void MTC2(u32 value, s32 reg)
 
 void MTC2_S(s32 value, s32 reg)
 {
+	if (NATIVE_PGXP_ACTIVE())
+	{
+		if (reg <= 5)
+		{
+			NativePgxp_GteInvalidateInput(reg);
+		}
+		else if ((reg >= 12) && (reg <= 15))
+		{
+			NativePgxp_GteWriteSXY(reg, (u32)value);
+		}
+	}
+
 	switch (reg)
 	{
 	case 15:

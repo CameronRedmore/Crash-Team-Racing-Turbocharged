@@ -229,7 +229,7 @@ static struct MenuRow s_nativeOptionsRows[] =
 	{NATIVE_MENU_STRING_AI_RACERS, 9, 11, 10, 10},
 	{NATIVE_MENU_STRING_MIRROR_MODE, 10, 0, 11, 11},
 #else
-	{LNG_LANGUAGE, 14, 1, 0, 0},
+	{LNG_LANGUAGE, 16, 1, 0, 0},
 	{NATIVE_MENU_STRING_CONTROLS, 0, 2, 1, 1},
 	{NATIVE_MENU_STRING_CHEATS, 1, 3, 2, 2},
 	{NATIVE_MENU_STRING_AUDIO_FX, 2, 4, 3, 3},
@@ -239,11 +239,13 @@ static struct MenuRow s_nativeOptionsRows[] =
 	{NATIVE_MENU_STRING_FRAME_RATE, 6, 8, 7, 7},
 	{NATIVE_MENU_STRING_ANTI_ALIASING, 7, 9, 8, 8},
 	{NATIVE_MENU_STRING_DITHERING, 8, 10, 9, 9},
-	{NATIVE_MENU_STRING_BORDERLESS, 9, 11, 10, 10},
-	{NATIVE_MENU_STRING_DEFAULT_CAMERA, 10, 12, 11, 11},
-	{NATIVE_MENU_STRING_DEFAULT_HUD, 11, 13, 12, 12},
-	{NATIVE_MENU_STRING_AI_RACERS, 12, 14, 13, 13},
-	{NATIVE_MENU_STRING_MIRROR_MODE, 13, 0, 14, 14},
+	{NATIVE_MENU_STRING_PGXP, 9, 11, 10, 10},
+	{NATIVE_MENU_STRING_MAX_LOD, 10, 12, 11, 11},
+	{NATIVE_MENU_STRING_BORDERLESS, 11, 13, 12, 12},
+	{NATIVE_MENU_STRING_DEFAULT_CAMERA, 12, 14, 13, 13},
+	{NATIVE_MENU_STRING_DEFAULT_HUD, 13, 15, 14, 14},
+	{NATIVE_MENU_STRING_AI_RACERS, 14, 16, 15, 15},
+	{NATIVE_MENU_STRING_MIRROR_MODE, 15, 0, 16, 16},
 #endif
 	{RECTMENU_STRING_NONE},
 };
@@ -961,6 +963,32 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 	if (choose == NATIVE_MENU_STRING_DITHERING)
 	{
 		gNativeDitheringEnabled ^= 1;
+		save_config();
+		return;
+	}
+
+	if (choose == NATIVE_MENU_STRING_PGXP)
+	{
+		if (button & BTN_LEFT)
+		{
+			gNativePgxpMode = (gNativePgxpMode + NATIVE_PGXP_MODE_COUNT - 1) % NATIVE_PGXP_MODE_COUNT;
+			OtherFX_Play(0, 1);
+		}
+		else
+		{
+			gNativePgxpMode = (gNativePgxpMode + 1) % NATIVE_PGXP_MODE_COUNT;
+			if (button & BTN_RIGHT)
+			{
+				OtherFX_Play(0, 1);
+			}
+		}
+		save_config();
+		return;
+	}
+
+	if (choose == NATIVE_MENU_STRING_MAX_LOD)
+	{
+		gNativeMaxLodEnabled ^= 1;
 		save_config();
 		return;
 	}

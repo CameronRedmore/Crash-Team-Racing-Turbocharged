@@ -10,6 +10,7 @@
 #include <macros.h>
 #include <psx/libgte.h>
 #include <psx/libgpu.h>
+#include <platform/native_pgxp.h>
 
 #define LUT_WIDTH              (256)
 #define LUT_HEIGHT             (256)
@@ -20,18 +21,36 @@
 #define TPAGE_WIDTH            (256)
 #define TPAGE_HEIGHT           (256)
 
+#if defined(__vita__)
 #define MAX_VERTEX_BUFFER_SIZE (1u << 16)
+#else
+// Max detail subdivides all level geometry; one 1P frame can pass 64K
+// vertices, and split screen multiplies that.
+#define MAX_VERTEX_BUFFER_SIZE (1u << 19)
+#endif
 
 #pragma pack(push, 1)
 typedef struct
 {
+#if NATIVE_PGXP_SUPPORTED
+	// Sub-pixel when PGXP recovered the GTE vertex, otherwise retail integers.
+	float x, y;
+	// Perspective divisor for PGXP polygons; 0 keeps retail affine mapping.
+	float w;
+	s16 page, clut;
+#else
 	s16 x, y, page, clut;
+#endif
 
 	u8 u, v, bright, dither;
 	u8 r, g, b, a;
 
 	s8 tcx, tcy, _p0, _p1;
 	u16 orderDepth;
+#if NATIVE_PGXP_SUPPORTED
+	// Keeps the float attributes 4-byte aligned in the vertex buffer.
+	u16 _p2;
+#endif
 } GrVertex;
 #pragma pack(pop)
 
@@ -42,6 +61,7 @@ typedef enum
 	a_color,
 	a_extra,
 	a_order_depth,
+	a_page_clut,
 } ShaderAttrib;
 
 typedef enum

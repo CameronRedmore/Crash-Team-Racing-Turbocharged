@@ -1385,11 +1385,23 @@ global_variable const char *gte_shader_cached_p4 =
     "\t}\n";
 #endif
 
+#if NATIVE_PGXP_SUPPORTED
+// NOTE: PGXP polygons carry a real W, so the GPU interpolates texture
+// coordinates perspective-correctly. Gouraud colour and the dither pattern stay
+// screen-space like the PS1 rasteriser (DuckStation's default as well), and the
+// per-polygon page/CLUT is flat so it never picks up interpolation error.
+global_variable const char *gpu_shader_common = "	centroid varying vec4 v_texcoord;\n"
+                                                "	PSX_NOPERSPECTIVE varying vec4 v_color;\n"
+                                                "	flat varying vec4 v_page_clut;\n"
+                                                "	PSX_NOPERSPECTIVE varying vec2 v_ditherCoord;\n"
+                                                "	varying float v_z;\n";
+#else
 global_variable const char *gpu_shader_common = "	centroid varying vec4 v_texcoord;\n"
                                                 "	varying vec4 v_color;\n"
                                                 "	varying vec4 v_page_clut;\n"
                                                 "	varying vec2 v_ditherCoord;\n"
                                                 "	varying float v_z;\n";
+#endif
 
 const char *gte_shader_4 = GPU_FRAGMENT_SAMPLE_SHADER(4);
 const char *gte_shader_8 = GPU_FRAGMENT_SAMPLE_SHADER(8);
@@ -1448,7 +1460,24 @@ const char *gte_shader_32_rgba = "	uniform sampler2D s_texture;\n"
 	"\tgl_Position.z = 1.0 - a_orderDepth * (2.0 / 65535.0);\n"
 #else
 #define GTE_ORDER_DEPTH_ATTRIBUTE   ""
-#define GTE_PERSPECTIVE_CORRECTION "\tgl_Position = Projection * vec4(a_position.xy, 0.0, 1.0);\n"
+// NOTE: a_position.z is the PGXP view depth (0 = affine). Scaling the whole
+// clip position by it leaves the screen position unchanged after the divide
+// but makes the rasteriser interpolate texture coordinates in perspective.
+#define GTE_PERSPECTIVE_CORRECTION                                                                 \
+	"\tgl_Position = Projection * vec4(a_position.xy, 0.0, 1.0);\n"                           \
+	"\tgl_Position *= (a_position.z > 0.0) ? a_position.z : 1.0;\n"
+#endif
+
+#if NATIVE_PGXP_SUPPORTED
+#define GTE_POSITION_ATTRIBUTES                                                                    \
+	"	attribute vec3 a_position; // x, y, PGXP w\n"                                             \
+	"	attribute vec2 a_page_clut;\n"
+#define GTE_PAGE_ATTRIBUTE "a_page_clut.x"
+#define GTE_CLUT_ATTRIBUTE "a_page_clut.y"
+#else
+#define GTE_POSITION_ATTRIBUTES "	attribute vec4 a_position;\n"
+#define GTE_PAGE_ATTRIBUTE      "a_position.z"
+#define GTE_CLUT_ATTRIBUTE      "a_position.w"
 #endif
 
 #ifdef __vita__
@@ -1459,16 +1488,16 @@ const char *gte_shader_32_rgba = "	uniform sampler2D s_texture;\n"
 	"\t\tv_page_clut.w = floor(a_position.w / 64.0);\n"
 #else
 #define GTE_PAGE_CLUT_SETUP                                                                                     \
-	"\t\tv_page_clut.x = fract(a_position.z / 16.0) * 1024.0;\n"                                           \
-	"\t\tv_page_clut.y = floor(a_position.z / 16.0) * 256.0;\n"                                            \
-	"\t\tv_page_clut.z = fract(a_position.w / 64.0);\n"                                                    \
-	"\t\tv_page_clut.w = floor(a_position.w / 64.0) / 512.0;\n"                                            \
+	"\t\tv_page_clut.x = fract(" GTE_PAGE_ATTRIBUTE " / 16.0) * 1024.0;\n"                                   \
+	"\t\tv_page_clut.y = floor(" GTE_PAGE_ATTRIBUTE " / 16.0) * 256.0;\n"                                    \
+	"\t\tv_page_clut.z = fract(" GTE_CLUT_ATTRIBUTE " / 64.0);\n"                                            \
+	"\t\tv_page_clut.w = floor(" GTE_CLUT_ATTRIBUTE " / 64.0) / 512.0;\n"                                    \
 	"\t\tv_page_clut.xy += c_UVFudge;\n"                                                                   \
 	"\t\tv_page_clut.zw += c_UVFudge;\n"
 #endif
 
 #define GTE_VERTEX_SHADER                                                                                          \
-	"	attribute vec4 a_position;\n"                                                                                \
+	GTE_POSITION_ATTRIBUTES                                                                                       \
 	"	attribute vec4 a_texcoord; // uv, color multiplier, dither\n"                                                \
 		"	attribute vec4 a_color;\n"                                                                                   \
 		"	attribute vec4 a_extra; // texcoord.xy ofs, unused.xy\n"                                                     \
@@ -1528,6 +1557,14 @@ internal int NativeRenderer_Shader_CheckProgramStatus(GLuint program)
 	return 0;
 }
 
+// GLSL ES has no noperspective qualifier; there everything interpolates in
+// perspective, which only differs from desktop for PGXP Gouraud shading.
+#ifdef __EMSCRIPTEN__
+#define GLSL_NOPERSPECTIVE_DEFINE "	#define PSX_NOPERSPECTIVE\n"
+#else
+#define GLSL_NOPERSPECTIVE_DEFINE "	#define PSX_NOPERSPECTIVE noperspective\n"
+#endif
+
 internal ShaderID NativeRenderer_Shader_Compile(const char *source, bool isPsxShader, const char *fragmentDefines)
 {
 	const char *GLSL_HEADER_VERT =
@@ -1542,6 +1579,7 @@ internal ShaderID NativeRenderer_Shader_Compile(const char *source, bool isPsxSh
 	                               "	#define varying   out\n"
 	                               "	#define attribute in\n"
 	                               "	#define texture2D texture\n"
+	                               GLSL_NOPERSPECTIVE_DEFINE
 #endif
 								   ;
 
@@ -1556,6 +1594,7 @@ internal ShaderID NativeRenderer_Shader_Compile(const char *source, bool isPsxSh
 #ifndef __vita__
 	                               "	#define varying     in\n"
 	                               "	#define texture2D   texture\n"
+	                               GLSL_NOPERSPECTIVE_DEFINE
 	                               "	out vec4 fragColor;\n"
 #ifdef __EMSCRIPTEN__
 	                               "\t#define gl_FragColor fragColor\n"
@@ -1632,6 +1671,9 @@ internal ShaderID NativeRenderer_Shader_Compile(const char *source, bool isPsxSh
 	glBindAttribLocation(program, a_extra, "a_extra");
 #ifdef __vita__
 	glBindAttribLocation(program, a_order_depth, "a_orderDepth");
+#endif
+#if NATIVE_PGXP_SUPPORTED
+	glBindAttribLocation(program, a_page_clut, "a_page_clut");
 #endif
 
 	glLinkProgram(program);
@@ -2114,7 +2156,13 @@ int NativeRenderer_InitialisePSX(void)
 			glEnableVertexAttribArray(a_order_depth);
 #endif
 
+#if NATIVE_PGXP_SUPPORTED
+			glEnableVertexAttribArray(a_page_clut);
+			glVertexAttribPointer(a_position, 3, GL_FLOAT, GL_FALSE, sizeof(GrVertex), &((GrVertex *)NULL)->x);
+			glVertexAttribPointer(a_page_clut, 2, GL_SHORT, GL_FALSE, sizeof(GrVertex), &((GrVertex *)NULL)->page);
+#else
 			glVertexAttribPointer(a_position, 4, GL_SHORT, GL_FALSE, sizeof(GrVertex), &((GrVertex *)NULL)->x);
+#endif
 			glVertexAttribPointer(a_texcoord, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(GrVertex), &((GrVertex *)NULL)->u);
 			glVertexAttribPointer(a_color, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(GrVertex), &((GrVertex *)NULL)->r);
 			glVertexAttribPointer(a_extra, 4, GL_BYTE, GL_FALSE, sizeof(GrVertex), &((GrVertex *)NULL)->tcx);

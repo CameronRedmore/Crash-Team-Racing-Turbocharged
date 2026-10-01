@@ -91,6 +91,7 @@ int gNativeRelicRaceResultTier = -1;
 #include "platform/native_gpu_links.c"
 #include "platform/native_gpu.c"
 #include "platform/native_gte_core.c"
+#include "platform/native_pgxp.c"
 #if !defined(__EMSCRIPTEN__)
 #include "platform/native_glad.c"
 #endif
@@ -200,6 +201,7 @@ u32 gNativeCheatConfigMask = 0;
 int gNativeAntiAliasingEnabled = 1;
 int gNativeDitheringEnabled = 1;
 int gNativeBorderlessEnabled = 0;
+int gNativeMaxLodEnabled = 0;
 #endif
 int cfg_language = 2; // Default: PAL UK language
 
@@ -308,6 +310,17 @@ void load_config(void)
 			{
 				gNativeBorderlessEnabled = (value != 0);
 			}
+			else if (strcmp("max_lod", buffer) == 0)
+			{
+				gNativeMaxLodEnabled = (value != 0);
+			}
+			else if (strcmp("pgxp", buffer) == 0)
+			{
+				if ((value >= NATIVE_PGXP_MODE_OFF) && (value < NATIVE_PGXP_MODE_COUNT))
+				{
+					gNativePgxpMode = value;
+				}
+			}
 #endif
 			else if (NativeConfig_SetCheat(buffer, value))
 			{
@@ -337,6 +350,8 @@ void save_config(void)
 		fprintf(config, "%s=%d\n", "anti_aliasing", gNativeAntiAliasingEnabled != 0);
 		fprintf(config, "%s=%d\n", "dithering", gNativeDitheringEnabled != 0);
 		fprintf(config, "%s=%d\n", "borderless", gNativeBorderlessEnabled != 0);
+		fprintf(config, "%s=%d\n", "pgxp", gNativePgxpMode);
+		fprintf(config, "%s=%d\n", "max_lod", gNativeMaxLodEnabled != 0);
 #endif
 		for (u32 i = 0; i < (u32)(sizeof(s_nativeCheatConfig) / sizeof(s_nativeCheatConfig[0])); i++)
 		{

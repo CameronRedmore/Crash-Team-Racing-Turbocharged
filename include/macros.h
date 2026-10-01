@@ -77,6 +77,14 @@ extern int gNativeGhostReplayFpsOverride;
 #define FPS_LEFTSHIFT(x)            (x)
 #define FPS_RIGHTSHIFT(x)           (x)
 #endif
+
+// Max detail option: level geometry and models always use their highest LOD.
+#if defined(CTR_NATIVE) && !defined(__vita__)
+extern int gNativeMaxLodEnabled;
+#define CTR_NATIVE_MAX_LOD_ACTIVE (gNativeMaxLodEnabled != 0)
+#else
+#define CTR_NATIVE_MAX_LOD_ACTIVE 0
+#endif
 #define CTR_SECONDS_TO_FRAMES(sec) ((s32)((sec) * FPS))
 
 #define SECONDS(x)                 ((s32)(((f32)(x)) * SECOND))

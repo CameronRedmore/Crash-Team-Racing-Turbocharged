@@ -9,6 +9,8 @@
 
 #include <stdint.h>
 
+#include <platform/native_pgxp.h>
+
 /* Psy-X specific calls */
 
 /* sets cop2 data register value. LWC2 is the same kind*/
@@ -611,34 +613,36 @@ extern int doCOP2(int op);
 		CTR_WriteU16LE((char *)(r0) + 12, MFC2(11)); \
 	}
 
-// swc2 14
-#define gte_stsxy(r0)                           \
-	{                                           \
-		CTR_WriteU32LE((char *)(r0), MFC2(14)); \
+// swc2 of an SXY register; native also records the precise GTE vertex.
+#define gte_stsxy_reg(r0, reg)                                       \
+	{                                                                \
+		const uint32_t gteStsxyValue = MFC2(reg);                    \
+		CTR_WriteU32LE((char *)(r0), gteStsxyValue);                 \
+		if (NATIVE_PGXP_ACTIVE())                                    \
+		{                                                            \
+			NativePgxp_StoreGteSXY((void *)(r0), reg, gteStsxyValue); \
+		}                                                            \
 	}
 
+// swc2 14
+#define gte_stsxy(r0) gte_stsxy_reg(r0, 14)
+
 // mfc2 12-14
-#define gte_stsxy3(r0, r1, r2)                  \
-	{                                           \
-		CTR_WriteU32LE((char *)(r0), MFC2(12)); \
-		CTR_WriteU32LE((char *)(r1), MFC2(13)); \
-		CTR_WriteU32LE((char *)(r2), MFC2(14)); \
+#define gte_stsxy3(r0, r1, r2)    \
+	{                             \
+		gte_stsxy_reg(r0, 12); \
+		gte_stsxy_reg(r1, 13); \
+		gte_stsxy_reg(r2, 14); \
 	}
 
 // swc2 14
 #define gte_stsxy2(r0) gte_stsxy(r0)
 
 // swc2 13
-#define gte_stsxy1(r0)                          \
-	{                                           \
-		CTR_WriteU32LE((char *)(r0), MFC2(13)); \
-	}
+#define gte_stsxy1(r0) gte_stsxy_reg(r0, 13)
 
 // swc2 12
-#define gte_stsxy0(r0)                          \
-	{                                           \
-		CTR_WriteU32LE((char *)(r0), MFC2(12)); \
-	}
+#define gte_stsxy0(r0) gte_stsxy_reg(r0, 12)
 
 // swc2 8
 #define gte_stdp(r0)                           \

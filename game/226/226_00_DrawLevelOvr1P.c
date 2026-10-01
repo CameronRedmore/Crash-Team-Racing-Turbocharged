@@ -1029,10 +1029,76 @@ static void DrawLevelOvr1P_CopyColorWord(u8 *dst, const u8 *src)
 	DrawLevelOvr1P_WritePackedWord(dst, DrawLevelOvr1P_ReadPackedWord(src));
 }
 
+#if defined(CTR_NATIVE)
+// NOTE: PGXP CPU-side precision (see native_pgxp.h). Retail builds subdivision
+// midpoints, LOD fades and near-plane clip vertices from truncated integers,
+// so they sit slightly off the edges they split. With sub-pixel projection that
+// shows up as cracks against neighbours drawn without the split, so native
+// carries the exact positions alongside the retail integers and feeds them to
+// the GTE when those vertices are projected.
+static void DrawLevelOvr1P_PgxpClearPos(const struct DrawLevelOvr1PScratchVertex *vertex)
+{
+	if (NATIVE_PGXP_ACTIVE())
+	{
+		NativePgxp_ClearPosition(&vertex->pos[0]);
+	}
+}
+
+static void DrawLevelOvr1P_PgxpCopyPos(const struct DrawLevelOvr1PScratchVertex *dst, const struct DrawLevelOvr1PScratchVertex *src)
+{
+	if (NATIVE_PGXP_ACTIVE())
+	{
+		NativePgxp_CopyPosition(&dst->pos[0], &src->pos[0], &src->pos[0]);
+	}
+}
+
+// Runs before the retail code overwrites dstMid->pos with the truncated average.
+static void DrawLevelOvr1P_PgxpMidpointPos(const struct DrawLevelOvr1PScratchVertex *dstMid, const struct DrawLevelOvr1PScratchVertex *srcA,
+                                           const struct DrawLevelOvr1PScratchVertex *srcB)
+{
+	float a[3];
+	float b[3];
+	float mid[3];
+	s16 vector[3];
+
+	if (!NATIVE_PGXP_ACTIVE())
+	{
+		return;
+	}
+
+	NativePgxp_GetPosition(&srcA->pos[0], &srcA->pos[0], a);
+	NativePgxp_GetPosition(&srcB->pos[0], &srcB->pos[0], b);
+	for (s32 axisIndex = 0; axisIndex < 3; axisIndex++)
+	{
+		mid[axisIndex] = (a[axisIndex] + b[axisIndex]) * 0.5f;
+		vector[axisIndex] = (s16)(((s32)srcA->pos[axisIndex] + (s32)srcB->pos[axisIndex]) >> 1);
+	}
+
+	NativePgxp_SetPosition(&dstMid->pos[0], vector, mid);
+}
+
+// Runs after the vector has been loaded into GTE V0.
+static void DrawLevelOvr1P_PgxpLoadV0(const s16 *pos)
+{
+	float precise[3];
+
+	if (NATIVE_PGXP_ACTIVE() && NativePgxp_GetPosition(pos, pos, precise))
+	{
+		NativePgxp_GteSetInput(0, pos, precise);
+	}
+}
+#else
+#define DrawLevelOvr1P_PgxpClearPos(vertex)                ((void)0)
+#define DrawLevelOvr1P_PgxpCopyPos(dst, src)               ((void)0)
+#define DrawLevelOvr1P_PgxpMidpointPos(dstMid, srcA, srcB) ((void)0)
+#define DrawLevelOvr1P_PgxpLoadV0(pos)                     ((void)0)
+#endif
+
 static void DrawLevelOvr1P_CopySourcePosFlags(struct DrawLevelOvr1PScratchVertex *projected, const struct LevVertex *vertex)
 {
 	projected->posVec = vertex->pos;
 	projected->flags = vertex->flags;
+	DrawLevelOvr1P_PgxpClearPos(projected);
 }
 
 static void DrawLevelOvr1P_CopySourceVertex(struct DrawLevelOvr1PScratchVertex *projected, const struct LevVertex *vertex)
@@ -1047,6 +1113,12 @@ static void DrawLevelOvr1P_CopyProjectedScreenDepth(struct DrawLevelOvr1PScratch
 	dst->depth = src->depth;
 	dst->clipNear = src->clipNear;
 	dst->clipHalfNear = src->clipHalfNear;
+#if defined(CTR_NATIVE)
+	if (NATIVE_PGXP_ACTIVE())
+	{
+		NativePgxp_CopyXY(&dst->posScreen[0], &src->posScreen[0], (u16)src->posScreen[0] | ((u32)(u16)src->posScreen[1] << 16));
+	}
+#endif
 }
 
 static void DrawLevelOvr1P_SetProjectedDepth(struct DrawLevelOvr1PScratchVertex *projected, u32 depth, int writeClipBytes)
@@ -1146,6 +1218,7 @@ static void DrawLevelOvr1P_CopyProjectedSource(struct LevVertex *vertex, struct 
 	case DRAW_LEVEL_OVR1P_PROJECTED_SOURCE_WATER_COLOR_LO_FLAGS:
 		projected->posVec = vertex->pos;
 		projected->flags = (u16)vertex->color_lo[0] | ((u16)vertex->color_lo[1] << 8);
+		DrawLevelOvr1P_PgxpClearPos(projected);
 		break;
 	}
 
@@ -1387,6 +1460,14 @@ static int DrawLevelOvr1P_NclipProjected(const struct DrawLevelOvr1PScratchVerte
 	MTC2(sxy0, 12);
 	MTC2(sxy1, 13);
 	MTC2(sxy2, 14);
+#if defined(CTR_NATIVE)
+	if (NATIVE_PGXP_ACTIVE())
+	{
+		NativePgxp_GteLoadSXY(12, &vertex0->posScreen[0], sxy0);
+		NativePgxp_GteLoadSXY(13, &vertex1->posScreen[0], sxy1);
+		NativePgxp_GteLoadSXY(14, &vertex2->posScreen[0], sxy2);
+	}
+#endif
 	gte_nclip();
 	gte_stopz(&nclip);
 
@@ -1396,6 +1477,11 @@ static int DrawLevelOvr1P_NclipProjected(const struct DrawLevelOvr1PScratchVerte
 static u32 DrawLevelOvr1P_PackProjectedSxy(const struct DrawLevelOvr1PScratchVertex *projected)
 {
 	return (u16)projected->posScreen[0] | ((u32)(u16)projected->posScreen[1] << 16);
+}
+
+static void DrawLevelOvr1P_WriteProjectedXY(VERTTYPE *xy, const struct DrawLevelOvr1PScratchVertex *projected)
+{
+	CtrGpu_CopyPackedXY(xy, &projected->posScreen[0], DrawLevelOvr1P_PackProjectedSxy(projected));
 }
 
 static int DrawLevelOvr1P_IsProjectedPolyOffscreenPacked(const struct DrawLevelOvr1PScratchVertex *projected, const int *indices, int count)
@@ -1498,6 +1584,7 @@ static void DrawLevelOvr1P_ProjectCopiedGridListMidpoint(struct DrawLevelOvr1PSc
 	u32 depth;
 
 	CTR_GteLoadS16TripletV0(&projected->pos[0]);
+	DrawLevelOvr1P_PgxpLoadV0(&projected->pos[0]);
 	gte_rtps();
 	CTR_GteStoreSXY(&projected->posScreen[0]);
 	gte_stsz(&depth);
@@ -1512,6 +1599,7 @@ static void DrawLevelOvr1P_ProjectCopiedGridRenderedMidpoint(struct DrawLevelOvr
 	u32 threshold = (u32)DrawLevelOvr1P_GetDepthClipThreshold();
 
 	CTR_GteLoadS16TripletV0(&projected->pos[0]);
+	DrawLevelOvr1P_PgxpLoadV0(&projected->pos[0]);
 	gte_rtps();
 	CTR_GteStoreSXY(&projected->posScreen[0]);
 	gte_stsz(&depth);
@@ -1524,6 +1612,7 @@ static void DrawLevelOvr1P_ProjectCopiedGridRenderedMidpoint(struct DrawLevelOvr
 static void DrawLevelOvr1P_BuildMidpointValue(struct DrawLevelOvr1PScratchVertex *dstMid, const struct DrawLevelOvr1PScratchVertex *srcA,
                                               const struct DrawLevelOvr1PScratchVertex *srcB, int writeClipBytes)
 {
+	DrawLevelOvr1P_PgxpMidpointPos(dstMid, srcA, srcB);
 	for (s32 axisIndex = 0; axisIndex < 3; axisIndex++)
 	{
 		dstMid->pos[axisIndex] = (s16)(((s32)srcA->pos[axisIndex] + (s32)srcB->pos[axisIndex]) >> 1);
@@ -1564,6 +1653,9 @@ static void Ovr226_800a3a78_BuildGround4x1ListMidpointPair(struct DrawLevelOvr1P
 	const u8 *srcBBytes = (const u8 *)srcB;
 	u32 depth;
 
+	DrawLevelOvr1P_PgxpMidpointPos(dstMid, srcA, srcB);
+	DrawLevelOvr1P_PgxpCopyPos(dstA, srcA);
+	DrawLevelOvr1P_PgxpCopyPos(dstB, srcB);
 	for (s32 axisIndex = 0; axisIndex < 3; axisIndex++)
 	{
 		dstA->pos[axisIndex] = srcA->pos[axisIndex];
@@ -1572,6 +1664,7 @@ static void Ovr226_800a3a78_BuildGround4x1ListMidpointPair(struct DrawLevelOvr1P
 	}
 
 	CTR_GteLoadS16TripletV0(&dstMid->pos[0]);
+	DrawLevelOvr1P_PgxpLoadV0(&dstMid->pos[0]);
 	gte_rtps();
 
 	for (int offset = 8; offset <= 10; offset++)
@@ -1611,6 +1704,8 @@ static void Ovr226_800a560c_BuildGround4x2ListEdgeMidpoint(struct DrawLevelOvr1P
 	const u8 *srcBBytes = (const u8 *)srcB;
 	u32 depth;
 
+	DrawLevelOvr1P_PgxpMidpointPos(dstMid, srcA, srcB);
+	DrawLevelOvr1P_PgxpCopyPos(dstA, srcA);
 	for (s32 axisIndex = 0; axisIndex < 3; axisIndex++)
 	{
 		dstA->pos[axisIndex] = srcA->pos[axisIndex];
@@ -1618,6 +1713,7 @@ static void Ovr226_800a560c_BuildGround4x2ListEdgeMidpoint(struct DrawLevelOvr1P
 	}
 
 	CTR_GteLoadS16TripletV0(&dstMid->pos[0]);
+	DrawLevelOvr1P_PgxpLoadV0(&dstMid->pos[0]);
 	gte_rtps();
 
 	for (int offset = 8; offset <= 10; offset++)
@@ -1649,6 +1745,9 @@ static void Ovr226_800a56f4_BuildGround4x2ListPairMidpoint(struct DrawLevelOvr1P
 	const u8 *srcBBytes = (const u8 *)srcB;
 	u32 depth;
 
+	DrawLevelOvr1P_PgxpMidpointPos(dstMid, srcA, srcB);
+	DrawLevelOvr1P_PgxpCopyPos(dstA, srcA);
+	DrawLevelOvr1P_PgxpCopyPos(dstB, srcB);
 	for (s32 axisIndex = 0; axisIndex < 3; axisIndex++)
 	{
 		dstA->pos[axisIndex] = srcA->pos[axisIndex];
@@ -1657,6 +1756,7 @@ static void Ovr226_800a56f4_BuildGround4x2ListPairMidpoint(struct DrawLevelOvr1P
 	}
 
 	CTR_GteLoadS16TripletV0(&dstMid->pos[0]);
+	DrawLevelOvr1P_PgxpLoadV0(&dstMid->pos[0]);
 	gte_rtps();
 
 	for (int offset = 8; offset <= 10; offset++)
@@ -1705,6 +1805,8 @@ static void Ovr226_800a6510_BuildGround4x2RenderedEdgeMidpoint(struct DrawLevelO
 	const u8 *srcBBytes = (const u8 *)srcB;
 	u32 depth;
 
+	DrawLevelOvr1P_PgxpMidpointPos(dstMid, srcA, srcB);
+	DrawLevelOvr1P_PgxpCopyPos(dstA, srcA);
 	for (s32 axisIndex = 0; axisIndex < 3; axisIndex++)
 	{
 		dstA->pos[axisIndex] = srcA->pos[axisIndex];
@@ -1712,6 +1814,7 @@ static void Ovr226_800a6510_BuildGround4x2RenderedEdgeMidpoint(struct DrawLevelO
 	}
 
 	CTR_GteLoadS16TripletV0(&dstMid->pos[0]);
+	DrawLevelOvr1P_PgxpLoadV0(&dstMid->pos[0]);
 	gte_rtps();
 
 	for (int offset = 8; offset <= 10; offset++)
@@ -1751,6 +1854,8 @@ static void Ovr226_800a74a0_BuildDynamicListSubdivideMidpoint(struct DrawLevelOv
 	u8 *dstMidUv = (u8 *)&dstMid->flags;
 	u32 depth;
 
+	DrawLevelOvr1P_PgxpMidpointPos(dstMid, srcA, srcB);
+	DrawLevelOvr1P_PgxpCopyPos(dstA, srcA);
 	for (s32 axisIndex = 0; axisIndex < 3; axisIndex++)
 	{
 		dstA->pos[axisIndex] = srcA->pos[axisIndex];
@@ -1758,6 +1863,7 @@ static void Ovr226_800a74a0_BuildDynamicListSubdivideMidpoint(struct DrawLevelOv
 	}
 
 	CTR_GteLoadS16TripletV0(&dstMid->pos[0]);
+	DrawLevelOvr1P_PgxpLoadV0(&dstMid->pos[0]);
 	gte_rtps();
 
 	for (s32 colorChannel = 0; colorChannel < 3; colorChannel++)
@@ -1808,6 +1914,8 @@ static void Ovr226_800a8150_BuildDynamicRenderedSubdivideMidpoint(struct DrawLev
 	u8 *dstMidUv = (u8 *)&dstMid->flags;
 	u32 depth;
 
+	DrawLevelOvr1P_PgxpMidpointPos(dstMid, srcA, srcB);
+	DrawLevelOvr1P_PgxpCopyPos(dstA, srcA);
 	for (s32 axisIndex = 0; axisIndex < 3; axisIndex++)
 	{
 		dstA->pos[axisIndex] = srcA->pos[axisIndex];
@@ -1815,6 +1923,7 @@ static void Ovr226_800a8150_BuildDynamicRenderedSubdivideMidpoint(struct DrawLev
 	}
 
 	CTR_GteLoadS16TripletV0(&dstMid->pos[0]);
+	DrawLevelOvr1P_PgxpLoadV0(&dstMid->pos[0]);
 	gte_rtps();
 
 	for (s32 colorChannel = 0; colorChannel < 3; colorChannel++)
@@ -1866,6 +1975,9 @@ static void Ovr226_800a4594_BuildGround4x1RenderedMidpointPair(struct DrawLevelO
 	const u8 *srcBBytes = (const u8 *)srcB;
 	u32 depth;
 
+	DrawLevelOvr1P_PgxpMidpointPos(dstMid, srcA, srcB);
+	DrawLevelOvr1P_PgxpCopyPos(dstA, srcA);
+	DrawLevelOvr1P_PgxpCopyPos(dstB, srcB);
 	for (s32 axisIndex = 0; axisIndex < 3; axisIndex++)
 	{
 		dstA->pos[axisIndex] = srcA->pos[axisIndex];
@@ -1874,6 +1986,7 @@ static void Ovr226_800a4594_BuildGround4x1RenderedMidpointPair(struct DrawLevelO
 	}
 
 	CTR_GteLoadS16TripletV0(&dstMid->pos[0]);
+	DrawLevelOvr1P_PgxpLoadV0(&dstMid->pos[0]);
 	gte_rtps();
 
 	for (int offset = 8; offset <= 10; offset++)
@@ -1909,6 +2022,7 @@ static void DrawLevelOvr1P_BuildMidpointFromFirstEndpoint(struct DrawLevelOvr1PS
                                                           int writeClipBytes)
 {
 	*dstA = *srcA;
+	DrawLevelOvr1P_PgxpCopyPos(dstA, srcA);
 	dstA->color_hi[3] = 0;
 	DrawLevelOvr1P_BuildMidpointValue(dstMid, srcA, srcB, writeClipBytes);
 }
@@ -1922,6 +2036,8 @@ static void Ovr226_800a17d8_BuildFullDynamicSubdivideMidpoint(struct DrawLevelOv
 	u8 *dstMidBytes = (u8 *)&dstMid->flags;
 	u32 depth;
 
+	DrawLevelOvr1P_PgxpMidpointPos(dstMid, srcA, srcB);
+	DrawLevelOvr1P_PgxpCopyPos(dstA, srcA);
 	for (s32 axisIndex = 0; axisIndex < 3; axisIndex++)
 	{
 		dstA->pos[axisIndex] = srcA->pos[axisIndex];
@@ -1929,6 +2045,7 @@ static void Ovr226_800a17d8_BuildFullDynamicSubdivideMidpoint(struct DrawLevelOv
 	}
 
 	CTR_GteLoadS16TripletV0(&dstMid->pos[0]);
+	DrawLevelOvr1P_PgxpLoadV0(&dstMid->pos[0]);
 	gte_rtps();
 
 	for (s32 colorChannel = 0; colorChannel < 3; colorChannel++)
@@ -2126,13 +2243,13 @@ static void DrawLevelOvr1P_WriteProjectedGT3(POLY_GT3 *poly, const struct QuadBl
 {
 	uv1 = DrawLevelOvr1P_GetNativeDecoratedUv1(block, uv1);
 	CtrGpu_WriteColorCode(&poly->r0, DrawLevelOvr1P_GetProjectedColorCode(&projected[indices[0]], code));
-	CtrGpu_WritePackedXY(&poly->x0, DrawLevelOvr1P_PackProjectedSxy(&projected[indices[0]]));
+	DrawLevelOvr1P_WriteProjectedXY(&poly->x0, &projected[indices[0]]);
 	CtrGpu_WritePackedUVWord(&poly->u0, uv0);
 	CtrGpu_WriteColorCode(&poly->r1, DrawLevelOvr1P_GetProjectedColorCode(&projected[indices[1]], 0));
-	CtrGpu_WritePackedXY(&poly->x1, DrawLevelOvr1P_PackProjectedSxy(&projected[indices[1]]));
+	DrawLevelOvr1P_WriteProjectedXY(&poly->x1, &projected[indices[1]]);
 	CtrGpu_WritePackedUVWord(&poly->u1, uv1);
 	CtrGpu_WriteColorCode(&poly->r2, DrawLevelOvr1P_GetProjectedColorCode(&projected[indices[2]], 0));
-	CtrGpu_WritePackedXY(&poly->x2, DrawLevelOvr1P_PackProjectedSxy(&projected[indices[2]]));
+	DrawLevelOvr1P_WriteProjectedXY(&poly->x2, &projected[indices[2]]);
 	CtrGpu_WritePackedUVWord(&poly->u2, uv2);
 }
 
@@ -2141,7 +2258,7 @@ static void DrawLevelOvr1P_WriteProjectedGT4(POLY_GT4 *poly, const struct QuadBl
 {
 	DrawLevelOvr1P_WriteProjectedGT3((POLY_GT3 *)poly, block, projected, indices, code, uv0, uv1, uv2);
 	CtrGpu_WriteColorCode(&poly->r3, DrawLevelOvr1P_GetProjectedColorCode(&projected[indices[3]], 0));
-	CtrGpu_WritePackedXY(&poly->x3, DrawLevelOvr1P_PackProjectedSxy(&projected[indices[3]]));
+	DrawLevelOvr1P_WriteProjectedXY(&poly->x3, &projected[indices[3]]);
 	CtrGpu_WritePackedUVWord(&poly->u3, uv2 >> 16);
 }
 
@@ -2332,6 +2449,26 @@ static void Ovr226_800a1408_AdjustFullDynamicMidVertex(struct DrawLevelOvr1PScra
 		midpoint[2] = (s16)MFC2_S(27);
 	}
 
+#if defined(CTR_NATIVE)
+	if (NATIVE_PGXP_ACTIVE())
+	{
+		// Exact counterpart of the edge midpoint and the GPL12 fade above.
+		float midPrecise[3];
+		float a[3];
+		float b[3];
+
+		NativePgxp_GetPosition(&mid->pos[0], &mid->pos[0], midPrecise);
+		NativePgxp_GetPosition(&endpointA->pos[0], &endpointA->pos[0], a);
+		NativePgxp_GetPosition(&endpointB->pos[0], &endpointB->pos[0], b);
+		for (s32 axisIndex = 0; axisIndex < 3; axisIndex++)
+		{
+			const float edgeMid = (a[axisIndex] + b[axisIndex]) * 0.5f;
+			midPrecise[axisIndex] = (factor < 0x1000) ? midPrecise[axisIndex] + (edgeMid - midPrecise[axisIndex]) * ((float)factor / 4096.0f) : edgeMid;
+		}
+		NativePgxp_SetPosition(&mid->pos[0], midpoint, midPrecise);
+	}
+#endif
+
 	mid->pos[0] = midpoint[0];
 	mid->pos[1] = midpoint[1];
 	mid->pos[2] = midpoint[2];
@@ -2340,6 +2477,7 @@ static void Ovr226_800a1408_AdjustFullDynamicMidVertex(struct DrawLevelOvr1PScra
 	u32 depth;
 	MTC2(DrawLevelOvr1P_ReadWord(&mid->pos[0], 0), 0);
 	MTC2((u32)(s32)mid->pos[2], 1);
+	DrawLevelOvr1P_PgxpLoadV0(&mid->pos[0]);
 	gte_rtps();
 	CTR_GteStoreSXY(&mid->posScreen[0]);
 	gte_stsz(&depth);
@@ -2420,6 +2558,12 @@ static int DrawLevelOvr1P_ShouldWriteRenderedClippedRecord(const struct DrawLeve
 static void DrawLevelOvr1P_CopyClipRecordVertex(struct DrawLevelOvr1PClipRecordVertex *dst, const struct DrawLevelOvr1PScratchVertex *src)
 {
 	dst->posVec = src->posVec;
+#if defined(CTR_NATIVE)
+	if (NATIVE_PGXP_ACTIVE())
+	{
+		NativePgxp_CopyPosition(&dst->pos[0], &src->pos[0], &src->pos[0]);
+	}
+#endif
 	dst->flags = src->flags;
 	DrawLevelOvr1P_CopyColorWord(dst->color_hi, src->color_hi);
 
@@ -2631,13 +2775,13 @@ static u32 DrawLevelOvr1P_StoreClipRecordUvScratch(const struct DrawLevelOvr1PSc
 static void DrawLevelOvr1P_WriteClipRecordGT3(POLY_GT3 *poly, const struct DrawLevelOvr1PScratchVertex *emit, u32 code, u32 uv0, u32 uv1, u32 uv2)
 {
 	CtrGpu_WriteColorCode(&poly->r0, DrawLevelOvr1P_GetClipRecordColorCode(&emit[0], code));
-	CtrGpu_WritePackedXY(&poly->x0, DrawLevelOvr1P_PackProjectedSxy(&emit[0]));
+	DrawLevelOvr1P_WriteProjectedXY(&poly->x0, &emit[0]);
 	CtrGpu_WritePackedUVWord(&poly->u0, uv0);
 	CtrGpu_WriteColorCode(&poly->r1, DrawLevelOvr1P_GetClipRecordColorCode(&emit[1], 0));
-	CtrGpu_WritePackedXY(&poly->x1, DrawLevelOvr1P_PackProjectedSxy(&emit[1]));
+	DrawLevelOvr1P_WriteProjectedXY(&poly->x1, &emit[1]);
 	CtrGpu_WritePackedUVWord(&poly->u1, uv1);
 	CtrGpu_WriteColorCode(&poly->r2, DrawLevelOvr1P_GetClipRecordColorCode(&emit[2], 0));
-	CtrGpu_WritePackedXY(&poly->x2, DrawLevelOvr1P_PackProjectedSxy(&emit[2]));
+	DrawLevelOvr1P_WriteProjectedXY(&poly->x2, &emit[2]);
 	CtrGpu_WritePackedUVWord(&poly->u2, uv2);
 }
 
@@ -2645,7 +2789,7 @@ static void DrawLevelOvr1P_WriteClipRecordGT4(POLY_GT4 *poly, const struct DrawL
 {
 	DrawLevelOvr1P_WriteClipRecordGT3((POLY_GT3 *)poly, emit, code, uv0, uv1, uv2);
 	CtrGpu_WriteColorCode(&poly->r3, DrawLevelOvr1P_GetClipRecordColorCode(&emit[3], 0));
-	CtrGpu_WritePackedXY(&poly->x3, DrawLevelOvr1P_PackProjectedSxy(&emit[3]));
+	DrawLevelOvr1P_WriteProjectedXY(&poly->x3, &emit[3]);
 	CtrGpu_WritePackedUVWord(&poly->u3, DrawLevelOvr1P_GetClipRecordSignedUvWord(&emit[3]));
 }
 
@@ -2677,6 +2821,27 @@ static void DrawLevelOvr1P_GetClipRecordSourceVector(const struct DrawLevelOvr1P
 	source->pad = 0;
 }
 
+static void DrawLevelOvr1P_PgxpLoadClipSource(int slot, const struct DrawLevelOvr1PScratchVertex *projected, const SVECTOR *source)
+{
+#if defined(CTR_NATIVE)
+	if (NATIVE_PGXP_ACTIVE())
+	{
+		const s16 vector[3] = {source->vx, source->vy, source->vz};
+		const void *key = (DrawLevelOvr1P_GetClipRecordSourceDelta(projected) < 0) ? (const void *)&projected->posScreen[0] : (const void *)&projected->pos[0];
+		float precise[3];
+
+		if (NativePgxp_GetPosition(key, vector, precise))
+		{
+			NativePgxp_GteSetInput(slot, vector, precise);
+		}
+	}
+#else
+	(void)slot;
+	(void)projected;
+	(void)source;
+#endif
+}
+
 static s32 DrawLevelOvr1P_ProjectClipRecordEmitVertices(struct DrawLevelOvr1PScratchVertex *dst, const struct DrawLevelOvr1PScratchVertex *projected,
                                                         const int *indices, int count)
 {
@@ -2690,6 +2855,10 @@ static s32 DrawLevelOvr1P_ProjectClipRecordEmitVertices(struct DrawLevelOvr1PScr
 	}
 
 	CTR_GteLoadSV3(&source[0], &source[1], &source[2]);
+	for (s32 vertexIndex = 0; vertexIndex < 3; vertexIndex++)
+	{
+		DrawLevelOvr1P_PgxpLoadClipSource(vertexIndex, &projected[indices[vertexIndex]], &source[vertexIndex]);
+	}
 	gte_rtpt();
 	CTR_GteStoreSXY3(&dst[0].posScreen[0], &dst[1].posScreen[0], &dst[2].posScreen[0]);
 	gte_nclip();
@@ -2698,6 +2867,7 @@ static s32 DrawLevelOvr1P_ProjectClipRecordEmitVertices(struct DrawLevelOvr1PScr
 	if (count == 4)
 	{
 		CTR_GteLoadSV0(&source[3]);
+		DrawLevelOvr1P_PgxpLoadClipSource(0, &projected[indices[3]], &source[3]);
 		gte_rtps();
 		CTR_GteStoreSXY(&dst[3].posScreen[0]);
 	}
@@ -2713,6 +2883,7 @@ static void DrawLevelOvr1P_ProjectClipRecordEmitVertex(struct DrawLevelOvr1PScra
 	DrawLevelOvr1P_GetClipRecordSourceVector(projected, &source);
 
 	CTR_GteLoadSV0(&source);
+	DrawLevelOvr1P_PgxpLoadClipSource(0, projected, &source);
 	gte_rtps();
 	CTR_GteStoreSXY(&dst->posScreen[0]);
 }
@@ -2825,6 +2996,32 @@ static void Ovr226_800aaad0_PrepareClipRecordDepthScratch(struct DrawLevelOvr1PS
 	projected->posScreen[1] = DrawLevelOvr1P_ShiftLeft1S16Wrap(projected->pos[1]);
 	projected->depth = (u16)DrawLevelOvr1P_ShiftLeft1S16Wrap(projected->pos[2]);
 	DrawLevelOvr1P_SetClipRecordSourceDelta(projected, (s16)((s32)projected->pos[2] - threshold));
+
+#if defined(CTR_NATIVE)
+	if (NATIVE_PGXP_ACTIVE())
+	{
+		const s16 doubled[3] = {projected->posScreen[0], projected->posScreen[1], (s16)projected->depth};
+		float view[3];
+		int wrapped = 0;
+
+		for (s32 axisIndex = 0; axisIndex < 3; axisIndex++)
+		{
+			wrapped |= (s32)doubled[axisIndex] != (s32)projected->pos[axisIndex] * 2;
+		}
+
+		if (!wrapped && NativePgxp_GetPosition(&projected->pos[0], &projected->pos[0], view))
+		{
+			view[0] *= 2.0f;
+			view[1] *= 2.0f;
+			view[2] *= 2.0f;
+			NativePgxp_SetPosition(&projected->posScreen[0], doubled, view);
+		}
+		else
+		{
+			NativePgxp_ClearPosition(&projected->posScreen[0]);
+		}
+	}
+#endif
 }
 
 static void Ovr226_800aa858_ProjectClipRecordRawVertex(struct DrawLevelOvr1PScratchVertex *projected, const struct DrawLevelOvr1PClipRecordVertex *src)
@@ -2834,8 +3031,15 @@ static void Ovr226_800aa858_ProjectClipRecordRawVertex(struct DrawLevelOvr1PScra
 	projected->posVec = src->posVec;
 	projected->flags = src->flags;
 	DrawLevelOvr1P_CopyColorWord(projected->color_hi, src->color_hi);
+#if defined(CTR_NATIVE)
+	if (NATIVE_PGXP_ACTIVE())
+	{
+		NativePgxp_CopyPosition(&projected->pos[0], &src->pos[0], &src->pos[0]);
+	}
+#endif
 
 	CTR_GteLoadS16TripletV0(&projected->pos[0]);
+	DrawLevelOvr1P_PgxpLoadV0(&projected->pos[0]);
 	// NOTE(aalhendi): Retail 0x800aa86c/0x800aa8b0/0x800aa8e8/0x800aaee4
 	// uses LLV0BK for this source-vector transform.
 	gte_llv0bk_b();
@@ -2844,6 +3048,24 @@ static void Ovr226_800aa858_ProjectClipRecordRawVertex(struct DrawLevelOvr1PScra
 	projected->pos[0] = ir[0];
 	projected->pos[1] = ir[1];
 	projected->pos[2] = ir[2];
+
+#if defined(CTR_NATIVE)
+	if (NATIVE_PGXP_ACTIVE())
+	{
+		// Exact view-space position, so re-projected corners of a clipped
+		// polygon still meet the unclipped polygons around it.
+		float view[3];
+
+		if (NativePgxp_GteGetMvmvaResult(ir, view))
+		{
+			NativePgxp_SetPosition(&projected->pos[0], ir, view);
+		}
+		else
+		{
+			NativePgxp_ClearPosition(&projected->pos[0]);
+		}
+	}
+#endif
 }
 
 static void DrawLevelOvr1P_PrepareClipRecordDepthScratchRange(struct DrawLevelOvr1PScratchVertex *projected, int count)
@@ -2902,6 +3124,30 @@ static void Ovr226_800aab00_InterpolateClipRecordVertex(struct DrawLevelOvr1PScr
 	{
 		dst->color_hi[colorChannel] = DrawLevelOvr1P_LerpU8_16(inside->color_hi[colorChannel], outside->color_hi[colorChannel], factor);
 	}
+
+#if defined(CTR_NATIVE)
+	if (NATIVE_PGXP_ACTIVE())
+	{
+		const s16 insideDoubled[3] = {inside->posScreen[0], inside->posScreen[1], (s16)inside->depth};
+		const s16 outsideDoubled[3] = {outside->posScreen[0], outside->posScreen[1], (s16)outside->depth};
+		float in[3];
+		float out[3];
+
+		NativePgxp_GetPosition(&inside->posScreen[0], insideDoubled, in);
+		NativePgxp_GetPosition(&outside->posScreen[0], outsideDoubled, out);
+		if (out[2] != in[2])
+		{
+			const float t = ((float)threshold - in[2]) / (out[2] - in[2]);
+			const float clipped[3] = {in[0] + (out[0] - in[0]) * t, in[1] + (out[1] - in[1]) * t, (float)dst->pos[2]};
+
+			NativePgxp_SetPosition(&dst->pos[0], &dst->pos[0], clipped);
+		}
+		else
+		{
+			NativePgxp_ClearPosition(&dst->pos[0]);
+		}
+	}
+#endif
 }
 
 static u32 DrawLevelOvr1P_GetClipRecordJumpAddress(int count, u32 nearMask)
@@ -8596,6 +8842,8 @@ static void Ovr226_800a24e8_BuildWaterListSubdivideMidpoint(struct DrawLevelOvr1
 	u8 *dstMidUv = (u8 *)&dstMid->flags;
 	u32 depth;
 
+	DrawLevelOvr1P_PgxpMidpointPos(dstMid, srcA, srcB);
+	DrawLevelOvr1P_PgxpCopyPos(dstA, srcA);
 	for (s32 axisIndex = 0; axisIndex < 3; axisIndex++)
 	{
 		dstA->pos[axisIndex] = srcA->pos[axisIndex];
@@ -8603,6 +8851,7 @@ static void Ovr226_800a24e8_BuildWaterListSubdivideMidpoint(struct DrawLevelOvr1
 	}
 
 	CTR_GteLoadS16TripletV0(&dstMid->pos[0]);
+	DrawLevelOvr1P_PgxpLoadV0(&dstMid->pos[0]);
 	gte_rtps();
 
 	for (s32 colorChannel = 0; colorChannel < 3; colorChannel++)
@@ -8642,6 +8891,8 @@ static void Ovr226_800a2fe4_BuildWaterRenderedSubdivideMidpoint(struct DrawLevel
 	u8 *dstMidUv = (u8 *)&dstMid->flags;
 	u32 depth;
 
+	DrawLevelOvr1P_PgxpMidpointPos(dstMid, srcA, srcB);
+	DrawLevelOvr1P_PgxpCopyPos(dstA, srcA);
 	for (s32 axisIndex = 0; axisIndex < 3; axisIndex++)
 	{
 		dstA->pos[axisIndex] = srcA->pos[axisIndex];
@@ -8649,6 +8900,7 @@ static void Ovr226_800a2fe4_BuildWaterRenderedSubdivideMidpoint(struct DrawLevel
 	}
 
 	CTR_GteLoadS16TripletV0(&dstMid->pos[0]);
+	DrawLevelOvr1P_PgxpLoadV0(&dstMid->pos[0]);
 	gte_rtps();
 
 	for (s32 colorChannel = 0; colorChannel < 3; colorChannel++)

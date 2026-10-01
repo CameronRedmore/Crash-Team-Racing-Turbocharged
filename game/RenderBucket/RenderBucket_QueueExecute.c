@@ -1278,6 +1278,42 @@ static void RenderBucket_StoreMvpTranslation(struct InstDrawPerPlayer *idpp, con
 	CTC2(viewPos->vz, 7);
 }
 
+#if defined(CTR_NATIVE)
+// Max detail option: draw the first enabled header (cutscenes hide headers by
+// zeroing maxDistanceLOD) while any header is still in range, so the model
+// keeps its retail draw distance but never drops to a lower LOD.
+static struct ModelHeader *RenderBucket_SelectMaxLodModelHeader(struct Instance *inst, int projectedDistance, int *lodIndexOut, int *lodExhaustedOut)
+{
+	struct ModelHeader *best = 0;
+	int bestIndex = 0;
+
+	for (int i = 0; i < inst->model->numHeaders; i++)
+	{
+		struct ModelHeader *mh = &inst->model->headers[i];
+
+		if ((u16)mh->maxDistanceLOD == 0)
+		{
+			continue;
+		}
+
+		if (best == 0)
+		{
+			best = mh;
+			bestIndex = i;
+		}
+
+		if (RenderBucket_MipsSub(projectedDistance, (u16)mh->maxDistanceLOD) < 0)
+		{
+			*lodIndexOut = bestIndex;
+			return best;
+		}
+	}
+
+	*lodExhaustedOut = 1;
+	return 0;
+}
+#endif
+
 static struct ModelHeader *RenderBucket_SelectModelHeader(struct Instance *inst, struct PushBuffer *pb, int *lodIndexOut, int *lodExhaustedOut, int viewDepth)
 {
 	struct ModelHeader *mh;
@@ -1311,6 +1347,13 @@ static struct ModelHeader *RenderBucket_SelectModelHeader(struct Instance *inst,
 	mh = inst->model->headers;
 	headersRemaining = inst->model->numHeaders;
 	lodIndex = 0;
+
+#if defined(CTR_NATIVE)
+	if (CTR_NATIVE_MAX_LOD_ACTIVE)
+	{
+		return RenderBucket_SelectMaxLodModelHeader(inst, projectedDistance, lodIndexOut, lodExhaustedOut);
+	}
+#endif
 
 	if (CTR_NATIVE_60FPS_ACTIVE && (inst->model->id == -1) && (inst->model->numHeaders == 4))
 	{
@@ -3472,9 +3515,9 @@ static int RenderBucket_DrawInstPrim_GhostAtRange(struct RenderBucketDrawContext
 	mask->drawMode = 0xe1000a40;
 	mask->pad = 0;
 	mask->colorAndCode = RenderBucket_Scratch()->split.fadeColor.word;
-	mask->xy0 = (u32)MFC2(12);
-	mask->xy1 = (u32)MFC2(13);
-	mask->xy2 = (u32)MFC2(14);
+	CTR_GteStoreSXYReg(&mask->xy0, 12);
+	CTR_GteStoreSXYReg(&mask->xy1, 13);
+	CTR_GteStoreSXYReg(&mask->xy2, 14);
 
 	if (tex == 0)
 	{
@@ -3483,11 +3526,11 @@ static int RenderBucket_DrawInstPrim_GhostAtRange(struct RenderBucketDrawContext
 		packet->drawMode = 0xe1000a20;
 		packet->pad = 0;
 		packet->body.color0AndCode = 0x32000000 | (u32)MFC2(20);
-		packet->body.xy0 = (u32)MFC2(12);
+		CTR_GteStoreSXYReg(&packet->body.xy0, 12);
 		packet->body.color1 = (u32)MFC2(21);
-		packet->body.xy1 = (u32)MFC2(13);
+		CTR_GteStoreSXYReg(&packet->body.xy1, 13);
 		packet->body.color2 = (u32)MFC2(22);
-		packet->body.xy2 = (u32)MFC2(14);
+		CTR_GteStoreSXYReg(&packet->body.xy2, 14);
 
 		RenderBucket_LinkPrimRaw(otEntry, packet, 0x0e000000);
 		ctx->primMem->cursor = packet + 1;
@@ -3498,13 +3541,13 @@ static int RenderBucket_DrawInstPrim_GhostAtRange(struct RenderBucketDrawContext
 		u32 texWord1 = (RenderBucket_ReadTextureWord(tex, RENDER_BUCKET_TEX_WORD1_OFFSET) & ~0x00600000U) | 0x00200000U;
 
 		packet->body.color0AndCode = 0x36000000 | (u32)MFC2(20);
-		packet->body.xy0 = (u32)MFC2(12);
+		CTR_GteStoreSXYReg(&packet->body.xy0, 12);
 		packet->body.uv0 = RenderBucket_ReadTextureWord(tex, RENDER_BUCKET_TEX_WORD0_OFFSET);
 		packet->body.color1 = (u32)MFC2(21);
-		packet->body.xy1 = (u32)MFC2(13);
+		CTR_GteStoreSXYReg(&packet->body.xy1, 13);
 		packet->body.uv1 = texWord1;
 		packet->body.color2 = (u32)MFC2(22);
-		packet->body.xy2 = (u32)MFC2(14);
+		CTR_GteStoreSXYReg(&packet->body.xy2, 14);
 		packet->body.uv2 = RenderBucket_ReadTextureWord(tex, RENDER_BUCKET_TEX_WORD2_OFFSET);
 
 		RenderBucket_LinkPrimRaw(otEntry, packet, 0x0f000000);
@@ -3653,12 +3696,9 @@ static int RenderBucket_DrawSplitPrimitiveNormalAtOTEntry(struct RenderBucketDra
 		CtrGpu_WriteColorCode(&p->r0, 0x30000000 | (u32)MFC2(20));
 		CtrGpu_WriteColorCode(&p->r1, (u32)MFC2(21));
 		CtrGpu_WriteColorCode(&p->r2, (u32)MFC2(22));
-		p->x0 = (s16)v0->sxy;
-		p->y0 = (s16)(v0->sxy >> 16);
-		p->x1 = (s16)v1->sxy;
-		p->y1 = (s16)(v1->sxy >> 16);
-		p->x2 = (s16)v2->sxy;
-		p->y2 = (s16)(v2->sxy >> 16);
+		CtrGpu_WritePackedXY(&p->x0, v0->sxy);
+		CtrGpu_WritePackedXY(&p->x1, v1->sxy);
+		CtrGpu_WritePackedXY(&p->x2, v2->sxy);
 		RenderBucket_LinkPrimRaw(otEntry, p, 0x06000000);
 		ctx->primMem->cursor = (char *)p + 0x1c;
 	}
@@ -3671,18 +3711,15 @@ static int RenderBucket_DrawSplitPrimitiveNormalAtOTEntry(struct RenderBucketDra
 		CtrGpu_WriteColorCode(&p->r0, codeWord | (u32)MFC2(20));
 		CtrGpu_WriteColorCode(&p->r1, (u32)MFC2(21));
 		CtrGpu_WriteColorCode(&p->r2, (u32)MFC2(22));
-		p->x0 = (s16)v0->sxy;
-		p->y0 = (s16)(v0->sxy >> 16);
+		CtrGpu_WritePackedXY(&p->x0, v0->sxy);
 		p->u0 = (u8)v0->uv;
 		p->v0 = (u8)(v0->uv >> 8);
 		p->clut = tex->clut;
-		p->x1 = (s16)v1->sxy;
-		p->y1 = (s16)(v1->sxy >> 16);
+		CtrGpu_WritePackedXY(&p->x1, v1->sxy);
 		p->u1 = (u8)v1->uv;
 		p->v1 = (u8)(v1->uv >> 8);
 		p->tpage = tex->tpage;
-		p->x2 = (s16)v2->sxy;
-		p->y2 = (s16)(v2->sxy >> 16);
+		CtrGpu_WritePackedXY(&p->x2, v2->sxy);
 		p->u2 = (u8)v2->uv;
 		p->v2 = (u8)(v2->uv >> 8);
 		RenderBucket_LinkPrimRaw(otEntry, p, 0x09000000);
@@ -3766,14 +3803,11 @@ static u32 RenderBucket_LightFlatTextureColor(u32 sourceColor, int signedTest)
 static void RenderBucket_WriteSplitFT3(POLY_FT3 *p, const struct RenderBucketSplitVertex *v0, const struct RenderBucketSplitVertex *v1,
                                        const struct RenderBucketSplitVertex *v2, u32 texWord0, u32 texWord1, u32 texWord2)
 {
-	p->x0 = (s16)v0->sxy;
-	p->y0 = (s16)(v0->sxy >> 16);
+	CtrGpu_WritePackedXY(&p->x0, v0->sxy);
 	CtrGpu_WritePackedUVWord(&p->u0, texWord0);
-	p->x1 = (s16)v1->sxy;
-	p->y1 = (s16)(v1->sxy >> 16);
+	CtrGpu_WritePackedXY(&p->x1, v1->sxy);
 	CtrGpu_WritePackedUVWord(&p->u1, texWord1);
-	p->x2 = (s16)v2->sxy;
-	p->y2 = (s16)(v2->sxy >> 16);
+	CtrGpu_WritePackedXY(&p->x2, v2->sxy);
 	CtrGpu_WritePackedUVWord(&p->u2, texWord2);
 }
 
@@ -3818,18 +3852,15 @@ static int RenderBucket_DrawSplitPrimitiveDepthFadeAtRange(struct RenderBucketDr
 	CtrGpu_WriteColorCode(&p->r0, 0x36000000 | (color0 & 0x00ffffff));
 	CtrGpu_WriteColorCode(&p->r1, color1);
 	CtrGpu_WriteColorCode(&p->r2, color2);
-	p->x0 = (s16)v0->sxy;
-	p->y0 = (s16)(v0->sxy >> 16);
+	CtrGpu_WritePackedXY(&p->x0, v0->sxy);
 	p->u0 = (u8)v0->uv;
 	p->v0 = (u8)(v0->uv >> 8);
 	p->clut = tex->clut;
-	p->x1 = (s16)v1->sxy;
-	p->y1 = (s16)(v1->sxy >> 16);
+	CtrGpu_WritePackedXY(&p->x1, v1->sxy);
 	p->u1 = (u8)v1->uv;
 	p->v1 = (u8)(v1->uv >> 8);
 	p->tpage = tex->tpage;
-	p->x2 = (s16)v2->sxy;
-	p->y2 = (s16)(v2->sxy >> 16);
+	CtrGpu_WritePackedXY(&p->x2, v2->sxy);
 	p->u2 = (u8)v2->uv;
 	p->v2 = (u8)(v2->uv >> 8);
 	RenderBucket_LinkPrimRaw(otEntry, p, 0x09000000);

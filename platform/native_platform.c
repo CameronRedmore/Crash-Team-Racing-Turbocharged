@@ -330,6 +330,18 @@ internal void Platform_HandleKey(int key, char down)
 			g_cfg_bilinearFiltering ^= 1;
 			Platform_LogWarn("[CTR Native] filtering mode: %d\n", g_cfg_bilinearFiltering);
 			break;
+#if NATIVE_PGXP_SUPPORTED
+		case SDL_SCANCODE_INSERT:
+			gNativePgxpMode = (gNativePgxpMode + 1) % NATIVE_PGXP_MODE_COUNT;
+			Platform_LogWarn("[CTR Native] PGXP mode: %d\n", gNativePgxpMode);
+			break;
+#endif
+#ifndef __vita__
+		case SDL_SCANCODE_HOME:
+			gNativeMaxLodEnabled ^= 1;
+			Platform_LogWarn("[CTR Native] max detail: %d\n", gNativeMaxLodEnabled);
+			break;
+#endif
 		case SDL_SCANCODE_F5:
 			NativeSaveState_RequestSave();
 			break;

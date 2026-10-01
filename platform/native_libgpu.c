@@ -422,6 +422,8 @@ void DrawOTag(void *p)
 		DrawAllSplits();
 #endif
 	} while (g_dbg_emulatorPaused);
+	// The OT has been consumed; precise vertices recorded for it are stale now.
+	NativePgxp_EndFrame();
 	NativePerf_EndScope(NATIVE_PERF_BUCKET_DRAW_OTAG);
 }
 

@@ -3,7 +3,13 @@
 #if defined(CTR_NATIVE)
 enum
 {
+#if defined(__vita__)
 	MAINDB_NATIVE_PRIMMEM_CAPACITY = 0x40000,
+#else
+	// Max detail subdivides all level geometry down to mosaic quads; a 1P
+	// track can pass 0x50000 per frame, and split screen multiplies that.
+	MAINDB_NATIVE_PRIMMEM_CAPACITY = 0x400000,
+#endif
 };
 
 #if defined(_MSC_VER)
@@ -40,6 +46,7 @@ static void MainDB_NativePrimMemBind(struct PrimMem *primMem, int index)
 	primMem->end = (void *)((char *)start + MAINDB_NATIVE_PRIMMEM_CAPACITY);
 	primMem->guardEnd = (void *)((char *)primMem->end - 0x100);
 	primMem->primitiveCount = 0;
+	NativePgxp_SetPrimRegion(s_mainDbNativePrimMem, sizeof(s_mainDbNativePrimMem));
 }
 
 void MainDB_RebindNativePrimMem(struct GameTracker *gGT)

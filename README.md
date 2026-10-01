@@ -20,6 +20,8 @@ You can play it from Web Browser as well from this link: [Web Browser Build](htt
 - USF will show as blue fire (similar to CTR: Nitro Fueled). (Credits: [Original mod](https://github.com/CTR-tools/CTR-ModSDK/tree/main/mods/Modules/BlueFire))
 - Super turbopads are cyan to distinguish them from regular turbopads.
 - Mirror mode option: Play any track specular.
+- [PC Only] PGXP option (Options menu): sub-pixel vertex precision removes polygon wobble, and the Perspective setting also removes affine texture warping.
+- [PC Only] Detail option (Options menu): Maximum keeps tracks and models at their highest level of detail at every distance (sharpest textures, no low-poly models).
 - Boss Fight option: Challenge Adventure mode bossfights on any track.
 - [PSVITA Only] AdHoc Netplay support for two PSVitas multiplayer without the need of a router.
 - Several vanilla game bugfixes (eg: PVS related glitches and Penta-Penguin wrong mask powerup HUD icon).

@@ -93,6 +93,7 @@ void MainFrame_RenderFrame(struct GameTracker *gGT, struct GamepadSystem *gGamep
 
 #if defined(CTR_NATIVE)
 	gNativeMirrorModeRenderActive = nativeMirrorWorldActive;
+	NativePgxp_SetWorldPhase(1);
 #endif
 
 	MAINFRAME_PERF_BEGIN(NATIVE_PERF_BUCKET_MAINFRAME_EFFECTS);
@@ -117,6 +118,7 @@ void MainFrame_RenderFrame(struct GameTracker *gGT, struct GamepadSystem *gGamep
 
 #if defined(CTR_NATIVE)
 	gNativeMirrorModeRenderActive = 0;
+	NativePgxp_SetWorldPhase(0);
 #endif
 
 	MAINFRAME_PERF_BEGIN(NATIVE_PERF_BUCKET_MAINFRAME_HUD);
@@ -125,6 +127,7 @@ void MainFrame_RenderFrame(struct GameTracker *gGT, struct GamepadSystem *gGamep
 
 #if defined(CTR_NATIVE)
 	gNativeMirrorModeRenderActive = nativeMirrorWorldActive;
+	NativePgxp_SetWorldPhase(1);
 #endif
 
 	MAINFRAME_PERF_BEGIN(NATIVE_PERF_BUCKET_MAINFRAME_EFFECTS);
@@ -178,6 +181,7 @@ void MainFrame_RenderFrame(struct GameTracker *gGT, struct GamepadSystem *gGamep
 		{
 #if defined(CTR_NATIVE)
 			gNativeMirrorModeRenderActive = 0;
+			NativePgxp_SetWorldPhase(0);
 #endif
 #if defined(__vita__)
 			if (!NativeAdhoc_IsSingleViewRenderActive())
@@ -187,6 +191,7 @@ void MainFrame_RenderFrame(struct GameTracker *gGT, struct GamepadSystem *gGamep
 			}
 #if defined(CTR_NATIVE)
 			gNativeMirrorModeRenderActive = nativeMirrorWorldActive;
+			NativePgxp_SetWorldPhase(1);
 #endif
 		}
 
@@ -239,6 +244,7 @@ void MainFrame_RenderFrame(struct GameTracker *gGT, struct GamepadSystem *gGamep
 
 #if defined(CTR_NATIVE)
 	gNativeMirrorModeRenderActive = 0;
+	NativePgxp_SetWorldPhase(0);
 #endif
 
 	// If in main menu, or in adventure arena,
@@ -1037,6 +1043,63 @@ static s32 RenderAllLevelGeometry_ScaleDistanceShift8(s32 distToScreen, s32 scal
 	return CTR_MipsSra(product, 8);
 }
 
+#if defined(CTR_NATIVE)
+enum
+{
+	// Past any GTE SZ value, so every LOD depth test takes the detailed side.
+	RENDER_LEVEL_NATIVE_MAX_LOD_DEPTH = 0x100000,
+};
+
+// Max detail option: keep every BSP leaf out of the far full-dynamic list
+// (one low-res texture per quadblock, middle vertices morphed flat), always
+// pick the sharpest mid texture, and subdivide every quad down to the mosaic
+// textures retail only uses right in front of the camera.
+static void RenderAllLevelGeometry_ApplyNativeMaxLod(struct MainRenderLevelGeometryScratch *scratch)
+{
+	if (!CTR_NATIVE_MAX_LOD_ACTIVE)
+	{
+		return;
+	}
+
+	scratch->bspLodDistanceThreshold = RENDER_LEVEL_NATIVE_MAX_LOD_DEPTH;
+	scratch->textureLodDepthThreshold0 = RENDER_LEVEL_NATIVE_MAX_LOD_DEPTH;
+	scratch->textureLodDepthThreshold1 = RENDER_LEVEL_NATIVE_MAX_LOD_DEPTH;
+	scratch->topLevelNearDepthThreshold = RENDER_LEVEL_NATIVE_MAX_LOD_DEPTH;
+	scratch->recursiveNearDepthThreshold = RENDER_LEVEL_NATIVE_MAX_LOD_DEPTH;
+	scratch->fullDynamicFadeDepthStart = RENDER_LEVEL_NATIVE_MAX_LOD_DEPTH;
+}
+
+// Native split screen: render each viewport through the proven 1P geometry
+// path used by AdHoc single-view rendering.
+static void RenderAllLevelGeometry_NativeViewports(struct GameTracker *gGT, struct Level *level1, struct mesh_info *ptr_mesh_info)
+{
+	struct MainRenderLevelGeometryScratch *scratch = CTR_SCRATCHPAD_PTR(struct MainRenderLevelGeometryScratch, 0);
+
+	for (int i = 0; i < gGT->numPlyrCurrGame; i++)
+	{
+		struct PushBuffer *pushBuffer = &gGT->pushBuffer[i];
+		s32 distToScreen = pushBuffer->distanceToScreen_PREV;
+
+		scratch->depthScale = RenderAllLevelGeometry_ScaleDistanceShift8(distToScreen, 0x2080);
+		scratch->bspLodDistanceThreshold = CTR_MipsMulLo(distToScreen, 0x1a);
+		scratch->textureLodDepthThreshold0 = CTR_MipsMulLo(distToScreen, 0x18);
+		scratch->textureLodDepthThreshold1 = CTR_MipsMulLo(distToScreen, 0xc);
+		scratch->topLevelNearDepthThreshold = CTR_MipsMulLo(distToScreen, 7);
+		scratch->recursiveNearDepthThreshold = RenderAllLevelGeometry_ScaleDistanceShift8(distToScreen, 0x380);
+		scratch->fullDynamicFadeDepthStart = CTR_MipsAddLo(scratch->bspLodDistanceThreshold, MAIN_RENDER_LEVEL_GEOMETRY_FULL_DYNAMIC_FADE_OFFSET);
+		RenderAllLevelGeometry_ApplyNativeMaxLod(scratch);
+
+		RenderLists_PreInit();
+		gGT->bspLeafsDrawn += RenderLists_Init1P2P(ptr_mesh_info->bspRoot, gGT->visMem1->visLeafList[i], pushBuffer, (u32)&gGT->LevRenderLists[i],
+		                                           gGT->visMem1->bspList[i], 1);
+
+		DrawLevelOvr1P_WithContext(&gGT->LevRenderLists[i], pushBuffer, (struct BSP *)ptr_mesh_info, &gGT->backBuffer->primMem, gGT->visMem1->visFaceList[i],
+		                           level1->ptr_tex_waterEnvMap, data.PtrClipBuffer[i],
+		                           (struct QuadBlock **)data.ptrRenderedQuadblockDestination_forEachPlayer[i]);
+	}
+}
+#endif
+
 void RenderAllLevelGeometry(struct GameTracker *gGT, struct Level *level1, struct mesh_info *ptr_mesh_info)
 {
 	int i;
@@ -1187,6 +1250,10 @@ void RenderAllLevelGeometry(struct GameTracker *gGT, struct Level *level1, struc
 			scratch->fullDynamicFadeDepthStart = CTR_MipsAddLo(scratch->bspLodDistanceThreshold, MAIN_RENDER_LEVEL_GEOMETRY_FULL_DYNAMIC_FADE_OFFSET);
 		}
 
+#if defined(CTR_NATIVE)
+		RenderAllLevelGeometry_ApplyNativeMaxLod(scratch);
+#endif
+
 		RenderLists_PreInit();
 		gGT->bspLeafsDrawn = 0;
 
@@ -1223,29 +1290,7 @@ void RenderAllLevelGeometry(struct GameTracker *gGT, struct Level *level1, struc
 		gGT->bspLeafsDrawn = 0;
 
 #ifdef CTR_NATIVE
-		// Native 2P: render each split-screen viewport through the
-		// proven 1P geometry path used by AdHoc single-view rendering.
-		for (i = 0; i < numPlyrCurrGame; i++)
-		{
-			pushBuffer = &gGT->pushBuffer[i];
-			scratch = CTR_SCRATCHPAD_PTR(struct MainRenderLevelGeometryScratch, 0);
-			distToScreen = pushBuffer->distanceToScreen_PREV;
-			scratch->depthScale = RenderAllLevelGeometry_ScaleDistanceShift8(distToScreen, 0x2080);
-			scratch->bspLodDistanceThreshold = CTR_MipsMulLo(distToScreen, 0x1a);
-			scratch->textureLodDepthThreshold0 = CTR_MipsMulLo(distToScreen, 0x18);
-			scratch->textureLodDepthThreshold1 = CTR_MipsMulLo(distToScreen, 0xc);
-			scratch->topLevelNearDepthThreshold = CTR_MipsMulLo(distToScreen, 7);
-			scratch->recursiveNearDepthThreshold = RenderAllLevelGeometry_ScaleDistanceShift8(distToScreen, 0x380);
-			scratch->fullDynamicFadeDepthStart = CTR_MipsAddLo(scratch->bspLodDistanceThreshold, MAIN_RENDER_LEVEL_GEOMETRY_FULL_DYNAMIC_FADE_OFFSET);
-
-			RenderLists_PreInit();
-			gGT->bspLeafsDrawn += RenderLists_Init1P2P(ptr_mesh_info->bspRoot, gGT->visMem1->visLeafList[i], pushBuffer, (u32)&gGT->LevRenderLists[i],
-			                                           gGT->visMem1->bspList[i], 1);
-
-			DrawLevelOvr1P_WithContext(&gGT->LevRenderLists[i], pushBuffer, (struct BSP *)ptr_mesh_info, &gGT->backBuffer->primMem,
-			                            gGT->visMem1->visFaceList[i], level1->ptr_tex_waterEnvMap, data.PtrClipBuffer[i],
-			                            (struct QuadBlock **)data.ptrRenderedQuadblockDestination_forEachPlayer[i]);
-		}
+		RenderAllLevelGeometry_NativeViewports(gGT, level1, ptr_mesh_info);
 #else
 		RenderLists_PreInit();
 		for (i = 0; i < numPlyrCurrGame; i++)
@@ -1262,7 +1307,18 @@ void RenderAllLevelGeometry(struct GameTracker *gGT, struct Level *level1, struc
 	}
 
 	// 3P or 4P
-	CTR_ClearRenderLists_3P4P(gGT, numPlyrCurrGame);
+#if defined(CTR_NATIVE)
+	// The 3P/4P overlays only carry low-detail ground handlers, so max detail
+	// renders each viewport with the 1P/2P lists instead.
+	if (CTR_NATIVE_MAX_LOD_ACTIVE)
+	{
+		CTR_ClearRenderLists_1P2P(gGT, numPlyrCurrGame);
+	}
+	else
+#endif
+	{
+		CTR_ClearRenderLists_3P4P(gGT, numPlyrCurrGame);
+	}
 
 	// if no SCVert
 	if ((level1->configFlags & 4) == 0)
@@ -1282,8 +1338,17 @@ void RenderAllLevelGeometry(struct GameTracker *gGT, struct Level *level1, struc
 		}
 	}
 
-	RenderLists_PreInit();
 	gGT->bspLeafsDrawn = 0;
+
+#if defined(CTR_NATIVE)
+	if (CTR_NATIVE_MAX_LOD_ACTIVE)
+	{
+		RenderAllLevelGeometry_NativeViewports(gGT, level1, ptr_mesh_info);
+		goto SkyboxGlow;
+	}
+#endif
+
+	RenderLists_PreInit();
 
 	for (i = 0; i < numPlyrCurrGame; i++)
 	{
