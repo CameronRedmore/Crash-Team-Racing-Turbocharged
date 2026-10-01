@@ -180,7 +180,7 @@ LAB_800af72c:
 		{
 			// increment animation frame
 #if CTR_NATIVE_60FPS
-			if (!CTR_NATIVE_60FPS_ACTIVE || ((gGT->timer & 1) != 0))
+			if (CTR_RETAIL_FRAME_TICK(gGT->timer))
 			{
 				saveInst->animFrame += 1;
 			}

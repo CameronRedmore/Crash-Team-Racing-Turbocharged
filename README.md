@@ -10,7 +10,7 @@ You can play it from Web Browser as well from this link: [Web Browser Build](htt
 - True widescreen with no stretching.
 - Internal resolution of the renderer bumped to 960x544.
 - MSAA 4x (PSVita) / FXAA (PC) for anti-aliasing.
-- 60 FPS support.
+- Selectable 30, 60, 90, 120, 144, and 240 FPS in the Options menu, with scaled game timing and animation interpolation. Higher rates need sufficient CPU/GPU performance; pacing retains the original NTSC clock (approximately 59.82 FPS for the 60 FPS setting).
 - Penta Penguin has its stats set to its PAL/NTSC-J counterpart (6/6/6).
 - Playable Nitrous Oxide (Unlockable via the original Spyro 2 Demo cheatcode). (Credits: [Original mod](https://github.com/CTR-tools/CTR-ModSDK/tree/main/mods/Modules/OxideFix))
 - Reserves Meter (Credits: [Original mod](https://github.com/CTR-tools/CTR-ModSDK/tree/main/mods/Modules/ReservesMeter))

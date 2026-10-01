@@ -337,7 +337,7 @@ void MM_TrackSelect_Video_Draw(RECT *r, struct MainMenu_LevelRow *selectMenu, in
 		    (D230.trackSelect.videoStateCurr == MM_TRACK_VIDEO_START_STREAM))
 		{
 			int uploaded = 0;
-			if (!CTR_NATIVE_60FPS_ACTIVE || ((gGT->timer & 1) != 0))
+			if (CTR_RETAIL_FRAME_TICK(gGT->timer))
 			{
 				uploaded = NativeSTR_UploadNextFrameToTexture();
 			}

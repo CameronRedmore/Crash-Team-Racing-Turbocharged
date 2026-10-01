@@ -21,8 +21,14 @@ void MainDrawCb_Vsync()
 	struct GameTracker *gGT;
 
 	gGT = sdata->gGT;
-	gGT->frameTimer_VsyncCallback++;
-	if ((gGT->gameMode1 & PAUSE_ALL) == 0)
+	int audioTick = 1;
+#ifdef CTR_NATIVE
+	static unsigned int callbackFrame;
+	int rate = CTR_NATIVE_60FPS_ACTIVE ? CTR_FRAMES_PER_SECOND : 60;
+	audioTick = NativeFrameRate_Step(2, callbackFrame++, rate) != 0;
+#endif
+	gGT->frameTimer_VsyncCallback += audioTick;
+	if (audioTick && ((gGT->gameMode1 & PAUSE_ALL) == 0))
 	{
 		gGT->frameTimer_Confetti++;
 	}
@@ -37,7 +43,7 @@ void MainDrawCb_Vsync()
 #ifdef CTR_NATIVE
 	// NOTE(aalhendi): Retail calls HOWL unconditionally. Native skips only while
 	// channel lists are mid-edit.
-	if (sdata->criticalSectionCount == 0)
+	if (audioTick && (sdata->criticalSectionCount == 0))
 #endif
 	{
 		howl_PlayAudio_Update();

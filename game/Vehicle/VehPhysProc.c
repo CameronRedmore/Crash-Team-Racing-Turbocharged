@@ -1717,7 +1717,7 @@ void VehPhysProc_PowerSlide_PhysAngular(struct Thread *th, struct Driver *driver
 	if ((desiredSpinRate == 0) || (driftDirection == 0))
 	{
 #if CTR_NATIVE_60FPS
-		if (!CTR_NATIVE_60FPS_ACTIVE || ((gGT->timer & 1) != 0))
+		if (CTR_RETAIL_FRAME_TICK(gGT->timer))
 #endif
 		{
 			driver->KartStates.Drifting.numFramesDrifting = VehCalc_InterpBySpeed((int)driver->KartStates.Drifting.numFramesDrifting, 1, 0);
@@ -1731,7 +1731,7 @@ void VehPhysProc_PowerSlide_PhysAngular(struct Thread *th, struct Driver *driver
 		if (driftDirection < 1)
 		{
 #if CTR_NATIVE_60FPS
-			if (!CTR_NATIVE_60FPS_ACTIVE || ((gGT->timer & 1) != 0))
+			if (CTR_RETAIL_FRAME_TICK(gGT->timer))
 #endif
 				driver->KartStates.Drifting.numFramesDrifting = (s16)CTR_MipsSubLo((u16)driver->KartStates.Drifting.numFramesDrifting, 1);
 
@@ -1745,7 +1745,7 @@ void VehPhysProc_PowerSlide_PhysAngular(struct Thread *th, struct Driver *driver
 		else
 		{
 #if CTR_NATIVE_60FPS
-			if (!CTR_NATIVE_60FPS_ACTIVE || ((gGT->timer & 1) != 0))
+			if (CTR_RETAIL_FRAME_TICK(gGT->timer))
 #endif
 				driver->KartStates.Drifting.numFramesDrifting = (s16)CTR_MipsAddLo((u16)driver->KartStates.Drifting.numFramesDrifting, 1);
 
@@ -1834,7 +1834,9 @@ void VehPhysProc_PowerSlide_PhysAngular(struct Thread *th, struct Driver *driver
 #if CTR_NATIVE_60FPS
 	if (CTR_NATIVE_60FPS_ACTIVE)
 	{
-		if ((gGT->timer & 1) != 0)
+		if (CTR_FRAMES_PER_SECOND > 60)
+			turnAngleStep = CTR_FRAME_STEP(CTR_MipsSra(turnAngleDelta, VEH_PHYS_PROC_DRIFT_ANGLE_LERP_SHIFT), gGT->timer);
+		else if ((gGT->timer & 1) != 0)
 			turnAngleStep = CTR_MipsSra(turnAngleDelta, VEH_PHYS_PROC_DRIFT_ANGLE_LERP_SHIFT + 1);
 		else
 			turnAngleStep = CTR_MipsSra((turnAngleDelta * 16) / 15, VEH_PHYS_PROC_DRIFT_ANGLE_LERP_SHIFT);
@@ -2001,7 +2003,9 @@ void PhysLerpRot(struct Driver *driver, int targetRotW)
 #if CTR_NATIVE_60FPS
 	if (CTR_NATIVE_60FPS_ACTIVE)
 	{
-		if ((sdata->gGT->timer & 1) != 0)
+		if (CTR_FRAMES_PER_SECOND > 60)
+			lerpStep = CTR_FRAME_STEP(CTR_MipsSra(remainingRot, 3), sdata->gGT->timer);
+		else if ((sdata->gGT->timer & 1) != 0)
 			lerpStep = CTR_MipsSra(remainingRot, 4);
 		else
 			lerpStep = CTR_MipsSra((remainingRot * 16) / 15, 3);
@@ -2337,7 +2341,7 @@ void VehPhysProc_SlamWall_Animate(struct Thread *t, struct Driver *d)
 	inst->animFrame = (s16)CTR_MipsAddLo((u16)inst->animFrame, 1);
 
 #if CTR_NATIVE_60FPS
-	if (!CTR_NATIVE_60FPS_ACTIVE || ((sdata->gGT->timer & 1) != 0))
+	if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
 #endif
 		d->matrixIndex = (u8)CTR_MipsAddLo(d->matrixIndex, 1);
 
@@ -2498,7 +2502,7 @@ void VehPhysProc_SpinFirst_PhysAngular(struct Thread *t, struct Driver *d)
 	d->numFramesSpentSteering = VEH_PHYS_PROC_STEER_RESET_FRAMES;
 
 #if CTR_NATIVE_60FPS
-	if (!CTR_NATIVE_60FPS_ACTIVE || ((sdata->gGT->timer & 1) != 0))
+	if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
 #endif
 	{
 		d->rotationSpinRate = (s16)CTR_MipsSubLo((u16)d->rotationSpinRate, CTR_MipsSra(d->rotationSpinRate, 3));
@@ -2641,7 +2645,7 @@ void VehPhysProc_SpinLast_PhysAngular(struct Thread *t, struct Driver *d)
 	d->numFramesSpentSteering = VEH_PHYS_PROC_STEER_RESET_FRAMES;
 
 #if CTR_NATIVE_60FPS
-	if (!CTR_NATIVE_60FPS_ACTIVE || ((sdata->gGT->timer & 1) != 0))
+	if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
 #endif
 	{
 		d->rotationSpinRate = (s16)CTR_MipsSubLo((u16)d->rotationSpinRate, CTR_MipsSra(d->rotationSpinRate, 3));

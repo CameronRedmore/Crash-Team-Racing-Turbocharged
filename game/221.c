@@ -173,7 +173,7 @@ void CC_EndEvent_DrawMenu()
 	struct Driver *driver = gGT->drivers[0];
 	b32 use30HzStep = true;
 #if CTR_NATIVE_60FPS
-	use30HzStep = !CTR_NATIVE_60FPS_ACTIVE || ((gGT->timer & 1) != 0);
+	use30HzStep = CTR_RETAIL_FRAME_TICK(gGT->timer);
 #endif
 	SVec2 pos;
 	s32 tokenRewardOffset = CC_EndEvent_GetRewardOffset(gGT);

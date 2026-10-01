@@ -439,7 +439,7 @@ u16 INSTANCE_GetNumAnimFrames(struct Instance *pInstance, int animIndex)
 							u16 frameCount = pAnim->numFrames & 0x7fff;
 							if (INSTANCE_Use60FpsAnimation(pInstance) && ((pAnim->numFrames & 0x8000) == 0) && (frameCount != 0))
 							{
-								frameCount = (u16)((frameCount << 1) - 1);
+								frameCount = (u16)(FPS_DOUBLE(frameCount - 1) + 1);
 							}
 							return frameCount;
 						}

@@ -215,6 +215,11 @@ void MainFrame_GameLogic(struct GameTracker *gGT, struct GamepadSystem *gGamepad
 		iVar4 = (iVar4 << 5) / 100;
 
 		gGT->elapsedTimeMS = iVar4;
+#if defined(CTR_NATIVE)
+		/* Sub-16ms frames otherwise lose time in the retail integer conversion. */
+		if (CTR_FRAMES_PER_SECOND > 60)
+			gGT->elapsedTimeMS = CTR_FRAME_STEP(ELAPSED_MS, gGT->timer);
+#endif
 		if (iVar4 < 0)
 		{
 			gGT->elapsedTimeMS = 0x20;
@@ -225,7 +230,7 @@ void MainFrame_GameLogic(struct GameTracker *gGT, struct GamepadSystem *gGamepad
 		}
 		if ((gGT->gameMode1_prevFrame & PAUSE_ALL) != 0)
 		{
-			gGT->elapsedTimeMS = 0x20;
+			gGT->elapsedTimeMS = CTR_FRAME_STEP(0x20, gGT->timer);
 		}
 #if defined(CTR_NATIVE) && defined(CTR_INTERNAL)
 		// NOTE(aalhendi): Replay playback must not let host RCNT timing decide

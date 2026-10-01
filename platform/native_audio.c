@@ -3969,7 +3969,10 @@ void NativeAudio_StepVBlank(void)
 #if defined(__vita__)
 		NativeAudio_ApplyPendingCommandsNoLock();
 #endif
-		int framesRendered = NativeAudio_RenderFramesNoLock(renderedFrames, NATIVE_AUDIO_VBLANK_FRAMES);
+		static unsigned int audioFrame;
+		int rate = CTR_NATIVE_60FPS_ACTIVE ? CTR_FRAMES_PER_SECOND : 60;
+		int frameCount = NativeFrameRate_Step(NATIVE_AUDIO_VBLANK_FRAMES * 2, audioFrame++, rate);
+		int framesRendered = NativeAudio_RenderFramesNoLock(renderedFrames, frameCount);
 		NativeAudio_QueueRenderedFramesNoLock(renderedFrames, framesRendered);
 #if defined(__vita__)
 		NativeAudio_UpdateXAReadbackNoLock();

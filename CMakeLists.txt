@@ -192,6 +192,10 @@ endif()
 
 include(CTest)
 if(BUILD_TESTING AND NOT EMSCRIPTEN)
+    add_executable(ctr_native_framerate_test tests/native_framerate_test.c)
+    target_include_directories(ctr_native_framerate_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
+    target_compile_definitions(ctr_native_framerate_test PRIVATE CTR_NATIVE BUILD=926)
+    add_test(NAME ctr_native_framerate COMMAND ctr_native_framerate_test)
     add_executable(ctr_native_precision_test
         tests/native_precision_test.c
         platform/native_pgxp.c

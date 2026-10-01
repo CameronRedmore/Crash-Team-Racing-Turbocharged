@@ -79,7 +79,7 @@ void AA_EndEvent_DrawMenu(void)
 	struct Driver *driver = gGT->drivers[0];
 	b32 use30HzStep = true;
 #if CTR_NATIVE_60FPS
-	use30HzStep = !CTR_NATIVE_60FPS_ACTIVE || ((gGT->timer & 1) != 0);
+	use30HzStep = CTR_RETAIL_FRAME_TICK(gGT->timer);
 #endif
 	s32 numPlayers = gGT->numPlyrCurrGame;
 	s32 totalRacers = numPlayers + gGT->numBotsNextGame;

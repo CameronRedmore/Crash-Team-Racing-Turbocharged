@@ -1135,7 +1135,7 @@ void RenderAllLevelGeometry(struct GameTracker *gGT, struct Level *level1, struc
 		}
 		else
 		{
-			AnimateQuad(gGT->timer << FPS_LEFTSHIFT(7), level1->numSCVert, level1->ptrSCVert, gGT->visMem1->visSCVertList[renderSlot]);
+			AnimateQuad(FPS_HALF((s64)gGT->timer * 128), level1->numSCVert, level1->ptrSCVert, gGT->visMem1->visSCVertList[renderSlot]);
 		}
 
 		scratch = CTR_SCRATCHPAD_PTR(struct MainRenderLevelGeometryScratch, 0);
@@ -1208,7 +1208,7 @@ void RenderAllLevelGeometry(struct GameTracker *gGT, struct Level *level1, struc
 		else
 		{
 			// draw SCVert (no primitives generated here
-			AnimateQuad(gGT->timer << FPS_LEFTSHIFT(7), level1->numSCVert, level1->ptrSCVert, gGT->visMem1->visSCVertList[0]);
+			AnimateQuad(FPS_HALF((s64)gGT->timer * 128), level1->numSCVert, level1->ptrSCVert, gGT->visMem1->visSCVertList[0]);
 		}
 
 		// camera of player 1
@@ -1634,7 +1634,7 @@ void RenderSubmit(struct GameTracker *gGT)
 
 #if defined(CTR_NATIVE)
 
-	sdata->vsyncTillFlip = FPS_HALF(2);
+	sdata->vsyncTillFlip = CTR_NATIVE_60FPS_ACTIVE ? 1 : 2;
 
 	// Native still renders immediately through PsyCross, so keep the host GPU's
 	// active draw/display envs in step with the retail DB selected this frame.

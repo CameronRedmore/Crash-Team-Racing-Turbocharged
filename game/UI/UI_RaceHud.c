@@ -355,7 +355,7 @@ UpdateTrackerState:
 	d->thTrackingMe = trackerTh;
 
 	if ((data.trackerTimer[driverID] != 0) &&
-	    (!CTR_NATIVE_60FPS_ACTIVE || ((gGT->timer & 1) != 0)))
+	    (CTR_RETAIL_FRAME_TICK(gGT->timer)))
 	{
 		data.trackerTimer[driverID]--;
 	}

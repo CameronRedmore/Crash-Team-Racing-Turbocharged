@@ -907,7 +907,7 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 
 	if (choose == NATIVE_MENU_STRING_FRAME_RATE)
 	{
-		gNative60FpsEnabled ^= 1;
+		gNative60FpsEnabled = (gNative60FpsEnabled + ((button & BTN_LEFT) ? NATIVE_FRAME_RATE_COUNT - 1 : 1)) % NATIVE_FRAME_RATE_COUNT;
 		save_config();
 		return;
 	}

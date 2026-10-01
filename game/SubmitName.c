@@ -109,7 +109,7 @@ s16 SubmitName_DrawMenu(u16 string)
 	}
 
 #if CTR_NATIVE_60FPS
-	if (!CTR_NATIVE_60FPS_ACTIVE || ((gGT->timer & 1) != 0))
+	if (CTR_RETAIL_FRAME_TICK(gGT->timer))
 	{
 		sdata->typeTimer++;
 	}

@@ -183,8 +183,8 @@ void RB_Armadillo_LInB(struct Instance *inst)
 	armObj->spawnPosZ = inst->matrix.t[2];
 	armObj->direction = 0;
 
-	armObj->velX = inst->matrix.m[0][2] >> FPS_RIGHTSHIFT(7);
-	armObj->velZ = inst->matrix.m[2][2] >> FPS_RIGHTSHIFT(7);
+	armObj->velX = FPS_HALF(inst->matrix.m[0][2]) >> 7;
+	armObj->velZ = FPS_HALF(inst->matrix.m[2][2]) >> 7;
 
 	if (sdata->gGT->level1->ptrSpawnType1->count <= 0)
 	{

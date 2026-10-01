@@ -278,6 +278,11 @@ void load_config(void)
 			{
 				gNative60FpsEnabled = (value != 0);
 			}
+			else if (strcmp("frame_rate", buffer) == 0)
+			{
+				int index = NativeFrameRate_Index(value);
+				if (index >= 0) gNative60FpsEnabled = index;
+			}
 			else if (strcmp("default_camera_far", buffer) == 0)
 			{
 				gNativeDefaultCameraFar = (value != 0);
@@ -343,6 +348,7 @@ void save_config(void)
 		fprintf(config, "%s=%d\n", "language", cfg_language);
 		fprintf(config, "%s=%d\n", "mirror_mode", gNativeMirrorModeEnabled != 0);
 		fprintf(config, "%s=%d\n", "60fps", gNative60FpsEnabled != 0);
+		fprintf(config, "%s=%d\n", "frame_rate", NativeFrameRate_FromIndex(gNative60FpsEnabled));
 		fprintf(config, "%s=%d\n", "default_camera_far", gNativeDefaultCameraFar != 0);
 		fprintf(config, "%s=%d\n", "default_hud_speedometer", gNativeDefaultHudSpeedometer != 0);
 		fprintf(config, "%s=%d\n", "ai_racers", gNativeAIRacersMode);

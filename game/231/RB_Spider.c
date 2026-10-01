@@ -166,7 +166,7 @@ void RB_Spider_ThTick(struct Thread *t)
 	if (spider->delay != 0)
 	{
 #if CTR_NATIVE_60FPS
-		if (!CTR_NATIVE_60FPS_ACTIVE || ((sdata->gGT->timer & 1) != 0))
+		if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
 		{
 			spider->delay--;
 		}
@@ -186,7 +186,7 @@ void RB_Spider_ThTick(struct Thread *t)
 			// Play animation backwards
 			s16 animFrame = spiderInst->animFrame;
 #if CTR_NATIVE_60FPS
-			if (!CTR_NATIVE_60FPS_ACTIVE || ((sdata->gGT->timer & 1) != 0))
+			if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
 			{
 				animFrame--;
 			}
@@ -244,7 +244,7 @@ void RB_Spider_ThTick(struct Thread *t)
 			if (animFrame + 1 < numAnimFrames)
 			{
 #if CTR_NATIVE_60FPS
-				if (!CTR_NATIVE_60FPS_ACTIVE || ((sdata->gGT->timer & 1) != 0))
+				if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
 				{
 					spiderInst->animFrame++;
 				}
@@ -293,7 +293,7 @@ void RB_Spider_ThTick(struct Thread *t)
 	}
 
 #if CTR_NATIVE_60FPS
-	if (!CTR_NATIVE_60FPS_ACTIVE || ((sdata->gGT->timer & 1) != 0))
+	if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
 	{
 		spiderInst->animFrame++;
 	}

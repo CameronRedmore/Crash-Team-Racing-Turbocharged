@@ -42,11 +42,11 @@ void RB_Bubbles_RoosTubes()
 #if CTR_NATIVE_60FPS
 	if (CTR_NATIVE_60FPS_ACTIVE)
 	{
-		if ((timer & 1) != 0)
+		if (CTR_FRAME_STEP(1, timer - 1) == 0)
 		{
 			return;
 		}
-		timer >>= 1;
+		timer = FPS_HALF(timer);
 	}
 #endif
 
@@ -111,7 +111,7 @@ void RB_Bubbles_RoosTubes()
 #if CTR_NATIVE_60FPS
 		if (CTR_NATIVE_60FPS_ACTIVE)
 		{
-			p->axis[1].accel = (s16)(p->axis[1].accel / 2);
+			p->axis[1].accel = (s16)FPS_HALF(p->axis[1].accel);
 		}
 #endif
 

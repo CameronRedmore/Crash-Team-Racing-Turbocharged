@@ -199,7 +199,7 @@ LAB_800ad5f8:
 
 		// add to the frame counter
 #if CTR_NATIVE_60FPS
-		if (!CTR_NATIVE_60FPS_ACTIVE || ((sdata->gGT->timer & 1) != 0))
+		if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
 		{
 			mw->numFramesOnHead += 1;
 		}

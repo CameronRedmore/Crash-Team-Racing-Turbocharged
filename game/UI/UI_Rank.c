@@ -91,7 +91,7 @@ internal int UI_Rank_GetDamageColor(int driverIndex)
 
 		// one frame closer to zero
 #if CTR_NATIVE_60FPS
-		if (!CTR_NATIVE_60FPS_ACTIVE || ((gGT->timer & 1) != 0))
+		if (CTR_RETAIL_FRAME_TICK(gGT->timer))
 		{
 			d->damageColorTimer += 1;
 		}
@@ -111,7 +111,7 @@ internal int UI_Rank_GetDamageColor(int driverIndex)
 
 		// one frame closer to zero
 #if CTR_NATIVE_60FPS
-		if (!CTR_NATIVE_60FPS_ACTIVE || ((gGT->timer & 1) != 0))
+		if (CTR_RETAIL_FRAME_TICK(gGT->timer))
 		{
 			d->damageColorTimer -= 1;
 		}
@@ -276,7 +276,7 @@ void UI_DrawRankedDrivers(void)
 				if (isTransitioning)
 				{
 #if CTR_NATIVE_60FPS
-					if (!CTR_NATIVE_60FPS_ACTIVE || ((gGT->timer & 1) != 0))
+					if (CTR_RETAIL_FRAME_TICK(gGT->timer))
 #endif
 					{
 						transitionTimer[0]++;

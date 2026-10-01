@@ -10,8 +10,7 @@ static s32 RenderWeather_GetFrameVelocityStep(s32 velocity, int framePhase)
 		return velocity;
 	}
 
-	const s32 firstHalf = velocity / 2;
-	return framePhase ? velocity - firstHalf : firstHalf;
+	return CTR_FRAME_STEP(velocity, framePhase);
 }
 
 static u32 RenderWeather_GetFrameVelocityXY(u32 packedVelocity, int framePhase)
@@ -180,7 +179,7 @@ void RenderWeather(struct PushBuffer *pb, struct PrimMem *primMem, struct RainBu
 	u32 state1;
 	u32 rngXY;
 	u32 rngZ;
-	const int framePhase = CTR_NATIVE_60FPS_ACTIVE ? (sdata->gGT->timer & 1) : 0;
+	const int framePhase = sdata->gGT->timer;
 
 	(void)numPlyr;
 

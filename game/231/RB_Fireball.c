@@ -186,7 +186,7 @@ void RB_Fireball_ThTick(struct Thread *t)
 		if (CTR_NATIVE_60FPS_ACTIVE)
 		{
 			sdata->UnusedPadding1 = 1;
-			if ((gGT->timer & 1) != 0)
+			if (CTR_FRAME_STEP(1, gGT->timer - 1) == 0)
 			{
 				particle = NULL;
 			}
@@ -238,7 +238,7 @@ void RB_Fireball_ThTick(struct Thread *t)
 
 	fireObj->cycleTimer -= elapsedTimeMS;
 
-	if (!CTR_NATIVE_60FPS_ACTIVE || ((gGT->timer & 1) != 0))
+	if (CTR_RETAIL_FRAME_TICK(gGT->timer))
 	{
 		if ((fireInst->animFrame + 1) < INSTANCE_GetNumAnimFrames(fireInst, 0))
 		{

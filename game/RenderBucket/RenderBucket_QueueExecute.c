@@ -1100,7 +1100,27 @@ static void RenderBucket_ProjectBoundsUpdate3(struct RenderBucketBounds *bounds,
 	RenderBucket_BoundsUpdate_80071524(bounds, sxy2, depth2);
 }
 
-static u32 RenderBucket_PackedFrameXY(struct ModelFrame *frame, struct ModelFrame *nextFrame)
+static int RenderBucket_NativeAnimationFraction(struct Instance *inst)
+{
+	if (CTR_FRAMES_PER_SECOND > 60 && INSTANCE_Use60FpsAnimation(inst))
+	{
+		struct ModelHeader *header = inst->model->headers;
+		if (header->ptrAnimations && inst->animIndex >= 0 && inst->animIndex < header->numAnimations)
+		{
+			struct ModelAnim *anim = header->ptrAnimations[inst->animIndex];
+			if (anim && (anim->numFrames & 0x8000) == 0)
+				return (int)(((u32)(u16)inst->animFrame * FPS % CTR_FRAMES_PER_SECOND) * 4096 / CTR_FRAMES_PER_SECOND);
+		}
+	}
+	return 2048;
+}
+
+static int RenderBucket_NativeBlend(int from, int to, int fraction)
+{
+	return (int)(((s64)from * (4096 - fraction) + (s64)to * fraction) >> 12);
+}
+
+static u32 RenderBucket_PackedFrameXY(struct Instance *inst, struct ModelFrame *frame, struct ModelFrame *nextFrame)
 {
 	u32 packedXY = RenderBucket_ReadPackedWord(&frame->pos.x);
 	int blendedY;
@@ -1110,6 +1130,12 @@ static u32 RenderBucket_PackedFrameXY(struct ModelFrame *frame, struct ModelFram
 	{
 		return packedXY;
 	}
+	if (CTR_FRAMES_PER_SECOND > 60)
+	{
+		int fraction = RenderBucket_NativeAnimationFraction(inst);
+		return CTR_PackS16Pair(RenderBucket_NativeBlend(frame->pos.x, nextFrame->pos.x, fraction),
+		                      RenderBucket_NativeBlend(frame->pos.y, nextFrame->pos.y, fraction));
+	}
 
 	// NOTE(aalhendi): Retail QueueDraw averages current/next frame bounds at
 	// 0x80070db4-0x80070df0 before the 0x3fc bbox projection.
@@ -1118,13 +1144,15 @@ static u32 RenderBucket_PackedFrameXY(struct ModelFrame *frame, struct ModelFram
 	return blendedY | blendedX;
 }
 
-static int RenderBucket_FrameZ(struct ModelFrame *frame, struct ModelFrame *nextFrame)
+static int RenderBucket_FrameZ(struct Instance *inst, struct ModelFrame *frame, struct ModelFrame *nextFrame)
 {
 	if (nextFrame == 0)
 	{
 		return frame->pos.z;
 	}
 
+	if (CTR_FRAMES_PER_SECOND > 60)
+		return RenderBucket_NativeBlend(frame->pos.z, nextFrame->pos.z, RenderBucket_NativeAnimationFraction(inst));
 	return RenderBucket_MipsAdd(frame->pos.z, nextFrame->pos.z) >> 1;
 }
 
@@ -1138,8 +1166,8 @@ static void RenderBucket_ProjectFrameBounds(struct Instance *inst, struct ModelF
 		gNativeMirrorModeRenderActive = 0;
 	}
 #endif
-	u32 minXY = RenderBucket_MipsSll(RenderBucket_PackedFrameXY(frame, nextFrame), 2) & 0xfff8ffff;
-	u32 minZ = RenderBucket_MipsSll(RenderBucket_FrameZ(frame, nextFrame), 2);
+	u32 minXY = RenderBucket_MipsSll(RenderBucket_PackedFrameXY(inst, frame, nextFrame), 2) & 0xfff8ffff;
+	u32 minZ = RenderBucket_MipsSll(RenderBucket_FrameZ(inst, frame, nextFrame), 2);
 	u32 maxXMinY = RenderBucket_MipsAdd(minXY, 0x3fc) & 0xfff8ffff;
 	u32 maxXMaxY = RenderBucket_MipsAdd(maxXMinY, 0x03fc0000);
 	u32 minXMaxY = RenderBucket_MipsAdd(minXY, 0x03fc0000);
@@ -1370,7 +1398,9 @@ static struct ModelHeader *RenderBucket_SelectModelHeader(struct Instance *inst,
 	lodIndex = 0;
 
 #if defined(CTR_NATIVE)
-	if (CTR_NATIVE_MAX_LOD_ACTIVE)
+	// The big-number headers are different digits, not detail levels.
+	// UI_DrawPosSuffix selects the rank digit through the instance depth.
+	if (CTR_NATIVE_MAX_LOD_ACTIVE && (inst->model->id != STATIC_BIG1))
 	{
 		return RenderBucket_SelectMaxLodModelHeader(inst, projectedDistance, lodIndexOut, lodExhaustedOut);
 	}
@@ -1764,7 +1794,7 @@ static struct RenderBucketSplitState RenderBucket_BuildSplitState(struct Instanc
 	}
 #endif
 
-	frameY = (s16)(RenderBucket_PackedFrameXY(frame, nextFrame) >> 16);
+	frameY = (s16)(RenderBucket_PackedFrameXY(inst, frame, nextFrame) >> 16);
 	baseY = RenderBucket_MipsAdd(inst->matrix.t[1], (frameY / matrixState->scratch76) >> 12);
 	rawSplit = RenderBucket_MipsSub(inst->vertSplit, baseY);
 	matrixOr = matrixState->m0 | matrixState->m1 | matrixState->m2 | matrixState->m3 | matrixState->m4;
@@ -2143,9 +2173,9 @@ static struct ModelFrame *RenderBucket_GetFrame(struct Instance *inst, struct Mo
 	}
 	else if (INSTANCE_Use60FpsAnimation(inst))
 	{
-		*lastFrameAdvanceOut = lastFrame << 1;
-		hasNextFrame = frameIndex & 1;
-		frameIndex >>= 1;
+		*lastFrameAdvanceOut = FPS_DOUBLE(lastFrame);
+		hasNextFrame = ((u32)frameIndex * FPS % CTR_FRAMES_PER_SECOND) != 0;
+		frameIndex = FPS_HALF(frameIndex);
 	}
 	else
 	{
@@ -2528,6 +2558,13 @@ static u32 RenderBucket_PackInterpolatedModelVertexXY(struct RenderBucketDrawCon
 
 	u32 currXZ = ((u32)currX) | ((u32)curr->z << 16);
 	u32 nextXZ = ((u32)nextX) | ((u32)next->z << 16);
+	if (CTR_FRAMES_PER_SECOND > 60)
+	{
+		int fraction = RenderBucket_NativeAnimationFraction(ctx->inst);
+		int x = RenderBucket_NativeBlend(currX + ctx->mf->pos.x, nextX + nextFrame->pos.x, fraction);
+		int y = RenderBucket_NativeBlend(curr->z + ctx->mf->pos.y, next->z + nextFrame->pos.y, fraction);
+		return CTR_PackS16Pair(x * 4, y * 4) & 0xfff8ffff;
+	}
 
 	frameOriginXY |= (u32)(u16)(ctx->mf->pos.y + nextFrame->pos.y) << 16;
 
@@ -2546,6 +2583,9 @@ static u32 RenderBucket_InterpolatedModelVertexZ(struct RenderBucketDrawContext 
 {
 	struct ModelFrame *nextFrame = ctx->idpp->ptrNextFrame;
 	int z = (int)curr->y + (int)next->y + (int)ctx->mf->pos.z + (int)nextFrame->pos.z;
+	if (CTR_FRAMES_PER_SECOND > 60)
+		return (u32)(RenderBucket_NativeBlend(curr->y + ctx->mf->pos.z, next->y + nextFrame->pos.z,
+		                                    RenderBucket_NativeAnimationFraction(ctx->inst)) * 4);
 
 	// NOTE(aalhendi): Source-backs retail 0x8006b480-0x8006b49c. The vertical
 	// byte pair and summed frame Z are doubled, producing the halfway frame.
