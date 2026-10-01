@@ -46,6 +46,7 @@ enum
 	MM_EXIT_ROUTE_DEMO = 4,
 	MM_EXIT_ROUTE_SCRAPBOOK = 5,
 	MM_EXIT_ROUTE_GHOST_REPLAY = 6,
+	MM_EXIT_ROUTE_ADV_QUICKLOAD = 7, // native: load the autosave directly
 };
 typedef s32 MainMenuExitRoute;
 

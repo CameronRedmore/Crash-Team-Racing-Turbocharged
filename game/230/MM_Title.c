@@ -146,6 +146,19 @@ void MM_Title_MenuUpdate(void)
 		SelectProfile_ToggleMode(SELECT_PROFILE_SCREEN_ADV_LOAD);
 		break;
 
+#if defined(CTR_NATIVE)
+	// adventure continue from the autosave
+	case MM_EXIT_ROUTE_ADV_QUICKLOAD:
+
+		if (!NativeAutoSave_QuickLoad())
+		{
+			// autosave vanished, fall back to the load screen
+			sdata->ptrDesiredMenu = &data.menuFourAdvProfiles;
+			SelectProfile_ToggleMode(SELECT_PROFILE_SCREEN_ADV_LOAD);
+		}
+		break;
+#endif
+
 	// regular character selection screen
 	case MM_EXIT_ROUTE_CHARACTER_SELECT:
 

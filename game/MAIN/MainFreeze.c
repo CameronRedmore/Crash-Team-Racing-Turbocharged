@@ -982,9 +982,7 @@ void MainFreeze_MenuPtrDefault(struct RectMenu *menu)
 	if (stringID == 14)
 	{
 		// Set Menu to Options
-		sdata->ptrDesiredMenu = &data.menuRacingWheelConfig;
-
-		data.menuRacingWheelConfig.rowSelected = 8;
+		MM_NativeOptions_OpenFromPause();
 		return;
 	}
 

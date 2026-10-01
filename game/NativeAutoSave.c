@@ -95,6 +95,26 @@ b32 NativeAutoSave_Apply(void)
 	return true;
 }
 
+// Loads the autosave and queues the saved hub directly, skipping the
+// profile screen (mirrors SelectProfile_FinalizeAdventure for ADV_LOAD).
+b32 NativeAutoSave_QuickLoad(void)
+{
+	struct GameTracker *gGT = sdata->gGT;
+
+	if (!NativeAutoSave_Apply())
+	{
+		return false;
+	}
+
+	// Not a card slot, so a later manual save asks for overwrite confirmation.
+	sdata->advProfileIndex = 0xffff;
+	gGT->currLEV = (sdata->advProgress.HubLevYouSavedOn != 0) ? sdata->advProgress.HubLevYouSavedOn : N_SANITY_BEACH;
+	memmove(gGT->prevNameEntered, sdata->advProgress.name, sizeof(gGT->prevNameEntered));
+	memmove(gGT->currNameEntered, sdata->advProgress.name, sizeof(gGT->currNameEntered));
+	sdata->ptrDesiredMenu = QueueLoadTrack_GetMenuPtr();
+	return true;
+}
+
 b32 NativeAutoSave_Write(void)
 {
 	struct NativeAutoSaveFile save;

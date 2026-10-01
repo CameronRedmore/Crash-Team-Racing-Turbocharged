@@ -372,6 +372,10 @@ static char *RECTMENU_GetString(s16 stringIndex)
 		return (char *)aiRacers[languageRow][gNativeAIRacersMode];
 	case NATIVE_MENU_STRING_CONTROLS:
 		return (char *)controlsTitle[languageRow];
+	case NATIVE_MENU_STRING_QUICK_LOAD:
+		return "CONTINUE";
+	case NATIVE_MENU_STRING_GAMEPAD:
+		return "GAMEPAD / VIBRATION";
 	case NATIVE_MENU_STRING_CHEATS:
 		return (char *)cheatsTitle[languageRow];
 	case NATIVE_MENU_STRING_CONTROL_HEADER:

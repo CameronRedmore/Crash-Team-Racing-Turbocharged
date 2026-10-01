@@ -152,6 +152,7 @@ void NativeBossFight_Clear(void);
 struct MetaDataBOSS *NativeBossFight_GetWeaponMeta(int bossID);
 int NativeBossFight_GetWeaponMetaCount(int bossID);
 void MM_NativeBossFight_OpenBossSelect(void);
+void MM_NativeOptions_OpenFromPause(void);
 void MM_NativeBossFight_JumpToBossSelect(void);
 #endif
 int NativeGhostInput_GetGhostFps(const char *ghostName);
@@ -173,6 +174,7 @@ b32 NativeAutoSave_Exists(void);
 b32 NativeAutoSave_Read(struct AdvProgress *adv);
 b32 NativeAutoSave_Apply(void);
 b32 NativeAutoSave_Write(void);
+b32 NativeAutoSave_QuickLoad(void);
 void NativeAutoSave_OnHubLoaded(void);
 #endif
 const char *NativeGhostInput_GetLeaderboardReplayName(void);

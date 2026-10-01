@@ -246,7 +246,7 @@ static struct MenuRow s_nativeOptionsRows[] =
 	{NATIVE_MENU_STRING_AI_RACERS, 13, 15, 14, 14},
 	{NATIVE_MENU_STRING_MIRROR_MODE, 14, 0, 15, 15},
 #endif
-	{RECTMENU_STRING_NONE},
+	{RECTMENU_STRING_NONE},	{RECTMENU_STRING_NONE}, // spare slot, the in-game pause menu appends a row here
 };
 
 #ifndef __vita__
@@ -828,6 +828,94 @@ static void MM_NativeTimeTrialMenuProc(struct RectMenu *menu)
 #endif
 }
 
+static b32 MM_NativeOptionsInGame(void)
+{
+	return sdata->gGT->levelID != MAIN_MENU_LEVEL;
+}
+
+static b32 MM_NativeOptionsRowLockedInRace(s16 stringIndex)
+{
+	switch (stringIndex & MENU_ROW_LNG_MASK)
+	{
+	case LNG_LANGUAGE:
+	case NATIVE_MENU_STRING_MIRROR_MODE:
+	case NATIVE_MENU_STRING_AI_RACERS:
+	case NATIVE_MENU_STRING_MAX_LOD:
+	case NATIVE_MENU_STRING_PHYSICS:
+	case NATIVE_MENU_STRING_AI_PHYSICS:
+	case NATIVE_MENU_STRING_COLLISION_PHYSICS:
+	case NATIVE_MENU_STRING_STEERING_PHYSICS:
+		return true;
+	default:
+		return false;
+	}
+}
+
+static void MM_NativeOptionsApplyLocks(struct MenuRow *rows, b32 inGame)
+{
+	for (struct MenuRow *row = rows; row->stringIndex != RECTMENU_STRING_NONE; row++)
+	{
+		if (inGame && MM_NativeOptionsRowLockedInRace(row->stringIndex))
+		{
+			row->stringIndex |= MENU_ROW_LOCKED;
+		}
+		else
+		{
+			row->stringIndex &= ~MENU_ROW_LOCKED;
+		}
+	}
+}
+
+// Rebuilds the options rows for the current context:
+// in a race, settings that are unsafe to change are locked and the
+// original gamepad/vibration screen is appended as an extra row.
+static void MM_NativeOptionsConfigureRows(b32 inGame)
+{
+	static int baseCount = 0;
+	if (baseCount == 0)
+	{
+		while (s_nativeOptionsRows[baseCount].stringIndex != RECTMENU_STRING_NONE)
+		{
+			baseCount++;
+		}
+	}
+
+	struct MenuRow *rows = s_nativeOptionsRows;
+	int last = baseCount - 1;
+
+	if (inGame)
+	{
+		rows[baseCount] = (struct MenuRow){NATIVE_MENU_STRING_GAMEPAD, (char)last, 0, (char)baseCount, (char)baseCount};
+		rows[baseCount + 1] = (struct MenuRow){RECTMENU_STRING_NONE};
+		rows[last].rowOnPressDown = (char)baseCount;
+		rows[0].rowOnPressUp = (char)baseCount;
+	}
+	else
+	{
+		rows[baseCount] = (struct MenuRow){RECTMENU_STRING_NONE};
+		rows[last].rowOnPressDown = 0;
+		rows[0].rowOnPressUp = (char)last;
+	}
+
+	MM_NativeOptionsApplyLocks(s_nativeOptionsRows, inGame);
+#ifndef __vita__
+	MM_NativeOptionsApplyLocks(s_nativeEnhancementsRows, inGame);
+#endif
+}
+
+// Opens the full options menu from the in-game pause menu.
+void MM_NativeOptions_OpenFromPause(void)
+{
+	MM_NativeOptionsConfigureRows(1);
+	s_nativeOptionsMenu.rowSelected = 0;
+	s_nativeOptionsMenu.posX_curr = 256;
+	s_nativeOptionsMenu.posY_curr = 120;
+	s_nativeOptionsMenu.state = CENTER_ON_COORDS | USE_SMALL_FONT | BIG_TEXT_IN_TITLE;
+	s_nativeOptionsMenu.ptrNextBox_InHierarchy = NULL;
+	s_nativeOptionsMenu.ptrPrevBox_InHierarchy = NULL;
+	sdata->ptrDesiredMenu = &s_nativeOptionsMenu;
+}
+
 static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 {
 	if (menu->funcState == RECTMENU_FUNC_STATE_UPDATE)
@@ -847,11 +935,29 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 		{
 			parent->state &= ~(ONLY_DRAW_TITLE | DRAW_NEXT_MENU_IN_HIERARCHY);
 		}
+		else if (MM_NativeOptionsInGame())
+		{
+			// opened from the pause menu, go back to it
+			sdata->ptrDesiredMenu = MainFreeze_GetMenuPtr();
+		}
+		return;
+	}
+
+	// left/right bypass the row lock check done for confirm
+	if ((menu->rows[menu->rowSelected].stringIndex & MENU_ROW_LOCKED) != 0)
+	{
 		return;
 	}
 
 	s16 choose = menu->rows[menu->rowSelected].stringIndex & MENU_ROW_LNG_MASK;
 	u32 button = sdata->buttonTapPerPlayer[0];
+
+	if (choose == NATIVE_MENU_STRING_GAMEPAD)
+	{
+		sdata->ptrDesiredMenu = &data.menuRacingWheelConfig;
+		data.menuRacingWheelConfig.rowSelected = 8;
+		return;
+	}
 
 	if ((choose >= NATIVE_MENU_STRING_AUDIO_FX) && (choose <= NATIVE_MENU_STRING_AUDIO_VOICE))
 	{
@@ -1323,6 +1429,10 @@ u8 MM_TransitionInOut(struct TransitionMeta *meta, int framesPassed, int numFram
 	return allTransitionsDone;
 }
 
+#if defined(CTR_NATIVE)
+static void MM_NativeAdventureConfigureRows(void);
+#endif
+
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800acff4-0x800ad448.
 void MM_MenuProc_Main(struct RectMenu *mainMenu)
 {
@@ -1507,6 +1617,9 @@ void MM_MenuProc_Main(struct RectMenu *mainMenu)
 		gGT->gameMode2 &= ~(CHEAT_WUMPA | CHEAT_MASK | CHEAT_TURBO | CHEAT_ENGINE | CHEAT_BOMBS);
 
 		// menu for new/load
+#if defined(CTR_NATIVE)
+		MM_NativeAdventureConfigureRows();
+#endif
 		mainMenu->ptrNextBox_InHierarchy = &D230.menuAdventure;
 		mainMenu->state |= DRAW_NEXT_MENU_IN_HIERARCHY;
 		return;
@@ -1621,6 +1734,7 @@ void MM_MenuProc_Main(struct RectMenu *mainMenu)
 	// Options
 	if (choose == LNG_OPTIONS)
 	{
+		MM_NativeOptionsConfigureRows(0);
 		s_nativeOptionsMenu.rowSelected = 0;
 		s_nativeOptionsMenu.state = CENTER_ON_X | USE_SMALL_FONT | BIG_TEXT_IN_TITLE;
 		s_nativeOptionsMenu.ptrNextBox_InHierarchy = NULL;
@@ -1916,6 +2030,26 @@ void MM_MenuProc_SingleCup(struct RectMenu *menu)
 	}
 }
 
+#if defined(CTR_NATIVE)
+static struct MenuRow s_nativeAdventureRows[] =
+{
+	{NATIVE_MENU_STRING_QUICK_LOAD, 0, 1, 0, 0},
+	{0x8d, 0, 2, 1, 1},
+	{0x8e, 1, 2, 2, 2},
+	{RECTMENU_STRING_NONE},
+};
+static b32 s_nativeAdventureHasQuickLoad;
+
+// Adds a CONTINUE row (default selection) above NEW / LOAD when an autosave exists.
+static void MM_NativeAdventureConfigureRows(void)
+{
+	NativeAutoSave_Refresh();
+	s_nativeAdventureHasQuickLoad = NativeAutoSave_Exists();
+	D230.menuAdventure.rows = s_nativeAdventureHasQuickLoad ? &s_nativeAdventureRows[0] : &D230.rowsAdventure[0];
+	D230.menuAdventure.rowSelected = 0;
+}
+#endif
+
 // NOTE(aalhendi): ASM-verified against NTSC-U 926 overlay 230 0x800ad8f0-0x800ad980.
 void MM_MenuProc_NewLoad(struct RectMenu *menu)
 {
@@ -1928,7 +2062,11 @@ void MM_MenuProc_NewLoad(struct RectMenu *menu)
 		return;
 	}
 
-	if ((row < 0) || (row >= MM_ADV_NEW_LOAD_ROUTE_COUNT))
+	s16 routeCount = MM_ADV_NEW_LOAD_ROUTE_COUNT;
+#if defined(CTR_NATIVE)
+	routeCount += s_nativeAdventureHasQuickLoad ? 1 : 0;
+#endif
+	if ((row < 0) || (row >= routeCount))
 	{
 		return;
 	}
@@ -1937,6 +2075,13 @@ void MM_MenuProc_NewLoad(struct RectMenu *menu)
 	// Reapply persistent cheat choices here: retail allowed cheat codes to be
 	// entered on NEW/LOAD after Adventure selection cleared item-cheat bits.
 	NativeCheat_ApplyConfigured();
+#endif
+
+#if defined(CTR_NATIVE)
+	if (s_nativeAdventureHasQuickLoad)
+	{
+		row = (row == 0) ? MM_EXIT_ROUTE_ADV_QUICKLOAD : row - 1;
+	}
 #endif
 
 	// if Load was chosen
