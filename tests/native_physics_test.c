@@ -41,6 +41,77 @@ static void VehPhysCrash_PlayHumanFeedback(struct Thread *a, struct Thread *b, s
 
 static void near(double a, double b) { assert(fabs(a - b) < 0.000001); }
 
+static void test_frame_rates(void)
+{
+	struct Driver d={.driverID=8};
+	struct Terrain terrain={.turnResponseScale=128};
+	NativePhysics_SetEnabled(1);
+	NativePhysics_SetDomain(NATIVE_PHYSICS_AI,1);
+	for (int option=0;option<NATIVE_FRAME_RATE_COUNT;option++)
+	{
+		gNative60FpsEnabled=option;
+		int rate=CTR_FRAMES_PER_SECOND;
+		NativePhysics_ResetDriver(&d);
+		d.terrainMeta1=&terrain;
+		d.posCurr=(Vec3){0};
+		NativePhysics_WriteVelocity(&d,(NativePhysicsVec){1,-1.25,2.5});
+		double acceleration=0, damping=1024;
+		for (int frame=0;frame<rate;frame++)
+		{
+			sdata->gGT->timer=frame;
+			sdata->gGT->elapsedTimeMS=CTR_FRAME_STEP(32,frame);
+			NativePhysics_Move(&d,NativePhysics_Step(&d,sdata->gGT->elapsedTimeMS,4096),1);
+			acceleration+=NativeAI_FrameStep(3.25,frame);
+			damping=NativeAI_HalfDecay(damping,frame);
+		}
+		NativePhysicsVec p=NativePhysics_ReadPosition(&d);
+		near(p.x,30); near(p.y,-37.5); near(p.z,75);
+		near(acceleration,97.5);
+		near(damping/ldexp(1024,-30),1);
+		NativePhysics_ResetDriver(&d);
+		d.matrixMovingDir.m[0][0]=d.matrixMovingDir.m[1][1]=d.matrixMovingDir.m[2][2]=4096;
+		d.const_Gravity=3; d.const_TerminalVelocity=30000;
+		NativePhysics_WriteVelocity(&d,(NativePhysicsVec){0});
+		for (int frame=0;frame<rate;frame++)
+		{
+			sdata->gGT->timer=frame;
+			sdata->gGT->elapsedTimeMS=CTR_FRAME_STEP(32,frame);
+			NativePhysics_Gravity(&d,&d.velocity);
+		}
+		near(NativePhysics_ReadVelocity(&d).y,-90);
+		// A single steering impulse uses the same retail time scale at every rate.
+		memset(&d,0,sizeof(d)); d.driverID=8;
+		d.terrainMeta1=&terrain; d.AxisAngle1_normalVec.y=4096;
+		d.simpTurnState=1; d.const_TurnInputDelay=3;
+		NativePhysics_SetDomain(NATIVE_PHYSICS_STEERING,1);
+		sdata->gGT->timer=0;
+		sdata->gGT->elapsedTimeMS=CTR_FRAME_STEP(32,0);
+		NativePhysics_Steer(&d);
+		near(NATIVE_PHYSICS_READ(&d,rotationSpinRate),1.5*30/rate);
+		NativePhysics_SetDomain(NATIVE_PHYSICS_STEERING,0);
+		struct Driver a={.driverID=9,.const_CollisionWeight=1}, b={.driverID=10,.const_CollisionWeight=1};
+		struct Thread ta={.object=&a,.driverHitRadius=10}, tb={.object=&b,.driverHitRadius=10};
+		struct DriverCollisionSearch search={0}; search.bucket.th=&tb;
+		Vec3 output;
+		NativePhysics_SetDomain(NATIVE_PHYSICS_COLLISION,1);
+		NativePhysics_WritePosition(&b,(NativePhysicsVec){19.25*256,0,0});
+		NativeCollision_Cars(&ta,&search,&output);
+		near(NativePhysics_ReadVelocity(&a).x,-12.0*30/rate);
+		near(NativePhysics_ReadVelocity(&b).x,12.0*30/rate);
+		NativePhysics_SetDomain(NATIVE_PHYSICS_COLLISION,0);
+		// Forced 30 FPS and ghost overrides take precedence over the menu rate.
+		gNativeForce30Fps=1;
+		near(NativePhysics_FrameScale(),1);
+		gNativeForce30Fps=0;
+		gNativeGhostReplayFpsOverride=1;
+		near(NativePhysics_FrameScale(),0.5);
+		gNativeGhostReplayFpsOverride=-1;
+	}
+	gNative60FpsEnabled=0;
+	NativePhysics_SetEnabled(0);
+	NativePhysics_SetDomain(NATIVE_PHYSICS_AI,0);
+}
+
 static void test_collision_response(void)
 {
 	struct Driver d={0}, other={0};
@@ -285,6 +356,7 @@ int main(void)
 	test_steering();
 	test_collisions();
 	test_collision_response();
+	test_frame_rates();
 	puts("Smoothed physics, AI, steering and collision checks passed");
 	return 0;
 }

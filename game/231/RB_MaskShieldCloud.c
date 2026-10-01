@@ -163,7 +163,7 @@ void RB_MaskWeapon_ThTick(struct Thread *maskTh)
 	mhs->posOffset.x = (((MATH_Sin(rot) << 6) >> 0xc) * mask->scale) >> 0xc;
 	mhs->posOffset.z = (((MATH_Cos(rot) << 6) >> 0xc) * mask->scale) >> 0xc;
 
-	mhs->posOffset.y = R231.maskPosArr[(int)maskBeamInst->animFrame >> FPS_RIGHTSHIFT(0)] + 0x40;
+	mhs->posOffset.y = R231.maskPosArr[FPS_HALF((int)maskBeamInst->animFrame)] + 0x40;
 
 	mhs->rot.x = 0;
 	mhs->rot.y = rot;
@@ -299,7 +299,7 @@ void RB_ShieldDark_ThTick_Pop(struct Thread *t)
 
 		// next frame
 #if CTR_NATIVE_60FPS
-		if (!CTR_NATIVE_60FPS_ACTIVE || ((sdata->gGT->timer & 1) != 0))
+		if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
 		{
 			sh->animFrame += 1;
 		}
@@ -474,7 +474,7 @@ void RB_ShieldDark_ThTick_Grow(struct Thread *th)
 
 		// next frame
 #if CTR_NATIVE_60FPS
-		if (!CTR_NATIVE_60FPS_ACTIVE || ((sdata->gGT->timer & 1) != 0))
+		if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
 		{
 			shield->animFrame++;
 		}
@@ -663,7 +663,7 @@ void RB_RainCloud_FadeAway(struct Thread *t)
 	struct RainCloud *rcloud;
 
 #if CTR_NATIVE_60FPS
-	if (CTR_NATIVE_60FPS_ACTIVE && ((sdata->gGT->timer & 1) == 0))
+	if (!CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
 	{
 		return;
 	}

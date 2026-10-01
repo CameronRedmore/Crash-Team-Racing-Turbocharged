@@ -400,7 +400,7 @@ void CS_Credits_DrawNames(struct CreditsObj *co)
 	}
 
 #if CTR_NATIVE_60FPS
-	if (!CTR_NATIVE_60FPS_ACTIVE || ((sdata->gGT->timer & 1) != 0))
+	if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
 #endif
 	{
 		co->creditsPosY--;
@@ -525,7 +525,7 @@ void CS_Credits_DrawEpilogue(struct CreditsObj *co)
 	}
 
 #if CTR_NATIVE_60FPS
-	if (!CTR_NATIVE_60FPS_ACTIVE || ((sdata->gGT->timer & 1) != 0))
+	if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
 #endif
 	{
 		co->epilogueFramesLeft--;
@@ -606,7 +606,7 @@ void CS_Credits_ThTick(void)
 	b32 use30HzStep = true;
 
 #if CTR_NATIVE_60FPS
-	use30HzStep = !CTR_NATIVE_60FPS_ACTIVE || ((sdata->gGT->timer & 1) != 0);
+	use30HzStep = CTR_RETAIL_FRAME_TICK(sdata->gGT->timer);
 #endif
 
 	co->creditDanceInst = danceInst;

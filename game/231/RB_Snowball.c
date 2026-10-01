@@ -49,22 +49,22 @@ void RB_Snowball_ThTick(struct Thread *t)
 		SVec3 pos = frame->pos;
 		SVec3 rot = frame->rot;
 
-		if (CTR_NATIVE_60FPS_ACTIVE && ((sdata->gGT->timer & 1) != 0))
+		if (CTR_NATIVE_60FPS_ACTIVE)
 		{
-			snowObj->pointIndex = (snowObj->pointIndex + 1) % (snowObj->numPoints * 2);
-			pointIndex = snowObj->pointIndex;
+			pointIndex = (snowObj->pointIndex + 1) % (snowObj->numPoints * 2);
 			if (pointIndex > snowObj->numPoints)
 			{
 				pointIndex = (snowObj->numPoints * 2) - pointIndex;
 			}
 
 			const struct SpawnPosRot *nextFrame = &ptrSpawnType2->posRot[pointIndex];
+			int fraction = (int)(((u32)sdata->gGT->timer * 30ull) % CTR_FRAMES_PER_SECOND);
 			for (int axis = 0; axis < 3; axis++)
 			{
-				pos.v[axis] = (s16)(((int)pos.v[axis] + (int)nextFrame->pos.v[axis]) / 2);
+				pos.v[axis] = (s16)(((s32)pos.v[axis] * (CTR_FRAMES_PER_SECOND - fraction) + (s32)nextFrame->pos.v[axis] * fraction) / CTR_FRAMES_PER_SECOND);
 				if (rot.z == nextFrame->rot.z)
 				{
-					rot.v[axis] = (s16)(((int)rot.v[axis] + (int)nextFrame->rot.v[axis]) / 2);
+					rot.v[axis] = (s16)(((s32)rot.v[axis] * (CTR_FRAMES_PER_SECOND - fraction) + (s32)nextFrame->rot.v[axis] * fraction) / CTR_FRAMES_PER_SECOND);
 				}
 			}
 		}
@@ -78,7 +78,7 @@ void RB_Snowball_ThTick(struct Thread *t)
 		RB_Minecart_CheckColl(snowInst, t);
 	}
 
-	if (!CTR_NATIVE_60FPS_ACTIVE)
+	if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
 	{
 		snowObj->pointIndex = (snowObj->pointIndex + 1) % (snowObj->numPoints * 2);
 	}

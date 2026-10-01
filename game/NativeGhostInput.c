@@ -5,13 +5,16 @@ enum
 {
     NATIVE_GHOST_INPUT_MAGIC = 0x3152474e,
     NATIVE_GHOST_INPUT_VERSION = 1,
-    NATIVE_GHOST_INPUT_MAX_FRAMES = 32768,
+    NATIVE_GHOST_INPUT_MAX_FRAMES = 131072,
     NATIVE_GHOST_INPUT_META_BUTTONS = BTN_START | BTN_SELECT,
     NATIVE_GHOST_INPUT_FLAG_60FPS = 1 << 0,
     NATIVE_GHOST_INPUT_FLAG_RELIC_RACE = 1 << 1,
     NATIVE_GHOST_INPUT_FLAG_RIGHT_STICK_Y = 1 << 2,
     NATIVE_GHOST_INPUT_FLAG_RIGHT_STICK_X_5BIT = 1 << 3,
     NATIVE_GHOST_INPUT_FLAG_STICK_OVERLAY_SOURCE = 1 << 4,
+    NATIVE_GHOST_INPUT_RATE_SHIFT = 5,
+    NATIVE_GHOST_INPUT_RATE_MASK = 7 << 5,
+    NATIVE_GHOST_INPUT_FLAG_HIGH_FPS = 1 << 8,
     NATIVE_GHOST_INPUT_FLAG_TIMING_METADATA = 1 << 15,
     NATIVE_GHOST_INPUT_BUTTON_MASK = 0x0007ffff,
     NATIVE_GHOST_INPUT_STICK_RX_SHIFT = 19,
@@ -333,11 +336,25 @@ static b32 NativeGhostInput_HeaderUses60Fps(const struct NativeGhostInputHeader 
     return (header->flags & NATIVE_GHOST_INPUT_FLAG_60FPS) != 0;
 }
 
+static int NativeGhostInput_FlagsRateIndex(u16 flags)
+{
+    if (flags & NATIVE_GHOST_INPUT_FLAG_HIGH_FPS)
+        return (flags & NATIVE_GHOST_INPUT_RATE_MASK) >> NATIVE_GHOST_INPUT_RATE_SHIFT;
+    return ((flags & NATIVE_GHOST_INPUT_FLAG_TIMING_METADATA) &&
+            (flags & NATIVE_GHOST_INPUT_FLAG_60FPS)) ? 1 : 0;
+}
+
+static u32 NativeGhostInput_TimerPhaseMask(u16 flags)
+{
+    /* Higher rates (especially 144 Hz) need more than the legacy three bits. */
+    return (flags & NATIVE_GHOST_INPUT_FLAG_HIGH_FPS) ? UINT32_MAX : NATIVE_GHOST_INPUT_TIMER_PHASE_MASK;
+}
+
 
 static b32 NativeGhostInput_ValidateHeader(const struct NativeGhostInputHeader *header)
 {
     if ((header->magic != NATIVE_GHOST_INPUT_MAGIC) ||
-        (header->version != NATIVE_GHOST_INPUT_VERSION) ||
+        ((header->version != NATIVE_GHOST_INPUT_VERSION) && (header->version != 2)) ||
         (header->headerSize != sizeof(struct NativeGhostInputHeader)) ||
         (header->frameSize != sizeof(struct NativeGhostInputFrame)) ||
         (header->frameCount == 0) ||
@@ -345,6 +362,11 @@ static b32 NativeGhostInput_ValidateHeader(const struct NativeGhostInputHeader *
     {
         return false;
     }
+
+    if ((header->flags & NATIVE_GHOST_INPUT_FLAG_HIGH_FPS) &&
+        ((header->version != 2) || NativeGhostInput_FlagsRateIndex(header->flags) < 2 ||
+         NativeGhostInput_FlagsRateIndex(header->flags) >= NATIVE_FRAME_RATE_COUNT))
+        return false;
 
     return true;
 }
@@ -374,7 +396,7 @@ int NativeGhostInput_GetGhostFps(const char *ghostName)
         return 0;
     }
 
-    return NativeGhostInput_HeaderUses60Fps(&header) ? 60 : 30;
+    return NativeFrameRate_FromIndex(NativeGhostInput_FlagsRateIndex(header.flags));
 }
 
 int NativeGhostInput_GetGhostMode(const char *ghostName)
@@ -515,12 +537,13 @@ static const u8 s_nativeGhostInputOverlayDefaultButtons[NATIVE_GHOST_INPUT_OVERL
 
 static void NativeGhostInput_StoreHeaderMetadata(struct NativeGhostInputHeader *header)
 {
-    header->reserved[0] = s_nativeGhostInputStartTimerPhase & NATIVE_GHOST_INPUT_TIMER_PHASE_MASK;
+    header->reserved[0] = s_nativeGhostInputStartTimerPhase & NativeGhostInput_TimerPhaseMask(header->flags);
+    if (header->flags & NATIVE_GHOST_INPUT_FLAG_HIGH_FPS) header->version = 2;
 }
 
 static void NativeGhostInput_LoadHeaderMetadata(const struct NativeGhostInputHeader *header)
 {
-    s_nativeGhostInputStartTimerPhase = header->reserved[0] & NATIVE_GHOST_INPUT_TIMER_PHASE_MASK;
+    s_nativeGhostInputStartTimerPhase = header->reserved[0] & NativeGhostInput_TimerPhaseMask(header->flags);
 }
 
 static u32 NativeGhostInput_OverlayButtonBit(u8 overlayButton)
@@ -645,7 +668,7 @@ b32 NativeGhostInput_SelectGhost(const char *ghostName, u16 trackID, u16 charact
     }
 
     snprintf(s_nativeGhostInputSelectedName, sizeof(s_nativeGhostInputSelectedName), "%s", ghostName);
-    gNativeGhostReplayFpsOverride = NativeGhostInput_HeaderUses60Fps(&header) ? 1 : 0;
+    gNativeGhostReplayFpsOverride = NativeGhostInput_FlagsRateIndex(header.flags);
     return true;
 }
 
@@ -678,6 +701,9 @@ void NativeGhostInput_StartRecording(void)
     {
         s_nativeGhostInputRecordingFlags |= NATIVE_GHOST_INPUT_FLAG_60FPS;
     }
+    if (CTR_FRAMES_PER_SECOND > 60)
+        s_nativeGhostInputRecordingFlags |= NATIVE_GHOST_INPUT_FLAG_HIGH_FPS |
+            (NativeFrameRate_Index(CTR_FRAMES_PER_SECOND) << NATIVE_GHOST_INPUT_RATE_SHIFT);
     s_nativeGhostInputStartTimerPhase = 0;
 }
 
@@ -882,7 +908,7 @@ void NativeGhostInput_ProcessFrameTiming(s32 *elapsedTimeMS)
             if (s_nativeGhostInputPlaybackTimerPhasePending)
             {
                 u32 timer = (u32)sdata->gGT->timer;
-                timer = (timer & ~((u32)NATIVE_GHOST_INPUT_TIMER_PHASE_MASK)) | s_nativeGhostInputPlaybackTimerPhase;
+                timer = (timer & ~NativeGhostInput_TimerPhaseMask(s_nativeGhostInputRecordingFlags)) | s_nativeGhostInputPlaybackTimerPhase;
                 sdata->gGT->timer = (s32)timer;
                 s_nativeGhostInputPlaybackTimerPhasePending = false;
             }
@@ -891,7 +917,10 @@ void NativeGhostInput_ProcessFrameTiming(s32 *elapsedTimeMS)
 #if CTR_NATIVE_60FPS
             if (CTR_NATIVE_60FPS_ACTIVE)
             {
-                s32 replayVBlanks = (*elapsedTimeMS + 15) / 16;
+                s32 frameMS = CTR_FRAME_STEP(ELAPSED_MS, sdata->gGT->timer);
+                s32 replayVBlanks = (*elapsedTimeMS + frameMS - 1) / frameMS;
+                if (CTR_FRAMES_PER_SECOND > 60)
+                    replayVBlanks = (*elapsedTimeMS * CTR_FRAMES_PER_SECOND + ELAPSED_MS * FPS / 2) / (ELAPSED_MS * FPS);
                 if (replayVBlanks < 1)
                 {
                     replayVBlanks = 1;
@@ -930,7 +959,7 @@ void NativeGhostInput_ProcessFrameTiming(s32 *elapsedTimeMS)
 
     if (s_nativeGhostInputFrameCount == 0)
     {
-        s_nativeGhostInputStartTimerPhase = (u32)sdata->gGT->timer & NATIVE_GHOST_INPUT_TIMER_PHASE_MASK;
+        s_nativeGhostInputStartTimerPhase = (u32)sdata->gGT->timer & NativeGhostInput_TimerPhaseMask(s_nativeGhostInputRecordingFlags);
     }
 
     s_nativeGhostInputPending.elapsedTimeMS = (u16)*elapsedTimeMS;
@@ -1007,7 +1036,7 @@ b32 NativeGhostInput_LoadSerializedGhost(const void *src, int size, u16 expected
     s_nativeGhostInputRecordingFlags = header.flags;
     NativeGhostInput_LoadHeaderMetadata(&header);
     s_nativeGhostInputExternalLoaded = true;
-    gNativeGhostReplayFpsOverride = NativeGhostInput_HeaderUses60Fps(&header) ? 1 : 0;
+    gNativeGhostReplayFpsOverride = NativeGhostInput_FlagsRateIndex(header.flags);
     return true;
 }
 
@@ -1099,8 +1128,8 @@ b32 NativeGhostInput_BeginPlayback(void)
 
         b32 use60Fps = (s_nativeGhostInputRecordingFlags & NATIVE_GHOST_INPUT_FLAG_TIMING_METADATA) &&
                        (s_nativeGhostInputRecordingFlags & NATIVE_GHOST_INPUT_FLAG_60FPS);
-        gNativeGhostReplayFpsOverride = use60Fps ? 1 : 0;
-        s_nativeGhostInputPlaybackTimerPhase = s_nativeGhostInputStartTimerPhase & NATIVE_GHOST_INPUT_TIMER_PHASE_MASK;
+        gNativeGhostReplayFpsOverride = NativeGhostInput_FlagsRateIndex(s_nativeGhostInputRecordingFlags);
+        s_nativeGhostInputPlaybackTimerPhase = s_nativeGhostInputStartTimerPhase & NativeGhostInput_TimerPhaseMask(s_nativeGhostInputRecordingFlags);
         s_nativeGhostInputPlaybackTimerPhasePending = use60Fps;
         s_nativeGhostInputPlaybackActive = true;
         return true;
@@ -1142,10 +1171,10 @@ b32 NativeGhostInput_BeginPlayback(void)
     s_nativeGhostInputRecordingFlags = header.flags;
     NativeGhostInput_LoadHeaderMetadata(&header);
     b32 use60Fps = NativeGhostInput_HeaderUses60Fps(&header);
-    gNativeGhostReplayFpsOverride = use60Fps ? 1 : 0;
+    gNativeGhostReplayFpsOverride = NativeGhostInput_FlagsRateIndex(s_nativeGhostInputRecordingFlags);
     if (use60Fps && ((header.flags & NATIVE_GHOST_INPUT_FLAG_TIMING_METADATA) != 0))
     {
-        s_nativeGhostInputPlaybackTimerPhase = s_nativeGhostInputStartTimerPhase & NATIVE_GHOST_INPUT_TIMER_PHASE_MASK;
+        s_nativeGhostInputPlaybackTimerPhase = s_nativeGhostInputStartTimerPhase & NativeGhostInput_TimerPhaseMask(s_nativeGhostInputRecordingFlags);
         s_nativeGhostInputPlaybackTimerPhasePending = true;
     }
     else
@@ -1155,4 +1184,3 @@ b32 NativeGhostInput_BeginPlayback(void)
     s_nativeGhostInputPlaybackActive = true;
     return true;
 }
-

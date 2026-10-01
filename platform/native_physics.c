@@ -40,6 +40,21 @@ struct NativePhysicsState
 };
 static struct NativePhysicsState s_physics;
 
+double NativePhysics_FrameScale(void)
+{
+	return 30.0 / CTR_FRAMES_PER_SECOND;
+}
+
+double NativePhysics_ElapsedMS(double elapsedMS)
+{
+	// The shared integer clock distributes milliseconds over successive frames.
+	// Continuous solvers keep the exact duration of an ordinary high-rate step;
+	// unusual elapsed times (pause, slow motion or replay) retain their input.
+	if (CTR_FRAMES_PER_SECOND > 60 && elapsedMS == CTR_FRAME_STEP(32, sdata->gGT->timer))
+		return 32.0 * NativePhysics_FrameScale();
+	return elapsedMS;
+}
+
 void NativePhysics_Reset(void)
 {
 	memset(&s_physics, 0, sizeof(s_physics));
@@ -231,7 +246,7 @@ void NativePhysics_ConvertSpeedToVec(struct Driver *d, Vec3 *output)
 NativePhysicsVec NativePhysics_Step(struct Driver *d, double elapsedMS, double multiplier)
 {
 	NativePhysicsVec v = NativePhysics_ReadVelocity(d);
-	double scale = elapsedMS / 32.0 * multiplier / 4096.0;
+	double scale = NativePhysics_ElapsedMS(elapsedMS) / 32.0 * multiplier / 4096.0;
 	return (NativePhysicsVec){v.x * scale, v.y * scale, v.z * scale};
 }
 

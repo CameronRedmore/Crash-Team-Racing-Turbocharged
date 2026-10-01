@@ -19,7 +19,13 @@ global_variable u64 s_rootCounterBase = 0;
 
 void NativeRCnt_EmitVBlank(void)
 {
-	s_rootCounterValue += CTR_NATIVE_RCNT1_TICKS_PER_VBLANK;
+	static u32 remainder;
+	static int previousRate;
+	int rate = CTR_NATIVE_60FPS_ACTIVE ? CTR_FRAMES_PER_SECOND : 60;
+	if (rate != previousRate) { remainder = 0; previousRate = rate; }
+	remainder += CTR_NATIVE_RCNT1_TICKS_PER_VBLANK * 60;
+	s_rootCounterValue += remainder / rate;
+	remainder %= rate;
 }
 
 int SetRCnt(int spec, unsigned short target, int mode)

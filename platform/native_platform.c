@@ -800,6 +800,18 @@ global_variable u64 s_vblankRemainder = 0;
 global_variable int s_nativeVBlankCount = 0;
 global_variable int s_vblankPacingNumerator = 1;
 global_variable int s_vblankPacingDenominator = 1;
+global_variable int s_vblankFrameRate = 60;
+
+internal void Native_UpdateVBlankFrameRate(void)
+{
+	int rate = CTR_NATIVE_60FPS_ACTIVE ? CTR_FRAMES_PER_SECOND : 60;
+	if (rate != s_vblankFrameRate)
+	{
+		s_vblankFrameRate = rate;
+		s_nextVBlankCounter = 0;
+		s_vblankRemainder = 0;
+	}
+}
 
 internal u64 Native_CounterFromMicroseconds(u64 freq, u64 microseconds)
 {
@@ -811,8 +823,8 @@ internal void Native_AdvanceVBlankTarget(void)
 	const u64 freq = SDL_GetPerformanceFrequency();
 	// Playback speed scales wall pacing only. VBlank callbacks and game simulation
 	// still advance one-for-one so deterministic ghost input is never skipped.
-	const u64 numer = freq * NATIVE_VBLANK_GPU_CYCLES * (u64)s_vblankPacingDenominator;
-	const u64 denom = NATIVE_GPU_CLOCK_HZ * (u64)s_vblankPacingNumerator;
+	const u64 numer = freq * NATIVE_VBLANK_GPU_CYCLES * (u64)s_vblankPacingDenominator * 60;
+	const u64 denom = NATIVE_GPU_CLOCK_HZ * (u64)s_vblankPacingNumerator * (u64)s_vblankFrameRate;
 
 	s_nextVBlankCounter += numer / denom;
 	s_vblankRemainder += numer % denom;
@@ -848,6 +860,7 @@ void Platform_SetVBlankPacingScale(int speedNumerator, int speedDenominator)
 
 internal void Native_EnsureVBlankTarget(void)
 {
+	Native_UpdateVBlankFrameRate();
 	const u64 now = SDL_GetPerformanceCounter();
 
 	if (s_nextVBlankCounter == 0)
@@ -965,8 +978,8 @@ internal int Native_CatchUpDueVBlanks(void)
 		{
 			const u64 freq = SDL_GetPerformanceFrequency();
 			const u64 step =
-			    (freq * NATIVE_VBLANK_GPU_CYCLES * (u64)s_vblankPacingDenominator) /
-			    (NATIVE_GPU_CLOCK_HZ * (u64)s_vblankPacingNumerator);
+			    (freq * NATIVE_VBLANK_GPU_CYCLES * (u64)s_vblankPacingDenominator * 60) /
+			    (NATIVE_GPU_CLOCK_HZ * (u64)s_vblankPacingNumerator * (u64)s_vblankFrameRate);
 			const u64 dueApprox = ((now - s_nextVBlankCounter) / step) + 1;
 
 			if (dueApprox > NATIVE_VSYNC_CATCHUP_MAX)

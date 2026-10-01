@@ -20,7 +20,7 @@ static double Smoothed_JumpVelY(s16 *normal, NativePhysicsVec *velocity)
 }
 void NativePhysics_Gravity(struct Driver *driver, Vec3 *output)
 {
-	int elapsedTimeMS = sdata->gGT->elapsedTimeMS;
+	double elapsedTimeMS = NativePhysics_ElapsedMS(sdata->gGT->elapsedTimeMS);
 
 	NativePhysicsVec velocityValue = NativePhysics_ReadVelocity(driver);
 	NativePhysicsVec *velocity = &velocityValue;
@@ -266,7 +266,7 @@ void NativePhysics_Gravity(struct Driver *driver, Vec3 *output)
 				GAMEPAD_ShockFreq(driver, VEH_PHYS_FORCE_TERRAIN_RUMBLE_FRAMES, 0);
 			}
 
-			terrainTimer = (terrainTimer + elapsedTimeMS);
+			terrainTimer = (terrainTimer + sdata->gGT->elapsedTimeMS);
 			if (terrainTimer > 0)
 			{
 				terrainTimer = 0;
@@ -275,7 +275,7 @@ void NativePhysics_Gravity(struct Driver *driver, Vec3 *output)
 		}
 		else if (terrainTimer > 0)
 		{
-			terrainTimer = (terrainTimer - elapsedTimeMS);
+			terrainTimer = (terrainTimer - sdata->gGT->elapsedTimeMS);
 			if (terrainTimer < 0)
 			{
 				terrainTimer = 0;
@@ -498,7 +498,7 @@ void NativePhysics_JumpAndFriction(struct Driver *d)
 
 PROCESS_ACCEL:
 {
-	double forwardImpulse = Smoothed_Down((acceleration * sdata->gGT->elapsedTimeMS), 5);
+	double forwardImpulse = Smoothed_Down((acceleration * NativePhysics_ElapsedMS(sdata->gGT->elapsedTimeMS)), 5);
 	NativePhysicsVec rotated = NativePhysics_RotateDriver(d, (NativePhysicsVec){0, 0, forwardImpulse}, 0);
 
 	if (d->baseSpeed < 0)

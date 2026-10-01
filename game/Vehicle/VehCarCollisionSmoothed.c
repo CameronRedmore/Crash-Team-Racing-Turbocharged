@@ -80,8 +80,9 @@ void NativeCollision_Cars(struct Thread *thread, struct DriverCollisionSearch *s
 	NativePhysicsVec center={(va.x*wa+vb.x*wb)/total,(va.y*wa+vb.y*wb)/total,(va.z*wa+vb.z*wb)/total};
 	sdata->vehicleCollisionImpactStrength=0;
 	va=NativeCar_Bounce(va,center,normal,0); vb=NativeCar_Bounce(vb,center,normal,1);
-	va.x+=normal.x*strength*16; va.y+=normal.y*strength*16; va.z+=normal.z*strength*16;
-	vb.x-=normal.x*strength*16; vb.y-=normal.y*strength*16; vb.z-=normal.z*strength*16;
+	double separationImpulse=strength*16*NativePhysics_FrameScale();
+	va.x+=normal.x*separationImpulse; va.y+=normal.y*separationImpulse; va.z+=normal.z*separationImpulse;
+	vb.x-=normal.x*separationImpulse; vb.y-=normal.y*separationImpulse; vb.z-=normal.z*separationImpulse;
 	NativeCar_Apply(self,va);NativeCar_Apply(other,vb);*output=self->velocity;
 	if (self->actionsFlagSet & ACTION_BOT)
 	{

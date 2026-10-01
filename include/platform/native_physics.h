@@ -28,6 +28,8 @@ void NativePhysics_WriteScalar(struct Driver *d, size_t offset, size_t size, dou
 #define NATIVE_PHYSICS_READ(d, field) NativePhysics_ReadScalar(d, offsetof(struct Driver, field), sizeof((d)->field))
 #define NATIVE_PHYSICS_WRITE(d, field, value) NativePhysics_WriteScalar(d, offsetof(struct Driver, field), sizeof((d)->field), value)
 double NativePhysics_WrapAngle(double value);
+double NativePhysics_FrameScale(void);
+double NativePhysics_ElapsedMS(double elapsedMS);
 void NativePhysics_Steer(struct Driver *d);
 void NativePhysics_DriftSteer(struct Driver *d);
 void NativePhysics_LerpRotation(struct Driver *d, double target);

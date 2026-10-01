@@ -49,7 +49,7 @@ void NativePhysics_Steer(struct Driver *driver)
 
 	NativePhysics_LerpRotation(driver, 0);
 
-	elapsedTimeMS = sdata->gGT->elapsedTimeMS;
+	elapsedTimeMS = NativePhysics_ElapsedMS(sdata->gGT->elapsedTimeMS);
 	actionsFlagSet = driver->actionsFlagSet;
 	forwardDir = driver->forwardDir;
 	simpTurnState = driver->simpTurnState;
@@ -95,7 +95,7 @@ void NativePhysics_Steer(struct Driver *driver)
 	{
 		double rate = ldexp(((driver->const_TurnInputDelay + ((s8)driver->turnConst * VEH_PHYS_ANGULAR_TURN_RESPONSE_COAST_SCALE)) * terrain->turnResponseScale), -(8));
 
-		rotCurrW_interp = NativeSteering_Approach(rotCurrW_original, (rate * (CTR_NATIVE_60FPS_ACTIVE ? 0.5 : 1.0)), 0);
+		rotCurrW_interp = NativeSteering_Approach(rotCurrW_original, (rate * NativePhysics_FrameScale()), 0);
 
 		forwardDir = rotCurrW_interp;
 	}
@@ -110,7 +110,7 @@ void NativePhysics_Steer(struct Driver *driver)
 		if (rotCurrW_original < rotCurrW_interp)
 		{
 			double rate = ldexp(((driver->const_TurnInputDelay + ((s8)driver->turnConst * VEH_PHYS_ANGULAR_TURN_RESPONSE_ACCEL_SCALE)) * terrain->turnResponseScale), -(8));
-			rotCurrW_original = (rotCurrW_original + rate);
+			rotCurrW_original = (rotCurrW_original + rate * NativePhysics_FrameScale());
 
 			interpLessThanOriginal = rotCurrW_interp < rotCurrW_original;
 		LAB_8005fee4:
@@ -122,7 +122,7 @@ void NativePhysics_Steer(struct Driver *driver)
 		else if (rotCurrW_interp < rotCurrW_original)
 		{
 			double rate = ldexp(((driver->const_TurnInputDelay + ((s8)driver->turnConst * VEH_PHYS_ANGULAR_TURN_RESPONSE_DECEL_SCALE)) * terrain->turnResponseScale), -(8));
-			rotCurrW_original = (rotCurrW_original - rate);
+			rotCurrW_original = (rotCurrW_original - rate * NativePhysics_FrameScale());
 
 			interpLessThanOriginal = rotCurrW_original < rotCurrW_interp;
 			goto LAB_8005fee4;
@@ -225,7 +225,7 @@ void NativePhysics_Steer(struct Driver *driver)
 	// spins camera from side of driver, to back of driver,
 	// when the drifting ends. "LerpToForwards"
 #if CTR_NATIVE_60FPS
-	if (!CTR_NATIVE_60FPS_ACTIVE || ((sdata->gGT->timer & 1) != 0))
+	if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
 #endif
 	NATIVE_PHYSICS_WRITE(driver, turnAngleLerpVel, NativeSteering_LerpForwards(driver, driftAngleCurr_og, forwardDir, classSpeed_halved));
 
@@ -241,7 +241,7 @@ void NativePhysics_Steer(struct Driver *driver)
 	turnResistMinBitshift = rotCurrW_original;
 	if ((VEH_PHYS_ANGULAR_STEER_ACCEL_COMPARE_SPEED < speedApprox) && ((actionsFlagSet & ACTION_TOUCH_GROUND) != 0))
 	{
-		turnResistMaxBitshift = NativeSteering_Accel((driver->numFramesSpentSteering * (CTR_NATIVE_60FPS_ACTIVE ? 0.5 : 1.0)), driver->const_SteerAccel_Stage2_FirstFrame,
+		turnResistMaxBitshift = NativeSteering_Accel((driver->numFramesSpentSteering * NativePhysics_FrameScale()), driver->const_SteerAccel_Stage2_FirstFrame,
 		                                           driver->const_SteerAccel_Stage2_FrameLength, driver->const_SteerAccel_Stage4_FirstFrame,
 		                                           driver->const_SteerAccel_Stage1_MinSteer, driver->const_SteerAccel_Stage1_MaxSteer);
 		if (rotCurrW_original < 0)
@@ -345,7 +345,7 @@ LAB_80060284:
 		{
 			rotCurrW_interp = (-rotCurrW_original);
 		}
-		rotCurrW_interp = NativeSteering_Approach(turnResistMax, (rotCurrW_interp * (CTR_NATIVE_60FPS_ACTIVE ? 0.5 : 1.0)), 0);
+		rotCurrW_interp = NativeSteering_Approach(turnResistMax, (rotCurrW_interp * NativePhysics_FrameScale()), 0);
 		forwardDir = rotCurrW_interp;
 	}
 	else
@@ -487,7 +487,7 @@ void NativePhysics_DriftSteer(struct Driver *driver)
 			axisAngleStep = 1;
 		}
 
-		double axisAngleStepLimit = ldexp(ldexp(gGT->elapsedTimeMS, VEH_PHYS_PROC_DRIFT_AXIS_STEP_MS_SHIFT), -(VEH_PHYS_PROC_DRIFT_MS_SCALE_SHIFT));
+		double axisAngleStepLimit = ldexp(ldexp(NativePhysics_ElapsedMS(gGT->elapsedTimeMS), VEH_PHYS_PROC_DRIFT_AXIS_STEP_MS_SHIFT), -(VEH_PHYS_PROC_DRIFT_MS_SCALE_SHIFT));
 
 		if (axisAngleStep > axisAngleStepLimit)
 		{
@@ -600,12 +600,12 @@ void NativePhysics_DriftSteer(struct Driver *driver)
 
 	if (clampSpinRate)
 	{
-		currentSpinRate = (currentSpinRate - ldexp((driver->const_DriftSpinRateDecel * gGT->elapsedTimeMS), -(VEH_PHYS_PROC_DRIFT_MS_SCALE_SHIFT)));
+		currentSpinRate = (currentSpinRate - ldexp((driver->const_DriftSpinRateDecel * NativePhysics_ElapsedMS(gGT->elapsedTimeMS)), -(VEH_PHYS_PROC_DRIFT_MS_SCALE_SHIFT)));
 		clampSpinRate = currentSpinRate < desiredSpinRate;
 	}
 	else
 	{
-		currentSpinRate = (currentSpinRate + ldexp((driver->const_DriftSpinRateAccel * gGT->elapsedTimeMS), -(VEH_PHYS_PROC_DRIFT_MS_SCALE_SHIFT)));
+		currentSpinRate = (currentSpinRate + ldexp((driver->const_DriftSpinRateAccel * NativePhysics_ElapsedMS(gGT->elapsedTimeMS)), -(VEH_PHYS_PROC_DRIFT_MS_SCALE_SHIFT)));
 		clampSpinRate = desiredSpinRate < currentSpinRate;
 	}
 
@@ -619,7 +619,7 @@ void NativePhysics_DriftSteer(struct Driver *driver)
 	if ((desiredSpinRate == 0) || (driftDirection == 0))
 	{
 #if CTR_NATIVE_60FPS
-		if (!CTR_NATIVE_60FPS_ACTIVE || ((gGT->timer & 1) != 0))
+		if (CTR_RETAIL_FRAME_TICK(gGT->timer))
 #endif
 		{
 			driver->KartStates.Drifting.numFramesDrifting = NativeSteering_Approach(driver->KartStates.Drifting.numFramesDrifting, 1, 0);
@@ -633,7 +633,7 @@ void NativePhysics_DriftSteer(struct Driver *driver)
 		if (driftDirection < 1)
 		{
 #if CTR_NATIVE_60FPS
-			if (!CTR_NATIVE_60FPS_ACTIVE || ((gGT->timer & 1) != 0))
+			if (CTR_RETAIL_FRAME_TICK(gGT->timer))
 #endif
 				driver->KartStates.Drifting.numFramesDrifting = (driver->KartStates.Drifting.numFramesDrifting - 1);
 
@@ -647,7 +647,7 @@ void NativePhysics_DriftSteer(struct Driver *driver)
 		else
 		{
 #if CTR_NATIVE_60FPS
-			if (!CTR_NATIVE_60FPS_ACTIVE || ((gGT->timer & 1) != 0))
+			if (CTR_RETAIL_FRAME_TICK(gGT->timer))
 #endif
 				driver->KartStates.Drifting.numFramesDrifting = (driver->KartStates.Drifting.numFramesDrifting + 1);
 
@@ -735,7 +735,9 @@ void NativePhysics_DriftSteer(struct Driver *driver)
 #if CTR_NATIVE_60FPS
 	if (CTR_NATIVE_60FPS_ACTIVE)
 	{
-		if ((gGT->timer & 1) != 0)
+		if (CTR_FRAMES_PER_SECOND > 60)
+			turnAngleStep = turnAngleDelta * (1.0 - pow(1.0 - ldexp(1.0, -VEH_PHYS_PROC_DRIFT_ANGLE_LERP_SHIFT), NativePhysics_FrameScale()));
+		else if ((gGT->timer & 1) != 0)
 			turnAngleStep = ldexp(turnAngleDelta, -(VEH_PHYS_PROC_DRIFT_ANGLE_LERP_SHIFT + 1));
 		else
 			turnAngleStep = ldexp((turnAngleDelta * 16) / 15, -(VEH_PHYS_PROC_DRIFT_ANGLE_LERP_SHIFT));
@@ -787,7 +789,7 @@ void NativePhysics_DriftSteer(struct Driver *driver)
 			driver->turnWobbleTimer = FPS_DOUBLE(VEH_PHYS_PROC_TURN_WOBBLE_START_TIMER);
 
 			// distortion, rate of change
-			NATIVE_PHYSICS_WRITE(driver, turnWobbleVelocity, (VEH_PHYS_PROC_TURN_WOBBLE_START_VELOCITY * (CTR_NATIVE_60FPS_ACTIVE ? 0.5 : 1.0)));
+			NATIVE_PHYSICS_WRITE(driver, turnWobbleVelocity, (VEH_PHYS_PROC_TURN_WOBBLE_START_VELOCITY * NativePhysics_FrameScale()));
 
 			if (driftTurnInput < 0)
 			{
@@ -823,7 +825,7 @@ void NativePhysics_DriftSteer(struct Driver *driver)
 	if (driver->turnWobbleTimer == 0)
 	{
 		// nearing spinout sfx
-		NATIVE_PHYSICS_WRITE(driver, turnWobbleVelocity, (VEH_PHYS_PROC_TURN_WOBBLE_RETURN_VELOCITY * (CTR_NATIVE_60FPS_ACTIVE ? 0.5 : 1.0)));
+		NATIVE_PHYSICS_WRITE(driver, turnWobbleVelocity, (VEH_PHYS_PROC_TURN_WOBBLE_RETURN_VELOCITY * NativePhysics_FrameScale()));
 
 		if (0 < NATIVE_PHYSICS_READ(driver, turnWobbleAngle))
 		{
@@ -854,7 +856,7 @@ void NativePhysics_DriftSteer(struct Driver *driver)
 
 	NATIVE_PHYSICS_WRITE(driver, ampTurnState, (signedSpinRate + driftTurnInput));
 
-	NATIVE_PHYSICS_WRITE(driver, angle, NativePhysics_WrapAngle((NATIVE_PHYSICS_READ(driver, angle) + ldexp((NATIVE_PHYSICS_READ(driver, ampTurnState) * gGT->elapsedTimeMS), -(VEH_PHYS_PROC_ANGLE_INTEGRATION_SHIFT)))));
+	NATIVE_PHYSICS_WRITE(driver, angle, NativePhysics_WrapAngle((NATIVE_PHYSICS_READ(driver, angle) + ldexp((NATIVE_PHYSICS_READ(driver, ampTurnState) * NativePhysics_ElapsedMS(gGT->elapsedTimeMS)), -(VEH_PHYS_PROC_ANGLE_INTEGRATION_SHIFT)))));
 
 	if (driver->KartStates.Drifting.driftBoostTimeMS != 0)
 	{
@@ -866,7 +868,7 @@ void NativePhysics_DriftSteer(struct Driver *driver)
 			driver->KartStates.Drifting.driftBoostTimeMS = 0;
 		}
 
-		double axisKick = ldexp(((u8)driver->const_DriftBoostAxisKickRate * gGT->elapsedTimeMS), -(VEH_PHYS_PROC_DRIFT_MS_SCALE_SHIFT));
+		double axisKick = ldexp(((u8)driver->const_DriftBoostAxisKickRate * NativePhysics_ElapsedMS(gGT->elapsedTimeMS)), -(VEH_PHYS_PROC_DRIFT_MS_SCALE_SHIFT));
 
 		if (NATIVE_PHYSICS_READ(driver, turnAngleCurr) < 0)
 		{
@@ -902,7 +904,9 @@ void NativePhysics_LerpRotation(struct Driver *driver, double targetRotW)
 #if CTR_NATIVE_60FPS
 	if (CTR_NATIVE_60FPS_ACTIVE)
 	{
-		if ((sdata->gGT->timer & 1) != 0)
+		if (CTR_FRAMES_PER_SECOND > 60)
+			lerpStep = remainingRot * (1.0 - pow(0.875, NativePhysics_FrameScale()));
+		else if ((sdata->gGT->timer & 1) != 0)
 			lerpStep = ldexp(remainingRot, -(4));
 		else
 			lerpStep = ldexp((remainingRot * 16) / 15, -(3));
@@ -927,9 +931,9 @@ void NativePhysics_LerpRotation(struct Driver *driver, double targetRotW)
 	}
 
 	// Interpolate rotation by speed
-	NATIVE_PHYSICS_WRITE(driver, rotPrev.w, NativeSteering_Approach(NATIVE_PHYSICS_READ(driver, rotPrev.w), 8, maxLerpStep));
+	NATIVE_PHYSICS_WRITE(driver, rotPrev.w, NativeSteering_Approach(NATIVE_PHYSICS_READ(driver, rotPrev.w), 8 * NativePhysics_FrameScale(), maxLerpStep));
 
 	// Interpolate rotation by speed
-	NATIVE_PHYSICS_WRITE(driver, rotCurr.w, NativeSteering_Approach(NATIVE_PHYSICS_READ(driver, rotCurr.w), ldexp((NATIVE_PHYSICS_READ(driver, rotPrev.w) * sdata->gGT->elapsedTimeMS), -(5)), targetRotW));
+	NATIVE_PHYSICS_WRITE(driver, rotCurr.w, NativeSteering_Approach(NATIVE_PHYSICS_READ(driver, rotCurr.w), ldexp((NATIVE_PHYSICS_READ(driver, rotPrev.w) * NativePhysics_ElapsedMS(sdata->gGT->elapsedTimeMS)), -(5)), targetRotW));
 }
 #endif

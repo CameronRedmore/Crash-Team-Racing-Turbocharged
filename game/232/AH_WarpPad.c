@@ -738,7 +738,7 @@ WarpPad_TrophyAnimateOnly:
 
 WarpPad_AnimateOpen:
 
-	if ((instArr[WPIS_OPEN_BEAM] != 0) && ((!CTR_NATIVE_60FPS_ACTIVE && ((gGT->timer & 1) != 0)) || (CTR_NATIVE_60FPS_ACTIVE && ((gGT->timer & 3) == 3))))
+	if ((instArr[WPIS_OPEN_BEAM] != 0) && CTR_RETAIL_FRAME_TICK(gGT->timer) && ((FPS_HALF(gGT->timer + 1) & 1) == 0))
 	{
 		warppadObj->spinRot_Beam.x = 0;
 		warppadObj->spinRot_Beam.z = 0;

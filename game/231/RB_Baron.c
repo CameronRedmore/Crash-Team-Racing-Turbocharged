@@ -42,7 +42,7 @@ void RB_Baron_ThTick(struct Thread *t)
 	level = gGT->level1;
 	modelID = baronInst->model->id;
 
-	if ((modelID == DYNAMIC_DRUM) && CTR_NATIVE_60FPS_ACTIVE && ((gGT->timer & 1) == 0))
+	if ((modelID == DYNAMIC_DRUM) && !CTR_RETAIL_FRAME_TICK(gGT->timer))
 	{
 		return;
 	}

@@ -271,7 +271,7 @@ u32 main(void)
 
 				// elapsed milliseconds per frame, locked 32 here
 				// impacts speed of flag wave during "loading...", but does not impact speed of flying text
-				gGT->elapsedTimeMS = CTR_NATIVE_FRAME_ELAPSED_MS;
+				gGT->elapsedTimeMS = CTR_FRAME_STEP(ELAPSED_MS, gGT->timer);
 
 				// if loading VLC
 				if (iVar8 == LOAD_VLC)

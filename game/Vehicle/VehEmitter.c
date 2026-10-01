@@ -174,6 +174,11 @@ struct Particle *VehEmitter_Exhaust(struct Driver *d, VECTOR *exhaustPos, VECTOR
 #if CTR_NATIVE_60FPS
 	int numPlyr60 = gGT->numPlyrCurrGame;
 	int timer60 = gGT->timer;
+	if (CTR_FRAMES_PER_SECOND > 60)
+	{
+		if (CTR_FRAME_STEP(2, timer60 - 1) == 0) return NULL;
+		timer60 = (int)(((s64)(u32)timer60 * 60) / CTR_FRAMES_PER_SECOND);
+	}
 	if (CTR_NATIVE_60FPS_ACTIVE && d->driverID < numPlyr60)
 	{
 		if ((numPlyr60 == 1 && (timer60 & 1) != 0) ||
@@ -952,7 +957,7 @@ static int VehEmitter_ShouldSkipExhaust(struct Thread *thread, struct Driver *d)
 	}
 
 	if ((d->failedBoostExhaustTimer != 0) &&
-	    (!CTR_NATIVE_60FPS_ACTIVE || ((gGT->timer & 1) != 0)))
+	    (CTR_RETAIL_FRAME_TICK(gGT->timer)))
 	{
 		d->failedBoostExhaustTimer--;
 	}

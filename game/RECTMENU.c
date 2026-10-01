@@ -37,10 +37,14 @@ static char *RECTMENU_GetString(s16 stringIndex)
 		{"ESPEJO: NO", "ESPEJO: SI"},
 		{"SPIEGEL: UIT", "SPIEGEL: AAN"},
 	};
-	static const char *frameRate[2] =
+	static const char *frameRate[NATIVE_FRAME_RATE_COUNT] =
 	{
 		"FPS: 30",
 		"FPS: 60",
+		"FPS: 90",
+		"FPS: 120",
+		"FPS: 144",
+		"FPS: 240",
 	};
 	static const char *defaultCamera[6][2] =
 	{
@@ -337,7 +341,7 @@ static char *RECTMENU_GetString(s16 stringIndex)
 	case NATIVE_MENU_STRING_MIRROR_MODE:
 		return (char *)mirrorMode[languageRow][gNativeMirrorModeEnabled != 0];
 	case NATIVE_MENU_STRING_FRAME_RATE:
-		return (char *)frameRate[gNative60FpsEnabled != 0];
+		return (char *)frameRate[gNative60FpsEnabled];
 	case NATIVE_MENU_STRING_AUDIO_FX:
 	case NATIVE_MENU_STRING_AUDIO_MUSIC:
 	case NATIVE_MENU_STRING_AUDIO_VOICE:

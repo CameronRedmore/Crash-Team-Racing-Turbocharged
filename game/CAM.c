@@ -972,13 +972,12 @@ static s32 CAM_RetailFrameStep(s32 step)
 		return step;
 	}
 
-	const s32 firstHalf = step / 2;
-	return (sdata->gGT->timer & 1) ? step - firstHalf : firstHalf;
+	return CTR_FRAME_STEP(step, sdata->gGT->timer);
 }
 
 static b32 CAM_RetailFrameTick(void)
 {
-	return !CTR_NATIVE_60FPS_ACTIVE || ((sdata->gGT->timer & 1) != 0);
+	return CTR_RETAIL_FRAME_TICK(sdata->gGT->timer);
 }
 
 static struct CheckpointNode *CAM_FollowDriver_TrackPath_GetNode(struct CameraDC *cDC, struct CheckpointNode *node, s32 speed)
@@ -1531,13 +1530,13 @@ void CAM_FollowDriver_Normal(struct CameraDC *cDC, struct Driver *d, SVec3 *push
 		// if frame countdown is not finished
 		if (cDC->BlastedLerp.framesRemaining != 0)
 		{
-			cam->pos.x += (cDC->BlastedLerp.desiredPos.x * cDC->BlastedLerp.framesRemaining) >> FPS_RIGHTSHIFT(3);
-			cam->pos.y += (cDC->BlastedLerp.desiredPos.y * cDC->BlastedLerp.framesRemaining) >> FPS_RIGHTSHIFT(3);
-			cam->pos.z += (cDC->BlastedLerp.desiredPos.z * cDC->BlastedLerp.framesRemaining) >> FPS_RIGHTSHIFT(3);
+			cam->pos.x += FPS_HALF(cDC->BlastedLerp.desiredPos.x * cDC->BlastedLerp.framesRemaining) >> 3;
+			cam->pos.y += FPS_HALF(cDC->BlastedLerp.desiredPos.y * cDC->BlastedLerp.framesRemaining) >> 3;
+			cam->pos.z += FPS_HALF(cDC->BlastedLerp.desiredPos.z * cDC->BlastedLerp.framesRemaining) >> 3;
 
-			cam->delta.x += (cDC->BlastedLerp.desiredRot.x * cDC->BlastedLerp.framesRemaining) >> FPS_RIGHTSHIFT(3);
-			cam->delta.y += (cDC->BlastedLerp.desiredRot.y * cDC->BlastedLerp.framesRemaining) >> FPS_RIGHTSHIFT(3);
-			cam->delta.z += (cDC->BlastedLerp.desiredRot.z * cDC->BlastedLerp.framesRemaining) >> FPS_RIGHTSHIFT(3);
+			cam->delta.x += FPS_HALF(cDC->BlastedLerp.desiredRot.x * cDC->BlastedLerp.framesRemaining) >> 3;
+			cam->delta.y += FPS_HALF(cDC->BlastedLerp.desiredRot.y * cDC->BlastedLerp.framesRemaining) >> 3;
+			cam->delta.z += FPS_HALF(cDC->BlastedLerp.desiredRot.z * cDC->BlastedLerp.framesRemaining) >> 3;
 
 			// decrease frame countdown
 			cDC->BlastedLerp.framesRemaining--;

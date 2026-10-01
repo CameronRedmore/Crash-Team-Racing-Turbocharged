@@ -428,7 +428,7 @@ void VehStuckProc_MaskGrab_Animate(struct Thread *t, struct Driver *d)
 
 		// logic specific to maskgrab
 		frame = maskGrabAnimFrame;
-		if (!CTR_NATIVE_60FPS_ACTIVE || ((gGT->timer & 1) != 0))
+		if (CTR_RETAIL_FRAME_TICK(gGT->timer))
 		{
 			frame++;
 		}
@@ -1770,7 +1770,7 @@ void VehStuckProc_Warp_AddDustPuff2(struct Driver *d, struct DriverWarpState *wa
 void VehStuckProc_Warp_PhysAngular(struct Thread *th, struct Driver *d)
 {
 	(void)th;
-	if (CTR_NATIVE_60FPS_ACTIVE && ((sdata->gGT->timer & 1) == 0))
+	if (!CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
 	{
 		d->actionsFlagSet |= ACTION_WARP;
 		return;

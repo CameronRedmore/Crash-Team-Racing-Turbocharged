@@ -11,6 +11,21 @@
 #define NATIVE_AI_READ(d, field) ((double)(d)->field)
 #define NATIVE_AI_WRITE(d, field, value) ((d)->field = (s32)(value))
 #endif
+static inline double NativeAI_FrameStep(double value, unsigned int frame)
+{
+#if defined(CTR_NATIVE) && !defined(__vita__)
+	if (CTR_NATIVE_SMOOTHED_AI_ACTIVE) return value * NativePhysics_FrameScale();
+#endif
+	return CTR_FRAMES_PER_SECOND > 60 ? CTR_FRAME_STEP((s32)value, frame) : value;
+}
+static inline double NativeAI_HalfDecay(double value, unsigned int frame)
+{
+#if defined(CTR_NATIVE) && !defined(__vita__)
+	if (CTR_NATIVE_SMOOTHED_AI_ACTIVE) return value * pow(0.5, NativePhysics_FrameScale());
+#endif
+	if (CTR_FRAMES_PER_SECOND > 60 && !CTR_RETAIL_FRAME_TICK(frame)) return value;
+	return CTR_MipsSra((s32)value, 1);
+}
 static inline double NativeAI_Add(double a, double b) { return CTR_NATIVE_SMOOTHED_AI_ACTIVE ? a + b : CTR_MipsAddLo((s32)a, (s32)b); }
 static inline double NativeAI_Sub(double a, double b) { return CTR_NATIVE_SMOOTHED_AI_ACTIVE ? a - b : CTR_MipsSubLo((s32)a, (s32)b); }
 static inline double NativeAI_Mul(double a, double b) { return CTR_NATIVE_SMOOTHED_AI_ACTIVE ? a * b : CTR_MipsMulLo((s32)a, (s32)b); }

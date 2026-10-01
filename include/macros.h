@@ -55,16 +55,19 @@ typedef double f64;
 #endif
 
 #if defined(CTR_NATIVE)
+#include <native_framerate.h>
 #define CTR_NATIVE_60FPS 1
 extern int gNative60FpsEnabled;
 extern int gNativeForce30Fps;
 extern int gNativeGhostReplayFpsOverride;
 #define CTR_NATIVE_60FPS_SELECTED   ((gNativeGhostReplayFpsOverride >= 0) ? gNativeGhostReplayFpsOverride : gNative60FpsEnabled)
 #define CTR_NATIVE_60FPS_ACTIVE     ((CTR_NATIVE_60FPS_SELECTED != 0) && (gNativeForce30Fps == 0))
-#define CTR_FRAMES_PER_SECOND       (CTR_NATIVE_60FPS_ACTIVE ? 60 : FPS)
-#define CTR_NATIVE_FRAME_ELAPSED_MS (CTR_NATIVE_60FPS_ACTIVE ? 16 : ELAPSED_MS)
-#define FPS_DOUBLE(x)               (CTR_NATIVE_60FPS_ACTIVE ? ((x) * 2) : (x))
-#define FPS_HALF(x)                 (CTR_NATIVE_60FPS_ACTIVE ? ((x) / 2) : (x))
+#define CTR_FRAMES_PER_SECOND       (CTR_NATIVE_60FPS_ACTIVE ? NativeFrameRate_FromIndex(CTR_NATIVE_60FPS_SELECTED) : FPS)
+#define CTR_NATIVE_FRAME_ELAPSED_MS FPS_HALF(ELAPSED_MS)
+#define FPS_DOUBLE(x)               (CTR_NATIVE_60FPS_ACTIVE ? (s32)(((s64)(x) * CTR_FRAMES_PER_SECOND) / FPS) : (x))
+#define FPS_HALF(x)                 (CTR_NATIVE_60FPS_ACTIVE ? (s32)(((s64)(x) * FPS) / CTR_FRAMES_PER_SECOND) : (x))
+#define CTR_FRAME_STEP(x, frame)    NativeFrameRate_Step((x), (u32)(frame), CTR_FRAMES_PER_SECOND)
+#define CTR_RETAIL_FRAME_TICK(frame) NativeFrameRate_Tick((u32)(frame), CTR_FRAMES_PER_SECOND)
 #define FPS_LEFTSHIFT(x)            (CTR_NATIVE_60FPS_ACTIVE ? ((x) - 1) : (x))
 #define FPS_RIGHTSHIFT(x)           (CTR_NATIVE_60FPS_ACTIVE ? ((x) + 1) : (x))
 #else
@@ -76,6 +79,8 @@ extern int gNativeGhostReplayFpsOverride;
 #define FPS_HALF(x)                 (x)
 #define FPS_LEFTSHIFT(x)            (x)
 #define FPS_RIGHTSHIFT(x)           (x)
+#define CTR_FRAME_STEP(x, frame)    (x)
+#define CTR_RETAIL_FRAME_TICK(frame) 1
 #endif
 
 #if defined(CTR_NATIVE) && !defined(__vita__)

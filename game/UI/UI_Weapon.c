@@ -169,7 +169,7 @@ void UI_Weapon_DrawSelf(s16 posX, s16 posY, s16 scale, struct Driver *d)
 #if CTR_NATIVE_60FPS
 			if (CTR_NATIVE_60FPS_ACTIVE)
 			{
-				if ((gGT->timer & 1) != 0)
+				if (CTR_RETAIL_FRAME_TICK(gGT->timer))
 				{
 					d->funcPtrs_compilerpadding = (s16)itemID;
 				}

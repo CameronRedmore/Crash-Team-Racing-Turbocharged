@@ -978,6 +978,10 @@ void BOTS_ThTick_Drive(struct Thread *botThread)
 	}
 
 	int elapsedMilliseconds = gGT->elapsedTimeMS; // local_34
+	double physicsMilliseconds = elapsedMilliseconds;
+#if defined(CTR_NATIVE) && !defined(__vita__)
+	if (CTR_NATIVE_SMOOTHED_AI_ACTIVE) physicsMilliseconds = NativePhysics_ElapsedMS(elapsedMilliseconds);
+#endif
 
 	botDriver->reserves = (s16)CTR_MipsSubLo((u16)botDriver->reserves, elapsedMilliseconds);
 	if (botDriver->reserves < 0)
@@ -1603,7 +1607,7 @@ UpdateTireColorTimer:
 			struct Terrain *botTerrain = botDriver->terrainMeta1; // iVar15
 
 			NATIVE_AI_WRITE(botDriver, botData.aiPhysics.speedLinear, NativeAI_Sub(NATIVE_AI_READ(botDriver, botData.aiPhysics.speedLinear),
-			                  NativeAI_Down(NativeAI_Mul(botDriver->const_PedalFriction_Forward, botTerrain->botFrictionScale), 8))); // iVar4
+			                  NativeAI_FrameStep(NativeAI_Down(NativeAI_Mul(botDriver->const_PedalFriction_Forward, botTerrain->botFrictionScale), 8), gGT->timer))); // iVar4
 
 			if (NATIVE_AI_READ(botDriver, botData.aiPhysics.speedLinear) < 0)
 			{
@@ -1642,12 +1646,12 @@ UpdateTireColorTimer:
 						                          8);
 					}
 
-					NATIVE_AI_WRITE(botDriver, botData.aiPhysics.speedLinear, NativeAI_Add(NATIVE_AI_READ(botDriver, botData.aiPhysics.speedLinear), botVelocity));
+					NATIVE_AI_WRITE(botDriver, botData.aiPhysics.speedLinear, NativeAI_Add(NATIVE_AI_READ(botDriver, botData.aiPhysics.speedLinear), NativeAI_FrameStep(botVelocity, gGT->timer)));
 				}
 			}
 			else
 			{
-				botVelocity = NativeAI_Down(NATIVE_AI_READ(botDriver, botData.aiPhysics.speedLinear), 1);
+				botVelocity = NativeAI_HalfDecay(NATIVE_AI_READ(botDriver, botData.aiPhysics.speedLinear), gGT->timer);
 
 				if (NATIVE_AI_READ(botDriver, botData.aiPhysics.speedLinear) < velocityAccountingForTerrain)
 				{
@@ -1691,7 +1695,7 @@ UpdateTireColorTimer:
 				{
 					botDriver->botData.aiPhysics.turboMeter = 0;
 
-					NATIVE_AI_WRITE(botDriver, botData.aiPhysics.speedLinear, NativeAI_Sub(NATIVE_AI_READ(botDriver, botData.aiPhysics.speedLinear), NativeAI_Add(100, botDriver->const_Accel_ClassStat)));
+					NATIVE_AI_WRITE(botDriver, botData.aiPhysics.speedLinear, NativeAI_Sub(NATIVE_AI_READ(botDriver, botData.aiPhysics.speedLinear), NativeAI_FrameStep(NativeAI_Add(100, botDriver->const_Accel_ClassStat), gGT->timer)));
 				}
 			}
 
@@ -1705,7 +1709,7 @@ UpdateTireColorTimer:
 					double sinOfAngle = NativeAI_Sin(NativeAI_Up(var, 4));
 
 					NATIVE_AI_WRITE(botDriver, botData.aiPhysics.speedLinear, NativeAI_Sub(NATIVE_AI_READ(botDriver, botData.aiPhysics.speedLinear),
-					                  NativeAI_Down(NativeAI_Mul(botDriver->const_Gravity, sinOfAngle), 0xc))); // force on a slope due to gravity
+					                  NativeAI_FrameStep(NativeAI_Down(NativeAI_Mul(botDriver->const_Gravity, sinOfAngle), 0xc), gGT->timer))); // force on a slope due to gravity
 				}
 
 				botDriver->fireSpeed = velocityAccountingForTerrain;
@@ -1717,7 +1721,7 @@ UpdateTireColorTimer:
 			NATIVE_AI_WRITE(botDriver, botData.aiPhysics.speedLinear, 0x6400);
 		}
 
-		deltaPosThisFrame = NativeAI_Down(NativeAI_Mul(NATIVE_AI_READ(botDriver, botData.aiPhysics.speedLinear), elapsedMilliseconds), 5); // iVar4
+		deltaPosThisFrame = NativeAI_Down(NativeAI_Mul(NATIVE_AI_READ(botDriver, botData.aiPhysics.speedLinear), physicsMilliseconds), 5); // iVar4
 		if (deltaPosThisFrame < 0)
 		{
 			deltaPosThisFrame = 0;
@@ -1759,14 +1763,14 @@ UpdateTireColorTimer:
 		gravity = NativeAI_Div(NativeAI_Mul(botDriver->const_Gravity, 41), 100);
 	}
 
-	NATIVE_AI_WRITE(botDriver, botData.aiPhysics.speedY, NativeAI_Sub(NATIVE_AI_READ(botDriver, botData.aiPhysics.speedY), NativeAI_Down(NativeAI_Mul(gravity, elapsedMilliseconds), 5))); // iVar3
+	NATIVE_AI_WRITE(botDriver, botData.aiPhysics.speedY, NativeAI_Sub(NATIVE_AI_READ(botDriver, botData.aiPhysics.speedY), NativeAI_Down(NativeAI_Mul(gravity, physicsMilliseconds), 5))); // iVar3
 
 	if (NATIVE_AI_READ(botDriver, botData.aiPhysics.speedY) < -0x5000)
 	{
 		NATIVE_AI_WRITE(botDriver, botData.aiPhysics.speedY, -0x5000);
 	}
 
-	NATIVE_AI_WRITE(botDriver, botData.positionBackup.y, NativeAI_Add(NATIVE_AI_READ(botDriver, botData.positionBackup.y), NativeAI_Down(NativeAI_Mul(NATIVE_AI_READ(botDriver, botData.aiPhysics.speedY), elapsedMilliseconds), 5)));
+	NATIVE_AI_WRITE(botDriver, botData.positionBackup.y, NativeAI_Add(NATIVE_AI_READ(botDriver, botData.positionBackup.y), NativeAI_Down(NativeAI_Mul(NATIVE_AI_READ(botDriver, botData.aiPhysics.speedY), physicsMilliseconds), 5)));
 
 	s16 navDist; // sVar7
 
@@ -2022,17 +2026,17 @@ UpdateTireColorTimer:
 	if ((botDriver->botData.botFlags & BOT_FLAG_FREE_PHYSICS) != 0)
 	{
 		NATIVE_AI_WRITE(botDriver, botData.aiPhysics.accel.y, 0);
-		NATIVE_AI_WRITE(botDriver, botData.aiPhysics.velocity.x, NativeAI_Add(NATIVE_AI_READ(botDriver, botData.aiPhysics.velocity.x), NATIVE_AI_READ(botDriver, botData.aiPhysics.accel.x)));
-		NATIVE_AI_WRITE(botDriver, botData.aiPhysics.velocity.y, NativeAI_Add(NATIVE_AI_READ(botDriver, botData.aiPhysics.velocity.y), NATIVE_AI_READ(botDriver, botData.aiPhysics.accel.y)));
-		NATIVE_AI_WRITE(botDriver, botData.aiPhysics.velocity.z, NativeAI_Add(NATIVE_AI_READ(botDriver, botData.aiPhysics.velocity.z), NATIVE_AI_READ(botDriver, botData.aiPhysics.accel.z)));
+		NATIVE_AI_WRITE(botDriver, botData.aiPhysics.velocity.x, NativeAI_Add(NATIVE_AI_READ(botDriver, botData.aiPhysics.velocity.x), NativeAI_FrameStep(NATIVE_AI_READ(botDriver, botData.aiPhysics.accel.x), gGT->timer)));
+		NATIVE_AI_WRITE(botDriver, botData.aiPhysics.velocity.y, NativeAI_Add(NATIVE_AI_READ(botDriver, botData.aiPhysics.velocity.y), NativeAI_FrameStep(NATIVE_AI_READ(botDriver, botData.aiPhysics.accel.y), gGT->timer)));
+		NATIVE_AI_WRITE(botDriver, botData.aiPhysics.velocity.z, NativeAI_Add(NATIVE_AI_READ(botDriver, botData.aiPhysics.velocity.z), NativeAI_FrameStep(NATIVE_AI_READ(botDriver, botData.aiPhysics.accel.z), gGT->timer)));
 		double preAccelX = NATIVE_AI_READ(botDriver, botData.aiPhysics.accel.x); // iVar3
 		double preAccelZ = NATIVE_AI_READ(botDriver, botData.aiPhysics.accel.z); // iVar15
-		NATIVE_AI_WRITE(botDriver, botData.aiPhysics.accel.x, NativeAI_Down(NATIVE_AI_READ(botDriver, botData.aiPhysics.accel.x), 1));
-		NATIVE_AI_WRITE(botDriver, botData.aiPhysics.accel.z, NativeAI_Down(NATIVE_AI_READ(botDriver, botData.aiPhysics.accel.z), 1));
-		NATIVE_AI_WRITE(botDriver, botData.aiPhysics.velocity.y, NativeAI_Add(NATIVE_AI_READ(botDriver, botData.aiPhysics.velocity.y), NATIVE_AI_READ(botDriver, botData.aiPhysics.accel.y)));
+		NATIVE_AI_WRITE(botDriver, botData.aiPhysics.accel.x, NativeAI_HalfDecay(NATIVE_AI_READ(botDriver, botData.aiPhysics.accel.x), gGT->timer));
+		NATIVE_AI_WRITE(botDriver, botData.aiPhysics.accel.z, NativeAI_HalfDecay(NATIVE_AI_READ(botDriver, botData.aiPhysics.accel.z), gGT->timer));
+		NATIVE_AI_WRITE(botDriver, botData.aiPhysics.velocity.y, NativeAI_Add(NATIVE_AI_READ(botDriver, botData.aiPhysics.velocity.y), NativeAI_FrameStep(NATIVE_AI_READ(botDriver, botData.aiPhysics.accel.y), gGT->timer)));
 
-		NATIVE_AI_WRITE(botDriver, botData.aiPhysics.velocity.x, NativeAI_Add(NATIVE_AI_READ(botDriver, botData.aiPhysics.velocity.x), preAccelX));
-		NATIVE_AI_WRITE(botDriver, botData.aiPhysics.velocity.z, NativeAI_Add(NATIVE_AI_READ(botDriver, botData.aiPhysics.velocity.z), preAccelZ));
+		NATIVE_AI_WRITE(botDriver, botData.aiPhysics.velocity.x, NativeAI_Add(NATIVE_AI_READ(botDriver, botData.aiPhysics.velocity.x), NativeAI_FrameStep(preAccelX, gGT->timer)));
+		NATIVE_AI_WRITE(botDriver, botData.aiPhysics.velocity.z, NativeAI_Add(NATIVE_AI_READ(botDriver, botData.aiPhysics.velocity.z), NativeAI_FrameStep(preAccelZ, gGT->timer)));
 
 		double preX = NATIVE_AI_READ(botDriver, botData.aiPhysics.velocity.x); // iVar3
 		if (preX != 0)
@@ -2364,14 +2368,16 @@ UpdateTireColorTimer:
 		botDriver->jump_LandingBoost = (s16)CTR_MipsAddLo((u16)botDriver->jump_LandingBoost, elapsedMilliseconds);
 	}
 
-	int iVar4_lifetime_3 = 0x18;
+	double iVar4_lifetime_3 = 0x18;
 
 	if (botDriver->botData.aiPhysics.driftTarget != 0)
 	{
 		iVar4_lifetime_3 = 0x60;
 	}
 
-	s16 iVar3_lifetime_2 = (s16)CTR_MipsSubLo((u16)NATIVE_AI_READ(botDriver, botData.aiPhysics.mulDrift), iVar4_lifetime_3);
+	iVar4_lifetime_3 = NativeAI_FrameStep(iVar4_lifetime_3, gGT->timer);
+	double iVar3_lifetime_2 = NativeAI_Sub(NATIVE_AI_READ(botDriver, botData.aiPhysics.mulDrift), iVar4_lifetime_3);
+	if (!CTR_NATIVE_SMOOTHED_AI_ACTIVE) iVar3_lifetime_2 = (s16)iVar3_lifetime_2;
 	if (botDriver->botData.aiPhysics.driftTarget < NATIVE_AI_READ(botDriver, botData.aiPhysics.mulDrift))
 	{
 		NATIVE_AI_WRITE(botDriver, botData.aiPhysics.mulDrift, iVar3_lifetime_2);
@@ -2383,7 +2389,8 @@ UpdateTireColorTimer:
 	}
 	else
 	{
-		iVar4_lifetime_3 = (s16)CTR_MipsAddLo((u16)NATIVE_AI_READ(botDriver, botData.aiPhysics.mulDrift), iVar4_lifetime_3);
+		iVar4_lifetime_3 = NativeAI_Add(NATIVE_AI_READ(botDriver, botData.aiPhysics.mulDrift), iVar4_lifetime_3);
+		if (!CTR_NATIVE_SMOOTHED_AI_ACTIVE) iVar4_lifetime_3 = (s16)iVar4_lifetime_3;
 
 		NATIVE_AI_WRITE(botDriver, botData.aiPhysics.mulDrift, iVar4_lifetime_3);
 

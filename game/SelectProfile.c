@@ -8,6 +8,12 @@ extern int gNativeGhostReplayMode;
 
 static char *SelectProfile_NativeGhostFormatText(int ghostFps, int ghostMode)
 {
+	if (ghostFps > 60)
+	{
+		static char label[16];
+		snprintf(label, sizeof(label), "%s - %d FPS", ghostMode == NATIVE_GHOST_MODE_RELIC_RACE ? "RR" : "TT", ghostFps);
+		return label;
+	}
 	if (ghostFps == 60)
 	{
 		return ghostMode == NATIVE_GHOST_MODE_RELIC_RACE ? "RR - 60 FPS" : "TT - 60 FPS";
