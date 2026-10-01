@@ -456,7 +456,10 @@ void MM_Title_ThTick(struct Thread *title)
 		{
 			// if frame is anywhere in the two seconds
 			// that the trophy is in the air
-			if ((u32)(timer - FPS_DOUBLE(TITLE_TROPHY_HIDE_START_FRAME)) < (u32)FPS_DOUBLE(TITLE_TROPHY_HIDE_FRAMES))
+			// scale the end frame rather than the length, so rounding at 144 FPS
+			// can't leave a one-frame gap before the catch animation starts
+			if ((u32)(timer - FPS_DOUBLE(TITLE_TROPHY_HIDE_START_FRAME)) <
+			    (u32)(FPS_DOUBLE(TITLE_TROPHY_HIDE_START_FRAME + TITLE_TROPHY_HIDE_FRAMES) - FPS_DOUBLE(TITLE_TROPHY_HIDE_START_FRAME)))
 			{
 				titleInst->flags |= HIDE_MODEL;
 			}

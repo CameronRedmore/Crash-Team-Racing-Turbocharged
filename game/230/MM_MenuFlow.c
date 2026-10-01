@@ -1345,7 +1345,7 @@ void MM_MenuProc_Main(struct RectMenu *mainMenu)
 
 		if (
 		    // main menu, "title" exists, and timer >= 230
-		    (D230.titleMenuState == TITLE_MENU_STATE_IN_MENU) && (D230.titleObj != NULL) && (TITLE_INTRO_TM_DRAW_MIN_FRAME < D230.titleIntroFrame))
+		    (D230.titleMenuState == TITLE_MENU_STATE_IN_MENU) && (D230.titleObj != NULL) && (FPS_DOUBLE(TITLE_INTRO_TM_DRAW_MIN_FRAME) < D230.titleIntroFrame))
 		{
 			DecalFont_DrawLineOT(sdata->lngStrings[LNG_TM], MM_TITLE_TM_X, MM_TITLE_TM_Y, FONT_SMALL, ORANGE,
 			                     &gGT->backBuffer->otMem.uiOT[MM_TITLE_TM_OT_INDEX]);
@@ -1407,7 +1407,7 @@ void MM_MenuProc_Main(struct RectMenu *mainMenu)
 	// if drawing ptrNextBox_InHierarchy
 	if ((mainMenu->state & DRAW_NEXT_MENU_IN_HIERARCHY) != 0)
 	{
-		D230.titleIntroFrame = TITLE_INTRO_SKIP_FRAME;
+		D230.titleIntroFrame = FPS_DOUBLE(TITLE_INTRO_SKIP_FRAME);
 	}
 
 	// if funcPtr is null

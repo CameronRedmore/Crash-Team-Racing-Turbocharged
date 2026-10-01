@@ -672,7 +672,7 @@ void MainInit_FinalizeInit(struct GameTracker *gGT)
 	if (gGT->levelID == MAIN_MENU_LEVEL)
 	{
 		// 30 seconds
-		gGT->demoCountdownTimer = 900;
+		gGT->demoCountdownTimer = FPS_DOUBLE(TITLE_DEMO_IDLE_FRAMES);
 	}
 
 	// copy InstDef to InstancePool
