@@ -519,17 +519,17 @@ int main(int argc, char *argv[])
 #endif
 
 #if defined(__vita__)
-	printf("[CTR Native] High Octane widescreen 960x544\n");
-	Platform_Init("Crash Team Racing: High Octane", 960, 544);
+	printf("[CTR Native] Turbocharged widescreen 960x544\n");
+	Platform_Init("Crash Team Racing: Turbocharged", 960, 544);
 #elif CTR_NATIVE_WIDESCREEN
-	printf("[CTR Native] High Octane widescreen 1280x720\n");
-	Platform_Init("Crash Team Racing: High Octane", 1280, 720);
+	printf("[CTR Native] Turbocharged widescreen 1280x720\n");
+	Platform_Init("Crash Team Racing: Turbocharged", 1280, 720);
 #elif defined(USE_16BY9)
 	printf("[CTR Native] Widescreen\n");
-	Platform_Init("Crash Team Racing: High Octane", 1280, 720);
+	Platform_Init("Crash Team Racing: Turbocharged", 1280, 720);
 #else
 	printf("[CTR Native] 4:3\n");
-	Platform_Init("Crash Team Racing: High Octane", 800, 600);
+	Platform_Init("Crash Team Racing: Turbocharged", 800, 600);
 #endif
 
 #if defined(CTR_INTERNAL)

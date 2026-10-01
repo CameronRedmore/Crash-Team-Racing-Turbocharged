@@ -1759,6 +1759,16 @@ void MM_Characters_MenuProc(struct RectMenu *unused)
 			// you selected in character selection screen
 			MM_Characters_BackupIDs();
 
+			// A character change requested from the Adventure hub returns directly
+			// to the hub level instead of continuing through the main menu flow.
+			if (MainFreeze_ConsumeAdventureCharacterChange())
+			{
+				sdata->Loading.OnBegin.AddBitsConfig0 |= ADVENTURE_ARENA;
+				sdata->Loading.OnBegin.RemBitsConfig0 |= MAIN_MENU;
+				MainRaceTrack_RequestLoad(gGT->prevLEV);
+				return;
+			}
+
 			// if returning to main menu
 			if (D230.characterSelectExitsForward == 0)
 			{

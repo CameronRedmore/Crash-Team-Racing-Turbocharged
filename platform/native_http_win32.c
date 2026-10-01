@@ -68,7 +68,7 @@ int NativeWinHttp_Request(const char *methodUtf8, const char *url, const char *b
     if (pathLength == 0) path[pathLength++] = L'/';
     path[pathLength] = L'\0';
 
-    HINTERNET session = WinHttpOpen(L"CTR High Octane/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+    HINTERNET session = WinHttpOpen(L"CTR Turbocharged/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
                                     WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
     if (session == NULL) return 0;
     WinHttpSetTimeouts(session, 8000, 8000, 20000, 20000);

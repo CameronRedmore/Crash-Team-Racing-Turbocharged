@@ -1,5 +1,28 @@
 #include <common.h>
 
+static b32 s_returnToAdventureHubAfterCharacterSelect;
+static struct MenuRow s_adventureHubRowsWithCharacter[] =
+{
+	{LNG_RESUME, 4, 1, 0, 0},
+	{LNG_AKU_AKU_HINTS, 0, 2, 1, 1},
+	{LNG_CHANGE_CHARACTER, 1, 3, 2, 2},
+	{LNG_OPTIONS, 2, 4, 3, 3},
+	{LNG_QUIT, 3, 0, 4, 4},
+	{RECTMENU_STRING_NONE, 0, 0, 0, 0},
+};
+
+void MainFreeze_BeginAdventureCharacterChange(void)
+{
+	s_returnToAdventureHubAfterCharacterSelect = true;
+}
+
+b32 MainFreeze_ConsumeAdventureCharacterChange(void)
+{
+	b32 requested = s_returnToAdventureHubAfterCharacterSelect;
+	s_returnToAdventureHubAfterCharacterSelect = false;
+	return requested;
+}
+
 #if defined(CTR_NATIVE)
 #include "platform/native_adhoc.h"
 #endif
@@ -967,6 +990,21 @@ void MainFreeze_MenuPtrDefault(struct RectMenu *menu)
 		return;
 	}
 
+	// Adventure hub character selection is available from the field start menu.
+	if (stringID == LNG_CHANGE_CHARACTER)
+	{
+		MainFreeze_BeginAdventureCharacterChange();
+		GhostTape_Destroy();
+		sdata->mainMenuState = MAIN_MENU_CHARACTERS;
+		sdata->Loading.OnBegin.AddBitsConfig0 |= MAIN_MENU;
+		gGT->gameMode1 &= ~PAUSE_1;
+		RECTMENU_Hide(menu);
+		MainFrame_TogglePauseAudio(0);
+		MainFreeze_SafeAdvDestroy();
+		MainRaceTrack_RequestLoad(MAIN_MENU_LEVEL);
+		return;
+	}
+
 	// stringID 3: "QUIT"
 	if (stringID == 3)
 	{
@@ -1181,6 +1219,8 @@ struct RectMenu *MainFreeze_GetMenuPtr(void)
 		}
 
 		data.rowsAdvHub[1].stringIndex = hintString;
+		data.menuAdvHub.rows = s_adventureHubRowsWithCharacter;
+		s_adventureHubRowsWithCharacter[1].stringIndex = hintString;
 		return &data.menuAdvHub;
 	}
 

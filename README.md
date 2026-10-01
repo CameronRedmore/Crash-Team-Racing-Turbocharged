@@ -1,7 +1,8 @@
-# Crash Team Racing: High Octane
+# Crash Team Racing: Turbocharged
 <img src="screenshots/game1.jpg"></img><br>
-Crash Team Racing: High Octane is a sourceport for PSVita, PC (Windows) and Web Browser of Crash Team Racing based on the [ctr-native](https://github.com/CTR-tools/ctr-native) project.
-It focuses on new features, enhancements and optimization.
+Crash Team Racing: Turbocharged is a fork of [Crash Team Racing: High Octane](https://github.com/Rinnegatamante/Crash-Team-Racing-High-Octane), a sourceport for PSVita, PC (Windows) and Web Browser based on the [ctr-native](https://github.com/CTR-tools/ctr-native) project. Turbocharged extends High Octane with additional rendering, precision, and quality-of-life options.
+
+This fork is focused on PC operating systems, especially Windows and Linux. PSVita and Web builds are not currently tested or a development priority. Support for ARM-based machines is planned for the future.
 
 You can play it from Web Browser as well from this link: [Web Browser Build](https://rinnegatamante.github.io/Crash-Team-Racing-High-Octane/).
 
@@ -11,6 +12,9 @@ You can play it from Web Browser as well from this link: [Web Browser Build](htt
 - Internal resolution of the renderer bumped to 960x544.
 - MSAA 4x (PSVita) / FXAA (PC) for anti-aliasing.
 - Selectable 30, 60, 90, 120, 144, and 240 FPS in the Options menu, with scaled game timing, interpolated model animation, and frame-rate-correct menu, UI, and effect animations. Higher rates need sufficient CPU/GPU performance; pacing retains the original NTSC clock (approximately 59.82 FPS for the 60 FPS setting).
+- Additional FPS options and high precision rendering, including sub-pixel vertex precision and perspective-correct textures.
+- High precision physics and collision options, level-of-detail overrides, and optional depth buffering.
+- Adventure Mode character switching and automatic progress saving.
 - Penta Penguin has its stats set to its PAL/NTSC-J counterpart (6/6/6).
 - Playable Nitrous Oxide (Unlockable via the original Spyro 2 Demo cheatcode). (Credits: [Original mod](https://github.com/CTR-tools/CTR-ModSDK/tree/main/mods/Modules/OxideFix))
 - Reserves Meter (Credits: [Original mod](https://github.com/CTR-tools/CTR-ModSDK/tree/main/mods/Modules/ReservesMeter))
@@ -73,7 +77,7 @@ The full online leaderboard for Time Trials and Relic Races is available at this
 - Run `python extract_pal_voices.py YOUR_DUMP_NAME.bin`.
 - When extraction is complete, place the generated `pal-voices` folder:
   - on PSVita: in `ux0:data/ctr/mods/`.
-  - on PC: in the `mods` folder next to the CTR: High Octane executable, so that the final path is `mods/pal-voices`.
+  - on PC: in the `mods` folder next to the CTR: Turbocharged executable, so that the final path is `mods/pal-voices`.
 
 ## How to add new custom characters to the game
 
@@ -88,7 +92,7 @@ Download a custom character in the form of an `.xdelta` patch and place it in th
 - *NOTE*: For static custom models, the script can automatically retarget and bake the animations of the original character being replaced onto the custom model. To enable this, run `python import_custom_racer.py YOUR_DUMP_NAME.bin YOUR_PATCH.xdelta YOUR_CHARACTER.ctrr --template-animations`. Models that already contain animations will not be overwritten.
 - When conversion is complete, place the generated `.ctrr` file or files:
   - on PSVita: in `ux0:data/ctr/mods/customracers`.
-  - on PC: in the `mods/customracers` folder next to the CTR: High Octane executable, so that the final path is `mods/customracers/YOUR_CHARACTER.ctrr`.
+  - on PC: in the `mods/customracers` folder next to the CTR: Turbocharged executable, so that the final path is `mods/customracers/YOUR_CHARACTER.ctrr`.
 
 ## How to set up Online functionalities on PC
 

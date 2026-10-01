@@ -14,7 +14,7 @@
 
 #define NATIVE_DISCORD_APP_ID "1546144938495049798"
 #define NATIVE_DISCORD_LARGE_IMAGE "high_octane"
-#define NATIVE_DISCORD_LARGE_TEXT "Crash Team Racing: High Octane"
+#define NATIVE_DISCORD_LARGE_TEXT "Crash Team Racing: Turbocharged"
 #define NATIVE_DISCORD_RETRY_MS 5000u
 #define NATIVE_DISCORD_MAX_PAYLOAD 16384u
 
@@ -293,7 +293,7 @@ static const char *NativeDiscord_GetCharacterName(const struct GameTracker *gGT)
 static void NativeDiscord_BuildPresence(char details[128], char state[128], b32 *gameplay)
 {
     *gameplay = false;
-    snprintf(details, 128, "%s", "Starting High Octane");
+    snprintf(details, 128, "%s", "Starting Turbocharged");
     state[0] = '\0';
 
     if ((sdata == NULL) || (sdata->gGT == NULL))

@@ -13,7 +13,7 @@ Use this for bug reports in internal builds.
 build/ctr_native --record
 ```
 
-Windows: use `build\Crash Team Racing - High Octane.exe` instead.
+Windows: use `build\Crash Team Racing - Turbocharged.exe` instead.
 
 Normal saves live in `memcards/slot0`.
 

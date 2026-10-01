@@ -498,6 +498,8 @@ void MainFreeze_SafeAdvDestroy(void);
 void MainFreeze_MenuPtrOptions(struct RectMenu *menu);
 void MainFreeze_MenuPtrQuit(struct RectMenu *menu);
 void MainFreeze_MenuPtrDefault(struct RectMenu *menu);
+void MainFreeze_BeginAdventureCharacterChange(void);
+b32 MainFreeze_ConsumeAdventureCharacterChange(void);
 void MainFreeze_IfPressStart(void);
 
 void MainGameStart_Initialize(struct GameTracker *gGT, b32 boolStopAudio);

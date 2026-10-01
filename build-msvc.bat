@@ -30,4 +30,4 @@ if %ERRORLEVEL% neq 0 (
 )
 
 echo.
-echo Build succeeded: build-msvc-x86\Release\Crash Team Racing - High Octane.exe
+echo Build succeeded: build-msvc-x86\Release\Crash Team Racing - Turbocharged.exe

@@ -55,4 +55,4 @@ if %ERRORLEVEL% neq 0 (
 )
 
 echo.
-echo Build succeeded: build\Crash Team Racing - High Octane.exe
+echo Build succeeded: build\Crash Team Racing - Turbocharged.exe
