@@ -79,7 +79,7 @@ void MainFreeze_ConfigDrawArrows(s16 offsetX, s16 offsetY, char *str)
 	// orange color
 	color = 0;
 
-	if ((sdata->frameCounter & 4) == 0)
+	if ((FPS_HALF(sdata->frameCounter) & 4) == 0)
 	{
 		// red color
 		color = 3;
@@ -158,7 +158,7 @@ static inline void MainFreeze_ConfigDrawRaceWheel(int value, struct GameTracker 
 
 	for (int tri = 0; tri < 2; tri++)
 	{
-		u32 wave = ((u32)sdata->frameCounter << 6) + (tri * 0x800);
+		u32 wave = (u32)FPS_HALF(sdata->frameCounter << 6) + (tri * 0x800);
 		int sin = MATH_Sin(wave);
 		int angle = (value * sin) >> 0xc;
 		int angleSin = MATH_Sin(angle);
@@ -202,7 +202,7 @@ static inline void MainFreeze_ConfigDrawNamco(int value, struct GameTracker *gGT
 		                          sdata->analogConfigY[1] + ((sin * 0x23) >> 0xc), 0, 0xff, 0, gGT->pushBuffer_UI.ptrOT);
 	}
 
-	u32 frameAngle = (u32)sdata->frameCounter << 6;
+	u32 frameAngle = (u32)FPS_HALF(sdata->frameCounter << 6);
 	u32 baseAngle = (((MATH_Sin(frameAngle) * value) >> 0xc) - 0x400) & 0xfff;
 	int baseSin = MATH_Sin(baseAngle);
 	int baseCos = MATH_Cos(baseAngle);

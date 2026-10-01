@@ -214,7 +214,7 @@ static void MM_Characters_NativeDrawStats(void)
 		s16 *length = &s_nativeCharacterSelectStatLengths[i];
 		if (*length < target)
 		{
-			*length += MM_CHARACTER_SELECT_STATS_BAR_RATE;
+			*length += CTR_FRAME_STEP(MM_CHARACTER_SELECT_STATS_BAR_RATE, sdata->gGT->timer);
 			if (*length > target)
 			{
 				*length = target;
@@ -1004,7 +1004,7 @@ void MM_Characters_AnimateColors(u8 *colorData, s16 playerID, s16 flag)
 	// see MM_Characters_MenuProc
 	if (flag == 0)
 	{
-		trigApproximationIndex = sdata->frameCounter * MM_CHARACTER_SELECT_COLOR_PHASE_FRAME_STEP + playerID * MM_CHARACTER_SELECT_COLOR_PHASE_PLAYER_STEP;
+		trigApproximationIndex = FPS_HALF(sdata->frameCounter * MM_CHARACTER_SELECT_COLOR_PHASE_FRAME_STEP) + playerID * MM_CHARACTER_SELECT_COLOR_PHASE_PLAYER_STEP;
 
 		// approximate trigonometry
 		trigApprox = CTR_ReadU32LE(&data.trigApprox[trigApproximationIndex & MM_CHARACTER_SELECT_COLOR_TRIG_MASK]);
@@ -1542,7 +1542,7 @@ void MM_Characters_RestoreIDs(void)
 
 	// erase select bits
 	sdata->characterSelectFlags = 0;
-	D230.characterSelectTransitionFrame = MM_CHARACTER_SELECT_TRANSITION_FRAMES;
+	D230.characterSelectTransitionFrame = FPS_DOUBLE(MM_CHARACTER_SELECT_TRANSITION_FRAMES);
 	D230.characterSelectMenuState = ENTERING_MENU;
 
 	// This uses 80086e84, which controls character IDs
@@ -1704,7 +1704,7 @@ void MM_Characters_MenuProc(struct RectMenu *unused)
 	// if menu is not in focus
 	if (D230.characterSelectMenuState != IN_MENU)
 	{
-		MM_TransitionInOut(D230.characterSelectTransitionMeta, (int)D230.characterSelectTransitionFrame, MM_CHARACTER_SELECT_TRANSITION_STEP);
+		MM_TransitionInOut(D230.characterSelectTransitionMeta, (int)D230.characterSelectTransitionFrame, FPS_DOUBLE(MM_CHARACTER_SELECT_TRANSITION_STEP));
 	}
 
 	MM_Characters_SetMenuLayout();
@@ -1753,7 +1753,7 @@ void MM_Characters_MenuProc(struct RectMenu *unused)
 		D230.characterSelectTransitionFrame++;
 
 		// if more than 12 frames
-		if (D230.characterSelectTransitionFrame > MM_CHARACTER_SELECT_TRANSITION_FRAMES)
+		if (D230.characterSelectTransitionFrame > FPS_DOUBLE(MM_CHARACTER_SELECT_TRANSITION_FRAMES))
 		{
 			// Make a backup of the characters
 			// you selected in character selection screen

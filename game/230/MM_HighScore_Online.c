@@ -250,7 +250,7 @@ static void MM_HighScore_OnlineInit(void)
     s_onlineGhostNickname[0] = '\0';
     s_onlineGhostMenu.rowSelected = 0;
     D230.highScoreTransition.state = ENTERING_MENU;
-    D230.highScoreTransition.mainFrame = MM_HIGHSCORE_MAIN_TRANSITION_MAX_FRAME;
+    D230.highScoreTransition.mainFrame = FPS_DOUBLE(MM_HIGHSCORE_MAIN_TRANSITION_MAX_FRAME);
     D230.highScoreTransition.trackFrame = 0;
     D230.highScoreTransition.rowFrame = 0;
     D230.highScoreSelection.targetRow = 0;
@@ -416,7 +416,7 @@ static void MM_HighScore_OnlineMenuProc(void)
         nextFrameCount = D230.highScoreTransition.mainFrame;
         if (D230.highScoreTransition.state == ENTERING_MENU)
         {
-            MM_TransitionInOut(D230.transitionMeta_HighScores, D230.highScoreTransition.mainFrame, MM_HIGHSCORE_SLIDE_TRANSITION_FRAMES);
+            MM_TransitionInOut(D230.transitionMeta_HighScores, D230.highScoreTransition.mainFrame, FPS_DOUBLE(MM_HIGHSCORE_SLIDE_TRANSITION_FRAMES));
             nextFrameCount--;
             if (D230.highScoreTransition.mainFrame == 0)
             {
@@ -426,10 +426,10 @@ static void MM_HighScore_OnlineMenuProc(void)
         }
         else if ((D230.highScoreTransition.state == EXITING_MENU) && (D230.highScoreTransition.trackFrame == 0))
         {
-            MM_TransitionInOut(D230.transitionMeta_HighScores, D230.highScoreTransition.mainFrame, MM_HIGHSCORE_SLIDE_TRANSITION_FRAMES);
+            MM_TransitionInOut(D230.transitionMeta_HighScores, D230.highScoreTransition.mainFrame, FPS_DOUBLE(MM_HIGHSCORE_SLIDE_TRANSITION_FRAMES));
             D230.highScoreTransition.mainFrame++;
             nextFrameCount = D230.highScoreTransition.mainFrame;
-            if (D230.highScoreTransition.mainFrame > MM_HIGHSCORE_MAIN_TRANSITION_MAX_FRAME)
+            if (D230.highScoreTransition.mainFrame > FPS_DOUBLE(MM_HIGHSCORE_MAIN_TRANSITION_MAX_FRAME))
             {
                 gNativeOnlineLeaderboardMode = 0;
                 MM_JumpTo_Title_Returning();
@@ -456,7 +456,8 @@ static void MM_HighScore_OnlineMenuProc(void)
             videoResetRequested = true;
         }
     }
-    else
+    // track slide steps at 30 Hz; its offsets rely on whole-step positions
+    else if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
     {
         u8 reachedTarget = D230.highScoreTransition.trackFrame == 1;
         D230.highScoreTransition.trackFrame--;

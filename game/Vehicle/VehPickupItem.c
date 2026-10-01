@@ -839,7 +839,7 @@ void VehPickupItem_ShootNow(struct Driver *d, s32 weaponID, s32 flags)
 		mw->crateInst = 0;
 		VehPickupItem_ClearMineMotion(mw);
 		mw->boolDestroyed = 0;
-		mw->parentSafetyFrames = MINE_PARENT_SAFETY_FRAMES;
+		mw->parentSafetyFrames = (s16)FPS_DOUBLE(MINE_PARENT_SAFETY_FRAMES);
 		mw->tntSpinY = 0;
 		mw->flags = 0;
 
@@ -978,7 +978,7 @@ void VehPickupItem_ShootNow(struct Driver *d, s32 weaponID, s32 flags)
 		mw->instParent = dInst;
 		mw->crateInst = 0;
 		mw->boolDestroyed = 0;
-		mw->parentSafetyFrames = MINE_PARENT_SAFETY_FRAMES;
+		mw->parentSafetyFrames = (s16)FPS_DOUBLE(MINE_PARENT_SAFETY_FRAMES);
 		mw->flags = 0;
 		if (modelID == STATIC_BEAKER_RED)
 		{
@@ -1218,7 +1218,7 @@ void VehPickupItem_ShootNow(struct Driver *d, s32 weaponID, s32 flags)
 
 		tw->vel.y = 0;
 		tw->dir.y = d->angle;
-		tw->parentSafetyFrames = WARPBALL_PARENT_SAFETY_FRAMES;
+		tw->parentSafetyFrames = (s16)FPS_DOUBLE(WARPBALL_PARENT_SAFETY_FRAMES);
 
 		// do NOT patch for 60fps,
 		// velocity uses elapsedTime

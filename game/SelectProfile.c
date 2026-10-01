@@ -55,7 +55,7 @@ void SelectProfile_ThTick(struct Thread *t)
 		int slot = i % 3;
 		struct Instance *inst = icon->inst;
 
-		icon->rot.y = (s16)(icon->rot.y + sdata->LoadSave_SpinRateY[slot]);
+		icon->rot.y = (s16)(icon->rot.y + CTR_FRAME_STEP(sdata->LoadSave_SpinRateY[slot], sdata->gGT->timer));
 
 #if defined(CTR_NATIVE)
 		// NOTE(aalhendi): Menu-storage can keep this thread alive when the
@@ -1295,7 +1295,7 @@ static void SelectProfile_DrawMemcardMessage(int screen, int color, int menuFlag
 				int y = (i == 0) ? 0x26 : 0x2e + (i * (data.font_charPixHeight[FONT_SMALL] + 2));
 				int lineColor = color | 0xffff8000;
 
-				if (((sdata->frameCounter & 4) == 0) && (i == 0))
+				if (((FPS_HALF(sdata->frameCounter) & 4) == 0) && (i == 0))
 				{
 					lineColor = RED | 0xffff8000;
 				}
@@ -1391,7 +1391,7 @@ static void SelectProfile_DrawAll(struct RectMenu *menu, int rowCount, int saved
 		    (*SelectProfile_AllProfiles_ExitToPrevious() == 0) && (*SelectProfile_AllProfiles_ActionDone() == 0) &&
 		    (*SelectProfile_AllProfiles_TimerSaveComplete() != 0))
 		{
-			int saveColor = ((sdata->frameCounter & 4) == 0) ? (JUSTIFY_CENTER | ORANGE) : (JUSTIFY_CENTER | WHITE);
+			int saveColor = ((FPS_HALF(sdata->frameCounter) & 4) == 0) ? (JUSTIFY_CENTER | ORANGE) : (JUSTIFY_CENTER | WHITE);
 			DecalFont_DrawLine(sdata->lngStrings[LNG_SAVE_COMPLETED], 0x108, 0x64, FONT_BIG, saveColor);
 		}
 		else
@@ -1678,7 +1678,7 @@ draw_and_finish:
 			SelectProfile_SaveAdvProfile(menu->rowSelected);
 		}
 
-		*SelectProfile_AllProfiles_TimerSaveComplete() = 0x3c;
+		*SelectProfile_AllProfiles_TimerSaveComplete() = FPS_DOUBLE(0x3c);
 	}
 
 	if (menu->funcState == RECTMENU_FUNC_STATE_UPDATE)

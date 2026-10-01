@@ -406,6 +406,33 @@ b32 INSTANCE_Use60FpsAnimation(struct Instance *inst)
 }
 
 
+/// @brief True when animFrame for this animation counts frame-rate-scaled
+/// frames (see INSTANCE_GetNumAnimFrames), false when it counts 30 FPS frames.
+b32 INSTANCE_AnimFramesScaled(struct Instance *inst, int animIndex)
+{
+	if (!INSTANCE_Use60FpsAnimation(inst))
+	{
+		return false;
+	}
+
+	struct ModelHeader *header = inst->model->headers;
+	if ((header->ptrAnimations == NULL) || (animIndex < 0) || (animIndex >= (int)header->numAnimations))
+	{
+		return false;
+	}
+
+	struct ModelAnim *anim = header->ptrAnimations[animIndex];
+	return (anim != NULL) && ((anim->numFrames & 0x8000) == 0);
+}
+
+/// @brief Convert a 30 FPS animation frame count to the units animFrame uses
+/// for this animation.
+int INSTANCE_ScaleAnimFrames(struct Instance *inst, int animIndex, int frames)
+{
+	return INSTANCE_AnimFramesScaled(inst, animIndex) ? FPS_DOUBLE(frames) : frames;
+}
+
+
 /// @brief Obtain number of actual animation data frames in the first lod entry of the passed model.
 /// @param pInstance - pointer to Instance
 /// @param animIndex - animation index to check

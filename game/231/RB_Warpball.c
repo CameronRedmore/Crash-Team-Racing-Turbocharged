@@ -352,9 +352,9 @@ void RB_Warpball_TurnAround(struct Thread *t)
 		tw->vel.y = -tw->vel.y;
 		tw->vel.z = -tw->vel.z;
 
-		inst->matrix.t[0] += ((int)tw->vel.x * gGT->elapsedTimeMS) >> 5;
-		inst->matrix.t[1] += ((int)tw->vel.y * gGT->elapsedTimeMS) >> 5;
-		inst->matrix.t[2] += ((int)tw->vel.z * gGT->elapsedTimeMS) >> 5;
+		inst->matrix.t[0] += Timer_ScaleByElapsed(tw->vel.x, 5);
+		inst->matrix.t[1] += Timer_ScaleByElapsed(tw->vel.y, 5);
+		inst->matrix.t[2] += Timer_ScaleByElapsed(tw->vel.z, 5);
 
 		// increment counter
 		tw->turnAroundFrames++;
@@ -399,11 +399,11 @@ void RB_Warpball_TurnAround(struct Thread *t)
 
 static const s16 s_warpballParticleHeight = 0xff;
 
-static void RB_Warpball_AdvanceStraight(struct TrackerWeapon *tw, struct Instance *inst, int elapsedTime)
+static void RB_Warpball_AdvanceStraight(struct TrackerWeapon *tw, struct Instance *inst)
 {
-	inst->matrix.t[0] += ((int)tw->vel.x * elapsedTime) >> 5;
-	inst->matrix.t[1] += ((int)tw->vel.y * elapsedTime) >> 5;
-	inst->matrix.t[2] += ((int)tw->vel.z * elapsedTime) >> 5;
+	inst->matrix.t[0] += Timer_ScaleByElapsed(tw->vel.x, 5);
+	inst->matrix.t[1] += Timer_ScaleByElapsed(tw->vel.y, 5);
+	inst->matrix.t[2] += Timer_ScaleByElapsed(tw->vel.z, 5);
 }
 
 static int RB_Warpball_NodeDeltaLength(struct CheckpointNode *curr, struct CheckpointNode *next, int *dx, int *dy, int *dz)
@@ -435,7 +435,6 @@ void RB_Warpball_ThTick(struct Thread *t)
 	struct Instance *hitInst;
 	SVec3 posTop;
 	SVec3 posBottom;
-	int elapsedTime;
 	int distX;
 	int distY;
 	int distZ;
@@ -484,7 +483,6 @@ void RB_Warpball_ThTick(struct Thread *t)
 
 	target = tw->driverTarget;
 	tw->flags &= ~TRACKER_FLAG_WARPBALL_BACKTRACKING;
-	elapsedTime = gGT->elapsedTimeMS;
 
 	if (target != NULL)
 	{
@@ -541,7 +539,7 @@ void RB_Warpball_ThTick(struct Thread *t)
 
 			if (distY > 0)
 			{
-				tw->vel.y += (elapsedTime << 2) >> 5;
+				tw->vel.y += Timer_ScaleByElapsed(4, 5);
 
 				if (distY < tw->vel.y)
 				{
@@ -555,7 +553,7 @@ void RB_Warpball_ThTick(struct Thread *t)
 			}
 			else if (distY < 0)
 			{
-				tw->vel.y -= (elapsedTime << 2) >> 5;
+				tw->vel.y -= Timer_ScaleByElapsed(4, 5);
 
 				if (tw->vel.y < distY)
 				{
@@ -568,14 +566,14 @@ void RB_Warpball_ThTick(struct Thread *t)
 				}
 			}
 
-			RB_Warpball_AdvanceStraight(tw, inst, elapsedTime);
+			RB_Warpball_AdvanceStraight(tw, inst);
 		}
 		else
 		{
 			struct CheckpointNode *curr = tw->ptrNodeCurr;
 			struct CheckpointNode *next = tw->ptrNodeNext;
 			int segmentLength = RB_Warpball_NodeDeltaLength(curr, next, &distX, &distY, &distZ);
-			int progress = tw->pathProgress + ((elapsedTime * 0x70) >> 5);
+			int progress = tw->pathProgress + Timer_ScaleByElapsed(0x70, 5);
 			int fraction;
 
 			if (segmentLength <= progress)
@@ -626,7 +624,7 @@ void RB_Warpball_ThTick(struct Thread *t)
 	}
 	else
 	{
-		RB_Warpball_AdvanceStraight(tw, inst, elapsedTime);
+		RB_Warpball_AdvanceStraight(tw, inst);
 	}
 
 	PlaySound3D_Flags(&tw->soundIDCount, 0x4e, inst);

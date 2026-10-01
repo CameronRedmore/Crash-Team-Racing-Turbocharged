@@ -307,7 +307,7 @@ int RB_Hazard_InterpolateValue(s16 currRot, s16 desiredRot, s16 rotSpeed)
 		return currRot;
 	}
 
-	int delta = (rotSpeed * sdata->gGT->elapsedTimeMS) >> 5;
+	int delta = Timer_ScaleByElapsed(rotSpeed, 5);
 
 	// adjust for range of "s16" [0-0xffff]
 	// compared to range of degrees [0-0xfff]

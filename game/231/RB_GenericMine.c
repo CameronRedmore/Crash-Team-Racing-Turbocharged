@@ -139,7 +139,7 @@ void RB_GenericMine_ThTick(struct Thread *t)
 
 	// increment posY by velY * time
 	// do NOT use parenthesis
-	inst->matrix.t[1] += (mw->velocity.y * gGT->elapsedTimeMS) >> 5;
+	inst->matrix.t[1] += Timer_ScaleByElapsed(mw->velocity.y, 5);
 
 	if (inst->matrix.t[1] < mw->stopFallAtY)
 	{
@@ -147,7 +147,7 @@ void RB_GenericMine_ThTick(struct Thread *t)
 	}
 
 	// decrease velocity by time, this is artificial gravity (negative acceleration)
-	mw->velocity.y -= ((gGT->elapsedTimeMS << 2) >> 5);
+	mw->velocity.y -= Timer_ScaleByElapsed(4, 5);
 
 	// terminal velocity
 	if (mw->velocity.y < -0x60)
@@ -159,9 +159,9 @@ void RB_GenericMine_ThTick(struct Thread *t)
 	if (inst->scale.x < 0x1000)
 	{
 		// make scale larger each frame
-		inst->scale.x += 0x200;
-		inst->scale.y += 0x200;
-		inst->scale.z += 0x200;
+		inst->scale.x += FPS_HALF(0x200);
+		inst->scale.y += FPS_HALF(0x200);
+		inst->scale.z += FPS_HALF(0x200);
 	}
 	else
 	{
@@ -362,7 +362,7 @@ void RB_GenericMine_ThTick(struct Thread *t)
 
 				tnt->instParent = d->instSelf;
 
-				tnt->parentSafetyFrames = 10;
+				tnt->parentSafetyFrames = (s16)FPS_DOUBLE(10);
 				tnt->boolDestroyed = 0;
 				tnt->tntSpinY = 0;
 				tnt->crateInst = 0;

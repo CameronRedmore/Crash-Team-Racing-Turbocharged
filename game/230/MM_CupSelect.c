@@ -315,7 +315,7 @@ void MM_CupSelect_Init(void)
 	MM_CupSelect_CustomCups_SyncChoices();
 
 	// reset transition data
-	D230.cupSelectTransition.frame = MM_CUP_SELECT_INITIAL_TRANSITION_FRAMES;
+	D230.cupSelectTransition.frame = FPS_DOUBLE(MM_CUP_SELECT_INITIAL_TRANSITION_FRAMES);
 	D230.cupSelectTransition.state = ENTERING_MENU;
 
 	// disable menu callback execution while the cup menu transitions in
@@ -350,7 +350,7 @@ void MM_CupSelect_MenuProc(struct RectMenu *menu)
 		// if transitioning in
 		if (D230.cupSelectTransition.state == ENTERING_MENU)
 		{
-			MM_TransitionInOut(D230.transitionMeta_cupSel, elapsedFrames, MM_CUP_SELECT_LERP_FRAMES);
+			MM_TransitionInOut(D230.transitionMeta_cupSel, elapsedFrames, FPS_DOUBLE(MM_CUP_SELECT_LERP_FRAMES));
 
 			// if no more frames
 			if (elapsedFrames == 0)
@@ -369,13 +369,13 @@ void MM_CupSelect_MenuProc(struct RectMenu *menu)
 		// if transitioning out
 		else if (D230.cupSelectTransition.state == EXITING_MENU)
 		{
-			MM_TransitionInOut(D230.transitionMeta_cupSel, elapsedFrames, MM_CUP_SELECT_LERP_FRAMES);
+			MM_TransitionInOut(D230.transitionMeta_cupSel, elapsedFrames, FPS_DOUBLE(MM_CUP_SELECT_LERP_FRAMES));
 
 			// increase frame count
 			elapsedFrames++;
 
 			// if more than 12 frames pass
-			if (MM_CUP_SELECT_TRANSITION_OUT_DONE_FRAME < elapsedFrames)
+			if (FPS_DOUBLE(MM_CUP_SELECT_TRANSITION_OUT_DONE_FRAME) < elapsedFrames)
 			{
 				// if cup selected
 				if (D230.cupSelectTransition.startAfterExit != 0)

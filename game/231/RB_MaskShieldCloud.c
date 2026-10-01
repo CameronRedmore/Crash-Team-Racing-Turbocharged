@@ -635,7 +635,7 @@ void RB_ShieldDark_ThTick_Grow(struct Thread *th)
 	tw->vel.z = (driverInst->matrix.m[2][2] * 3) >> 7;
 
 	tw->rotY = player->angle;
-	tw->parentSafetyFrames = 10;
+	tw->parentSafetyFrames = (s16)FPS_DOUBLE(10);
 
 LAB_800b0d6c:
 
@@ -790,7 +790,7 @@ void RB_RainCloud_ThTick(struct Thread *t)
 
 			// you are always 5 frames away from new weapon,
 			// so you get weapon 5 frames after cloud dies
-			d->itemRollTimer = 5;
+			d->itemRollTimer = FPS_DOUBLE(5);
 
 			// you hold zero of this item
 			d->numHeldItems = 0;

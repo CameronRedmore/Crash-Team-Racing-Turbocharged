@@ -15,7 +15,7 @@ void RB_TNT_ThTick_ThrowOffHead(struct Thread *t)
 	mw = t->object;
 
 	// do NOT use parenthesis
-	inst->matrix.t[1] += (mw->velocity.y * gGT->elapsedTimeMS) >> 5;
+	inst->matrix.t[1] += Timer_ScaleByElapsed(mw->velocity.y, 5);
 
 #if defined(CTR_NATIVE)
 	// NOTE(aalhendi): Retail reads through driverTarget blindly here. Boss-thrown TNT can have
@@ -57,7 +57,7 @@ void RB_TNT_ThTick_ThrowOffHead(struct Thread *t)
 	}
 
 	// decrease velocity (artificial gravity)
-	mw->velocity.y -= ((gGT->elapsedTimeMS << 2) >> 5);
+	mw->velocity.y -= Timer_ScaleByElapsed(4, 5);
 	if (mw->velocity.y < -0x60)
 	{
 		mw->velocity.y = -0x60;
@@ -264,7 +264,7 @@ void RB_TNT_ThTick_ThrowOnHead(struct Thread *t)
 
 	// alter height of TNT as it flies onto a driver's head,
 	// do NOT use parenthesis
-	mw->deltaPos.y += (mw->velocity.y * gGT->elapsedTimeMS) >> 5;
+	mw->deltaPos.y += Timer_ScaleByElapsed(mw->velocity.y, 5);
 
 	// if TNT is moving downward
 	if (mw->velocity.y < 0)
@@ -308,7 +308,7 @@ void RB_TNT_ThTick_ThrowOnHead(struct Thread *t)
 	MatrixRotate(&inst->matrix, &inst->matrix, &localMatrix);
 
 	// reduce time remaining until TNT lands on head
-	mw->velocity.y -= ((gGT->elapsedTimeMS << 2) >> 5);
+	mw->velocity.y -= Timer_ScaleByElapsed(4, 5);
 
 	// set a minimum value (-0x60)
 	if (mw->velocity.y < -0x60)

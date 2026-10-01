@@ -252,12 +252,13 @@ static struct MenuRow s_nativeOptionsRows[] =
 #ifndef __vita__
 static struct MenuRow s_nativeEnhancementsRows[] =
 {
-	{NATIVE_MENU_STRING_PGXP, 5, 1, 0, 0},
-	{NATIVE_MENU_STRING_MAX_LOD, 0, 2, 1, 1},
-	{NATIVE_MENU_STRING_PHYSICS, 1, 3, 2, 2},
-	{NATIVE_MENU_STRING_AI_PHYSICS, 2, 4, 3, 3},
-	{NATIVE_MENU_STRING_COLLISION_PHYSICS, 3, 5, 4, 4},
-	{NATIVE_MENU_STRING_STEERING_PHYSICS, 4, 0, 5, 5},
+	{NATIVE_MENU_STRING_PGXP, 6, 1, 0, 0},
+	{NATIVE_MENU_STRING_INTEGER_NCLIP, 0, 2, 1, 1},
+	{NATIVE_MENU_STRING_MAX_LOD, 1, 3, 2, 2},
+	{NATIVE_MENU_STRING_PHYSICS, 2, 4, 3, 3},
+	{NATIVE_MENU_STRING_AI_PHYSICS, 3, 5, 4, 4},
+	{NATIVE_MENU_STRING_COLLISION_PHYSICS, 4, 6, 5, 5},
+	{NATIVE_MENU_STRING_STEERING_PHYSICS, 5, 0, 6, 6},
 	{RECTMENU_STRING_NONE},
 };
 #endif
@@ -1012,6 +1013,13 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 		return;
 	}
 
+	if (choose == NATIVE_MENU_STRING_INTEGER_NCLIP)
+	{
+		gNativePgxpIntegerNclipEnabled ^= 1;
+		save_config();
+		return;
+	}
+
 	if (choose == NATIVE_MENU_STRING_PGXP)
 	{
 		if (button & BTN_LEFT)
@@ -1254,10 +1262,12 @@ u8 MM_TransitionInOut(struct TransitionMeta *meta, int framesPassed, int numFram
 	// last member of array is null-terminated with 0xFFFF
 	for (/**/; meta->headStart > -1; meta++, transitionIndex++)
 	{
-		s16 start = meta->headStart;
+		// framesPassed and numFrames count rendered frames; headStart and the
+		// swish frame are 30 FPS frame counts
+		s16 start = (s16)FPS_DOUBLE(meta->headStart);
 		s16 framesLeft = ((s16)framesPassed - start);
 
-		if ((framesLeft == MM_TRANSITION_SWISH_FRAME) && (transitionIndex == 0))
+		if ((framesLeft == FPS_DOUBLE(MM_TRANSITION_SWISH_FRAME)) && (transitionIndex == 0))
 		{
 			// Play "swoosh" sound for menu transition
 			OtherFX_Play(MM_TRANSITION_SWISH_SFX, 0);

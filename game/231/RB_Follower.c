@@ -61,7 +61,13 @@ void RB_Follower_ThTick(struct Thread *t)
 	d = fObj->driver;
 	kartState = d->kartState;
 
-	fObj->frameCount--;
+	// lifetime and scale-up run at 30 Hz; position still updates every frame
+	b32 retailTick = CTR_RETAIL_FRAME_TICK(sdata->gGT->timer);
+
+	if (retailTick)
+	{
+		fObj->frameCount--;
+	}
 
 	if ((fObj->frameCount > 0) && ((kartState == KS_NORMAL) || (kartState == KS_DRIFTING)) &&
 
@@ -71,7 +77,7 @@ void RB_Follower_ThTick(struct Thread *t)
 
 	    (d->speedApprox > -1))
 	{
-		if (inst->scale.x < 0x800)
+		if (retailTick && (inst->scale.x < 0x800))
 		{
 			inst->scale.x = inst->scale.x << 1;
 			inst->scale.y = inst->scale.y << 1;

@@ -331,6 +331,10 @@ internal void Platform_HandleKey(int key, char down)
 			Platform_LogWarn("[CTR Native] filtering mode: %d\n", g_cfg_bilinearFiltering);
 			break;
 #if NATIVE_PGXP_SUPPORTED
+		case SDL_SCANCODE_END:
+			gNativePgxpIntegerNclipEnabled ^= 1;
+			Platform_LogWarn("[CTR Native] NCLIP: %s\n", gNativePgxpIntegerNclipEnabled ? "integer" : "PGXP precise");
+			break;
 		case SDL_SCANCODE_INSERT:
 			gNativePgxpMode = (gNativePgxpMode + 1) % NATIVE_PGXP_MODE_COUNT;
 			Platform_LogWarn("[CTR Native] PGXP mode: %d\n", gNativePgxpMode);

@@ -66,3 +66,23 @@ int Timer_GetTime_Elapsed(int oldVal, int *retVal)
 
 	return newVal - oldVal;
 }
+
+/// @brief Retail `(value * elapsedTimeMS) >> shift`, for per-frame motion and timers.
+/// Above 30 FPS, frames are only a few ms long, so the retail shift rounds small
+/// values down to 0 every frame (gravity 4 >> 5 at 240 FPS never applies). Taking
+/// the difference of the scaled running level time keeps the sum exact instead.
+int Timer_ScaleByElapsed(int value, int shift)
+{
+	struct GameTracker *gGT = sdata->gGT;
+	int elapsed = gGT->elapsedTimeMS;
+
+#if defined(CTR_NATIVE)
+	if (CTR_FRAMES_PER_SECOND > FPS)
+	{
+		s64 now = (u32)gGT->msInThisLEV;
+		return (int)((((s64)value * now) >> shift) - (((s64)value * (now - elapsed)) >> shift));
+	}
+#endif
+
+	return (value * elapsed) >> shift;
+}

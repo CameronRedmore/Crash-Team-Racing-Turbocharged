@@ -113,7 +113,11 @@ void RB_Orca_ThTick(struct Thread *t)
 
 	if (orcaObj->cooldown != 0)
 	{
-		orcaObj->cooldown--;
+		// cooldown is in 30 FPS frames
+		if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+		{
+			orcaObj->cooldown--;
+		}
 
 		if ((u16)orcaObj->cooldown != 0)
 		{
@@ -127,24 +131,26 @@ void RB_Orca_ThTick(struct Thread *t)
 	numFrames = orcaObj->numFrames;
 	pathFrame = orcaObj->animIndex;
 
-	if ((numFrames - 0x14) < pathFrame)
+	// animFrame and animIndex count in frame-rate-scaled animation frames,
+	// so scale the 30 FPS path offsets to match
+	if ((numFrames - INSTANCE_ScaleAnimFrames(orcaInst, 0, 0x14)) < pathFrame)
 	{
-		pathFrame = numFrames - 0x14;
+		pathFrame = numFrames - INSTANCE_ScaleAnimFrames(orcaInst, 0, 0x14);
 	}
 
 	direction = orcaObj->direction;
-	denominator = numFrames - 0x17;
+	denominator = numFrames - INSTANCE_ScaleAnimFrames(orcaInst, 0, 0x17);
 
 	if (direction == 0)
 	{
-		if ((numFrames - 0x1A) < (s16)pathFrame)
+		if ((numFrames - INSTANCE_ScaleAnimFrames(orcaInst, 0, 0x1A)) < (s16)pathFrame)
 		{
-			pathFrame = numFrames - 0x1A;
+			pathFrame = numFrames - INSTANCE_ScaleAnimFrames(orcaInst, 0, 0x1A);
 		}
 	}
 	else
 	{
-		pathFrame -= 3;
+		pathFrame -= INSTANCE_ScaleAnimFrames(orcaInst, 0, 3);
 	}
 
 	if ((s16)pathFrame < 0)
@@ -162,7 +168,7 @@ void RB_Orca_ThTick(struct Thread *t)
 	{
 		gGT = sdata->gGT;
 
-		if ((gGT->numPlyrCurrGame < 2) && ((nextFrame == 5) || (nextFrame == 0x31)))
+		if ((gGT->numPlyrCurrGame < 2) && ((nextFrame == INSTANCE_ScaleAnimFrames(orcaInst, 0, 5)) || (nextFrame == INSTANCE_ScaleAnimFrames(orcaInst, 0, 0x31))))
 		{
 			RB_Orca_SpawnSplash(orcaInst);
 		}
@@ -236,7 +242,7 @@ void RB_Orca_LInB(struct Instance *inst)
 	inst->flags |= DRAW_HUGE;
 
 	orcaObj = (struct Orca *)t->object;
-	orcaObj->animIndex = -10;
+	orcaObj->animIndex = INSTANCE_ScaleAnimFrames(inst, 0, -10);
 	orcaObj->direction = 1;
 	orcaObj->instDefRot.x = inst->instDef->rot.x;
 	orcaObj->instDefRot.y = inst->instDef->rot.y;

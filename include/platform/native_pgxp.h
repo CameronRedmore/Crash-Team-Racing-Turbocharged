@@ -42,6 +42,8 @@ typedef struct
 } NativePgxpVertex;
 
 extern int gNativePgxpMode;
+// Use retail integer winding calculations while retaining PGXP geometry.
+extern int gNativePgxpIntegerNclipEnabled;
 
 #if NATIVE_PGXP_SUPPORTED
 

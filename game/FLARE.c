@@ -41,7 +41,8 @@ void FLARE_ThTick(struct Thread *th)
 
 	flare[0] = timer + 1;
 
-	if (timer >= 20)
+	// timer counts rendered frames; the 30 FPS breakpoints below are scaled to match
+	if (timer >= FPS_DOUBLE(20))
 	{
 		th->flags |= THREAD_FLAG_DEAD;
 		return;
@@ -72,37 +73,37 @@ void FLARE_ThTick(struct Thread *th)
 	s32 oldMax;
 	s32 newMin;
 	s32 newMax;
-	if (timer < 2)
+	if (timer < FPS_DOUBLE(2))
 	{
 		oldMin = 0;
-		oldMax = 2;
+		oldMax = FPS_DOUBLE(2);
 		newMin = 0x400;
 		newMax = 0x2000;
 	}
-	else if (timer < 4)
+	else if (timer < FPS_DOUBLE(4))
 	{
-		oldMin = 2;
-		oldMax = 4;
+		oldMin = FPS_DOUBLE(2);
+		oldMax = FPS_DOUBLE(4);
 		newMin = 0x2000;
 		newMax = 0xc00;
 	}
-	else if (timer < 8)
+	else if (timer < FPS_DOUBLE(8))
 	{
-		oldMin = 4;
-		oldMax = 8;
+		oldMin = FPS_DOUBLE(4);
+		oldMax = FPS_DOUBLE(8);
 		newMin = 0xc00;
 		newMax = 0x266;
 	}
 	else
 	{
-		oldMin = 8;
-		oldMax = 20;
+		oldMin = FPS_DOUBLE(8);
+		oldMax = FPS_DOUBLE(20);
 		newMin = 0x266;
 		newMax = 0;
 	}
 
 	s32 scale = VehCalc_MapToRange(timer, oldMin, oldMax, newMin, newMax);
-	u32 angle = ((u32)flare[0] << 12) / 20;
+	u32 angle = ((u32)flare[0] << 12) / FPS_DOUBLE(20);
 	s32 sin = (MATH_Sin(angle) * scale) >> 12;
 	s32 cos = (MATH_Cos(angle) * scale) >> 12;
 	s32 scaledCos = (cos << 9) / 0xf0;

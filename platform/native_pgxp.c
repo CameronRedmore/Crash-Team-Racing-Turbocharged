@@ -13,6 +13,8 @@ int gNativePgxpMode = NATIVE_PGXP_MODE_PERSPECTIVE;
 int gNativePgxpMode = NATIVE_PGXP_MODE_OFF;
 #endif
 
+int gNativePgxpIntegerNclipEnabled = 0;
+
 #if NATIVE_PGXP_SUPPORTED
 
 // Recently read or stored GTE results, for CPU code that copies SXY words
@@ -256,6 +258,11 @@ void NativePgxp_GteLoadSXY(int reg, const void *src, u32 value)
 
 int NativePgxp_GteNclip(u32 sxy0, u32 sxy1, u32 sxy2, s64 *out)
 {
+	if (gNativePgxpIntegerNclipEnabled)
+	{
+		return 0;
+	}
+
 	const NativePgxpVertex *v0 = NativePgxp_FifoMatch(12, sxy0);
 	const NativePgxpVertex *v1 = NativePgxp_FifoMatch(13, sxy1);
 	const NativePgxpVertex *v2 = NativePgxp_FifoMatch(14, sxy2);

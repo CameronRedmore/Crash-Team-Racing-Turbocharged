@@ -384,6 +384,8 @@ static char *RECTMENU_GetString(s16 stringIndex)
 		return (char *)displayMode[gNativeBorderlessEnabled != 0];
 	case NATIVE_MENU_STRING_PGXP:
 		return (char *)pgxp[languageRow][gNativePgxpMode];
+	case NATIVE_MENU_STRING_INTEGER_NCLIP:
+		return gNativePgxpIntegerNclipEnabled ? "INTEGER NCLIP: ON" : "INTEGER NCLIP: OFF";
 	case NATIVE_MENU_STRING_ENHANCEMENTS:
 		return "ENHANCEMENTS";
 	case NATIVE_MENU_STRING_AI_PHYSICS:
@@ -806,6 +808,7 @@ static b32 RECTMENU_NativeOptionsHorizontalInput(struct RectMenu *menu)
 	        (stringIndex <= NATIVE_MENU_STRING_AUDIO_MODE)) ||
 	       (stringIndex == NATIVE_MENU_STRING_AI_RACERS) ||
 	       (stringIndex == NATIVE_MENU_STRING_PGXP) ||
+	       (stringIndex == NATIVE_MENU_STRING_INTEGER_NCLIP) ||
 	       (stringIndex == NATIVE_MENU_STRING_MAX_LOD) ||
 	       (stringIndex == NATIVE_MENU_STRING_PHYSICS) ||
 	       (stringIndex == NATIVE_MENU_STRING_AI_PHYSICS) ||

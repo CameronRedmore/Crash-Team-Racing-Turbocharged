@@ -268,7 +268,7 @@ void MM_HighScore_Init(void)
 	}
 #endif
 	D230.highScoreTransition.state = ENTERING_MENU;
-	D230.highScoreTransition.mainFrame = MM_HIGHSCORE_MAIN_TRANSITION_MAX_FRAME;
+	D230.highScoreTransition.mainFrame = FPS_DOUBLE(MM_HIGHSCORE_MAIN_TRANSITION_MAX_FRAME);
 	D230.highScoreSelection.targetRow = 0;
 	D230.highScoreSelection.currentRow = 0;
 
@@ -298,7 +298,7 @@ void MM_HighScore_MenuProc(struct RectMenu *menu_unused)
 		{
 			if (D230.highScoreTransition.state == ENTERING_MENU)
 			{
-				MM_TransitionInOut(D230.transitionMeta_HighScores, (int)D230.highScoreTransition.mainFrame, MM_HIGHSCORE_SLIDE_TRANSITION_FRAMES);
+				MM_TransitionInOut(D230.transitionMeta_HighScores, (int)D230.highScoreTransition.mainFrame, FPS_DOUBLE(MM_HIGHSCORE_SLIDE_TRANSITION_FRAMES));
 				nextFrameCount = D230.highScoreTransition.mainFrame + -1;
 				if (D230.highScoreTransition.mainFrame == 0)
 				{
@@ -309,10 +309,10 @@ void MM_HighScore_MenuProc(struct RectMenu *menu_unused)
 		}
 		else if (((D230.highScoreTransition.state == EXITING_MENU) && (D230.highScoreTransition.trackFrame == 0)) && (D230.highScoreTransition.rowFrame == 0))
 		{
-			MM_TransitionInOut(D230.transitionMeta_HighScores, (int)D230.highScoreTransition.mainFrame, MM_HIGHSCORE_SLIDE_TRANSITION_FRAMES);
+			MM_TransitionInOut(D230.transitionMeta_HighScores, (int)D230.highScoreTransition.mainFrame, FPS_DOUBLE(MM_HIGHSCORE_SLIDE_TRANSITION_FRAMES));
 			D230.highScoreTransition.mainFrame = D230.highScoreTransition.mainFrame + 1;
 			nextFrameCount = D230.highScoreTransition.mainFrame;
-			if (MM_HIGHSCORE_MAIN_TRANSITION_MAX_FRAME < D230.highScoreTransition.mainFrame)
+			if (FPS_DOUBLE(MM_HIGHSCORE_MAIN_TRANSITION_MAX_FRAME) < D230.highScoreTransition.mainFrame)
 			{
 				MM_JumpTo_Title_Returning();
 				return;
@@ -416,6 +416,8 @@ LAB_OVR_230__800b3c78:
 	                 (D230.highScoreTransition.state == EXITING_MENU);
 	MM_TrackSelect_Video_State(videoState);
 }
+	// row/track slides step at 30 Hz; their offsets rely on whole-step positions
+	b32 slideTick = CTR_RETAIL_FRAME_TICK(sdata->gGT->timer);
 	nextFrameCount = D230.highScoreTransition.trackFrame + -1;
 	if (D230.highScoreTransition.trackFrame == 0)
 	{
@@ -436,7 +438,7 @@ LAB_OVR_230__800b3c78:
 				D230.highScoreTransition.activeHorizontalMove = D230.highScoreTransition.pendingHorizontalMove;
 			}
 		}
-		else
+		else if (slideTick)
 		{
 			u8 slideReachedTarget = D230.highScoreTransition.rowFrame == 1;
 			D230.highScoreTransition.rowFrame = nextFrameCount;
@@ -446,7 +448,7 @@ LAB_OVR_230__800b3c78:
 			}
 		}
 	}
-	else
+	else if (slideTick)
 	{
 		u8 slideReachedTarget = D230.highScoreTransition.trackFrame == 1;
 		D230.highScoreTransition.trackFrame = nextFrameCount;

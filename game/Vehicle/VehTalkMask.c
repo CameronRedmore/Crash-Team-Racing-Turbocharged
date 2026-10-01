@@ -31,6 +31,9 @@ CTR_STATIC_ASSERT(TALK_MASK_INIT_OBJECT_SIZE == 6);
 CTR_STATIC_ASSERT(TALK_MASK_XA_TYPE == 1);
 CTR_STATIC_ASSERT(ADV_MASK_HINT_UKA_UKA_XA_OFFSET == 0x1f);
 
+// Mouth frames are derived in 30 FPS animation units
+#define VehTalkMask_ScaleMouthFrame(mhInst, frame) INSTANCE_ScaleAnimFrames((mhInst), 0, (frame))
+
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80068f90-0x80069178.
 void VehTalkMask_ThTick(struct Thread *t)
 {
@@ -86,6 +89,7 @@ void VehTalkMask_ThTick(struct Thread *t)
 	{
 		desiredMouthFrame = 0;
 	}
+	desiredMouthFrame = VehTalkMask_ScaleMouthFrame(mhInst, desiredMouthFrame);
 
 	s32 currentMouthFrame = mhInst->animFrame;
 
@@ -98,7 +102,7 @@ void VehTalkMask_ThTick(struct Thread *t)
 			mouthFrameDelta = -mouthFrameDelta;
 		}
 
-		if (mouthFrameDelta >= TALK_MASK_MOUTH_SNAP_DELTA_THRESHOLD)
+		if (mouthFrameDelta >= VehTalkMask_ScaleMouthFrame(mhInst, TALK_MASK_MOUTH_SNAP_DELTA_THRESHOLD))
 		{
 			mhInst->animFrame = (s16)desiredMouthFrame;
 
@@ -120,7 +124,7 @@ SkipLerp:
 		mouthFrameDelta = -mouthFrameDelta;
 	}
 
-	if (mouthFrameDelta < TALK_MASK_MOUTH_FINAL_LERP_DELTA_THRESHOLD)
+	if (mouthFrameDelta < VehTalkMask_ScaleMouthFrame(mhInst, TALK_MASK_MOUTH_FINAL_LERP_DELTA_THRESHOLD))
 	{
 		mhInst->animFrame = EngineSound_VolumeAdjust(desiredMouthFrame, currentMouthFrame, TALK_MASK_MOUTH_LERP_STEP);
 	}

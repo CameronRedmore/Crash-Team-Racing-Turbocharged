@@ -134,7 +134,8 @@ void DISPLAY_Blur_Main(struct PushBuffer *pb, int strength)
 	}
 	else
 	{
-		int wave = gGT->timer + cameraID;
+		// phase advances at the 30 FPS rate
+		int wave = FPS_HALF(gGT->timer * 100) + cameraID * 100;
 		struct DisplayBlurTile *scratch = CTR_SCRATCHPAD_PTR(struct DisplayBlurTile, 0);
 		struct DisplayBlurTile *tile = &scratch[0];
 		u32 oldTag;
@@ -147,7 +148,7 @@ void DISPLAY_Blur_Main(struct PushBuffer *pb, int strength)
 			wave = -wave;
 		}
 
-		blur = MATH_Sin(wave * 100);
+		blur = MATH_Sin(wave);
 		if (blur < 0)
 		{
 			blur = -blur;

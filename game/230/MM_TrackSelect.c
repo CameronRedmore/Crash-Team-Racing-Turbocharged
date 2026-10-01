@@ -530,7 +530,7 @@ void MM_TrackSelect_Init(void)
 	D230.menuTrackSelect.rowSelected = sdata->trackSelBackup;
 
 	// 12 frames when moving between selection
-	D230.trackSelect.transition.frame = MM_TRACK_SELECT_TRANSITION_FRAMES;
+	D230.trackSelect.transition.frame = FPS_DOUBLE(MM_TRACK_SELECT_TRANSITION_FRAMES);
 
 	// Set menu and num of tracks based on game mode
 	if ((sdata->gGT->gameMode1 & BATTLE_MODE) != 0)
@@ -586,7 +586,7 @@ void MM_TrackSelect_MenuProc(struct RectMenu *menu)
 				sdata->errorMessagePosIndex = 2;
 			}
 
-			MM_TransitionInOut(D230.transitionMeta_trackSel, elapsedFrames, MM_TRACK_SELECT_SLIDE_FRAMES);
+			MM_TransitionInOut(D230.transitionMeta_trackSel, elapsedFrames, FPS_DOUBLE(MM_TRACK_SELECT_SLIDE_FRAMES));
 
 			// ran out of frames
 			if (elapsedFrames == 0)
@@ -602,10 +602,10 @@ void MM_TrackSelect_MenuProc(struct RectMenu *menu)
 		// transitioning out
 		else if (D230.trackSelect.transition.state == EXITING_MENU)
 		{
-			MM_TransitionInOut(D230.transitionMeta_trackSel, elapsedFrames, MM_TRACK_SELECT_SLIDE_FRAMES);
+			MM_TransitionInOut(D230.transitionMeta_trackSel, elapsedFrames, FPS_DOUBLE(MM_TRACK_SELECT_SLIDE_FRAMES));
 			elapsedFrames++;
 
-			if (elapsedFrames > MM_TRACK_SELECT_TRANSITION_FRAMES)
+			if (elapsedFrames > FPS_DOUBLE(MM_TRACK_SELECT_TRANSITION_FRAMES))
 			{
 				sdata->errorMessagePosIndex = 0;
 
@@ -758,7 +758,7 @@ void MM_TrackSelect_MenuProc(struct RectMenu *menu)
 				} while (!MM_TrackSelect_boolTrackOpen(&selectMenu[currTrack]));
 
 				D230.trackSelect.currentTrack = currTrack;
-				D230.trackSelect.trackChangeFrames = MM_TRACK_SELECT_TRACK_CHANGE_FRAMES;
+				D230.trackSelect.trackChangeFrames = FPS_DOUBLE(MM_TRACK_SELECT_TRACK_CHANGE_FRAMES);
 				D230.trackSelect.trackChangeDirection = 1;
 
 				// NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b034c-0x800b035c for track-select previous SFX.
@@ -782,7 +782,7 @@ void MM_TrackSelect_MenuProc(struct RectMenu *menu)
 				} while (!MM_TrackSelect_boolTrackOpen(&selectMenu[currTrack]));
 
 				D230.trackSelect.currentTrack = currTrack;
-				D230.trackSelect.trackChangeFrames = MM_TRACK_SELECT_TRACK_CHANGE_FRAMES;
+				D230.trackSelect.trackChangeFrames = FPS_DOUBLE(MM_TRACK_SELECT_TRACK_CHANGE_FRAMES);
 				D230.trackSelect.trackChangeDirection = -1;
 
 				// NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b03bc-0x800b03cc for track-select next SFX.
@@ -960,8 +960,8 @@ void MM_TrackSelect_MenuProc(struct RectMenu *menu)
 		u32 rowAngle = ((rowPhase >> 0x10) + -MM_TRACK_SELECT_CENTER_ROW) * MM_TRACK_SELECT_ROW_ANGLE_STEP;
 		if (0 < D230.trackSelect.trackChangeFrames)
 		{
-			rowAngle = rowAngle + (((MM_TRACK_SELECT_TRACK_CHANGE_FRAMES - D230.trackSelect.trackChangeFrames) * MM_TRACK_SELECT_ROW_ANGLE_STEP) /
-			                       MM_TRACK_SELECT_TRACK_CHANGE_FRAMES) *
+			rowAngle = rowAngle + (((FPS_DOUBLE(MM_TRACK_SELECT_TRACK_CHANGE_FRAMES) - D230.trackSelect.trackChangeFrames) * MM_TRACK_SELECT_ROW_ANGLE_STEP) /
+			                       FPS_DOUBLE(MM_TRACK_SELECT_TRACK_CHANGE_FRAMES)) *
 			                          (int)D230.trackSelect.trackChangeDirection;
 		}
 

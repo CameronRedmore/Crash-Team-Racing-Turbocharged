@@ -141,7 +141,7 @@ LAB_800adc08:;
 
 		if ((modelID == DYNAMIC_BOMB) || (modelID == DYNAMIC_SHIELD))
 		{
-			tw->rotY = RB_Hazard_InterpolateValue(tw->rotY, (int)desiredRotY, FPS_HALF(4));
+			tw->rotY = RB_Hazard_InterpolateValue(tw->rotY, (int)desiredRotY, 4);
 
 			tw->vel.x = (MATH_Sin(tw->rotY) * 3) >> 7;
 			tw->vel.z = (MATH_Cos(tw->rotY) * 3) >> 7;
@@ -159,7 +159,7 @@ LAB_800adc08:;
 			// if 10 wumpa were not used
 			if ((tw->flags & TRACKER_FLAG_POWERED_UP) == 0)
 			{
-				tw->rotY = RB_Hazard_InterpolateValue(tw->rotY, (int)desiredRotY, FPS_HALF(0x40));
+				tw->rotY = RB_Hazard_InterpolateValue(tw->rotY, (int)desiredRotY, 0x40);
 
 				tw->vel.x = (MATH_Sin(tw->rotY) * 5) >> 8;
 				tw->vel.z = (MATH_Cos(tw->rotY) * 5) >> 8;
@@ -168,7 +168,7 @@ LAB_800adc08:;
 			// if 10 wumpa were used
 			else
 			{
-				tw->rotY = RB_Hazard_InterpolateValue(tw->rotY, (int)desiredRotY, FPS_HALF(0x80));
+				tw->rotY = RB_Hazard_InterpolateValue(tw->rotY, (int)desiredRotY, 0x80);
 
 				tw->vel.x = (MATH_Sin(tw->rotY) * 3) >> 7;
 				tw->vel.z = (MATH_Cos(tw->rotY) * 3) >> 7;
@@ -200,10 +200,9 @@ LAB_800adc08:;
 		inst->animFrame = 0;
 	}
 
-	int elapsedTime = gGT->elapsedTimeMS;
-	inst->matrix.t[0] += (((int)tw->vel.x * elapsedTime) >> 5);
-	inst->matrix.t[1] += (((int)tw->vel.y * elapsedTime) >> 5);
-	inst->matrix.t[2] += (((int)tw->vel.z * elapsedTime) >> 5);
+	inst->matrix.t[0] += Timer_ScaleByElapsed(tw->vel.x, 5);
+	inst->matrix.t[1] += Timer_ScaleByElapsed(tw->vel.y, 5);
+	inst->matrix.t[2] += Timer_ScaleByElapsed(tw->vel.z, 5);
 
 	// If this is bomb
 	if (modelID == DYNAMIC_BOMB)
@@ -256,9 +255,9 @@ LAB_800adc08:;
 		tw->vel.y = -tw->vel.y;
 		tw->vel.z = -tw->vel.z;
 
-		inst->matrix.t[0] += ((int)tw->vel.x * elapsedTime) >> 5;
-		inst->matrix.t[1] += ((int)tw->vel.y * elapsedTime) >> 5;
-		inst->matrix.t[2] += ((int)tw->vel.z * elapsedTime) >> 5;
+		inst->matrix.t[0] += Timer_ScaleByElapsed(tw->vel.x, 5);
+		inst->matrix.t[1] += Timer_ScaleByElapsed(tw->vel.y, 5);
+		inst->matrix.t[2] += Timer_ScaleByElapsed(tw->vel.z, 5);
 
 		RB_MovingExplosive_Explode(t, inst, tw);
 		return;
@@ -287,15 +286,15 @@ LAB_800adc08:;
 			// if quadblock under,
 			// then set fall rate and fall
 
-			int gravityStep = elapsedTime << 2;
+			int gravityStep = 4;
 
 			// if missile
 			if (modelID == DYNAMIC_ROCKET)
 			{
-				gravityStep = elapsedTime << 3;
+				gravityStep = 8;
 			}
 
-			tw->vel.y -= (gravityStep >> 5);
+			tw->vel.y -= Timer_ScaleByElapsed(gravityStep, 5);
 
 			if (tw->vel.y < -0x60)
 			{

@@ -60,12 +60,12 @@ void RB_Potion_ThTick_InAir(struct Thread *t)
 	mw = t->object;
 
 	// adjust position, by velocity, do NOT use parenthesis
-	inst->matrix.t[0] += mw->velocity.x * gGT->elapsedTimeMS >> 5;
-	inst->matrix.t[1] += mw->velocity.y * gGT->elapsedTimeMS >> 5;
-	inst->matrix.t[2] += mw->velocity.z * gGT->elapsedTimeMS >> 5;
+	inst->matrix.t[0] += Timer_ScaleByElapsed(mw->velocity.x, 5);
+	inst->matrix.t[1] += Timer_ScaleByElapsed(mw->velocity.y, 5);
+	inst->matrix.t[2] += Timer_ScaleByElapsed(mw->velocity.z, 5);
 
 	// gravity, decrease velocity over time
-	mw->velocity.y -= ((gGT->elapsedTimeMS << 2) >> 5);
+	mw->velocity.y -= Timer_ScaleByElapsed(4, 5);
 
 	// terminal velocity
 	if (mw->velocity.y < -0x60)

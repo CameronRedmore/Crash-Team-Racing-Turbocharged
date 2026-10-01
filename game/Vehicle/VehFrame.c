@@ -109,9 +109,26 @@ u32 VehFrameInst_GetNumAnimFrames(struct Instance *inst, int animIndex)
 	u32 frameCount = anim->numFrames & VEH_FRAME_NUM_FRAMES_MASK;
 	if (INSTANCE_Use60FpsAnimation(inst) && ((anim->numFrames & 0x8000) == 0) && (frameCount != 0))
 	{
-		frameCount = (frameCount << 1) - 1;
+		frameCount = (u32)(FPS_DOUBLE((int)frameCount - 1) + 1);
 	}
 	return frameCount;
+}
+
+// Half-rate (0x8000) driver anims keep animFrame in 30 FPS frames, so they
+// only step at 30 Hz and index baked matrices directly.
+static int VehFrame_InterpAnimFrame(struct Instance *inst, int speed, int desired)
+{
+	if (!INSTANCE_AnimFramesScaled(inst, inst->animIndex) && !CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+	{
+		return inst->animFrame;
+	}
+
+	return VehFrame_InterpAnimFrame(inst, speed, desired);
+}
+
+static u8 VehFrame_MatrixIndex(struct Instance *inst)
+{
+	return (u8)(INSTANCE_AnimFramesScaled(inst, inst->animIndex) ? FPS_HALF(inst->animFrame) : inst->animFrame);
 }
 
 static void VehFrameProc_Driving_SpawnBurnSmoke(struct Driver *d)
@@ -190,14 +207,14 @@ void VehFrameProc_Driving(struct Thread *t, struct Driver *d)
 			else if (currAnim == VEH_FRAME_ANIM_MATRIX_FIRST)
 			{
 				speed = VEH_FRAME_TRANSITION_MATRIX_SPEED;
-				d->matrixIndex = (u8)FPS_HALF(inst->animFrame);
+				d->matrixIndex = VehFrame_MatrixIndex(inst);
 			}
 
-			inst->animFrame = VehCalc_InterpBySpeed(inst->animFrame, speed, startFrame);
+			inst->animFrame = VehFrame_InterpAnimFrame(inst, speed, startFrame);
 
 			if ((u32)(inst->animIndex - VEH_FRAME_ANIM_MATRIX_FIRST) < VEH_FRAME_MATRIX_ANIM_COUNT)
 			{
-				d->matrixIndex = (u8)FPS_HALF(inst->animFrame);
+				d->matrixIndex = VehFrame_MatrixIndex(inst);
 				if (d->matrixIndex == 0)
 				{
 					d->matrixArray = BAKED_GTE_MATRIX_NONE;
@@ -241,7 +258,7 @@ void VehFrameProc_Driving(struct Thread *t, struct Driver *d)
 			}
 		}
 
-		inst->animFrame = VehCalc_InterpBySpeed(inst->animFrame, VEH_FRAME_INTERP_SPEED_NORMAL, targetFrame);
+		inst->animFrame = VehFrame_InterpAnimFrame(inst, VEH_FRAME_INTERP_SPEED_NORMAL, targetFrame);
 		return;
 	}
 
@@ -250,7 +267,7 @@ void VehFrameProc_Driving(struct Thread *t, struct Driver *d)
 		s16 characterID;
 		u8 matrixArray;
 
-		inst->animFrame = VehCalc_InterpBySpeed(inst->animFrame, VEH_FRAME_INTERP_SPEED_NORMAL, numFrames - 1);
+		inst->animFrame = VehFrame_InterpAnimFrame(inst, VEH_FRAME_INTERP_SPEED_NORMAL, numFrames - 1);
 
 		if (d->kartState == KS_MASK_GRABBED)
 		{
@@ -274,11 +291,11 @@ void VehFrameProc_Driving(struct Thread *t, struct Driver *d)
 		}
 
 		d->matrixArray = matrixArray;
-		d->matrixIndex = (u8)FPS_HALF(inst->animFrame);
+		d->matrixIndex = VehFrame_MatrixIndex(inst);
 		return;
 	}
 
-	inst->animFrame = VehCalc_InterpBySpeed(inst->animFrame, VEH_FRAME_INTERP_SPEED_NORMAL, numFrames - 1);
+	inst->animFrame = VehFrame_InterpAnimFrame(inst, VEH_FRAME_INTERP_SPEED_NORMAL, numFrames - 1);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8005b510-0x8005b5fc.
@@ -316,7 +333,7 @@ void VehFrameProc_Spinning(struct Thread *t, struct Driver *d)
 
 		if (inst->animIndex != VEH_FRAME_ANIM_DRIVE)
 		{
-			inst->animFrame = VehCalc_InterpBySpeed(inst->animFrame, VEH_FRAME_SPIN_INTERP_SPEED, targetFrame);
+			inst->animFrame = VehFrame_InterpAnimFrame(inst, VEH_FRAME_SPIN_INTERP_SPEED, targetFrame);
 			return;
 		}
 	}
@@ -327,7 +344,7 @@ void VehFrameProc_Spinning(struct Thread *t, struct Driver *d)
 		targetFrame = numFrames - 1;
 	}
 
-	inst->animFrame = VehCalc_InterpBySpeed(inst->animFrame, VEH_FRAME_SPIN_INTERP_SPEED, targetFrame);
+	inst->animFrame = VehFrame_InterpAnimFrame(inst, VEH_FRAME_SPIN_INTERP_SPEED, targetFrame);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8005b5fc-0x8005b6b8.
@@ -362,5 +379,5 @@ void VehFrameProc_LastSpin(struct Thread *t, struct Driver *d)
 		targetFrame = 0;
 	}
 
-	inst->animFrame = VehCalc_InterpBySpeed(inst->animFrame, VEH_FRAME_LAST_SPIN_INTERP_SPEED, targetFrame);
+	inst->animFrame = VehFrame_InterpAnimFrame(inst, VEH_FRAME_LAST_SPIN_INTERP_SPEED, targetFrame);
 }

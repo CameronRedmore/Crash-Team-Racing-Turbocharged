@@ -2077,6 +2077,15 @@ static void RenderBucket_AdvanceInstanceAnimWord(struct Instance *inst, int game
 		return;
 	}
 
+#if defined(CTR_NATIVE)
+	// Animations whose animFrame counts 30 FPS frames (half-rate 0x8000 anims
+	// and models excluded from 60 FPS animation) only step at 30 Hz.
+	if (!INSTANCE_AnimFramesScaled(inst, inst->animIndex) && !CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+	{
+		return;
+	}
+#endif
+
 	frame = (u16)inst->animFrame;
 
 	if ((*queuedFlags & 0x20) == 0)

@@ -337,6 +337,10 @@ void load_config(void)
 			{
 				gNativeMaxLodEnabled = (value != 0);
 			}
+			else if (strcmp("pgxp_integer_nclip", buffer) == 0)
+			{
+				gNativePgxpIntegerNclipEnabled = (value != 0);
+			}
 			else if (strcmp("pgxp", buffer) == 0)
 			{
 				if ((value >= NATIVE_PGXP_MODE_OFF) && (value < NATIVE_PGXP_MODE_COUNT))
@@ -375,6 +379,7 @@ void save_config(void)
 		fprintf(config, "%s=%d\n", "dithering", gNativeDitheringEnabled != 0);
 		fprintf(config, "%s=%d\n", "borderless", gNativeBorderlessEnabled != 0);
 		fprintf(config, "%s=%d\n", "pgxp", gNativePgxpMode);
+		fprintf(config, "%s=%d\n", "pgxp_integer_nclip", gNativePgxpIntegerNclipEnabled != 0);
 		fprintf(config, "%s=%d\n", "max_lod", gNativeMaxLodEnabled != 0);
 		fprintf(config, "%s=%d\n", "smoothed_physics", gNativeSmoothedPhysicsEnabled != 0);
 		fprintf(config, "%s=%d\n", "smoothed_ai", gNativeSmoothedAIEnabled != 0);

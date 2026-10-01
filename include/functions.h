@@ -338,6 +338,8 @@ struct Instance *INSTANCE_BirthWithThread_Stack(int *spArr);
 void INSTANCE_Death(struct Instance *inst);
 b32 INSTANCE_Use60FpsAnimation(struct Instance *inst);
 u16 INSTANCE_GetNumAnimFrames(struct Instance *pInstance, int animIndex);
+b32 INSTANCE_AnimFramesScaled(struct Instance *inst, int animIndex);
+int INSTANCE_ScaleAnimFrames(struct Instance *inst, int animIndex, int frames);
 void INSTANCE_LevInitAll(struct InstDef *levInstDef, int numInst);
 
 // JitPool
@@ -709,6 +711,7 @@ void Timer_Init(void);
 void Timer_Destroy(void);
 int Timer_GetTime_Total();
 int Timer_GetTime_Elapsed(int, int *);
+int Timer_ScaleByElapsed(int value, int shift);
 
 // UI
 void UI_ThTick_CountPickup(struct Thread *bucket);

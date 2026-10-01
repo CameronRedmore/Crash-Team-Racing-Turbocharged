@@ -206,7 +206,7 @@ void MM_Battle_DrawIcon_Weapon(struct Icon *icon, u32 posX, int posY, struct Pri
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b1830-0x800b1848.
 void MM_Battle_Init(void)
 {
-	D230.battleTransition.frame = BATTLE_TRANSITION_FRAME_COUNT;
+	D230.battleTransition.frame = FPS_DOUBLE(BATTLE_TRANSITION_FRAME_COUNT);
 	D230.battleTransition.state = ENTERING_MENU;
 }
 
@@ -233,7 +233,7 @@ void MM_Battle_MenuProc(struct RectMenu *unused)
 			// if transitioning in
 			if (D230.battleTransition.state == ENTERING_MENU)
 			{
-				MM_TransitionInOut(D230.transitionMeta_battle, (int)D230.battleTransition.frame, BATTLE_ANIMATED_TRANSITION_META_COUNT);
+				MM_TransitionInOut(D230.transitionMeta_battle, (int)D230.battleTransition.frame, FPS_DOUBLE(BATTLE_ANIMATED_TRANSITION_META_COUNT));
 
 				// reduce frames
 				nextTransitionFrames = D230.battleTransition.frame - 1;
@@ -252,7 +252,7 @@ void MM_Battle_MenuProc(struct RectMenu *unused)
 			// if transitioning out
 			if (D230.battleTransition.state == EXITING_MENU)
 			{
-				MM_TransitionInOut(D230.transitionMeta_battle, (int)D230.battleTransition.frame, BATTLE_ANIMATED_TRANSITION_META_COUNT);
+				MM_TransitionInOut(D230.transitionMeta_battle, (int)D230.battleTransition.frame, FPS_DOUBLE(BATTLE_ANIMATED_TRANSITION_META_COUNT));
 
 				// count frames
 				D230.battleTransition.frame++;
@@ -260,7 +260,7 @@ void MM_Battle_MenuProc(struct RectMenu *unused)
 				nextTransitionFrames = D230.battleTransition.frame;
 
 				// if 12 frames past
-				if (BATTLE_TRANSITION_FRAME_COUNT < D230.battleTransition.frame)
+				if (FPS_DOUBLE(BATTLE_TRANSITION_FRAME_COUNT) < D230.battleTransition.frame)
 				{
 					// if starting race
 					if (D230.battleTransition.startAfterExit != 0)
@@ -951,7 +951,7 @@ LAB_800b25f0:
 	s16 flashingErrorColor = BATTLE_ERROR_COLOR_A;
 
 	// if time on timer is odd
-	if ((sdata->frameCounter & BATTLE_ERROR_COLOR_FRAME_BIT) != 0)
+	if ((FPS_HALF(sdata->frameCounter) & BATTLE_ERROR_COLOR_FRAME_BIT) != 0)
 	{
 		// change color
 		flashingErrorColor = BATTLE_ERROR_COLOR_B;
