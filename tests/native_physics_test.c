@@ -39,6 +39,15 @@ static void VehPhysCrash_PlayHumanFeedback(struct Thread *a, struct Thread *b, s
 #include "../game/NativeCollisionImpact.c"
 #include "../game/Vehicle/VehCarCollisionSmoothed.c"
 
+void GhostTape_WriteBoosts(int reserves, u8 type, int cap) { (void)reserves; (void)type; (void)cap; }
+void VehTurbo_ThTick(struct Thread *t) { (void)t; }
+void VehTurbo_ThDestroy(struct Thread *t) { (void)t; }
+struct Instance *INSTANCE_Birth3D(struct Model *model, const char *name, struct Thread *t)
+{ (void)model; (void)name; (void)t; assert(0); return NULL; }
+struct Instance *INSTANCE_BirthWithThread(int model, const char *name, int pool, int bucket, void *tick, int size, struct Thread *parent)
+{ (void)model; (void)name; (void)pool; (void)bucket; (void)tick; (void)size; (void)parent; assert(0); return NULL; }
+#include "../game/Vehicle/VehFire.c"
+
 static void near(double a, double b) { assert(fabs(a - b) < 0.000001); }
 
 static void test_frame_rates(void)
@@ -382,6 +391,120 @@ static void test_collisions(void)
 	near(hit.fraction,0.25);near(u+v,0.75);
 }
 
+static void test_pad_contact(void)
+{
+	struct QuadBlock pad={.quadFlags=QUADBLOCK_FLAG_TRIGGER,.terrain_type=COLL_STEP_TRIGGER_TURBO_PAD};
+	struct BspSearchVertex a={.pos={.x=-10,.y=0,.z=-10}}, b={.pos={.x=10,.y=0,.z=-10}}, c={.pos={.x=0,.y=0,.z=10}};
+	for (int option=0;option<NATIVE_FRAME_RATE_COUNT;option++)
+	{
+		gNative60FpsEnabled=option;
+		int rate=CTR_FRAMES_PER_SECOND;
+		// Stay on the pad for a second while moving parallel to its face.
+		for (int frame=0;frame<rate;frame++)
+		{
+			struct ScratchpadStruct sps={0};
+			sps.candidate.ptrQuadblock=&pad;
+			sps.Input1.hitRadius=1;
+			sps.hitFraction=4096;
+			NativeCollision_BeginSweep(&sps,(NativePhysicsVec){-1+2.0*frame/rate,1,0},(NativePhysicsVec){2.0/rate,0,0});
+			NativeCollision_MovedTriangle(&sps,&a,&b,&c);
+			assert(sps.collision.stepFlags==COLL_STEP_TRIGGER_TURBO_PAD);
+			assert(sps.boolDidTouchQuadblock==0 && sps.hitFraction==4096);
+			NativeCollision_EndSweep();
+		}
+	}
+	struct ScratchpadStruct sps={0};
+	sps.candidate.ptrQuadblock=&pad;
+	sps.Input1.hitRadius=1;
+	NativeCollision_BeginSweep(&sps,(NativePhysicsVec){0,1,0},(NativePhysicsVec){0});
+	NativeCollision_MovedTriangle(&sps,&a,&b,&c);
+	assert(sps.collision.stepFlags==COLL_STEP_TRIGGER_TURBO_PAD);
+	NativeCollision_EndSweep();
+	sps.collision.stepFlags=0;
+	NativeCollision_BeginSweep(&sps,(NativePhysicsVec){0,2,0},(NativePhysicsVec){0});
+	NativeCollision_MovedTriangle(&sps,&a,&b,&c);
+	assert(sps.collision.stepFlags==0);
+	NativeCollision_EndSweep();
+}
+
+static void test_pad_boost_counter(void)
+{
+	struct GameTracker *gt=sdata->gGT;
+	struct Thread player={.modelIndex=DYNAMIC_PLAYER}, turboThread={0};
+	struct Instance inst={.thread=&player}, flame1={0}, flame2={0};
+	struct Driver d={.driverID=12,.instSelf=&inst,.numTurbos=3,.kartState=KS_NORMAL};
+	struct Turbo turbo={.driver=&d,.inst=&flame2};
+	turboThread.object=&turbo; turboThread.inst=&flame1;
+	struct Thread *saved=gt->threadBuckets[TURBO].thread;
+	gt->threadBuckets[TURBO].thread=&turboThread;
+	for (int option=0;option<NATIVE_FRAME_RATE_COUNT;option++)
+	{
+		gNative60FpsEnabled=option;
+		NativePhysics_ResetDriver(&d);
+		d.numTurbos=3;
+		for (int frame=0;frame<CTR_FRAMES_PER_SECOND;frame++)
+		{
+			gt->timer=frame;
+			gt->elapsedTimeMS=CTR_FRAME_STEP(32,frame);
+			// A missed contact every other high-rate step must not rearm entry.
+			u32 flags=frame%2 && CTR_FRAMES_PER_SECOND>30 ? 0 : COLL_STEP_TRIGGER_TURBO_PAD;
+			NativePhysics_UpdateTurboPadContact(&d,flags);
+			if (!flags) continue;
+			// Exercise the actual boost function even if its action flag was lost.
+			d.actionsFlagSet=d.actionsFlagSetPrevFrame=0;
+			d.stepFlagSet=flags;
+			VehFire_Increment(&d,960,TURBO_PAD|FREEZE_RESERVES_ON_TURBO_PAD,256);
+			assert(d.numTurbos==4);
+		}
+		int size=NativePhysics_GetStateSize();
+		void *snapshot=malloc(size);
+		assert(snapshot && NativePhysics_CaptureState(snapshot,size));
+		NativePhysics_ResetDriver(&d);
+		assert(NativePhysics_ConsumeTurboPadEntry(&d));
+		assert(NativePhysics_RestoreState(snapshot,size));
+		assert(!NativePhysics_ConsumeTurboPadEntry(&d));
+		free(snapshot);
+		gt->elapsedTimeMS=32;
+		NativePhysics_UpdateTurboPadContact(&d,0);
+		NativePhysics_UpdateTurboPadContact(&d,COLL_STEP_TRIGGER_TURBO_PAD);
+		VehFire_Increment(&d,960,TURBO_PAD|FREEZE_RESERVES_ON_TURBO_PAD,256);
+		assert(d.numTurbos==5);
+	}
+	gt->threadBuckets[TURBO].thread=saved;
+}
+
+static void test_road_seam_normals(void)
+{
+	struct QuadBlock road={.quadFlags=QUADBLOCK_FLAG_GROUND};
+	// Road triangle beneath Roo's Tubes pad 935, from the installed 1P level.
+	struct BspSearchVertex a={.pos={.x=1724,.y=-788,.z=-12493}},
+	                      b={.pos={.x=1879,.y=-794,.z=-12606}},
+	                      c={.pos={.x=1835,.y=-810,.z=-12338}};
+	NativePhysicsVec av=NC_Vertex(&a.pos),bv=NC_Vertex(&b.pos),cv=NC_Vertex(&c.pos);
+	NativePhysicsVec n=NC_Normalize(NC_Cross(NC_Sub(bv,av),NC_Sub(cv,av)));
+	if (n.y<0) n=NC_Scale(n,-1);
+	a.plane.normal=NC_Export(NC_Scale(n,4096));
+	NativePhysicsVec middle=NC_Scale(NC_Add(av,bv),0.5), edge=NC_Normalize(NC_Sub(bv,av));
+	NativePhysicsVec across=NC_Normalize(NC_Cross(edge,n));
+	if (NC_Dot(across,NC_Sub(cv,middle))<0) across=NC_Scale(across,-1);
+	for (int inward=0;inward<2;inward++)
+	{
+		struct ScratchpadStruct s={0};
+		s.candidate.ptrQuadblock=&road; s.Input1.hitRadius=25; s.hitFraction=4096;
+		NativePhysicsVec start=NC_Add(NC_Sub(middle,NC_Scale(across,40)),NC_Scale(n,24));
+		NativeCollision_BeginSweep(&s,start,NC_Sub(NC_Scale(across,80),NC_Scale(n,inward)));
+		NativeCollision_MovedTriangle(&s,&a,&b,&c);
+		if (!inward) assert(s.boolDidTouchQuadblock==0);
+		else
+		{
+			assert(s.boolDidTouchQuadblock==1);
+			NativePhysicsVec normal=NativeCollision_Normal(&s);
+			assert(NC_Dot(NC_Normalize(normal),n)>0.999999);
+		}
+		NativeCollision_EndSweep();
+	}
+}
+
 int main(void)
 {
 	struct Driver d = {0}, other = {0};
@@ -491,6 +614,9 @@ int main(void)
 	test_domains();
 	test_steering();
 	test_collisions();
+	test_pad_contact();
+	test_pad_boost_counter();
+	test_road_seam_normals();
 	test_collision_response();
 	test_surface_forces();
 	test_mud_drag();

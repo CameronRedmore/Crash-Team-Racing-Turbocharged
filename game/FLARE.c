@@ -1,5 +1,10 @@
 #include <common.h>
 
+#if defined(CTR_NATIVE)
+#include "platform/native_pgxp.h"
+extern int gNativeMirrorModeEnabled;
+#endif
+
 static inline u32 FLARE_PackXY(s16 x, s16 y)
 {
 	return (u16)x | ((u32)(u16)y << 16);
@@ -172,6 +177,57 @@ void FLARE_ThTick(struct Thread *th)
 	}
 
 	uint32_t *ot = &pb->ptrOT[depth];
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+	if (NATIVE_DRAW3D_ACTIVE())
+	{
+		NativeDraw3DView view = {0};
+		double rotation[9], translation[3];
+		NativePgxp_GetTransform(&pb->matrix_ViewProj, &pb->matrix_ViewProj.m[0][0], pb->matrix_ViewProj.t, rotation, translation);
+		const double position[3] = {relX, relY, relZ};
+		for (int i = 0; i < 3; i++)
+			view.translation[i] = (rotation[i*3] * position[0] + rotation[i*3+1] * position[1] + rotation[i*3+2] * position[2]) / 16384.0;
+		const s16 billboard[9] = {scaledCos, -scaledSin, 0, sin, cos, 0, 0, 0, scale};
+		for (int i = 0; i < 9; i++) view.rotation[i] = billboard[i] / 16384.0;
+		view.projection = (float)pb->distanceToScreen_PREV;
+		view.centerX = (float)pb->rect.w * 0.5f;
+		view.centerY = (float)pb->rect.h * 0.5f;
+		view.width = (float)pb->rect.w;
+		view.height = (float)pb->rect.h;
+		// This tick precedes MainFrame_RenderFrame's mirror-phase switch.
+		view.mirror = gNativeMirrorModeEnabled && !gGT->boolDemoMode &&
+			!(gGT->gameMode1 & (GAME_CUTSCENE | MAIN_MENU | LOADING)) &&
+			gGT->levelID >= DINGO_CANYON && gGT->levelID < INTRO_RACE_TODAY &&
+			LOAD_IsOpen_RacingOrBattle() && sdata->Loading.stage == LOAD_IDLE;
+		int layer = NativeDraw3D_BeginLayer(&view);
+		if (layer >= 0)
+		{
+			for (int quad = 0; quad < 4; quad++)
+			{
+				const POLY_GT4 *poly = prim + quad;
+				const u8 uv[4][2] = {{poly->u0,poly->v0}, {poly->u1,poly->v1}, {poly->u2,poly->v2}, {poly->u3,poly->v3}};
+				const u8 *colors[4] = {&poly->r0, &poly->r1, &poly->r2, &poly->r3};
+				NativeDraw3DVertex vertices[4];
+				for (int i = 0; i < 4; i++)
+					vertices[i] = (NativeDraw3DVertex){.x=(i & 1) ? 0 : ((quad & 1) ? 409 : -409),
+						.y=(i & 2) ? 0 : ((quad & 2) ? 409 : -409), .z=0, .u=uv[i][0], .v=uv[i][1],
+						.r=colors[i][0], .g=colors[i][1], .b=colors[i][2]};
+				NativeDraw3DMaterial material = {0};
+				material.tpage = poly->tpage;
+				material.clut = poly->clut;
+				material.depthBias = -2;
+				material.flags = NATIVE_DRAW3D_TEXTURED | NATIVE_DRAW3D_SEMI_TRANS |
+				                 NATIVE_DRAW3D_DOUBLE_SIDED | NATIVE_DRAW3D_ORDERED_BLEND;
+				NativeDraw3D_AddQuad(layer, &vertices[0], &vertices[1], &vertices[2], &vertices[3], &material);
+			}
+			NativeDraw3D_EndLayer(layer);
+			DR_PSYX_DRAW3D *marker = (DR_PSYX_DRAW3D *)prim;
+			NativeDraw3D_SetMarker(marker, layer);
+			AddPrim(ot, marker);
+			gGT->backBuffer->primMem.cursor = marker + 1;
+			return;
+		}
+	}
+#endif
 	p0->tag = CtrGpu_PackOTTag(CtrGpu_PrimToOTLink24(p1), 0x0c000000);
 	p1->tag = CtrGpu_PackOTTag(CtrGpu_PrimToOTLink24(p2), 0x0c000000);
 	p2->tag = CtrGpu_PackOTTag(CtrGpu_PrimToOTLink24(p3), 0x0c000000);

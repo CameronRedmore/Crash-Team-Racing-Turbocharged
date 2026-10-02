@@ -98,6 +98,9 @@ void MainFrame_ResetDB(struct GameTracker *gGT)
 	db->otMem.cursor = db->otMem.start;
 
 #if defined(CTR_NATIVE)
+	// Start native storage alongside the OT arena, before game-logic effects
+	// such as FLARE_ThTick can publish markers into this frame.
+	NativeDraw3D_BeginFrame();
 	MainFrame_RegisterGpuLinkRanges(gGT);
 #endif
 

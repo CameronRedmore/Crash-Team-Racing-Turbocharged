@@ -1,5 +1,10 @@
 #include <common.h>
 
+#if defined(CTR_NATIVE)
+#include "platform/native_pgxp.h"
+extern int gNativeMirrorModeRenderActive;
+#endif
+
 struct CSThreadParentFrameScratch
 {
 	SVec3Slot parentPos;
@@ -1448,6 +1453,37 @@ void CS_Thread_InterpolateFramesMS(struct Thread *t)
 		}
 
 		ot = (u32 *)&gGT->pushBuffer[0].ptrOT[otIndex];
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+		if (NATIVE_DRAW3D_ACTIVE())
+		{
+			struct PushBuffer *pb = &gGT->pushBuffer[0];
+			NativeDraw3DView view = {0};
+			double rotation[9], translation[3];
+			NativePgxp_GetTransform(&pb->matrix_ViewProj, &pb->matrix_ViewProj.m[0][0], pb->matrix_ViewProj.t, rotation, translation);
+			for (int i = 0; i < 9; i++) view.rotation[i] = rotation[i] / 4096.0;
+			for (int i = 0; i < 3; i++) view.translation[i] = translation[i];
+			view.projection = pb->distanceToScreen_PREV;
+			view.width = pb->rect.w;
+			view.height = pb->rect.h;
+			view.centerX = view.width * 0.5f;
+			view.centerY = view.height * 0.5f;
+			view.mirror = gNativeMirrorModeRenderActive != 0;
+			const int layer = NativeDraw3D_BeginLayer(&view);
+			if (layer >= 0)
+			{
+				NativeDraw3DVertex a = { .x = curr.x, .y = curr.y, .z = curr.z, .r = color, .g = color, .b = color };
+				NativeDraw3DVertex b = { .x = next.x, .y = next.y, .z = next.z, .r = color, .g = color, .b = color };
+				NativeDraw3DMaterial material = { .tpage = 0x20, .flags = NATIVE_DRAW3D_SEMI_TRANS | NATIVE_DRAW3D_ORDERED_BLEND | NATIVE_DRAW3D_DOUBLE_SIDED };
+				NativeDraw3D_AddLine(layer, &a, &b, &material, 1.0f);
+				NativeDraw3D_EndLayer(layer);
+				DR_PSYX_DRAW3D *marker = (DR_PSYX_DRAW3D *)packet;
+				NativeDraw3D_SetMarker(marker, layer);
+				AddPrim(ot, marker);
+				primMem->cursor = marker + 1;
+				return;
+			}
+		}
+#endif
 		packet->tag = CtrGpu_PackOTTag(*ot, CS_INTERPOLATE_LINE_OT_TAG);
 		*ot = CtrGpu_PrimToOTLink24(packet);
 		packet++;

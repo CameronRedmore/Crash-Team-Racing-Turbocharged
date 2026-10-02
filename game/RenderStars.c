@@ -1,5 +1,10 @@
 #include <common.h>
 
+#if defined(CTR_NATIVE)
+#include "platform/native_pgxp.h"
+extern int gNativeMirrorModeRenderActive;
+#endif
+
 CTR_STATIC_ASSERT(sizeof(TILE_1) == 0x0C);
 CTR_STATIC_ASSERT(offsetof(TILE_1, tag) == 0x00);
 CTR_STATIC_ASSERT(offsetof(TILE_1, r0) == 0x04);
@@ -101,6 +106,23 @@ void RenderStars(struct PushBuffer *pb, struct PrimMem *primMem, struct Stars *s
 		ot = &pb->ptrOT[(u16)stars->distance];
 		state0 = 0x30125400;
 		state1 = 0x493583fe;
+		int nativeLayer = -1;
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+		if (NATIVE_DRAW3D_ACTIVE() && (u8 *)prim + sizeof(DR_PSYX_DRAW3D) <= (u8 *)primMem->guardEnd)
+		{
+			NativeDraw3DView view = {0};
+			double rotation[9], translation[3];
+			NativePgxp_GetTransform(&pb->matrix_ViewProj, &pb->matrix_ViewProj.m[0][0], pb->matrix_ViewProj.t, rotation, translation);
+			for (int i = 0; i < 9; i++) view.rotation[i] = rotation[i] / 4096.0;
+			view.projection = (float)pb->distanceToScreen_PREV;
+			view.centerX = (float)pb->rect.w * 0.5f;
+			view.centerY = (float)pb->rect.h * 0.5f;
+			view.width = (float)pb->rect.w;
+			view.height = (float)pb->rect.h;
+			view.mirror = gNativeMirrorModeRenderActive != 0;
+			nativeLayer = NativeDraw3D_BeginLayer(&view);
+		}
+#endif
 
 		while (starIndex >= 0)
 		{
@@ -179,6 +201,17 @@ void RenderStars(struct PushBuffer *pb, struct PrimMem *primMem, struct Stars *s
 			gteFlag = CFC2(31);
 			sxy = MFC2(14);
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+			if (nativeLayer >= 0)
+			{
+				NativeDraw3DVertex point = {.x=(s16)packedXY, .y=(s16)(packedXY >> 16),
+					.z=(s16)RenderStars_MulLowShift(starZ, scale), .r=colorByte, .g=colorByte, .b=colorByte};
+				NativeDraw3DMaterial material = {0};
+				material.flags = NATIVE_DRAW3D_BACKGROUND;
+				NativeDraw3D_AddLine(nativeLayer, &point, &point, &material, 1.0f);
+			}
+			else
+#endif
 			if (RenderStars_IsVisible(gteFlag, sxy))
 			{
 				TILE_1 *star = (TILE_1 *)prim;
@@ -192,6 +225,19 @@ void RenderStars(struct PushBuffer *pb, struct PrimMem *primMem, struct Stars *s
 			starIndex--;
 		}
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+		if (nativeLayer >= 0)
+		{
+			NativeDraw3D_EndLayer(nativeLayer);
+			DR_PSYX_DRAW3D *marker = (DR_PSYX_DRAW3D *)prim;
+			NativeDraw3D_SetMarker(marker, nativeLayer);
+			AddPrim(ot, marker);
+			prim = (u32 *)(marker + 1);
+			continue;
+		}
+#else
+		(void)nativeLayer;
+#endif
 		// Retail emits a length-2 draw-env packet: E1 tpage followed by a
 		// zero terminator word.
 		struct CtrGpuDrawModePacket *drawMode = (struct CtrGpuDrawModePacket *)prim;

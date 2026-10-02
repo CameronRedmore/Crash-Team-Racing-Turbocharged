@@ -102,6 +102,7 @@ typedef struct
 #if NATIVE_PGXP_SUPPORTED
 	// NativeGpuWorldDepth; zero when the split has no world depth.
 	u8 worldDepth;
+	u32 nativeOverlayLayer;
 #endif
 #ifdef __vita__
 	bool psxTextureFullyOpaque;
@@ -208,12 +209,16 @@ typedef enum
 	NATIVE_GPU_WORLD_DEPTH_TESTED,
 	// Drawn in retail OT order and always passing, but still writing depth.
 	NATIVE_GPU_WORLD_DEPTH_RETAIL_ORDER,
+	// All passes are depth tested after opaque visibility, without writing depth.
+	NATIVE_GPU_WORLD_DEPTH_ORDERED_BLEND,
+	// Native sky: preserve OT order, never touch world depth.
+	NATIVE_GPU_WORLD_DEPTH_BACKGROUND,
 } NativeGpuWorldDepth;
 
-internal void NativeGpu_SetWorldDepthSplit(NativeGpuWorldDepth mode)
+internal void NativeGpu_SetDepthSplit(NativeGpuWorldDepth mode, u32 overlayLayer)
 {
 	GPUDrawSplit *current = &s_gpu.splits[s_gpu.splitIndex];
-	if (current->worldDepth == mode) return;
+	if (current->worldDepth == mode && current->nativeOverlayLayer == overlayLayer) return;
 	if (s_gpu.vertexIndex != (int)current->startVertex)
 	{
 		if (s_gpu.splitIndex + 1 >= MAX_DRAW_SPLITS) return;
@@ -225,6 +230,12 @@ internal void NativeGpu_SetWorldDepthSplit(NativeGpuWorldDepth mode)
 		current = next;
 	}
 	current->worldDepth = mode;
+	current->nativeOverlayLayer = overlayLayer;
+}
+
+internal void NativeGpu_SetWorldDepthSplit(NativeGpuWorldDepth mode)
+{
+	NativeGpu_SetDepthSplit(mode, 0);
 }
 #endif
 
@@ -792,6 +803,7 @@ void ClearSplits(void)
 	s_gpu.splits[0].superTurboTint = false;
 #if NATIVE_PGXP_SUPPORTED
 	s_gpu.splits[0].worldDepth = NATIVE_GPU_WORLD_DEPTH_NONE;
+	s_gpu.splits[0].nativeOverlayLayer = 0;
 #endif
 #ifdef __vita__
 	s_gpu.splits[0].psxTextureFullyOpaque = false;
@@ -935,6 +947,54 @@ void LineSwapSourceVerts(VERTTYPE **p0, VERTTYPE **p1, u8 **c0, u8 **c1)
 	}
 }
 
+#if NATIVE_DRAW3D_SUPPORTED
+// Native screen geometry uses the same homogeneous shader input as Draw3D,
+// with clip W=1 and Z=0. It stays at its OT position with no scene depth.
+// Packets remain the transport for draw environments, materials and ordering.
+internal void NativeGpu_SetScreenGeometry(GrVertex *vertex, int count)
+{
+	NativeGpu_SetDepthSplit(NATIVE_GPU_WORLD_DEPTH_NONE, 0);
+	for (int i = 0; i < count; i++)
+	{
+		vertex[i].w = 0.0f;
+		vertex[i].depth = 1.0f;
+		vertex[i].clipSpace = 1;
+	}
+}
+
+internal int NativeGpu_ApplyNative2D(GrVertex *vertex, VERTTYPE *const *points, int count, float ofsX, float ofsY)
+{
+	if (!NATIVE_DRAW3D_ACTIVE()) return 0;
+	NativePgxpVertex explicitPosition[4];
+	int explicitMask = 0;
+	for (int i = 0; i < count; i++)
+	{
+		const u32 value = (u16)points[i][0] | ((u32)(u16)points[i][1] << 16);
+		if (NativePgxp_Lookup(points[i], value, &explicitPosition[i]))
+		{
+			// A GTE-backed corner belongs to a projected 3D fallback, even
+			// when its depth is unavailable. Keep its existing recovery path.
+			if (explicitPosition[i].w != NATIVE_PGXP_SCREEN_W)
+			{
+				NativeDraw3D_ReportDiagnostic(NATIVE_DRAW3D_DIAG_PROJECTED_PACKET, "polygon packet", value);
+				return 0;
+			}
+			explicitMask |= 1 << i;
+		}
+	}
+	for (int i = 0; i < count; i++)
+	{
+		if (explicitMask & (1 << i))
+		{
+			vertex[i].x = explicitPosition[i].x + ofsX;
+			vertex[i].y = explicitPosition[i].y + ofsY;
+		}
+	}
+	NativeGpu_SetScreenGeometry(vertex, count);
+	return 1;
+}
+#endif
+
 void MakeLineArray(GrVertex *vertex, VERTTYPE *p0, VERTTYPE *p1)
 {
 #if NATIVE_PGXP_SUPPORTED
@@ -977,6 +1037,9 @@ void MakeLineArray(GrVertex *vertex, VERTTYPE *p0, VERTTYPE *p1)
 		vertex[3].x = vertex[0].x + 1;
 		vertex[3].y = vertex[0].y;
 	} // TODO diagonal line alignment
+#if NATIVE_DRAW3D_SUPPORTED
+	if (NATIVE_DRAW3D_ACTIVE()) NativeGpu_SetScreenGeometry(vertex, 4);
+#endif
 }
 
 #if NATIVE_PGXP_SUPPORTED
@@ -1002,7 +1065,7 @@ internal void NativeGpu_ApplyPgxp(GrVertex *vertex, VERTTYPE *const *points, int
 
 		if (NativePgxp_Lookup(points[i], value, &precise))
 		{
-			if (NATIVE_PGXP_ACTIVE())
+			if (NATIVE_PGXP_ACTIVE() || precise.w == NATIVE_PGXP_SCREEN_W)
 			{
 				vertex[i].x = precise.x + ofsX;
 				vertex[i].y = precise.y + ofsY;
@@ -1061,6 +1124,10 @@ void MakeVertexTriangle(GrVertex *vertex, VERTTYPE *p0, VERTTYPE *p1, VERTTYPE *
 	vertex[2].x = p2[0] + ofsX;
 	vertex[2].y = p2[1] + ofsY;
 
+#if NATIVE_DRAW3D_SUPPORTED
+	VERTTYPE *const screenPoints[3] = {p0, p1, p2};
+	if (NativeGpu_ApplyNative2D(vertex, screenPoints, 3, ofsX, ofsY)) return;
+#endif
 #if NATIVE_PGXP_SUPPORTED
 	if (NATIVE_VERTEX_TRACKING_ACTIVE())
 	{
@@ -1095,6 +1162,10 @@ void MakeVertexQuad(GrVertex *vertex, VERTTYPE *p0, VERTTYPE *p1, VERTTYPE *p2, 
 	vertex[3].x = p3[0] + ofsX;
 	vertex[3].y = p3[1] + ofsY;
 
+#if NATIVE_DRAW3D_SUPPORTED
+	VERTTYPE *const screenPoints[4] = {p0, p1, p2, p3};
+	if (NativeGpu_ApplyNative2D(vertex, screenPoints, 4, ofsX, ofsY)) return;
+#endif
 #if NATIVE_PGXP_SUPPORTED
 	if (NATIVE_VERTEX_TRACKING_ACTIVE())
 	{
@@ -1128,6 +1199,9 @@ void MakeVertexRect(GrVertex *vertex, VERTTYPE *p0, s16 w, s16 h)
 
 	vertex[3].x = vertex[0].x + w;
 	vertex[3].y = vertex[0].y;
+#if NATIVE_DRAW3D_SUPPORTED
+	if (NATIVE_DRAW3D_ACTIVE()) NativeGpu_SetScreenGeometry(vertex, 4);
+#endif
 }
 
 void MakeTexcoordQuad(GrVertex *vertex, u8 *uv0, u8 *uv1, u8 *uv2, u8 *uv3, s16 page, s16 clut, u8 dither)
@@ -1719,6 +1793,7 @@ internal void AddSplit(bool semiTrans, bool textured, bool framebufferFeedback, 
 	split->superTurboTint = superTurboTint;
 #if NATIVE_PGXP_SUPPORTED
 	split->worldDepth = NATIVE_GPU_WORLD_DEPTH_NONE;
+	split->nativeOverlayLayer = 0;
 #endif
 #ifdef __vita__
 	split->psxTextureFullyOpaque = false;
@@ -1933,6 +2008,11 @@ internal bool NativeGpu_DepthPassStateCompatible(const GPUDrawSplit *first, int 
 
 #endif
 
+#if NATIVE_DRAW3D_SUPPORTED
+static int s_gpuIsolatedDepthPending;
+static int s_gpuIsolatedDepthActive;
+#endif
+
 internal void NativeGpu_DrawSplitRangePass(const GPUDrawSplit *split, int semiTransPass, BlendMode blendMode, bool depthWrite, int startVertex,
                                            int numVerts)
 {
@@ -1961,10 +2041,21 @@ internal void NativeGpu_DrawSplitRangePass(const GPUDrawSplit *split, int semiTr
 	NativeRenderer_SetupClipMode(&split->drawenv.clip, &split->dispenv, drawOnScreen);
 	NativeRenderer_SetOffscreenState(&split->drawenv.clip, !drawOnScreen);
 	NativeGpu_SetSplitShaderState(split, semiTransPass, blendMode, !drawOnScreen);
+#if NATIVE_DRAW3D_SUPPORTED
+	if (s_gpuIsolatedDepthPending)
+	{
+		s_gpuIsolatedDepthActive = NativeRenderer_BeginIsolatedDepth();
+		s_gpuIsolatedDepthPending = 0;
+	}
+#endif
 #ifdef __vita__
 	NativeRenderer_SetDepthState(1, depthWrite);
 #else
-	NativeRenderer_SetDepthState(NATIVE_DEPTH_BUFFER_ACTIVE() && split->worldDepth && drawOnScreen, depthWrite);
+	int nativeDepthTarget = drawOnScreen;
+#if NATIVE_DRAW3D_SUPPORTED
+	if (split->nativeOverlayLayer) nativeDepthTarget = s_gpuIsolatedDepthActive;
+#endif
+	NativeRenderer_SetDepthState(NATIVE_DEPTH_BUFFER_ACTIVE() && split->worldDepth && split->worldDepth != NATIVE_GPU_WORLD_DEPTH_BACKGROUND && nativeDepthTarget, depthWrite);
 	NativeRenderer_SetDepthAlwaysPass(split->worldDepth == NATIVE_GPU_WORLD_DEPTH_RETAIL_ORDER);
 #endif
 	NativeRenderer_DrawTriangles(startVertex, numVerts / 3);
@@ -2715,7 +2806,9 @@ internal void SetPSXMaskState(u32 code)
 #if NATIVE_PGXP_SUPPORTED
 internal bool NativeGpu_SameWorldDepthDomain(const GPUDrawSplit *first, const GPUDrawSplit *second)
 {
-	return second->drawenv.dfe && !second->drawPrimMode &&
+	return first->nativeOverlayLayer == second->nativeOverlayLayer &&
+	       (first->nativeOverlayLayer ? second->drawenv.dfe == first->drawenv.dfe : second->drawenv.dfe) &&
+	       (first->nativeOverlayLayer ? second->drawPrimMode == first->drawPrimMode : !second->drawPrimMode) &&
 	       memcmp(&first->drawenv.clip, &second->drawenv.clip, sizeof(first->drawenv.clip)) == 0 &&
 	       memcmp(&first->dispenv, &second->dispenv, sizeof(first->dispenv)) == 0;
 }
@@ -2725,7 +2818,7 @@ internal void NativeGpu_DrawWorldDepthSplits(void)
 	for (int first = 1; first <= s_gpuDrawSplitCount;)
 	{
 		const GPUDrawSplit *start = &s_gpuDrawSplits[first];
-		if (!start->worldDepth || !start->drawenv.dfe || start->drawPrimMode)
+		if (!start->worldDepth || ((!start->drawenv.dfe || start->drawPrimMode) && !start->nativeOverlayLayer))
 		{
 			DrawSplit(start);
 			first++;
@@ -2739,11 +2832,20 @@ internal void NativeGpu_DrawWorldDepthSplits(void)
 		{
 			if (s_gpuDrawSplits[i].worldDepth) last = i;
 		}
+#if NATIVE_DRAW3D_SUPPORTED
+		if (start->nativeOverlayLayer)
+		{
+			s_gpuIsolatedDepthPending = 1;
+			s_gpuIsolatedDepthActive = 0;
+		}
+#endif
 		// Retail-order splits draw every pass here, at their OT position.
 		for (int i = first; i <= last; i++)
 		{
 			const GPUDrawSplit *split = &s_gpuDrawSplits[i];
-			if (split->worldDepth != NATIVE_GPU_WORLD_DEPTH_TESTED) DrawSplit(split);
+			if (split->worldDepth == NATIVE_GPU_WORLD_DEPTH_ORDERED_BLEND) continue;
+			if (split->worldDepth == NATIVE_GPU_WORLD_DEPTH_BACKGROUND) NativeGpu_DrawSplitPass(split, 0, split->blendMode, false);
+			else if (split->worldDepth != NATIVE_GPU_WORLD_DEPTH_TESTED) DrawSplit(split);
 			else if (split->psxTexturedSemiTrans)
 			{
 				if (split->psxSemiTransPassMask & 1) NativeGpu_DrawSplitPass(split, 1, BM_NONE, true);
@@ -2758,6 +2860,18 @@ internal void NativeGpu_DrawWorldDepthSplits(void)
 		for (int i = first; i <= last; i++)
 		{
 			const GPUDrawSplit *split = &s_gpuDrawSplits[i];
+			if (split->worldDepth == NATIVE_GPU_WORLD_DEPTH_ORDERED_BLEND)
+			{
+				// Mask and body stay adjacent here. Even opaque body texels
+				// belong after the mask and must not occlude later ghost faces.
+				if (split->psxTexturedSemiTrans)
+				{
+					if (split->psxSemiTransPassMask & 1) NativeGpu_DrawSplitPass(split, 1, BM_NONE, false);
+					if (split->psxSemiTransPassMask & 2) NativeGpu_DrawSplitPass(split, 2, split->blendMode, false);
+				}
+				else NativeGpu_DrawSplitPass(split, 0, split->blendMode, false);
+				continue;
+			}
 			if (split->worldDepth != NATIVE_GPU_WORLD_DEPTH_TESTED) continue;
 			if (split->psxTexturedSemiTrans)
 			{
@@ -2768,6 +2882,13 @@ internal void NativeGpu_DrawWorldDepthSplits(void)
 				NativeGpu_DrawSplitPass(split, 0, split->blendMode, false);
 			}
 		}
+#if NATIVE_DRAW3D_SUPPORTED
+		if (start->nativeOverlayLayer)
+		{
+			NativeRenderer_EndIsolatedDepth();
+			s_gpuIsolatedDepthPending = s_gpuIsolatedDepthActive = 0;
+		}
+#endif
 		first = last + 1;
 	}
 }
@@ -2953,6 +3074,10 @@ internal bool NativeGpu_HasPacketVertexRoom(void)
 		return true;
 	}
 
+	if (NATIVE_DRAW3D_ACTIVE())
+	{
+		return false;
+	}
 	if (!s_reported)
 	{
 		s_reported = true;
@@ -3675,6 +3800,7 @@ internal void ProcessDrawEnvCommand(u32 code)
 
 global_variable u32 s_gpuDraw3DOrder[NATIVE_DRAW3D_MAX_TRIANGLES];
 global_variable const NativeDraw3DTriangle *s_gpuDraw3DSortTriangles;
+static u32 s_gpuDraw3DOverlayLayer;
 
 internal u32 NativeGpu_Draw3DStateKey(const NativeDraw3DMaterial *material)
 {
@@ -3716,7 +3842,10 @@ internal void NativeGpu_EmitDraw3DTriangle(const NativeDraw3DView *view, const N
 
 	activeDrawEnv.tpage = tpage;
 	AddSplit(semiTrans, textured, false, (s16)material->clut);
-	NativeGpu_SetWorldDepthSplit(NATIVE_GPU_WORLD_DEPTH_TESTED);
+	NativeGpu_SetDepthSplit((material->flags & NATIVE_DRAW3D_BACKGROUND) ? NATIVE_GPU_WORLD_DEPTH_BACKGROUND
+	                               : (material->flags & NATIVE_DRAW3D_ORDERED_BLEND)
+	                                 ? NATIVE_GPU_WORLD_DEPTH_ORDERED_BLEND : NATIVE_GPU_WORLD_DEPTH_TESTED,
+	                            (material->flags & NATIVE_DRAW3D_OVERLAY) ? s_gpuDraw3DOverlayLayer : 0);
 
 	GrVertex *vertex = &s_gpu.vertexBuffer[s_gpu.vertexIndex];
 	memset(vertex, 0, sizeof(GrVertex) * 3);
@@ -3731,7 +3860,7 @@ internal void NativeGpu_EmitDraw3DTriangle(const NativeDraw3DView *view, const N
 		const float y = triangle->position[i][1];
 		const float z = triangle->position[i][2];
 
-		vertex[i].x = view->projection * x + (view->centerX + ofsX) * z;
+		vertex[i].x = view->projection * x + (view->centerX + ofsX + material->screenOffsetX) * z;
 		vertex[i].y = view->projection * y + (view->centerY + ofsY) * z;
 		vertex[i].w = z - nearDepth;
 		vertex[i].depth = z;
@@ -3774,6 +3903,7 @@ internal void NativeGpu_EmitDraw3DLayer(int layerIndex)
 		return;
 	}
 
+	s_gpuDraw3DOverlayLayer = (u32)layerIndex + 1;
 	const NativeDraw3DTriangle *triangles = NativeDraw3D_GetTriangles() + layer->firstTriangle;
 	const u32 count = layer->triangleCount;
 	u32 opaqueCount = 0;
@@ -3781,7 +3911,8 @@ internal void NativeGpu_EmitDraw3DLayer(int layerIndex)
 
 	for (u32 i = 0; i < count; i++)
 	{
-		if ((triangles[i].material.flags & NATIVE_DRAW3D_SEMI_TRANS) != 0)
+		if (!(triangles[i].material.flags & NATIVE_DRAW3D_BACKGROUND) &&
+		    (triangles[i].material.flags & (NATIVE_DRAW3D_SEMI_TRANS | NATIVE_DRAW3D_ORDERED_BLEND)))
 		{
 			s_gpuDraw3DOrder[count - 1 - translucentCount++] = i;
 		}
@@ -3802,7 +3933,14 @@ internal void NativeGpu_EmitDraw3DLayer(int layerIndex)
 	s_gpu.mergeSemiTransSplits = true;
 	for (u32 i = 0; (i < count) && NativeGpu_HasPacketVertexRoom(); i++)
 	{
-		NativeGpu_EmitDraw3DTriangle(&layer->view, &triangles[s_gpuDraw3DOrder[i]], ofsX, ofsY);
+		const NativeDraw3DTriangle *triangle = &triangles[s_gpuDraw3DOrder[i]];
+		NativeGpu_EmitDraw3DTriangle(&layer->view, triangle, ofsX, ofsY);
+		if ((triangle->material.flags & NATIVE_DRAW3D_BLEND_PAIR_START) && i + 1 < count)
+		{
+			// Packet headroom exceeds the six vertices required by a pair.
+			// Emit the body before checking the frame limit again.
+			NativeGpu_EmitDraw3DTriangle(&layer->view, &triangles[s_gpuDraw3DOrder[++i]], ofsX, ofsY);
+		}
 	}
 	s_gpu.mergeSemiTransSplits = false;
 	activeDrawEnv.tpage = savedTpage;

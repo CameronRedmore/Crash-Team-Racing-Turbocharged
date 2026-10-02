@@ -36,6 +36,8 @@ struct NativePhysicsDriverState
 	Vec3 exportedPosition;
 	double speed, yaw, pitch;
 	s16 exportedSpeed, exportedYaw, exportedPitch;
+	int turboPadBoosted;
+	double turboPadAbsentMS;
 };
 struct NativePhysicsState
 {
@@ -43,6 +45,7 @@ struct NativePhysicsState
 	struct NativePhysicsDriverState drivers[NATIVE_PHYSICS_DRIVER_COUNT];
 };
 static struct NativePhysicsState s_physics;
+static struct NativePhysicsDriverState *NativePhysics_Driver(struct Driver *d);
 
 double NativePhysics_FrameScale(void)
 {
@@ -81,6 +84,28 @@ void NativePhysics_SetEnabled(int enabled)
 void NativePhysics_ResetDriver(struct Driver *d)
 {
 	memset(&s_physics.drivers[d->driverID], 0, sizeof(s_physics.drivers[0]));
+}
+
+void NativePhysics_UpdateTurboPadContact(struct Driver *d, u32 stepFlags)
+{
+	struct NativePhysicsDriverState *state = NativePhysics_Driver(d);
+	if (stepFlags & COLL_STEP_TRIGGER_TURBO_PAD_MASK)
+		state->turboPadAbsentMS = 0;
+	else
+	{
+		state->turboPadAbsentMS += NativePhysics_ElapsedMS(sdata->gGT->elapsedTimeMS);
+		// Require a full retail step away from the pad to rearm. Short contact
+		// gaps at high FPS are still part of the same crossing.
+		if (state->turboPadAbsentMS >= 32.0 - 1e-9) state->turboPadBoosted = 0;
+	}
+}
+
+int NativePhysics_ConsumeTurboPadEntry(struct Driver *d)
+{
+	struct NativePhysicsDriverState *state = NativePhysics_Driver(d);
+	int first = !state->turboPadBoosted;
+	state->turboPadBoosted = 1;
+	return first;
 }
 
 static struct NativePhysicsDriverState *NativePhysics_Driver(struct Driver *d)

@@ -141,6 +141,7 @@ void VehFire_Increment(struct Driver *driver, int reserves, u32 type, int fireLe
 	struct Instance *turboInst2;
 
 	struct GameTracker *gGT = sdata->gGT;
+	b32 firstPadBoost = (driver->actionsFlagSetPrevFrame & ACTION_NEW_BOOST) == 0;
 	if (
 	    // if this is a turbo pad
 	    ((type & TURBO_PAD) != 0) &&
@@ -179,6 +180,12 @@ void VehFire_Increment(struct Driver *driver, int reserves, u32 type, int fireLe
 	{
 		return;
 	}
+
+#if defined(CTR_NATIVE) && !defined(__vita__)
+	if ((type & (TURBO_PAD | FREEZE_RESERVES_ON_TURBO_PAD)) == (TURBO_PAD | FREEZE_RESERVES_ON_TURBO_PAD) &&
+	    driver->instSelf->thread->modelIndex == DYNAMIC_PLAYER && (driver->actionsFlagSet & ACTION_BOT) == 0)
+		firstPadBoost = NativePhysics_ConsumeTurboPadEntry(driver);
+#endif
 
 	// Clear the turbo input latch and mark an outside turbo.
 	driver->actionsFlagSet = (driver->actionsFlagSet & ~ACTION_TURBO_INPUT_LATCH) | ACTION_NEW_BOOST;
@@ -317,7 +324,7 @@ void VehFire_Increment(struct Driver *driver, int reserves, u32 type, int fireLe
 		{
 			// only increase counter on the first frame of turbo pad
 
-			if ((driver->actionsFlagSetPrevFrame & ACTION_NEW_BOOST) == 0)
+			if (firstPadBoost)
 			{
 				driver->numTurbos = (s16)CTR_MipsAddLo((u16)driver->numTurbos, 1);
 

@@ -290,6 +290,222 @@ static void DepthTest_Native(int mode)
 	gNativeRendererMode = NATIVE_RENDERER_CLASSIC;
 }
 
+// Tiger Temple's black lower sky uses a -8 byte offset from OT slot 0x3ff.
+// With the native level marker at 0x3fe, the sky paints over the level. Exercise
+// the actual level-marker helper and DrawSky_Full, rather than a hand-made
+// packet order that would silently miss that regression.
+static void DepthTest_TigerSkyOrder(int mode, int draw, int skyOffset)
+{
+	gNativeRendererMode = NATIVE_RENDERER_NATIVE;
+	if (draw) DepthTest_Begin(1, mode);
+	else
+	{
+		NativePgxp_EndFrame();
+		gNativePgxpMode = mode;
+		NativeDraw3D_BeginFrame();
+	}
+	Platform_InitScratchpad();
+	uint32_t ot[0x400];
+	u32 primitiveWords[64] = {0};
+	u8 *primitives = (u8 *)primitiveWords;
+	struct PushBuffer pb = {0};
+	struct PrimMem primMem = {0};
+	struct ShortVertex vertices[3] = {0};
+	struct SkyboxFace face = {0};
+	struct Skybox sky = {0};
+	pb.ptrOT = ot;
+	pb.rect.w = 320;
+	pb.rect.h = 240;
+	pb.distanceToScreen_PREV = 160;
+	pb.matrix_ViewProj.m[0][0] = 4096;
+	pb.matrix_ViewProj.m[1][1] = 4096;
+	pb.matrix_ViewProj.m[2][2] = 4096;
+	primMem.cursor = primitives;
+	primMem.end = primitives + sizeof(primitiveWords);
+	primMem.guardEnd = primMem.end;
+	for (int i = 0; i < 3; i++)
+	{
+		const int sx[] = {20, 300, 160};
+		const int sy[] = {20, 20, 220};
+		vertices[i].Position.vx = (sx[i] - 160) * 10;
+		vertices[i].Position.vy = (sy[i] - 120) * 10;
+		vertices[i].Position.vz = 1600;
+		vertices[i].Color.cd = 0x30;
+	}
+	face.B = sizeof(vertices[0]);
+	face.C = sizeof(vertices[0]) * 2;
+	face.D = (u16)skyOffset;
+	sky.ptrVertex = vertices;
+	// DrawSky chooses four segments; every segment contains the same black
+	// triangle so the test also covers cameras selecting adjacent segments.
+	for (int i = 0; i < NUM_SKYBOX_SEGMENTS; i++)
+	{
+		sky.numFaces[i] = 1;
+		sky.ptrFaces[i] = &face;
+	}
+	NativeGpuLinks_Reset();
+	NativeGpuLinks_RegisterRangeChecked("test sky OT", ot, sizeof(ot));
+	NativeGpuLinks_RegisterRangeChecked("test sky primitives", primitives, sizeof(primitiveWords));
+	ClearOTagR(ot, 0x400);
+	gte_SetGeomOffset(160, 120);
+	gte_SetGeomScreen(160);
+	NativePgxp_SetWorldPhase(1);
+	DrawSky_Full(&sky, &pb, &primMem);
+	assert((u8 *)primMem.cursor > primitives);
+	const int layer = DepthTest_BeginNativeLayer(0);
+	DepthTest_NativeTriangle(layer, 0, 400, 0, 0);
+	NativeDraw3D_EndLayer(layer);
+	NativeDrawLevel_LinkLayer(&pb, &primMem, layer, NATIVE_DRAW_LEVEL_MARKER_OT_INDEX);
+	int skyCount = 0;
+	int markerCount = 0;
+	int steps = 0;
+	const u32 *packet = &ot[0x3ff];
+	while (packet != NULL)
+	{
+		assert(++steps <= 0x400 + 5);
+		const u32 tag = CTR_GPU_ReadTagWord(packet);
+		if ((tag >> 24) == 6)
+		{
+			// All four sky faces must precede the level marker, including
+			// Tiger Temple's negative-D faces.
+			assert(markerCount == 0);
+			skyCount++;
+		}
+		else if ((tag >> 24) == 1)
+		{
+			assert((packet[1] >> 24) == 0xb3);
+			const NativeDraw3DLayer *nativeLayer = NativeDraw3D_GetLayer((int)(packet[1] & 0xffffff));
+			assert(nativeLayer != NULL && nativeLayer->triangleCount > 0);
+			const NativeDraw3DTriangle *triangles = NativeDraw3D_GetTriangles() + nativeLayer->firstTriangle;
+			if (triangles[0].material.flags & NATIVE_DRAW3D_BACKGROUND)
+			{
+				assert(markerCount == 0);
+				skyCount += (int)nativeLayer->triangleCount;
+			}
+			else
+			{
+				assert(skyCount == 4);
+				markerCount++;
+			}
+		}
+		if (NativeGpuLinks_IsTerminator(tag & 0xffffff)) break;
+		packet = NativeGpuLinks_ToHostPointer(tag & 0xffffff);
+	}
+	assert(skyCount == 4 && markerCount == 1);
+	if (draw)
+	{
+		ParsePrimitivesLinkedList(&ot[0x3ff], 0);
+		DrawAllSplits();
+		DepthTest_Pixel(160, 100, 248, 0, 0);
+	}
+	gNativeRendererMode = NATIVE_RENDERER_CLASSIC;
+}
+
+// Check the model bridge without SDL/GL: packet screen coordinates are
+// deliberately bogus, so the assertions require the animation FIFO geometry.
+static void DepthTest_ModelSubmission(void)
+{
+	gNativeRendererMode = NATIVE_RENDERER_NATIVE;
+	NativeDraw3D_BeginFrame();
+	struct RenderBucketDrawContext ctx = {0};
+	struct Instance inst = {0};
+	struct InstDrawPerPlayer idpp = {0};
+	ctx.inst = &inst;
+	ctx.idpp = &idpp;
+	ctx.nativeLayer = DepthTest_BeginNativeLayer(0);
+	const double rotation[9] = {0.25, 0, 0, 0, 0.25, 0, 0, 0, 0.25};
+	const double translation[3] = {0, 0, 0};
+	NativeDraw3D_SetObjectTransform(ctx.nativeLayer, rotation, translation);
+	ctx.tempPacked[1].xy = CTR_PackS16Pair(-400, -200);
+	ctx.tempPacked[2].xy = CTR_PackS16Pair(400, -200);
+	ctx.tempPacked[3].xy = CTR_PackS16Pair(0, 200);
+	for (int i = 1; i <= 3; i++) ctx.tempPacked[i].z = 1600;
+	inst.depthBiasNormal = (u8)-2;
+	POLY_G3 flat = {0};
+	setPolyG3(&flat);
+	flat.r0 = 10; flat.g0 = 20; flat.b0 = 30;
+	flat.r1 = 40; flat.g1 = 50; flat.b1 = 60;
+	flat.r2 = 70; flat.g2 = 80; flat.b2 = 90;
+	flat.x0 = flat.y0 = flat.x1 = flat.y1 = flat.x2 = flat.y2 = -1000;
+	assert(RenderBucket_SubmitNativePrim(&ctx, 0x10000000, &flat) == 1);
+	const NativeDraw3DLayer *layer = NativeDraw3D_GetLayer(ctx.nativeLayer);
+	const NativeDraw3DTriangle *triangles = NativeDraw3D_GetTriangles();
+	assert(layer->triangleCount == 1);
+	assert(triangles[0].position[0][0] == -100 && triangles[0].position[0][1] == -50);
+	assert(triangles[0].position[2][1] == 50 && triangles[0].position[2][2] == 400);
+	assert(triangles[0].color[1][0] == 40 && triangles[0].color[2][2] == 90);
+	assert(triangles[0].material.depthBias == -2);
+	assert(triangles[0].material.flags == 0);
+
+	// Strip command winding, instance winding and the start-banner double flip.
+	RenderBucket_SubmitNativePrim(&ctx, 0x30000000, &flat);
+	assert(layer->triangleCount == 1);
+	idpp.instFlags = 0x8000;
+	RenderBucket_SubmitNativePrim(&ctx, 0x30000000, &flat);
+	assert(layer->triangleCount == 2);
+	idpp.instFlags = 0;
+	gNativeMirrorModeDoubleFlipActive = 1;
+	RenderBucket_SubmitNativePrim(&ctx, 0x30000000, &flat);
+	assert(layer->triangleCount == 3);
+	gNativeMirrorModeDoubleFlipActive = 0;
+
+	POLY_GT3 textured = {0};
+	setPolyGT3(&textured);
+	setSemiTrans(&textured, 1);
+	textured.tpage = 0x20;
+	textured.clut = 0x123;
+	textured.u0 = 2; textured.v0 = 3;
+	textured.u1 = 4; textured.v1 = 5;
+	textured.u2 = 6; textured.v2 = 7;
+	textured.r0 = 11; textured.r1 = 22; textured.r2 = 33;
+	RenderBucket_SubmitNativePrim(&ctx, 0, &textured);
+	assert(layer->triangleCount == 4);
+	assert(triangles[3].material.tpage == 0x20 && triangles[3].material.clut == 0x123);
+	assert(triangles[3].material.flags == (NATIVE_DRAW3D_TEXTURED | NATIVE_DRAW3D_SEMI_TRANS | NATIVE_DRAW3D_DOUBLE_SIDED));
+	assert(triangles[3].uv[1][0] == 4 && triangles[3].uv[2][1] == 7);
+	assert(triangles[3].color[1][0] == 22 && triangles[3].color[2][0] == 33);
+
+	// Lit collectible writers emit one colour for all three vertices (FT3).
+	POLY_FT3 lit = {0};
+	setPolyFT3(&lit);
+	lit.r0 = 77; lit.g0 = 88; lit.b0 = 99;
+	lit.tpage = 0x60; lit.clut = 0x456;
+	lit.u2 = 42; lit.v2 = 43;
+	RenderBucket_SubmitNativePrim(&ctx, 0, &lit);
+	assert(layer->triangleCount == 5);
+	for (int i = 0; i < 3; i++) assert(triangles[4].color[i][0] == 77 && triangles[4].color[i][2] == 99);
+	assert(triangles[4].material.tpage == 0x60 && triangles[4].material.clut == 0x456);
+	assert(triangles[4].uv[2][0] == 42 && triangles[4].uv[2][1] == 43);
+
+	// A triangle crossing the camera is retained for host near-plane clipping.
+	ctx.tempPacked[3].z = (u32)-40;
+	RenderBucket_SubmitNativePrim(&ctx, 0, &flat);
+	assert(layer->triangleCount == 6 && triangles[5].position[2][2] == -10);
+	// Generated split vertices replace the original FIFO geometry and use
+	// the interpolated UV/colour record produced by the split writer.
+	struct RenderBucketSplitVertex split[3] = {0};
+	split[0].xy = CTR_PackS16Pair(-200, -100);
+	split[1].xy = CTR_PackS16Pair(200, -100);
+	split[2].xy = CTR_PackS16Pair(0, 100);
+	for (int i = 0; i < 3; i++) split[i].z = 1600;
+	assert(RenderBucket_SubmitNativeSplit(&ctx, 0, &textured, &split[0], &split[1], &split[2]) == 1);
+	assert(layer->triangleCount == 7);
+	assert(triangles[6].position[0][0] == -50 && triangles[6].position[0][1] == -25);
+	assert(triangles[6].position[2][2] == 400 && triangles[6].uv[2][1] == 7);
+	ctx.nativeLayer = -1;
+	assert(RenderBucket_SubmitNativePrim(&ctx, 0, &flat) == 0);
+	assert(layer->triangleCount == 7);
+
+	// A race may queue 2048 instance/viewport entries, exceeding the old 64
+	// layer limit. Ensure those entries leave space for the level layers.
+	NativeDraw3D_BeginFrame();
+	for (int i = 0; i < 2052; i++) assert(DepthTest_BeginNativeLayer(i & 1) == i);
+	NativeDraw3D_BeginFrame();
+	gNativeRendererMode = NATIVE_RENDERER_CLASSIC;
+	ctx.nativeLayer = 0;
+	assert(RenderBucket_SubmitNativePrim(&ctx, 0, &flat) == 0);
+}
+
 // Counts red values on a horizontal gradient that the PS1's 5-bit channels
 // cannot represent.
 static int DepthTest_GradientNon15BitPixels(int colorDepth)
@@ -348,8 +564,143 @@ static int DepthTest_PartialEdgePixels(void)
 	return partial;
 }
 
-int main(void)
+static void DepthTest_MinimapPrecision(void)
 {
+	assert(gNativePreciseMinimapEnabled == 0);
+	gNativePreciseMinimapEnabled = 1;
+	static struct GameTracker tracker;
+	struct GameTracker *savedTracker = sdata->gGT;
+	sdata->gGT = &tracker;
+	tracker.numPlyrCurrGame = 1;
+	struct UIMap map = {2000, 4000, 0, 0, 100, 80, 400, 180, 0};
+	s32 world[3] = {-123, 0, 456};
+	const double expectedX[4] = {-6.15, -11.4, 6.15, 11.4};
+	const double expectedY[4] = {18.24, -9.84, -18.24, 9.84};
+	for (int mode = 0; mode < 4; mode++)
+	{
+		map.mode = mode;
+		float x, y;
+		UI_Map_GetIconPosPrecise(&map, world, &x, &y);
+		assert(fabs(x - (400 + expectedX[mode] * 34.0 / 45.0)) < 0.0001);
+		assert(fabs(y - (164 + expectedY[mode])) < 0.0001);
+		tracker.numPlyrCurrGame = 3;
+		float x3, y3;
+		UI_Map_GetIconPosPrecise(&map, world, &x3, &y3);
+		assert(fabs(x3 - (x - 60)) < 0.0001);
+		assert(fabs(y3 - (y + 10)) < 0.0001);
+		tracker.numPlyrCurrGame = 1;
+	}
+	map.mode = 0;
+	float x, y, nextX, nextY;
+	UI_Map_GetIconPosPrecise(&map, world, &x, &y);
+	world[0]++;
+	UI_Map_GetIconPosPrecise(&map, world, &nextX, &nextY);
+	assert(nextX > x && nextX - x < 0.1f);
+	assert(y == nextY);
+
+	POLY_G4 packets[5] = {0};
+	u32 ot = 0xffffff;
+	tracker.backBuffer = &tracker.db[0];
+	tracker.backBuffer->primMem.cursor = packets;
+	tracker.backBuffer->primMem.guardEnd = packets + 4;
+	tracker.pushBuffer_UI.ptrOT = &ot;
+	NativeGpuLinks_Reset();
+	NativeGpuLinks_RegisterRangeChecked("minimap packets", packets, sizeof(packets));
+	NativeGpuLinks_RegisterRangeChecked("minimap OT", &ot, sizeof(ot));
+	NativePgxp_EndFrame();
+	gNativePgxpMode = NATIVE_PGXP_MODE_PERSPECTIVE;
+	// Even if the previous draw phase was world geometry, HUD markers have
+	// no perspective divisor or depth. The real GPU parser retains fractions.
+	NativePgxp_SetWorldPhase(1);
+	const SVec2 points[3] = {{{0, -8}}, {{-5, 4}}, {{5, 4}}};
+	char colors[12] = {0};
+	AH_Map_HubArrowPrecise(100.25f, 80.5f, points, colors, 0x800, 0);
+	assert(tracker.backBuffer->primMem.cursor == packets + 5);
+	for (int i = 0; i < 5; i++)
+	{
+		NativePgxpVertex precise;
+		const u32 packed = (u16)packets[i].x2 | ((u32)(u16)packets[i].y2 << 16);
+		assert(NativePgxp_Lookup(&packets[i].x2, packed, &precise));
+		assert(fabs(precise.x - (106.25f + D232.hubArrowPrimOffset[i].x)) < 0.0001);
+		assert(fabs(precise.y - (80.5f + D232.hubArrowPrimOffset[i].y)) < 0.0001);
+		assert(precise.w == NATIVE_PGXP_SCREEN_W && precise.depth == 0);
+		GrVertex vertices[4];
+		MakeVertexQuad(vertices, &packets[i].x0, &packets[i].x1, &packets[i].x2, &packets[i].x3);
+		assert(fabs(vertices[2].x - precise.x) < 0.0001);
+		assert(fabs(vertices[2].y - precise.y) < 0.0001);
+	}
+	// The minimap toggle works with 3D PGXP and world depth both off.
+	gNativePgxpMode = NATIVE_PGXP_MODE_OFF;
+	gNativeDepthBufferEnabled = 0;
+	// Race dots use the same projection, with the existing sprite shape.
+	struct { struct IconGroup group; struct Icon *icons[1]; } group = {0};
+	struct Icon icon = {0};
+	group.icons[0] = &icon;
+	icon.texLayout.u1 = 4;
+	icon.texLayout.v2 = 4;
+	tracker.iconGroup[UI_MAP_ICON_GROUP] = &group.group;
+	u32 colors4[4] = {0};
+	u32 *savedColor = data.ptrColor[0];
+	data.ptrColor[0] = colors4;
+	POLY_GT4 dots[2] = {0};
+	NativeGpuLinks_RegisterRangeChecked("minimap dots", dots, sizeof(dots));
+	tracker.backBuffer->primMem.cursor = dots;
+	UI_Map_DrawRawIcon(&map, world, 0, 0, 0, 0x1000);
+	world[0]++;
+	UI_Map_DrawRawIcon(&map, world, 0, 0, 0, 0x1000);
+	GrVertex first[4], second[4];
+	MakeVertexQuad(first, &dots[0].x0, &dots[0].x1, &dots[0].x2, &dots[0].x3);
+	MakeVertexQuad(second, &dots[1].x0, &dots[1].x1, &dots[1].x2, &dots[1].x3);
+	assert(dots[0].x0 == dots[1].x0);
+	for (int i = 0; i < 4; i++)
+	{
+		assert(fabs(second[i].x - first[i].x - 0.05 * 34.0 / 45.0) < 0.0001);
+		assert(second[i].y == first[i].y);
+	}
+	// Disabling the enhancement returns to the exact integer drawing path.
+	NativePgxp_EndFrame();
+	gNativePreciseMinimapEnabled = 0;
+	tracker.backBuffer->primMem.cursor = dots;
+	UI_Map_DrawRawIcon(&map, world, 0, 0, 0, 0x1000);
+	MakeVertexQuad(first, &dots[0].x0, &dots[0].x1, &dots[0].x2, &dots[0].x3);
+	assert(first[0].x == dots[0].x0 && first[0].y == dots[0].y0);
+	NativePgxpVertex rounded;
+	const u32 roundedXY = (u16)dots[0].x0 | ((u32)(u16)dots[0].y0 << 16);
+	assert(!NativePgxp_Lookup(&dots[0].x0, roundedXY, &rounded));
+	data.ptrColor[0] = savedColor;
+	NativePgxp_EndFrame();
+	NativePgxpVertex expired;
+	const u32 packed = (u16)dots[0].x0 | ((u32)(u16)dots[0].y0 << 16);
+	assert(!NativePgxp_Lookup(&dots[0].x0, packed, &expired));
+	sdata->gGT = savedTracker;
+}
+
+int main(int argc, char **argv)
+{
+	if (argc == 2 && strcmp(argv[1], "--minimap-only") == 0)
+	{
+		DepthTest_MinimapPrecision();
+		puts("Minimap precision checks passed");
+		return 0;
+	}
+	if (argc == 2 && strcmp(argv[1], "--model-submission-only") == 0)
+	{
+		DepthTest_ModelSubmission();
+		puts("Native model submission checks passed");
+		return 0;
+	}
+	if (argc == 2 && strcmp(argv[1], "--sky-order-only") == 0)
+	{
+		for (int mirror = 0; mirror < 2; mirror++)
+		{
+			gNativeMirrorModeRenderActive = mirror;
+			for (int mode = 0; mode < NATIVE_PGXP_MODE_COUNT; mode++)
+				for (int offset = 0; offset >= -8; offset -= 4)
+					DepthTest_TigerSkyOrder(mode, 0, offset);
+		}
+		puts("Tiger Temple sky ordering checks passed");
+		return 0;
+	}
 	if (!SDL_Init(SDL_INIT_VIDEO)) return 77;
 	gNativeDitheringEnabled = 0;
 	gNativeBorderlessEnabled = 0;
@@ -459,6 +810,8 @@ int main(void)
 			DepthTest_Pixel(160, 100, 0, 248, 0);
 
 			DepthTest_Native(mode);
+			for (int offset = 0; offset >= -8; offset -= 4)
+				DepthTest_TigerSkyOrder(mode, 1, offset);
 		}
 	}
 	NativeRenderer_Shutdown();

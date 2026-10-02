@@ -1,5 +1,9 @@
 #include <common.h>
 
+#if defined(CTR_NATIVE)
+#include "platform/native_pgxp.h"
+#endif
+
 enum AHMapIconID
 {
 	AH_MAP_ICON_WARPPAD = 0x31,
@@ -188,6 +192,96 @@ void AH_Map_LoadSave_Full(int posX, int posY, const SVec2 *vertPos, char *vertCo
 		vertCol = (char *)&D232.colorQuad[0];
 	}
 }
+
+#if defined(CTR_NATIVE)
+static void AH_Map_HubArrowPreciseTriangle(struct GameTracker *gGT, const float x[3], const float y[3], char *vertCol)
+{
+	SVec2 drawPos[3];
+	for (int i = 0; i < 3; i++)
+	{
+		drawPos[i].x = (s16)x[i];
+		drawPos[i].y = (s16)y[i];
+	}
+
+	POLY_G4 *p = gGT->backBuffer->primMem.cursor;
+	RECTMENU_DrawRwdTriangle(drawPos[0].v, vertCol, gGT->pushBuffer_UI.ptrOT, &gGT->backBuffer->primMem);
+	if (gGT->backBuffer->primMem.cursor == p + 1)
+	{
+		// Use the same first point twice so the precise triangle has no pixel-sized split.
+		NativePgxp_SetScreenXY(&p->x0, x[0], y[0]);
+		NativePgxp_SetScreenXY(&p->x1, x[1], y[1]);
+		NativePgxp_SetScreenXY(&p->x2, x[0], y[0]);
+		NativePgxp_SetScreenXY(&p->x3, x[2], y[2]);
+	}
+}
+
+void AH_Map_HubArrowPrecise(float posX, float posY, const SVec2 *vertPos, char *vertCol, int scale, int angle)
+{
+	struct GameTracker *gGT = sdata->gGT;
+	const float sin = MATH_Sin(angle) / 4096.0f;
+	const float cos = MATH_Cos(angle) / 4096.0f;
+	const float scaleY = scale * 0.6f / 4096.0f;
+	const float scaleX = scaleY * 8.0f / 5.0f;
+	float x[3], y[3];
+	for (int i = 0; i < 3; i++)
+	{
+		x[i] = posX + 6 + (vertPos[i].x * cos + vertPos[i].y * sin) * scaleX;
+		y[i] = posY + 4 + (vertPos[i].y * cos - vertPos[i].x * sin) * scaleY;
+	}
+
+	float outlineX[3], outlineY[3];
+	const float signedArea = (x[1] - x[0]) * (y[2] - y[0]) - (y[1] - y[0]) * (x[2] - x[0]);
+	const float normalDirection = (signedArea < 0.0f) ? 1.0f : -1.0f;
+	const float outlineThickness = 1.0f;
+	const float maxMiterLength = outlineThickness * 3.0f;
+	for (int i = 0; i < 3; i++)
+	{
+		const int previous = (i + 2) % 3;
+		const int next = (i + 1) % 3;
+		const float prevDX = x[i] - x[previous];
+		const float prevDY = y[i] - y[previous];
+		const float nextDX = x[next] - x[i];
+		const float nextDY = y[next] - y[i];
+		const float prevLength = sqrtf(prevDX * prevDX + prevDY * prevDY);
+		const float nextLength = sqrtf(nextDX * nextDX + nextDY * nextDY);
+		if (prevLength <= 0.0001f || nextLength <= 0.0001f || fabsf(signedArea) <= 0.0001f)
+		{
+			outlineX[i] = x[i];
+			outlineY[i] = y[i];
+			continue;
+		}
+
+		const float prevNormalX = normalDirection * -prevDY / prevLength;
+		const float prevNormalY = normalDirection * prevDX / prevLength;
+		const float nextNormalX = normalDirection * -nextDY / nextLength;
+		const float nextNormalY = normalDirection * nextDX / nextLength;
+		const float normalDot = prevNormalX * nextNormalX + prevNormalY * nextNormalY;
+		const float denominator = 1.0f + normalDot;
+		if (denominator <= 0.0001f)
+		{
+			outlineX[i] = x[i];
+			outlineY[i] = y[i];
+			continue;
+		}
+
+		float miterX = (prevNormalX + nextNormalX) * outlineThickness / denominator;
+		float miterY = (prevNormalY + nextNormalY) * outlineThickness / denominator;
+		const float miterLength = sqrtf(miterX * miterX + miterY * miterY);
+		if (miterLength > maxMiterLength)
+		{
+			const float miterScale = maxMiterLength / miterLength;
+			miterX *= miterScale;
+			miterY *= miterScale;
+		}
+		outlineX[i] = x[i] + miterX;
+		outlineY[i] = y[i] + miterY;
+	}
+
+	// OT entries render newest first, so submit the outline after the fill to keep it behind.
+	AH_Map_HubArrowPreciseTriangle(gGT, x, y, vertCol);
+	AH_Map_HubArrowPreciseTriangle(gGT, outlineX, outlineY, (char *)&D232.colorTri[0]);
+}
+#endif
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b0f18-0x800b1150.
 void AH_Map_HubArrow(int posX, int posY, const SVec2 *vertPos, char *vertCol, int scale, int angle)

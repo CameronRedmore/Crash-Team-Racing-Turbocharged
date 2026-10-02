@@ -128,6 +128,26 @@ double NativeCollision_HitFraction(struct ScratchpadStruct *sps)
 }
 static NativePhysicsVec NC_Vertex(const SVec3 *v) { return (NativePhysicsVec){v->x,v->y,v->z}; }
 static SVec3 NC_Export(NativePhysicsVec v) { return (SVec3){.x=(s16)round(v.x),.y=(s16)round(v.y),.z=(s16)round(v.z)}; }
+static int NC_OverlapsTriangle(NativePhysicsVec point, double radius,
+                               NativePhysicsVec a, NativePhysicsVec b, NativePhysicsVec c)
+{
+	NativePhysicsVec normal=NC_Normalize(NC_Cross(NC_Sub(b,a),NC_Sub(c,a)));
+	if (NC_Dot(normal,normal)<0.5) return 0;
+	double distance=NC_Dot(NC_Sub(point,a),normal), u,v;
+	if (fabs(distance)>radius+1e-9) return 0;
+	NativePhysicsVec projected=NC_Sub(point,NC_Scale(normal,distance));
+	if (NC_Barycentric(projected,a,b,c,&u,&v)) return 1;
+	NativePhysicsVec vertices[3]={a,b,c};
+	for (int i=0;i<3;i++)
+	{
+		NativePhysicsVec edge=NC_Sub(vertices[(i+1)%3],vertices[i]);
+		double lengthSq=NC_Dot(edge,edge);
+		double t=lengthSq>1e-12 ? fmax(0,fmin(1,NC_Dot(NC_Sub(point,vertices[i]),edge)/lengthSq)) : 0;
+		NativePhysicsVec offset=NC_Sub(point,NC_Add(vertices[i],NC_Scale(edge,t)));
+		if (NC_Dot(offset,offset)<=radius*radius+1e-9) return 1;
+	}
+	return 0;
+}
 void NativeCollision_MovedTriangle(struct ScratchpadStruct *sps, struct BspSearchVertex *a, struct BspSearchVertex *b, struct BspSearchVertex *c)
 {
 	struct QuadBlock *quad=sps->candidate.ptrQuadblock;
@@ -140,8 +160,28 @@ void NativeCollision_MovedTriangle(struct ScratchpadStruct *sps, struct BspSearc
 	    NC_Dot(NC_Sub(start,NC_Vertex(&a->pos)),authoredNormal)<0) return;
 	NativeCollisionHit hit;
 	sps->numTrianglesTested++;
+	if (flags & QUADBLOCK_FLAG_TRIGGER)
+	{
+		// Triggers detect overlap even during stationary or tangential contact.
+		// The blocking sweep intentionally rejects those contacts for solids.
+		if (NC_OverlapsTriangle(start,sps->Input1.hitRadius,NC_Vertex(&a->pos),NC_Vertex(&b->pos),NC_Vertex(&c->pos)) ||
+		    NC_OverlapsTriangle(end,sps->Input1.hitRadius,NC_Vertex(&a->pos),NC_Vertex(&b->pos),NC_Vertex(&c->pos)) ||
+		    NativeCollision_SweepTriangle(start,end,sps->Input1.hitRadius,NC_Vertex(&a->pos),NC_Vertex(&b->pos),NC_Vertex(&c->pos),&hit))
+			sps->collision.stepFlags|=(u8)quad->terrain_type;
+		return;
+	}
 	if (!NativeCollision_SweepTriangle(start,end,sps->Input1.hitRadius,NC_Vertex(&a->pos),NC_Vertex(&b->pos),NC_Vertex(&c->pos),&hit)) return;
-	if (flags & QUADBLOCK_FLAG_TRIGGER) { sps->collision.stepFlags|=(u8)quad->terrain_type; return; }
+	if (flags & QUADBLOCK_FLAG_GROUND)
+	{
+		// Road triangles form a continuous surface. Their sphere/edge normals
+		// are not road slopes: projecting forward motion onto one launches the
+		// kart at tessellation seams. Respond only to motion into the face.
+		NativePhysicsVec normal=NC_Normalize(NC_Cross(NC_Sub(NC_Vertex(&b->pos),NC_Vertex(&a->pos)),
+		                                           NC_Sub(NC_Vertex(&c->pos),NC_Vertex(&a->pos))));
+		if (NC_Dot(normal,hit.normal)<0) normal=NC_Scale(normal,-1);
+		if (NC_Dot(NC_Sub(end,start),normal)>=-1e-10) return;
+		hit.normal=normal;
+	}
 	if (flags & QUADBLOCK_FLAG_NO_COLLISION_RESPONSE)
 	{
 		if (flags & QUADBLOCK_FLAG_KILL_PLANE) sps->collision.stepFlags|=COLL_STEP_FLAG_KILL_PLANE;

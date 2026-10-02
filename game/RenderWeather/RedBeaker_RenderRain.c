@@ -2,6 +2,8 @@
 
 #if defined(CTR_NATIVE)
 #include "platform/native_adhoc.h"
+#include "platform/native_pgxp.h"
+extern int gNativeMirrorModeRenderActive;
 #endif
 
 #define RED_BEAKER_CENTER_XY 0x02000080u
@@ -105,12 +107,36 @@ static void RedBeaker_EmitDrawMode(u32 **primCursor, uint32_t *ot, u32 drawMode)
 }
 
 static void RedBeaker_RenderPass(u32 **primCursor, uint32_t *ot, u32 color, u32 drawMode, s32 frameCount, u32 scrollXY, u32 nextScrollXY, s32 scrollZ,
-                                 s32 nextScrollZ, u32 spanXY, s32 spanZ, u32 screenBounds)
+                                 s32 nextScrollZ, u32 spanXY, s32 spanZ, u32 screenBounds, struct PushBuffer *pb,
+                                 struct Instance *cloudInst, struct PrimMem *primMem)
 {
 	u32 state0 = 0x30125400;
 	u32 state1 = 0x493583fe;
 	struct RedBeakerRng rng = RedBeaker_NextRng(&state0, &state1);
 	s32 remaining = frameCount;
+	int nativeLayer = -1;
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+	if (NATIVE_DRAW3D_ACTIVE() && (u8 *)*primCursor + sizeof(DR_PSYX_DRAW3D) <= (u8 *)primMem->guardEnd)
+	{
+		NativeDraw3DView view = {0};
+		double rotation[9], translation[3];
+		float cameraPosition[3];
+		NativePgxp_GetPosition(&pb->pos, pb->pos.v, cameraPosition);
+		NativePgxp_GetTransform(&pb->matrix_ViewProj, &pb->matrix_ViewProj.m[0][0], pb->matrix_ViewProj.t, rotation, translation);
+		// Rain runs before the cloud is queued this frame. Build the anchor
+		// from its current world position instead of the previous MVP packet.
+		NativePgxp_ModelViewTranslation(rotation, cloudInst->matrix.t, pb->pos.v, cameraPosition, view.translation);
+		double scale = (view.translation[2] < 4096.0 ? 0.25 : 1.0) * ((cloudInst->flags & DRAW_HUGE) ? 4.0 : 1.0);
+		for (int i = 0; i < 9; i++) view.rotation[i] = rotation[i] * scale / 4096.0;
+		view.projection = (float)pb->distanceToScreen_PREV;
+		view.centerX = (float)pb->rect.w * 0.5f;
+		view.centerY = (float)pb->rect.h * 0.5f;
+		view.width = (float)pb->rect.w;
+		view.height = (float)pb->rect.h;
+		view.mirror = gNativeMirrorModeRenderActive != 0;
+		nativeLayer = NativeDraw3D_BeginLayer(&view);
+	}
+#endif
 
 	while (remaining != 0)
 	{
@@ -156,6 +182,21 @@ static void RedBeaker_RenderPass(u32 **primCursor, uint32_t *ot, u32 color, u32 
 				gteFlag = CFC2(31);
 				sxy1 = MFC2(13);
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+				if (nativeLayer >= 0)
+				{
+					NativeDraw3DVertex vertices[2] = {
+						{.x=(s16)xy0, .y=(s16)(xy0 >> 16), .z=(s16)z0},
+						{.x=(s16)xy1, .y=(s16)(xy1 >> 16), .z=(s16)z1,
+						 .r=(u8)color, .g=(u8)(color >> 8), .b=(u8)(color >> 16)},
+					};
+					NativeDraw3DMaterial material = {0};
+					material.tpage = (u16)drawMode;
+					material.flags = NATIVE_DRAW3D_SEMI_TRANS | NATIVE_DRAW3D_ORDERED_BLEND;
+					NativeDraw3D_AddLine(nativeLayer, &vertices[0], &vertices[1], &material, 1.0f);
+				}
+				else
+#endif
 				if (RedBeaker_IsVisible(gteFlag, sxy0, sxy1, screenBounds))
 				{
 					RedBeaker_EmitLine(primCursor, ot, color);
@@ -166,6 +207,19 @@ static void RedBeaker_RenderPass(u32 **primCursor, uint32_t *ot, u32 color, u32 
 		rng = RedBeaker_NextRng(&state0, &state1);
 	}
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+	if (nativeLayer >= 0)
+	{
+		NativeDraw3D_EndLayer(nativeLayer);
+		DR_PSYX_DRAW3D *marker = (DR_PSYX_DRAW3D *)*primCursor;
+		NativeDraw3D_SetMarker(marker, nativeLayer);
+		AddPrim(ot, marker);
+		*primCursor = (u32 *)(marker + 1);
+		return;
+	}
+#else
+	(void)nativeLayer;
+#endif
 	RedBeaker_EmitDrawMode(primCursor, ot, drawMode);
 }
 
@@ -314,9 +368,9 @@ void RedBeaker_RenderRain(struct PushBuffer *pb, struct PrimMem *primMem, struct
 			ot = (uint32_t *)(void *)((char *)otBase + otOffset);
 
 			RedBeaker_RenderPass(&prim, ot, scratch->colorTop, 0xe1000a20, rainLocal->frameCount, scrollXY, nextScrollXY, scrollZ, nextScrollZ, velocityXY,
-			                     velocityZ, screenBounds);
+			                     velocityZ, screenBounds, pb, rainLocal->cloudInst, primMem);
 			RedBeaker_RenderPass(&prim, ot, scratch->colorBottom, 0xe1000a40, rainLocal->frameCount, scrollXY, nextScrollXY, scrollZ, nextScrollZ, velocityXY,
-			                     velocityZ, screenBounds);
+			                     velocityZ, screenBounds, pb, rainLocal->cloudInst, primMem);
 		}
 	}
 

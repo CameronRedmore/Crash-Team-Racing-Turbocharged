@@ -2013,6 +2013,11 @@ KeepNormal:;
 			sps->collision.stepFlags |= (u8)quad->terrain_type;
 			return;
 		}
+#if defined(CTR_NATIVE)
+		// Trigger geometry must never become a solid collision at the radius
+		// boundary: its normal describes the trigger, not the road beneath it.
+		return;
+#endif
 	}
 
 	s32 distance = CTR_MipsSubLo(planeFar, planeNear);
@@ -2526,6 +2531,9 @@ static void CollMoved_PlayerSearch_Run(struct Thread *t, struct Driver *d)
 	}
 
 	d->stepFlagSet = sps->collision.stepFlags;
+#if defined(CTR_NATIVE) && !defined(__vita__)
+	NativePhysics_UpdateTurboPadContact(d, d->stepFlagSet);
+#endif
 }
 
 

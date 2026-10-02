@@ -2,6 +2,8 @@
 
 #if defined(CTR_NATIVE)
 #include "platform/native_adhoc.h"
+#include "platform/native_pgxp.h"
+
 #endif
 
 enum UIMapConstants
@@ -261,6 +263,43 @@ void UI_Map_GetIconPos(struct UIMap *map, int *posX, int *posY)
 	return;
 }
 
+#if defined(CTR_NATIVE)
+// Keep the division and widescreen conversion fractional until rasterization.
+static void UI_Map_GetIconPosPrecise(const struct UIMap *map, const s32 worldPos[3], float *posX, float *posY)
+{
+	const double x = (double)worldPos[0] * map->iconSizeX / (map->worldEndX - map->worldStartX);
+	const double y = (double)worldPos[2] * map->iconSizeY * 2 / (map->worldEndY - map->worldStartY);
+	double addX, addY;
+	if (map->mode == UI_MAP_MODE_0_DEGREES)
+	{
+		addX = x;
+		addY = y;
+	}
+	else if (map->mode == UI_MAP_MODE_180_DEGREES)
+	{
+		addX = -x;
+		addY = -y;
+	}
+	else
+	{
+		addX = (double)worldPos[2] * map->iconSizeX / (map->worldEndY - map->worldStartY);
+		addY = (double)worldPos[0] * map->iconSizeY * 2 / (map->worldEndX - map->worldStartX);
+		if (map->mode == UI_MAP_MODE_90_DEGREES) addX = -addX;
+		else addY = -addY;
+	}
+#if CTR_NATIVE_WIDESCREEN
+	addX *= 34.0 / 45.0;
+#endif
+	if (sdata->gGT->numPlyrCurrGame == 3)
+	{
+		addX -= UI_MAP_3P_OFFSET_X;
+		addY += UI_MAP_3P_OFFSET_Y;
+	}
+	*posX = (float)(map->iconStartX + addX);
+	*posY = (float)(map->iconStartY + addY - UI_MAP_ICON_Y_OFFSET);
+}
+#endif
+
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8004dbac-0x8004dc44.
 // Draw dot for Player on 2D Adv Map
 void UI_Map_DrawAdvPlayer(struct UIMap *map, const s32 worldPos[3], int unused1, int unused2, s16 rot, s16 scale)
@@ -282,6 +321,15 @@ void UI_Map_DrawAdvPlayer(struct UIMap *map, const s32 worldPos[3], int unused1,
 		arrowColor = &data.playerIconAdvMap.vertCol2[0];
 	}
 
+#if defined(CTR_NATIVE)
+	if (gNativePreciseMinimapEnabled && NATIVE_PGXP_SUPPORTED)
+	{
+		float preciseX, preciseY;
+		UI_Map_GetIconPosPrecise(map, worldPos, &preciseX, &preciseY);
+		AH_Map_HubArrowPrecise(preciseX, preciseY, &data.playerIconAdvMap.pos[0], (char *)arrowColor, scale, rot);
+		return;
+	}
+#endif
 	AH_Map_HubArrow(posX, posY, &data.playerIconAdvMap.pos[0], (char *)arrowColor, (int)scale, (int)rot);
 
 	return;
@@ -307,8 +355,27 @@ void UI_Map_DrawRawIcon(struct UIMap *map, const s32 worldPos[3], int iconID, in
 
 	struct Icon **iconPtrArray = ICONGROUP_GETICONS(sdata->gGT->iconGroup[UI_MAP_ICON_GROUP]);
 
+#if defined(CTR_NATIVE)
+	POLY_GT4 *p = gGT->backBuffer->primMem.cursor;
+#endif
 	DecalHUD_DrawPolyGT4(iconPtrArray[iconID], posX, posY, &gGT->backBuffer->primMem, gGT->pushBuffer_UI.ptrOT, ptrColor[0], ptrColor[1], ptrColor[2],
 	                     ptrColor[3], 0, (int)scale);
+#if defined(CTR_NATIVE)
+	if (gNativePreciseMinimapEnabled && NATIVE_PGXP_SUPPORTED && gGT->backBuffer->primMem.cursor == p + 1)
+	{
+		float preciseX, preciseY;
+		UI_Map_GetIconPosPrecise(map, worldPos, &preciseX, &preciseY);
+		// Preserve the icon's existing size and widescreen shape; translate all
+		// corners by the precision lost in the legacy map projection.
+		const float dx = preciseX - posX;
+		const float dy = preciseY - posY;
+		NativePgxp_SetScreenXY(&p->x0, p->x0 + dx, p->y0 + dy);
+		NativePgxp_SetScreenXY(&p->x1, p->x1 + dx, p->y1 + dy);
+		NativePgxp_SetScreenXY(&p->x2, p->x2 + dx, p->y2 + dy);
+		NativePgxp_SetScreenXY(&p->x3, p->x3 + dx, p->y3 + dy);
+	}
+#endif
+
 
 	return;
 }

@@ -2,6 +2,8 @@
 
 #if defined(CTR_NATIVE)
 #include "platform/native_adhoc.h"
+#include "platform/native_pgxp.h"
+extern int gNativeMirrorModeRenderActive;
 #endif
 
 enum RaceFlagScratchConstants
@@ -594,6 +596,28 @@ SKIP_LOADING_TEXT:
 
 	p = (POLY_G4 *)gGT->backBuffer->primMem.cursor;
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+	int nativeLayer = -1;
+	NativeDraw3DVertex nativePoints[2][RACE_FLAG_SCREEN_ROWS * RACE_FLAG_SCREEN_POINTS_PER_ROW];
+	DR_PSYX_DRAW3D *nativeMarker = (DR_PSYX_DRAW3D *)p;
+	if (NATIVE_DRAW3D_ACTIVE() && (u8 *)(nativeMarker + 1) <= (u8 *)gGT->backBuffer->primMem.guardEnd)
+	{
+		NativeDraw3DView view = {0};
+		double rotation[9], translation[3];
+		NativePgxp_GetTransform(&data.matrixTitleFlag, &data.matrixTitleFlag.m[0][0], data.matrixTitleFlag.t, rotation, translation);
+		for (int k = 0; k < 9; k++) view.rotation[k] = rotation[k] / 4096.0;
+		for (int k = 0; k < 3; k++) view.translation[k] = translation[k];
+		view.projection = 256.0f;
+		view.centerX = 256.0f;
+		view.centerY = 120.0f;
+		view.width = 512.0f;
+		view.height = 240.0f;
+		view.mirror = gNativeMirrorModeRenderActive != 0;
+		nativeLayer = NativeDraw3D_BeginLayer(&view);
+		if (nativeLayer >= 0) p = (POLY_G4 *)(nativeMarker + 1);
+	}
+#endif
+
 	scratch = CTR_SCRATCHPAD_PTR(struct RaceFlagScratch, 0);
 
 	dimensions = 0xd80200;
@@ -685,6 +709,12 @@ SKIP_LOADING_TEXT:
 			CTR_GteLoadSV3WithPad(&pos[0], &pos[1], &pos[2]);
 			gte_rtpt();
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+			if (nativeLayer >= 0)
+				for (int k = 0; k < 3; k++)
+					nativePoints[toggle ^ 1][row * 3 + k] = (NativeDraw3DVertex){.x=pos[k].vx, .y=pos[k].vy, .z=pos[k].vz};
+#endif
+
 			pos[0].vy += 0x11a;
 			pos[1].vy += 0x11a;
 			pos[2].vy += 0x11a;
@@ -767,6 +797,12 @@ SKIP_LOADING_TEXT:
 			CTR_GteLoadSV3WithPad(&pos[0], &pos[1], &pos[2]);
 			gte_rtpt();
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+			if (nativeLayer >= 0)
+				for (int k = 0; k < 3; k++)
+					nativePoints[toggle ^ 1][row * 3 + k] = (NativeDraw3DVertex){.x=pos[k].vx, .y=pos[k].vy, .z=pos[k].vz};
+#endif
+
 			pos[0].vy += 0x11a;
 			pos[1].vy += 0x11a;
 			pos[2].vy += 0x11a;
@@ -788,6 +824,23 @@ SKIP_LOADING_TEXT:
 				{
 					// TRUE for gray, FALSE for white
 					u8 boolDark = ((((column >> 2) + (i >> 2)) & 1U) != 0);
+
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+					if (nativeLayer >= 0)
+					{
+						NativeDraw3DVertex vertices[4] = {
+							nativePoints[toggle][pointIndex], nativePoints[toggle ^ 1][pointIndex],
+							nativePoints[toggle][pointIndex + 1], nativePoints[toggle ^ 1][pointIndex + 1],
+						};
+						for (int k = 0; k < 4; k++)
+							vertices[k].r = vertices[k].g = vertices[k].b =
+							    RaceFlag_CalculateBrightness((k & 1) ? lightL : lightR, boolDark);
+						NativeDraw3DMaterial material = {0};
+						material.flags = NATIVE_DRAW3D_DOUBLE_SIDED | NATIVE_DRAW3D_OVERLAY;
+						NativeDraw3D_AddQuad(nativeLayer, &vertices[0], &vertices[1], &vertices[2], &vertices[3], &material);
+						continue;
+					}
+#endif
 
 					u8 colorR = RaceFlag_CalculateBrightness(lightR, boolDark);
 					setRGB0(p, colorR, colorR, colorR);
@@ -819,6 +872,14 @@ SKIP_LOADING_TEXT:
 		lightR = lightL;
 	}
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+	if (nativeLayer >= 0)
+	{
+		NativeDraw3D_EndLayer(nativeLayer);
+		NativeDraw3D_SetMarker(nativeMarker, nativeLayer);
+		AddPrim(ot, nativeMarker);
+	}
+#endif
 	gGT->backBuffer->primMem.cursor = p;
 	sdata->RaceFlag_ElapsedTime += gGT->elapsedTimeMS * 100;
 }

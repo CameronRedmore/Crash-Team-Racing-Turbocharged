@@ -54,6 +54,11 @@ void NativeRenderer_SetBlendMode(BlendMode blendMode);
 void NativeRenderer_SetMixedSTPBlendMode(BlendMode blendMode);
 void NativeRenderer_SetDepthState(int enable, int write);
 void NativeRenderer_SetDepthAlwaysPass(int alwaysPass);
+#if NATIVE_DRAW3D_SUPPORTED
+// Share colour and stencil with the current target, use fresh private depth.
+int NativeRenderer_BeginIsolatedDepth(void);
+void NativeRenderer_EndIsolatedDepth(void);
+#endif
 void NativeRenderer_SetStencilMode(int drawPrim);
 void NativeRenderer_SetOffscreenState(const RECT16 *offscreenRect, int enable);
 void NativeRenderer_SetProjection(const RECT16 *drawRect, const DISPENV *displayEnv, int offscreen);

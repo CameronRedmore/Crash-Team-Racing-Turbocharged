@@ -2,6 +2,8 @@
 
 #if defined(CTR_NATIVE)
 #include "platform/native_adhoc.h"
+#include "platform/native_pgxp.h"
+extern int gNativeMirrorModeRenderActive;
 #endif
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b95fc-0x800b9848.
@@ -127,6 +129,43 @@ void RB_Spider_DrawWebs(struct Thread *t, struct PushBuffer *pb)
 				// pushBuffer 0xf4, ptrOT
 				ot = (u32 *)&pb->ptrOT[depth];
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+				if (NATIVE_DRAW3D_ACTIVE())
+				{
+					NativeDraw3DView view = {0};
+					double rotation[9], translation[3];
+					NativePgxp_GetTransform(m, &m->m[0][0], m->t, rotation, translation);
+					for (int k = 0; k < 9; k++) view.rotation[k] = rotation[k] / 4096.0;
+					for (int k = 0; k < 3; k++) view.translation[k] = translation[k];
+					view.projection = (float)pb->distanceToScreen_PREV;
+					view.centerX = (float)pb->rect.w * 0.5f;
+					view.centerY = (float)pb->rect.h * 0.5f;
+					view.width = (float)pb->rect.w;
+					view.height = (float)pb->rect.h;
+					view.mirror = gNativeMirrorModeRenderActive != 0;
+					int layer = NativeDraw3D_BeginLayer(&view);
+					if (layer >= 0)
+					{
+						NativeDraw3DVertex vertices[2] = {
+							{.x=(s16)line->topXY, .y=(s16)(line->topXY >> 16), .z=(s16)line->z,
+							 .r=lineColor, .g=lineColor, .b=lineColor},
+							{.x=(s16)line->bottomXY, .y=(s16)(line->bottomXY >> 16), .z=(s16)line->z,
+							 .r=lineColor, .g=lineColor, .b=lineColor},
+						};
+						NativeDraw3DMaterial material = {0};
+						material.tpage = 0x20;
+						material.flags = NATIVE_DRAW3D_SEMI_TRANS | NATIVE_DRAW3D_ORDERED_BLEND;
+						NativeDraw3D_AddLine(layer, &vertices[0], &vertices[1], &material, 1.0f);
+						NativeDraw3D_EndLayer(layer);
+						DR_PSYX_DRAW3D *marker = (DR_PSYX_DRAW3D *)p;
+						NativeDraw3D_SetMarker(marker, layer);
+						AddPrim(ot, marker);
+						p = (multiCmdPacket *)(marker + 1);
+						line++;
+						continue;
+					}
+				}
+#endif
 				// prim header, OT and prim len
 				*(int *)p = CtrGpu_PackOTTag(*ot, 0x5000000);
 				*ot = CtrGpu_PrimToOTLink24(p);

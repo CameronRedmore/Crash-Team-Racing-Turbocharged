@@ -150,8 +150,27 @@ static void near_projection(void)
 	NativePgxp_EndFrame();
 }
 
+static void explicit_hud_coordinates(void)
+{
+	s16 xy[2] = {100, -20};
+	const u32 packed = (u16)xy[0] | ((u32)(u16)xy[1] << 16);
+	NativePgxpVertex vertex;
+	NativePgxp_SetWorldPhase(1);
+	NativePgxp_SetScreenXY(xy, 100.25f, -20.75f);
+	assert(NativePgxp_Lookup(xy, packed, &vertex));
+	close_to(vertex.x, 100.25);
+	close_to(vertex.y, -20.75);
+	close_to(vertex.w, NATIVE_PGXP_SCREEN_W);
+	close_to(vertex.depth, 0);
+	assert(!NativePgxp_Lookup(xy, packed + 1, &vertex));
+	NativePgxp_EndFrame();
+	assert(!NativePgxp_Lookup(xy, packed, &vertex));
+	NativePgxp_SetWorldPhase(0);
+}
+
 int main(void)
 {
+	explicit_hud_coordinates();
 	portal_translation();
 	model_translation_boundaries();
 	near_projection();

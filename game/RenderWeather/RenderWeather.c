@@ -1,5 +1,10 @@
 #include <common.h>
 
+#if defined(CTR_NATIVE)
+#include "platform/native_pgxp.h"
+extern int gNativeMirrorModeRenderActive;
+#endif
+
 #define RENDER_WEATHER_XY_MASK   0xfffeffffu
 #define RENDER_WEATHER_WRAP_MASK 0x07fe07ffu
 
@@ -298,6 +303,23 @@ void RenderWeather(struct PushBuffer *pb, struct PrimMem *primMem, struct RainBu
 	state1 = 0x493583fe;
 	RenderWeather_NextRng(&state0, &state1, &rngXY, &rngZ);
 
+	int nativeLayer = -1;
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+	if (NATIVE_DRAW3D_ACTIVE() && (u8 *)prim + sizeof(DR_PSYX_DRAW3D) <= (u8 *)primMem->guardEnd)
+	{
+		NativeDraw3DView view = {0};
+		double rotation[9], translation[3];
+		NativePgxp_GetTransform(&pb->matrix_ViewProj, &pb->matrix_ViewProj.m[0][0], pb->matrix_ViewProj.t, rotation, translation);
+		for (int i = 0; i < 9; i++) view.rotation[i] = rotation[i] / 4096.0;
+		view.projection = (float)pb->distanceToScreen_PREV;
+		view.centerX = (float)pb->rect.w * 0.5f;
+		view.centerY = (float)pb->rect.h * 0.5f;
+		view.width = (float)pb->rect.w;
+		view.height = (float)pb->rect.h;
+		view.mirror = gNativeMirrorModeRenderActive != 0;
+		nativeLayer = NativeDraw3D_BeginLayer(&view);
+	}
+#endif
 	while (particleCount != 0)
 	{
 		u32 xy0;
@@ -341,6 +363,22 @@ void RenderWeather(struct PushBuffer *pb, struct PrimMem *primMem, struct RainBu
 				gteFlag = CFC2(31);
 				sxy1 = MFC2(13);
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+				if (nativeLayer >= 0)
+				{
+					NativeDraw3DVertex vertices[2] = {
+						{.x=(s16)xy0, .y=(s16)(xy0 >> 16), .z=(s16)z0,
+						 .r=(u8)scratch->colorTop, .g=(u8)(scratch->colorTop >> 8), .b=(u8)(scratch->colorTop >> 16)},
+						{.x=(s16)xy1, .y=(s16)(xy1 >> 16), .z=(s16)z1,
+						 .r=(u8)scratch->colorBottom, .g=(u8)(scratch->colorBottom >> 8), .b=(u8)(scratch->colorBottom >> 16)},
+					};
+					NativeDraw3DMaterial material = {0};
+					material.tpage = (u16)fillMode;
+					material.flags = NATIVE_DRAW3D_SEMI_TRANS | NATIVE_DRAW3D_ORDERED_BLEND;
+					NativeDraw3D_AddLine(nativeLayer, &vertices[0], &vertices[1], &material, 1.0f);
+					continue;
+				}
+#endif
 				if (RenderWeather_IsVisible(gteFlag, sxy0, sxy1, screenBounds))
 				{
 					LINE_G2 *line = (LINE_G2 *)prim;
@@ -360,6 +398,19 @@ void RenderWeather(struct PushBuffer *pb, struct PrimMem *primMem, struct RainBu
 		RenderWeather_NextRng(&state0, &state1, &rngXY, &rngZ);
 	}
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+	if (nativeLayer >= 0)
+	{
+		NativeDraw3D_EndLayer(nativeLayer);
+		DR_PSYX_DRAW3D *marker = (DR_PSYX_DRAW3D *)prim;
+		NativeDraw3D_SetMarker(marker, nativeLayer);
+		AddPrim(ot, marker);
+		primMem->cursor = marker + 1;
+		return;
+	}
+#else
+	(void)nativeLayer;
+#endif
 	struct CtrGpuDrawModePacket *drawMode = (struct CtrGpuDrawModePacket *)prim;
 	drawMode->drawMode = fillMode;
 	drawMode->terminator = 0;

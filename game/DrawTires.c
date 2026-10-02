@@ -2,6 +2,8 @@
 
 #if defined(CTR_NATIVE)
 #include "platform/native_adhoc.h"
+#include "platform/native_pgxp.h"
+extern int gNativeMirrorModeRenderActive;
 #endif
 
 static const u32 sDrawTiresSolidJumpTable[8] = {
@@ -497,8 +499,82 @@ static void DrawTiresSolid_LinkPrimitive(struct DrawTiresScratch *scratch, POLY_
 	*otSlot = (uint32_t)CtrGpu_PrimToOTLink24(p);
 }
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+static int DrawTires_SubmitNativeWheel(struct DrawTiresScratch *scratch, struct PushBuffer *pb,
+                                       struct PrimMem *primMem, const POLY_FT4 *packet,
+                                       int wheelIndex, int jumpIndex, int selectedOTSlot, int originalOTSlot, int reflected)
+{
+	if (!NATIVE_DRAW3D_ACTIVE()) return 0;
+	DR_PSYX_DRAW3D *marker = primMem->cursor;
+	if ((u8 *)(marker + 1) > (u8 *)primMem->guardEnd)
+	{
+		return 0;
+	}
+
+	NativeDraw3DView view = {0};
+	double rotation[9], translation[3];
+	NativePgxp_GetTransform(&pb->matrix_ViewProj, &pb->matrix_ViewProj.m[0][0], pb->matrix_ViewProj.t, rotation, translation);
+	// Wheel centres and billboard axes are already relative to the camera,
+	// in four times the level's world units. Projection has no translation.
+	for (int i = 0; i < 9; i++) view.rotation[i] = rotation[i] / 16384.0;
+	view.projection = (float)pb->distanceToScreen_PREV;
+	view.centerX = (float)pb->rect.w * 0.5f;
+	view.centerY = (float)pb->rect.h * 0.5f;
+	view.width = (float)pb->rect.w;
+	view.height = (float)pb->rect.h;
+	view.mirror = gNativeMirrorModeRenderActive != 0;
+	const int layer = NativeDraw3D_BeginLayer(&view);
+	if (layer < 0) return 0;
+
+	// These are the retail jump-table corner permutations. Reflection stores
+	// the projected FIFO in slots 1,0,3,2 rather than 0,1,2,3.
+	static const u8 cornerOrder[4][4] = {{3,1,2,0}, {2,0,3,1}, {1,3,0,2}, {0,2,1,3}};
+	static const int axisSign[4] = {-1,1,-1,1};
+	static const int rimSign[4] = {-1,-1,1,1};
+	const int order = (jumpIndex & 1) + ((jumpIndex & 4) ? 2 : 0);
+	const struct DrawTiresWheelLocal *local = &scratch->wheelLocal[wheelIndex];
+	const SVec3Slot *axisA = &scratch->tireAxisA[wheelIndex];
+	const SVec3Slot *axisB = &scratch->tireAxisB[wheelIndex];
+	const u8 uv[4][2] = {{packet->u0,packet->v0}, {packet->u1,packet->v1},
+	                      {packet->u2,packet->v2}, {packet->u3,packet->v3}};
+	NativeDraw3DVertex vertices[4];
+	for (int i = 0; i < 4; i++)
+	{
+		int corner = cornerOrder[order][i] ^ (reflected ? 1 : 0);
+		vertices[i] = (NativeDraw3DVertex){
+			.x = local->center.x + axisSign[corner] * axisA->x + rimSign[corner] * axisB->x,
+			.y = local->center.y + axisSign[corner] * axisA->y + rimSign[corner] * axisB->y,
+			.z = local->center.z.lo + axisSign[corner] * axisA->z + rimSign[corner] * axisB->z,
+			.u = uv[i][0], .v = uv[i][1], .r = packet->r0, .g = packet->g0, .b = packet->b0,
+		};
+	}
+	NativeDraw3DMaterial material = {0};
+	material.tpage = packet->tpage;
+	material.clut = packet->clut;
+	material.flags = NATIVE_DRAW3D_TEXTURED | NATIVE_DRAW3D_DOUBLE_SIDED;
+	// Overlay tires keep their retail marker slots and camera-relative wheel
+	// geometry while leaving the scene's depth intact, as overlay models do.
+	if (scratch->instFlags & (SCREENSPACE_INSTANCE | PUSHBUFFER_EXISTS))
+		material.flags |= NATIVE_DRAW3D_OVERLAY;
+	if (packet->code & 2) material.flags |= NATIVE_DRAW3D_SEMI_TRANS;
+	int bias = (selectedOTSlot - originalOTSlot) / 4;
+	if (bias < -128) bias = -128;
+	if (bias > 127) bias = 127;
+	material.depthBias = (s8)bias;
+	NativeDraw3D_AddQuad(layer, &vertices[0], &vertices[1], &vertices[2], &vertices[3], &material);
+	NativeDraw3D_EndLayer(layer);
+
+	if (selectedOTSlot < scratch->otRangeStart) selectedOTSlot = scratch->otRangeStart;
+	if (selectedOTSlot > scratch->otRangeEnd) selectedOTSlot = scratch->otRangeEnd;
+	NativeDraw3D_SetMarker(marker, layer);
+	AddPrim((uint32_t *)(uintptr_t)selectedOTSlot, marker);
+	primMem->cursor = marker + 1;
+	return 1;
+}
+#endif
+
 static int DrawTiresSolid_EmitProjectedWheel(struct DrawTiresScratch *scratch, struct DrawTiresSolidProjectedWheel *selected, struct PrimMem *primMem,
-                                             int *primCount)
+                                             int *primCount, int wheelIndex, struct PushBuffer *pb)
 {
 	POLY_FT4 *p = (POLY_FT4 *)primMem->cursor;
 	int selectedOTSlot = selected->selectedOTSlot;
@@ -523,6 +599,14 @@ static int DrawTiresSolid_EmitProjectedWheel(struct DrawTiresScratch *scratch, s
 		return 0;
 	}
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+	if (DrawTires_SubmitNativeWheel(scratch, pb, primMem, p, wheelIndex, selected->jumpIndex,
+	                               selectedOTSlot, selected->selectedOTSlot, 0))
+	{
+		(*primCount)++;
+		return 1;
+	}
+#endif
 	DrawTiresSolid_WritePrimitiveCorners(p, sxy);
 	DrawTiresSolid_LinkPrimitive(scratch, p, selectedOTSlot);
 	primMem->cursor = (char *)primMem->cursor + sizeof(POLY_FT4);
@@ -558,7 +642,7 @@ static int DrawTires_WheelFitsGteInput(const struct DrawTiresScratch *scratch, i
 }
 #endif
 
-static int DrawTiresSolid_ProjectWheelQuads(struct DrawTiresScratch *scratch, struct PrimMem *primMem, int *primCount)
+static int DrawTiresSolid_ProjectWheelQuads(struct DrawTiresScratch *scratch, struct PrimMem *primMem, int *primCount, struct PushBuffer *pb)
 {
 	// NOTE(aalhendi): PSX-backfeed blocker: retail DrawTires_Solid walks the
 	// projection loop with s7/t8/t9 scratchpad cursors from 0x8006eb34 onward.
@@ -587,7 +671,7 @@ static int DrawTiresSolid_ProjectWheelQuads(struct DrawTiresScratch *scratch, st
 
 		struct DrawTiresSolidProjectedWheel projectedWheel = DrawTiresSolid_SelectProjectedWheel(scratch, wheelIndex);
 
-		if (DrawTiresSolid_EmitProjectedWheel(scratch, &projectedWheel, primMem, primCount) == 0)
+		if (DrawTiresSolid_EmitProjectedWheel(scratch, &projectedWheel, primMem, primCount, wheelIndex, pb) == 0)
 		{
 			return 0;
 		}
@@ -650,7 +734,7 @@ static int DrawTiresSolid_StagePlayer(struct DrawTiresScratch *scratch, struct D
 	DrawTiresSolid_SetupGteState(scratch, inst, idpp, pb);
 	DrawTiresSolid_BuildWheelAxes(scratch);
 	DrawTiresSolid_SetupProjectionState(pb);
-	DrawTiresSolid_ProjectWheelQuads(scratch, primMem, primCount);
+	DrawTiresSolid_ProjectWheelQuads(scratch, primMem, primCount, pb);
 
 	return 1;
 }
@@ -1116,7 +1200,7 @@ static void DrawTiresReflection_LinkPrimitive(struct DrawTiresScratch *scratch, 
 }
 
 static void DrawTiresReflection_EmitProjectedWheel(struct DrawTiresScratch *scratch, struct DrawTiresReflectionProjectedWheel *selected,
-                                                   struct PrimMem *primMem, int *primCount, int wheelIndex)
+                                                   struct PrimMem *primMem, int *primCount, int wheelIndex, struct PushBuffer *pb)
 {
 	POLY_FT4 *p = (POLY_FT4 *)primMem->cursor;
 	struct DrawTiresWheelLocal *wheelLocal = &scratch->wheelLocal[wheelIndex];
@@ -1143,13 +1227,21 @@ static void DrawTiresReflection_EmitProjectedWheel(struct DrawTiresScratch *scra
 		return;
 	}
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+	if (DrawTires_SubmitNativeWheel(scratch, pb, primMem, p, wheelIndex, selected->jumpIndex,
+	                               selectedOTSlot, selected->selectedOTSlot, 1))
+	{
+		(*primCount)++;
+		return;
+	}
+#endif
 	DrawTiresReflection_WritePrimitiveCorners(p, sxy);
 	DrawTiresReflection_LinkPrimitive(scratch, p, selectedOTSlot);
 	primMem->cursor = (char *)primMem->cursor + sizeof(POLY_FT4);
 	(*primCount)++;
 }
 
-static int DrawTiresReflection_ProjectWheelQuads(struct DrawTiresScratch *scratch, struct PrimMem *primMem, int *primCount)
+static int DrawTiresReflection_ProjectWheelQuads(struct DrawTiresScratch *scratch, struct PrimMem *primMem, int *primCount, struct PushBuffer *pb)
 {
 	// NOTE(aalhendi): PSX-backfeed blocker: retail DrawTires_Reflection walks
 	// the projection loop with s7/t8/t9 scratchpad cursors from 0x8006f5b4
@@ -1177,7 +1269,7 @@ static int DrawTiresReflection_ProjectWheelQuads(struct DrawTiresScratch *scratc
 		scratch->projectedSxy[2] = MFC2(14);
 
 		struct DrawTiresReflectionProjectedWheel projectedWheel = DrawTiresReflection_SelectProjectedWheel(scratch, wheelIndex);
-		DrawTiresReflection_EmitProjectedWheel(scratch, &projectedWheel, primMem, primCount, wheelIndex);
+		DrawTiresReflection_EmitProjectedWheel(scratch, &projectedWheel, primMem, primCount, wheelIndex, pb);
 	}
 
 	return 1;
@@ -1232,7 +1324,7 @@ static int DrawTiresReflection_StagePlayer(struct DrawTiresScratch *scratch, str
 	DrawTiresReflection_SetupGteState(scratch, inst, idpp, pb);
 	DrawTiresReflection_BuildWheelAxes(scratch);
 	DrawTiresReflection_SetupProjectionState(pb);
-	DrawTiresReflection_ProjectWheelQuads(scratch, primMem, primCount);
+	DrawTiresReflection_ProjectWheelQuads(scratch, primMem, primCount, pb);
 
 	return 1;
 }

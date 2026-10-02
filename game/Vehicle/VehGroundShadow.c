@@ -2,6 +2,8 @@
 
 #if defined(CTR_NATIVE)
 #include "platform/native_adhoc.h"
+#include "platform/native_pgxp.h"
+extern int gNativeMirrorModeRenderActive;
 #endif
 
 enum
@@ -314,7 +316,7 @@ static void VehGroundShadow_WriteUv(POLY_FT4 *poly, const struct TextureLayout *
 }
 
 static void VehGroundShadow_EmitQuad(u32 **primCursor, u32 *otBase, const struct TextureLayout *texture, u32 color, u32 sxy[VEH_GROUND_SHADOW_NUM_POINTS],
-                                     s32 depth, s8 depthBias, int quadIndex)
+                                     s32 depth, s8 depthBias, int quadIndex, SVec3 points[VEH_GROUND_SHADOW_NUM_POINTS], struct PushBuffer *pb)
 {
 	static const u8 quadPointIndex[VEH_GROUND_SHADOW_NUM_QUADS][4] = {
 	    {8, 0, 1, 2},
@@ -342,6 +344,50 @@ static void VehGroundShadow_EmitQuad(u32 **primCursor, u32 *otBase, const struct
 	CtrGpu_WritePackedXY(&poly->x3, sxy[quadPointIndex[quadIndex][3]]);
 	VehGroundShadow_WriteUv(poly, texture);
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+	if (NATIVE_DRAW3D_ACTIVE())
+	{
+		NativeDraw3DView view = {0};
+		double rotation[9], translation[3];
+		NativePgxp_GetTransform(&pb->matrix_ViewProj, &pb->matrix_ViewProj.m[0][0], pb->matrix_ViewProj.t, rotation, translation);
+		// Points are camera relative, with the retail fourfold scale.
+		for (int i = 0; i < 9; i++) view.rotation[i] = rotation[i] / 16384.0;
+		view.projection = (float)pb->distanceToScreen_PREV;
+		view.centerX = (float)pb->rect.w * 0.5f;
+		view.centerY = (float)pb->rect.h * 0.5f;
+		view.width = (float)pb->rect.w;
+		view.height = (float)pb->rect.h;
+		view.mirror = gNativeMirrorModeRenderActive != 0;
+		int layer = NativeDraw3D_BeginLayer(&view);
+		if (layer >= 0)
+		{
+			const u8 uv[4][2] = {{poly->u0,poly->v0}, {poly->u1,poly->v1}, {poly->u2,poly->v2}, {poly->u3,poly->v3}};
+			NativeDraw3DVertex vertices[4];
+			for (int i = 0; i < 4; i++)
+			{
+				const SVec3 *point = &points[quadPointIndex[quadIndex][i]];
+				vertices[i] = (NativeDraw3DVertex){.x=point->x, .y=point->y, .z=point->z,
+					.u=uv[i][0], .v=uv[i][1], .r=poly->r0, .g=poly->g0, .b=poly->b0};
+			}
+			NativeDraw3DMaterial material = {0};
+			material.tpage = poly->tpage;
+			material.clut = poly->clut;
+			// Keep the retail OT bias on the marker; the native decal must
+			// sit in front of a coplanar floor even if that bias is positive.
+			material.depthBias = depthBias < -1 ? depthBias : -1;
+			// A decal never replaces the track depth, including non-STP texels.
+			material.flags = NATIVE_DRAW3D_TEXTURED | NATIVE_DRAW3D_SEMI_TRANS |
+			                 NATIVE_DRAW3D_DOUBLE_SIDED | NATIVE_DRAW3D_ORDERED_BLEND;
+			NativeDraw3D_AddQuad(layer, &vertices[0], &vertices[1], &vertices[2], &vertices[3], &material);
+			NativeDraw3D_EndLayer(layer);
+			DR_PSYX_DRAW3D *marker = (DR_PSYX_DRAW3D *)*primCursor;
+			NativeDraw3D_SetMarker(marker, layer);
+			AddPrim(&otBase[depthIndex], marker);
+			*primCursor = (u32 *)(marker + 1);
+			return;
+		}
+	}
+#endif
 	ot = &otBase[depthIndex];
 	CtrGpu_LinkPacket24(ot, &poly->tag, poly, VEH_GROUND_SHADOW_GPU_TAG_POLY_FT4);
 
@@ -554,7 +600,7 @@ void VehGroundShadow_Main(void)
 			{
 				const struct TextureLayout *texture = (quadIndex & 1) != 0 ? shadowTex1 : shadowTex0;
 
-				VehGroundShadow_EmitQuad(&prim, otBase, texture, color, sxy, depth[0], entry->depthBias, quadIndex);
+				VehGroundShadow_EmitQuad(&prim, otBase, texture, color, sxy, depth[0], entry->depthBias, quadIndex, points, pb);
 			}
 		}
 	}

@@ -1,5 +1,10 @@
 #include <common.h>
 
+#if defined(CTR_NATIVE)
+#include "platform/native_pgxp.h"
+extern int gNativeMirrorModeRenderActive;
+#endif
+
 static const u8 sDrawConfettiColorTable8008a2a0[36] = {
     0x39, 0x39, 0x3a, 0x3b, 0x3d, 0x3f, 0x41, 0x44, 0x47, 0x4b, 0x4f, 0x53, 0x58, 0x5d, 0x63, 0x69, 0x6f, 0x76,
     0x7d, 0x85, 0x8d, 0x95, 0x9e, 0xa7, 0xb1, 0xbb, 0xc5, 0xd0, 0xdb, 0xe7, 0xf3, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -227,6 +232,23 @@ void DrawConfetti(struct PushBuffer *pb, struct PrimMem *primMem, struct GameTra
 	state1 = 0x493583fe;
 	rng = DrawConfetti_NextRng(&state0, &state1);
 	particleCount = currentParticles;
+	int nativeLayer = -1;
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+	if (NATIVE_DRAW3D_ACTIVE() && (u8 *)prim + sizeof(DR_PSYX_DRAW3D) <= (u8 *)primMem->guardEnd)
+	{
+		NativeDraw3DView view = {0};
+		double rotation[9], translation[3];
+		NativePgxp_GetTransform(&pb->matrix_ViewProj, &pb->matrix_ViewProj.m[0][0], pb->matrix_ViewProj.t, rotation, translation);
+		for (int i = 0; i < 9; i++) view.rotation[i] = rotation[i] / 4096.0;
+		view.projection = (float)pb->distanceToScreen_PREV;
+		view.centerX = (float)pb->rect.w * 0.5f;
+		view.centerY = (float)pb->rect.h * 0.5f;
+		view.width = (float)pb->rect.w;
+		view.height = (float)pb->rect.h;
+		view.mirror = gNativeMirrorModeRenderActive != 0;
+		nativeLayer = NativeDraw3D_BeginLayer(&view);
+	}
+#endif
 
 	while (1)
 	{
@@ -307,6 +329,22 @@ void DrawConfetti(struct PushBuffer *pb, struct PrimMem *primMem, struct GameTra
 		xy3 = DrawConfetti_PackXY(x + halfX + skewX, y + halfY);
 		z3 = z + halfZ - skewZ;
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+		if (nativeLayer >= 0)
+		{
+			const u32 xy[4] = {xy0, xy1, xy2, xy3};
+			const s32 zs[4] = {z0, z1, z2, z3};
+			NativeDraw3DVertex vertices[4];
+			for (int i = 0; i < 4; i++)
+				vertices[i] = (NativeDraw3DVertex){.x=(s16)xy[i], .y=(s16)(xy[i] >> 16), .z=(s16)zs[i],
+					.r=(u8)scratch->color, .g=(u8)(scratch->color >> 8), .b=(u8)(scratch->color >> 16)};
+			NativeDraw3DMaterial material = {0};
+			material.flags = NATIVE_DRAW3D_DOUBLE_SIDED;
+			NativeDraw3D_AddQuad(nativeLayer, &vertices[0], &vertices[1], &vertices[2], &vertices[3], &material);
+			rng = DrawConfetti_NextRng(&state0, &state1);
+			continue;
+		}
+#endif
 		MTC2(xy0, 0);
 		MTC2((u32)z0, 1);
 		MTC2(xy1, 2);
@@ -357,5 +395,18 @@ void DrawConfetti(struct PushBuffer *pb, struct PrimMem *primMem, struct GameTra
 		particleCount = scratch->remainingParticles;
 	}
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+	if (nativeLayer >= 0)
+	{
+		NativeDraw3D_EndLayer(nativeLayer);
+		DR_PSYX_DRAW3D *marker = (DR_PSYX_DRAW3D *)prim;
+		NativeDraw3D_SetMarker(marker, nativeLayer);
+		AddPrim(&pb->ptrOT[0x3fc], marker);
+		primMem->cursor = marker + 1;
+		return;
+	}
+#else
+	(void)nativeLayer;
+#endif
 	primMem->cursor = prim;
 }

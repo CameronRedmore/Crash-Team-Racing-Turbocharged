@@ -1,5 +1,10 @@
 #include <common.h>
 
+#if defined(CTR_NATIVE)
+#include "platform/native_pgxp.h"
+extern int gNativeMirrorModeRenderActive;
+#endif
+
 enum
 {
 	PARTICLE_POTION_SHATTER_Y_SPEED_THRESHOLD = 0x578,
@@ -919,7 +924,7 @@ static void Particle_RenderList_LinkPrimitive(u32 *tagWord, const void *packet, 
 }
 
 static void Particle_RenderList_LinkAndAdvance(u32 **primCursor, u32 **payloadCursor, struct Particle *particle, struct InstDrawPerPlayer *idpp,
-                                               u16 flagsSetColor, s32 depth, uint32_t *defaultOT)
+                                               u16 flagsSetColor, s32 depth, uint32_t *defaultOT, int nativeLayer)
 {
 	u32 *prim = *primCursor;
 	uint32_t *otBase;
@@ -958,6 +963,20 @@ static void Particle_RenderList_LinkAndAdvance(u32 **primCursor, u32 **payloadCu
 		otBase = defaultOT;
 	}
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+	if (nativeLayer >= 0)
+	{
+		DR_PSYX_DRAW3D *marker = (DR_PSYX_DRAW3D *)prim;
+		NativeDraw3D_EndLayer(nativeLayer);
+		NativeDraw3D_SetMarker(marker, nativeLayer);
+		AddPrim(&otBase[otIndex], marker);
+		*primCursor = (u32 *)(marker + 1);
+		*payloadCursor = *primCursor + 8;
+		return;
+	}
+#else
+	(void)nativeLayer;
+#endif
 	if ((flagsSetColor & PARTICLE_SET_COLOR_FLAG_SPECIAL_LINE) != 0)
 	{
 		struct ParticleSpecialPacket *packet = (struct ParticleSpecialPacket *)prim;
@@ -1292,6 +1311,98 @@ static void Particle_RenderList_WriteNormalPrimitive(POLY_FT4 *poly, struct Icon
 	CtrGpu_WritePackedXY(&poly->x3, MFC2(14));
 }
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+static int Particle_RenderList_SubmitNative(struct PushBuffer *pb, struct Particle *particle, struct Icon *icon,
+                                             const void *packet, const struct ParticleRenderListMatrix *matrix,
+                                             s32 posX, s32 posY, s32 posZ)
+{
+	if (!NATIVE_DRAW3D_ACTIVE()) return -1;
+	const int screenDriver = (particle->flagsSetColor & PARTICLE_SET_COLOR_FLAG_DRIVER_LOCAL) &&
+	    particle->driverInst && (particle->driverInst->flags & SCREENSPACE_INSTANCE);
+	NativeDraw3DView view = {0};
+	double rotation[9], translation[3];
+	NativePgxp_GetTransform(&pb->matrix_ViewProj, &pb->matrix_ViewProj.m[0][0], pb->matrix_ViewProj.t, rotation, translation);
+	const double position[3] = {posX, posY, posZ};
+	for (int i = 0; i < 3; i++)
+		view.translation[i] = (rotation[i*3] * position[0] + rotation[i*3+1] * position[1] + rotation[i*3+2] * position[2]) / 16384.0;
+	view.projection = (float)pb->distanceToScreen_PREV;
+	view.centerX = (float)pb->rect.w * 0.5f;
+	view.centerY = (float)pb->rect.h * 0.5f;
+	view.width = (float)pb->rect.w;
+	view.height = (float)pb->rect.h;
+	view.mirror = gNativeMirrorModeRenderActive != 0;
+	const int specialLine = (particle->flagsSetColor & PARTICLE_SET_COLOR_FLAG_SPECIAL_LINE) != 0;
+	if (specialLine)
+	{
+		for (int i = 0; i < 9; i++) view.rotation[i] = rotation[i] / 16384.0;
+	}
+	else
+	{
+		const u32 words[5] = {matrix->r11r12, matrix->r13r21, matrix->r22r23, matrix->r31r32, matrix->r33};
+		for (int i = 0; i < 9; i++) view.rotation[i] = (s16)(words[i >> 1] >> ((i & 1) * 16)) / 16384.0;
+	}
+	const int layer = NativeDraw3D_BeginLayer(&view);
+	if (layer < 0) return -1;
+	NativeDraw3DMaterial material = {0};
+	material.depthBias = particle->otIndexOffset;
+	material.flags = NATIVE_DRAW3D_DOUBLE_SIDED;
+	// Keep the particle renderer's camera-relative placement and OT range.
+	// Screen-driver particles draw over the world at that slot, with private
+	// depth just like screen models. Packet XY never supplies native geometry.
+	if (screenDriver) material.flags |= NATIVE_DRAW3D_OVERLAY;
+	if (specialLine)
+	{
+		const struct ParticleSpecialPacket *line = packet;
+		const u32 colors[2] = {line->line.color0AndCode, line->line.color1};
+		NativeDraw3DVertex vertices[2] = {{0}, {0}};
+		for (int i = 0; i < 2; i++)
+		{
+			vertices[i].r = (u8)colors[i];
+			vertices[i].g = (u8)(colors[i] >> 8);
+			vertices[i].b = (u8)(colors[i] >> 16);
+		}
+		const int currentAxes[3] = {PARTICLE_AXIS_POS_X, PARTICLE_AXIS_POS_Y, PARTICLE_AXIS_POS_Z};
+		const int previousAxes[3] = {PARTICLE_AXIS_ROT_X_OR_LINE_PREV_X, PARTICLE_AXIS_SCALE_Y_OR_LINE_PREV_Y, PARTICLE_AXIS_ROT_Y_OR_LINE_PREV_Z};
+		float delta[3];
+		for (int i = 0; i < 3; i++)
+		{
+			s32 value = (particle->axis[previousAxes[i]].startVal - particle->axis[currentAxes[i]].startVal) >> 6;
+			if (particle->flagsAxis & PARTICLE_AXIS_FLAG_SCALE_X)
+				value = Particle_RenderList_MulLo(value, particle->axis[PARTICLE_AXIS_SCALE_X_OR_LINE_SCALE].startVal) >> 16;
+			delta[i] = (s16)value;
+		}
+		vertices[1].x = delta[0]; vertices[1].y = delta[1]; vertices[1].z = delta[2];
+		material.tpage = (u16)line->drawMode;
+		if (colors[0] & PARTICLE_GPU_CODE_SEMI_TRANS)
+			material.flags |= NATIVE_DRAW3D_SEMI_TRANS;
+		material.flags |= NATIVE_DRAW3D_ORDERED_BLEND;
+		NativeDraw3D_AddLine(layer, &vertices[0], &vertices[1], &material, 1.0f);
+	}
+	else
+	{
+		const POLY_FT4 *poly = packet;
+		const u8 uv[4][2] = {{poly->u0,poly->v0}, {poly->u1,poly->v1}, {poly->u2,poly->v2}, {poly->u3,poly->v3}};
+		int sizeShift = (particle->flagsSetColor & PARTICLE_SET_COLOR_FLAG_LARGE_QUAD) ? 4 : 1;
+		int halfWidth = ((icon->texLayout.u1 - icon->texLayout.u0) + 1) << sizeShift;
+		int halfHeight = ((icon->texLayout.v3 - icon->texLayout.v0) + 1) << sizeShift;
+		NativeDraw3DVertex vertices[4];
+		for (int i = 0; i < 4; i++)
+		{
+			vertices[i] = (NativeDraw3DVertex){.x=(i & 1) ? halfWidth : -halfWidth,
+				.y=(i & 2) ? halfHeight : -halfHeight, .z=0, .u=uv[i][0], .v=uv[i][1],
+				.r=(poly->code & 1) ? 128 : poly->r0, .g=(poly->code & 1) ? 128 : poly->g0,
+				.b=(poly->code & 1) ? 128 : poly->b0};
+		}
+		material.tpage = poly->tpage;
+		material.clut = poly->clut;
+		material.flags |= NATIVE_DRAW3D_TEXTURED;
+		if (poly->code & 2) material.flags |= NATIVE_DRAW3D_SEMI_TRANS | NATIVE_DRAW3D_ORDERED_BLEND;
+		NativeDraw3D_AddQuad(layer, &vertices[0], &vertices[1], &vertices[2], &vertices[3], &material);
+	}
+	return layer;
+}
+#endif
+
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8003f590-0x80040308
 void Particle_RenderList(struct PushBuffer *pb, void *particleList)
 {
@@ -1346,6 +1457,7 @@ void Particle_RenderList(struct PushBuffer *pb, void *particleList)
 			s32 posZ;
 			s32 depth;
 			u32 color;
+			int nativeLayer = -1;
 
 			prim = primCursor;
 			driverID = (s8)particle->driverID;
@@ -1467,7 +1579,10 @@ void Particle_RenderList(struct PushBuffer *pb, void *particleList)
 			if ((flagsSetColor & PARTICLE_SET_COLOR_FLAG_SPECIAL_LINE) != 0)
 			{
 				Particle_RenderList_WriteSpecialPrimitive((struct ParticleSpecialPacket *)prim, particle, flagsAxis, flagsSetColor, color, scratch);
-				Particle_RenderList_LinkAndAdvance(&primCursor, &payloadCursor, particle, idpp, flagsSetColor, scratch->depth, scratch->ot);
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+				nativeLayer = Particle_RenderList_SubmitNative(pb, particle, icon, prim, NULL, posX, posY, posZ);
+#endif
+				Particle_RenderList_LinkAndAdvance(&primCursor, &payloadCursor, particle, idpp, flagsSetColor, scratch->depth, scratch->ot, nativeLayer);
 				prim = primCursor;
 				goto next_particle;
 			}
@@ -1475,7 +1590,10 @@ void Particle_RenderList(struct PushBuffer *pb, void *particleList)
 			struct ParticleRenderListMatrix matrix = Particle_RenderList_BuildNormalMatrix(particle, flagsAxis);
 
 			Particle_RenderList_WriteNormalPrimitive((POLY_FT4 *)prim, icon, flagsAxis, flagsSetColor, color, &matrix, &scratch->depth);
-			Particle_RenderList_LinkAndAdvance(&primCursor, &payloadCursor, particle, idpp, flagsSetColor, scratch->depth, scratch->ot);
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+			nativeLayer = Particle_RenderList_SubmitNative(pb, particle, icon, prim, &matrix, posX, posY, posZ);
+#endif
+			Particle_RenderList_LinkAndAdvance(&primCursor, &payloadCursor, particle, idpp, flagsSetColor, scratch->depth, scratch->ot, nativeLayer);
 			prim = primCursor;
 
 		next_particle:

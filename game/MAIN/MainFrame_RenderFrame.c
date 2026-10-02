@@ -43,8 +43,8 @@ void MainFrame_RenderFrame(struct GameTracker *gGT, struct GamepadSystem *gGamep
 #if defined(__vita__)
 	NativeAdhoc_BeginRenderFrame(gGT);
 #endif
-	// Last frame's OT, and the native layers it referenced, have been drawn.
-	NativeDraw3D_BeginFrame();
+	// Native storage was reset with the OT in MainFrame_ResetDB.
+	// Keep any effects already submitted during game logic.
 #endif
 
 	MAINFRAME_PERF_BEGIN(NATIVE_PERF_BUCKET_MAINFRAME_SETUP);

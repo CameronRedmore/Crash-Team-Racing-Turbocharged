@@ -14,6 +14,7 @@ int gNativePgxpMode = NATIVE_PGXP_MODE_OFF;
 #endif
 
 int gNativePgxpIntegerNclipEnabled = 0;
+int gNativePreciseMinimapEnabled = 0;
 // Enabled by default on PC builds; Vita keeps the retail polygon ordering.
 #if defined(__vita__)
 int gNativeDepthBufferEnabled = 0;
@@ -244,6 +245,16 @@ internal const NativePgxpVertex *NativePgxp_FifoMatch(int reg, u32 value)
 	const NativePgxpRegister *fifoReg = NativePgxp_FifoRegister(reg);
 
 	return (fifoReg->valid && (fifoReg->vertex.value == value)) ? &fifoReg->vertex : NULL;
+}
+
+void NativePgxp_SetScreenXY(const s16 *dst, float x, float y)
+{
+	NativePgxpVertex vertex = {0};
+	vertex.x = x;
+	vertex.y = y;
+	vertex.w = NATIVE_PGXP_SCREEN_W;
+	vertex.value = (u16)dst[0] | ((u32)(u16)dst[1] << 16);
+	NativePgxp_SetShadow(dst, vertex);
 }
 
 void NativePgxp_GteProject(float x, float y, float w, u32 value)

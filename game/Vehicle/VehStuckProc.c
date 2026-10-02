@@ -2,6 +2,8 @@
 
 #if defined(CTR_NATIVE)
 #include "platform/native_adhoc.h"
+#include "platform/native_pgxp.h"
+extern int gNativeMirrorModeEnabled;
 #endif
 
 enum
@@ -1653,10 +1655,68 @@ static void VehWarpDust_Project(struct VehWarpDustScratch *scratch, SVECTOR *poi
 	out->depth = MFC2(17);
 }
 
-static void VehWarpDust_EmitSegment(u32 **primCursor, struct PushBuffer *pb, const struct VehWarpDustProjected *prev, const struct VehWarpDustProjected *curr)
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+static int VehWarpDust_SubmitNative(u32 **primCursor, struct PushBuffer *pb, u32 *ot,
+                                    const SVECTOR *prev, const SVECTOR *curr, int offsetX, int offsetY, int offsetZ)
+{
+	if (!NATIVE_DRAW3D_ACTIVE()) return 0;
+	NativeDraw3DView view = {0};
+	double rotation[9], translation[3];
+	NativePgxp_GetTransform(&pb->matrix_ViewProj, &pb->matrix_ViewProj.m[0][0], pb->matrix_ViewProj.t, rotation, translation);
+	for (int i = 0; i < 9; i++) view.rotation[i] = rotation[i] / 4096.0;
+	for (int i = 0; i < 3; i++) view.translation[i] = translation[i];
+	view.projection = (float)pb->distanceToScreen_PREV;
+	view.centerX = (float)pb->rect.w * 0.5f;
+	view.centerY = (float)pb->rect.h * 0.5f;
+	view.width = (float)pb->rect.w;
+	view.height = (float)pb->rect.h;
+	// Warp geometry is submitted by game logic, before the render mirror phase.
+	struct GameTracker *gGT = sdata->gGT;
+	view.mirror = gNativeMirrorModeEnabled && !gGT->boolDemoMode &&
+	    !(gGT->gameMode1 & (GAME_CUTSCENE | MAIN_MENU | LOADING)) &&
+	    gGT->levelID >= DINGO_CANYON && gGT->levelID < INTRO_RACE_TODAY &&
+	    LOAD_IsOpen_RacingOrBattle() && sdata->Loading.stage == LOAD_IDLE;
+	const int layer = NativeDraw3D_BeginLayer(&view);
+	if (layer < 0) return 0;
+	NativeDraw3DMaterial material = {0};
+	material.tpage = (u16)VEH_WARP_DUST_DRAW_MODE;
+	material.flags = NATIVE_DRAW3D_DOUBLE_SIDED | NATIVE_DRAW3D_SEMI_TRANS | NATIVE_DRAW3D_ORDERED_BLEND;
+	const SVECTOR *points[4] = {curr, curr, prev, prev};
+	for (int side = -1; side <= 1; side += 2)
+	{
+		NativeDraw3DVertex vertices[4];
+		for (int i = 0; i < 4; i++)
+		{
+			const int edge = (i & 1) ? 0 : side;
+			const u32 color = (i & 1) ? VEH_WARP_DUST_EDGE_COLOR : 0;
+			vertices[i] = (NativeDraw3DVertex){
+				.x = VehWarpDust_AddHalf(points[i]->vx, edge * offsetX),
+				.y = VehWarpDust_AddHalf(points[i]->vy, edge * offsetY),
+				.z = VehWarpDust_AddHalf(points[i]->vz, edge * offsetZ),
+				.r = (u8)color, .g = (u8)(color >> 8), .b = (u8)(color >> 16),
+			};
+		}
+		NativeDraw3D_AddQuad(layer, &vertices[0], &vertices[1], &vertices[2], &vertices[3], &material);
+	}
+	NativeDraw3D_EndLayer(layer);
+	DR_PSYX_DRAW3D *marker = (DR_PSYX_DRAW3D *)*primCursor;
+	NativeDraw3D_SetMarker(marker, layer);
+	AddPrim(ot, marker);
+	*primCursor = (u32 *)(marker + 1);
+	return 1;
+}
+#endif
+
+static void VehWarpDust_EmitSegment(u32 **primCursor, struct PushBuffer *pb, const struct VehWarpDustProjected *prev, const struct VehWarpDustProjected *curr,
+                                    const SVECTOR *prevPoint, const SVECTOR *currPoint, int offsetX, int offsetY, int offsetZ)
 {
 	struct VehWarpDustPacket *packet = (struct VehWarpDustPacket *)*primCursor;
 	u32 *ot = pb->ptrOT + CTR_MipsSra((s32)curr->depth, VEH_WARP_DUST_OT_DEPTH_SHIFT);
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+	if (VehWarpDust_SubmitNative(primCursor, pb, ot, prevPoint, currPoint, offsetX, offsetY, offsetZ)) return;
+#else
+	(void)prevPoint; (void)currPoint; (void)offsetX; (void)offsetY; (void)offsetZ;
+#endif
 
 	packet->drawMode = VEH_WARP_DUST_DRAW_MODE;
 
@@ -1759,7 +1819,7 @@ void VehStuckProc_Warp_AddDustPuff2(struct Driver *d, struct DriverWarpState *wa
 			struct VehWarpDustProjected *tmp;
 
 			VehWarpDust_Project(scratch, &points[seg + 1], offsetX, offsetY, offsetZ, curr);
-			VehWarpDust_EmitSegment(&prim, pb, prev, curr);
+			VehWarpDust_EmitSegment(&prim, pb, prev, curr, &points[seg], &points[seg + 1], offsetX, offsetY, offsetZ);
 
 			tmp = prev;
 			prev = curr;

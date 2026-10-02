@@ -16,9 +16,9 @@ extern int gNativeMirrorModeRenderActive;
 enum
 {
 	NATIVE_DRAW_LEVEL_GRID_VERTICES = 9,
-	// Retail OT slot for a viewport's world draw environment and sky; the
-	// layer marker goes right after it.
-	NATIVE_DRAW_LEVEL_MARKER_OT_INDEX = 0x3fe,
+	// Sky faces can use negative D offsets from slot 0x3ff. Put the marker at
+	// the retail level's farthest OT slot so those faces draw before the level.
+	NATIVE_DRAW_LEVEL_MARKER_OT_INDEX = 0x3fc,
 	// tpage blend bits 3 mark an opaque level face.
 	NATIVE_DRAW_LEVEL_TPAGE_BLEND_MASK = 0x60,
 };
@@ -355,7 +355,7 @@ static void NativeDrawLevel_EmitFace(const struct NativeDrawLevelContext *ctx, c
 		NativeDrawLevel_SetUv(&v[k], uv[swapUv ? swapped[k] : k]);
 	}
 
-	NativeDraw3DMaterial material;
+	NativeDraw3DMaterial material = {0};
 	material.tpage = texture->tpage;
 	material.clut = texture->clut;
 	material.flags = NativeDrawLevel_BaseFlags(block, texture);
@@ -497,7 +497,7 @@ static void NativeDrawLevel_EmitFullDynamic(const struct NativeDrawLevelContext 
 		NativeDrawLevel_SetUv(&grid[k], uv[k]);
 	}
 
-	NativeDraw3DMaterial material;
+	NativeDraw3DMaterial material = {0};
 	material.tpage = texture->tpage;
 	material.clut = texture->clut;
 	material.flags = NativeDrawLevel_BaseFlags(block, texture);
@@ -566,7 +566,7 @@ static void NativeDrawLevel_EmitWater(const struct NativeDrawLevelContext *ctx, 
 		return;
 	}
 
-	NativeDraw3DMaterial material;
+	NativeDraw3DMaterial material = {0};
 	material.tpage = envMap->tpage;
 	material.clut = envMap->clut;
 	material.flags = NATIVE_DRAW3D_TEXTURED | NATIVE_DRAW3D_SEMI_TRANS | NATIVE_DRAW3D_DOUBLE_SIDED;
@@ -680,7 +680,7 @@ static void NativeDrawLevel_BuildView(const struct PushBuffer *pb, NativeDraw3DV
 	view->mirror = gNativeMirrorModeRenderActive != 0;
 }
 
-// Links a layer marker just after the viewport's draw environment and sky.
+// Links a layer marker after the sky's negative-D OT slots.
 static void NativeDrawLevel_LinkLayer(struct PushBuffer *pb, struct PrimMem *primMem, int layer, int otIndex)
 {
 	DR_PSYX_DRAW3D *marker = (DR_PSYX_DRAW3D *)primMem->cursor;
@@ -702,6 +702,7 @@ static void NativeDrawLevel_Viewport(struct PushBuffer *pb, struct PrimMem *prim
 
 	if ((visFaceList == NULL) || (mesh->ptrQuadBlockArray == NULL) || (mesh->ptrVertexArray == NULL))
 	{
+		NativeDraw3D_ReportDiagnostic(NATIVE_DRAW3D_DIAG_LEVEL_INPUT, "NativeDrawLevel", pb->cameraID);
 		return;
 	}
 

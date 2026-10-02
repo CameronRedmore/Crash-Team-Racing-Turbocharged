@@ -1,5 +1,10 @@
 #include <common.h>
 
+#if defined(CTR_NATIVE)
+#include "platform/native_pgxp.h"
+extern int gNativeMirrorModeRenderActive;
+#endif
+
 enum
 {
 	VEH_GROUND_SKIDS_ICON_TIREMARK = 0x2f,
@@ -209,8 +214,70 @@ static void VehGroundSkids_ProjectFrame(struct VehGroundSkidsScratch *scratch, c
 	gte_stsz3(&depth[6], &depth[7], &depth[8]);
 }
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+static int VehGroundSkids_SubmitNativeSegment(struct VehGroundSkidsScratch *scratch,
+                                               const SVECTOR *currPoints, const SVECTOR *prevPoints,
+                                               int pointIndex, int depth, const union VehEmitterSkidmark *mark)
+{
+	if (!NATIVE_DRAW3D_ACTIVE()) return 0;
+	struct PrimMem *primMem = &sdata->gGT->backBuffer->primMem;
+	DR_PSYX_DRAW3D *marker = primMem->cursor;
+	if ((u8 *)(marker + 1) > (u8 *)primMem->guardEnd) return 1;
+	struct PushBuffer *pb = scratch->pushBuffer;
+	struct Icon *icon = sdata->gGT->ptrIcons[VEH_GROUND_SKIDS_ICON_TIREMARK];
+	if (icon == NULL) return 1;
+	NativeDraw3DView view = {0};
+	double rotation[9], translation[3];
+	NativePgxp_GetTransform(&pb->matrix_ViewProj, &pb->matrix_ViewProj.m[0][0], pb->matrix_ViewProj.t, rotation, translation);
+	for (int i = 0; i < 9; i++) view.rotation[i] = rotation[i] / 4096.0;
+	view.projection = (float)pb->distanceToScreen_PREV;
+	view.centerX = (float)pb->rect.w * 0.5f;
+	view.centerY = (float)pb->rect.h * 0.5f;
+	view.width = (float)pb->rect.w;
+	view.height = (float)pb->rect.h;
+	view.mirror = gNativeMirrorModeRenderActive != 0;
+	const int layer = NativeDraw3D_BeginLayer(&view);
+	if (layer < 0) return 0;
+	const struct TextureLayout *texture = &icon->texLayout;
+	const u8 uv[4][2] = {{texture->u0,texture->v0}, {texture->u1,texture->v1},
+	                      {texture->u2,texture->v2}, {texture->u3,texture->v3}};
+	NativeDraw3DVertex vertices[4];
+	for (int i = 0; i < 4; i++)
+	{
+		const SVECTOR *point = (i < 2 ? currPoints : prevPoints) + pointIndex + (i & 1);
+		u32 color = i < 2 ? scratch->colorNear : scratch->colorFar;
+		// Preserve relative halfword wrap, then normalize to level depth units.
+		vertices[i] = (NativeDraw3DVertex){
+			.x = VehGroundSkids_ScaleRelative((u16)point->vx, (u16)scratch->origin.x) * 0.25f,
+			.y = VehGroundSkids_ScaleRelative((u16)point->vy, (u16)scratch->origin.y) * 0.25f,
+			.z = VehGroundSkids_ScaleRelative((u16)point->vz, (u16)scratch->origin.z) * 0.25f,
+			.u = uv[i][0], .v = uv[i][1], .r = (u8)color, .g = (u8)(color >> 8), .b = (u8)(color >> 16),
+		};
+	}
+	NativeDraw3DMaterial material = {0};
+	material.tpage = (texture->tpage & 0xff9f) | ((scratch->segmentFlags & VEH_GROUND_SKIDS_ALT_TPAGE_FLAG) ? 0x60 : 0x40);
+	material.clut = texture->clut;
+	// Retail adds an OT offset to the stored instance bias. Native
+	// marks instead need a small forward bias to avoid coplanar rejection.
+	int bias = (s8)mark->color;
+	material.depthBias = (s8)(bias < -2 ? bias : -2);
+	material.flags = NATIVE_DRAW3D_TEXTURED | NATIVE_DRAW3D_SEMI_TRANS |
+	                 NATIVE_DRAW3D_DOUBLE_SIDED | NATIVE_DRAW3D_ORDERED_BLEND;
+	NativeDraw3D_AddQuad(layer, &vertices[0], &vertices[1], &vertices[2], &vertices[3], &material);
+	NativeDraw3D_EndLayer(layer);
+	int slot = depth >> VEH_GROUND_SKIDS_OT_DEPTH_SHIFT;
+	if (slot < 0) slot = 0;
+	if (slot > 0x3ff) slot = 0x3ff;
+	NativeDraw3D_SetMarker(marker, layer);
+	AddPrim(&pb->ptrOT[slot], marker);
+	primMem->cursor = marker + 1;
+	return 1;
+}
+#endif
+
 static void VehGroundSkids_TryEmitSegment(struct VehGroundSkidsScratch *scratch, u32 *currXY, u32 *prevXY, s32 *currDepth, s32 *prevDepth, u32 flags,
-                                          u32 prevFlags, int bit, const union VehEmitterSkidmark *mark, int pointIndex)
+                                          u32 prevFlags, int bit, const union VehEmitterSkidmark *mark, int pointIndex,
+                                          const SVECTOR *currPoints, const SVECTOR *prevPoints)
 {
 	if ((flags & prevFlags & bit) == 0)
 	{
@@ -227,6 +294,9 @@ static void VehGroundSkids_TryEmitSegment(struct VehGroundSkidsScratch *scratch,
 
 	scratch->segmentFlagsLow = mark->flags;
 	int depth = (currDepth[pointIndex] >> VEH_GROUND_SKIDS_DEPTH_SHIFT) + (mark->color << VEH_GROUND_SKIDS_OT_DEPTH_SHIFT);
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+	if (VehGroundSkids_SubmitNativeSegment(scratch, currPoints, prevPoints, pointIndex, depth, mark)) return;
+#endif
 	VehGroundSkids_Subset1(&currXY[pointIndex], &prevXY[pointIndex], depth, scratch);
 }
 
@@ -283,6 +353,7 @@ void VehGroundSkids_Main(struct Thread *thread, struct PushBuffer *pb)
 					scratch->colorNear = VehGroundSkids_ColorWord(intensity);
 					scratch->colorFar = VEH_GROUND_SKIDS_COLOR_SENTINEL;
 
+					const SVECTOR *prevFramePoints = NULL;
 					u32 prevFlags = 0;
 					while (flags != 0)
 					{
@@ -295,15 +366,16 @@ void VehGroundSkids_Main(struct Thread *thread, struct PushBuffer *pb)
 							VehGroundSkids_ProjectFrame(scratch, framePoints, currXY, currDepth);
 
 							VehGroundSkids_TryEmitSegment(scratch, currXY, prevXY, currDepth, prevDepth, currFlags, prevFlags, DRIVER_SKIDMARK_BACK_LEFT,
-							                              &frame[0], 0);
+							                              &frame[0], 0, framePoints, prevFramePoints);
 							VehGroundSkids_TryEmitSegment(scratch, currXY, prevXY, currDepth, prevDepth, currFlags, prevFlags, DRIVER_SKIDMARK_BACK_RIGHT,
-							                              &frame[1], 2);
+							                              &frame[1], 2, framePoints, prevFramePoints);
 							VehGroundSkids_TryEmitSegment(scratch, currXY, prevXY, currDepth, prevDepth, currFlags, prevFlags, DRIVER_SKIDMARK_FRONT_LEFT,
-							                              &frame[2], 4);
+							                              &frame[2], 4, framePoints, prevFramePoints);
 							VehGroundSkids_TryEmitSegment(scratch, currXY, prevXY, currDepth, prevDepth, currFlags, prevFlags, DRIVER_SKIDMARK_FRONT_RIGHT,
-							                              &frame[3], 6);
+							                              &frame[3], 6, framePoints, prevFramePoints);
 						}
 
+						prevFramePoints = framePoints;
 						u32 *tmpXY = currXY;
 						currXY = prevXY;
 						prevXY = tmpXY;

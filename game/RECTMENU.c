@@ -413,6 +413,8 @@ static char *RECTMENU_GetString(s16 stringIndex)
 		return g_cfg_bilinearFiltering ? "TEXTURES: BILINEAR" : "TEXTURES: NEAREST";
 	case NATIVE_MENU_STRING_HD_PAUSE:
 		return gNativeHdPauseMode == 0 ? "PAUSE SCREEN: ORIGINAL" : (gNativeHdPauseMode == 1 ? "PAUSE SCREEN: HD" : "PAUSE SCREEN: HD SMOOTH");
+	case NATIVE_MENU_STRING_PRECISE_MINIMAP:
+		return gNativePreciseMinimapEnabled ? "PRECISE MINIMAP: ON" : "PRECISE MINIMAP: OFF";
 	case NATIVE_MENU_STRING_ENHANCEMENTS:
 		return "ENHANCEMENTS";
 	case NATIVE_MENU_STRING_AI_PHYSICS:
@@ -844,7 +846,8 @@ static b32 RECTMENU_NativeOptionsHorizontalInput(struct RectMenu *menu)
 	       (stringIndex == NATIVE_MENU_STRING_PHYSICS) ||
 	       (stringIndex == NATIVE_MENU_STRING_AI_PHYSICS) ||
 	       (stringIndex == NATIVE_MENU_STRING_COLLISION_PHYSICS) ||
-	       (stringIndex == NATIVE_MENU_STRING_STEERING_PHYSICS);
+	       (stringIndex == NATIVE_MENU_STRING_STEERING_PHYSICS) ||
+	       (stringIndex == NATIVE_MENU_STRING_PRECISE_MINIMAP);
 }
 #endif
 

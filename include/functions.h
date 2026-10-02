@@ -1143,6 +1143,9 @@ void AH_Map_LoadSave_Prim(const SVec2 *vertPos, char *vertCol, void *ot, struct 
 void AH_Map_LoadSave_Full(int posX, int posY, const SVec2 *vertPos, char *vertCol, int scale, int angle);
 
 void AH_Map_HubArrow(int posX, int posY, const SVec2 *vertPos, char *vertCol, int scale, int angle);
+#if defined(CTR_NATIVE)
+void AH_Map_HubArrowPrecise(float posX, float posY, const SVec2 *vertPos, char *vertCol, int scale, int angle);
+#endif
 
 void AH_Map_HubArrowOuter(struct UIMap *map, int arrowIndex, int posX, int posY, int inputAngle, int type);
 

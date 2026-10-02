@@ -1,5 +1,10 @@
 #include <common.h>
 
+#if defined(CTR_NATIVE)
+#include "platform/native_pgxp.h"
+extern int gNativeMirrorModeRenderActive;
+#endif
+
 struct DrawSkyContext
 {
 	const struct ShortVertex *verts;
@@ -113,9 +118,85 @@ static u32 *DrawSky_Piece(struct Skybox *skybox, struct DrawSkyContext *ctx, int
 	return prim;
 }
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+static int DrawSky_SubmitNative(struct Skybox *sky, struct PushBuffer *pb, struct PrimMem *primMem)
+{
+	if (!NATIVE_DRAW3D_ACTIVE() || sky == NULL) return 0;
+	NativeDraw3DView view = {0};
+	double rotation[9], translation[3];
+	NativePgxp_GetTransform(&pb->matrix_ViewProj, &pb->matrix_ViewProj.m[0][0], pb->matrix_ViewProj.t, rotation, translation);
+	// The sky follows camera rotation, with no camera translation.
+	for (int i = 0; i < 9; i++) view.rotation[i] = rotation[i] / 4096.0;
+	view.projection = (float)pb->distanceToScreen_PREV;
+	view.centerX = (float)pb->rect.w * 0.5f;
+	view.centerY = (float)pb->rect.h * 0.5f;
+	view.width = (float)pb->rect.w;
+	view.height = (float)pb->rect.h;
+	view.mirror = gNativeMirrorModeRenderActive != 0;
+	int base = (int)(((DrawSky_ReadWord(pb, 0x08) + 0x500) >> 9) & 7);
+	const int pieces[4] = {base, (base + 1) & 7, (base + 7) & 7, (base + 6) & 7};
+	u8 usedSlots[0x400] = {0};
+	for (int piece = 0; piece < 4; piece++)
+	{
+		int index = pieces[piece];
+		const struct SkyboxFace *faces = sky->ptrFaces[index];
+		for (u32 i = 0; i < (u16)sky->numFaces[index]; i++)
+		{
+			int slot = 0x3ff + (s16)faces[i].D / 4;
+			if (slot >= 0 && slot < 0x400) usedSlots[slot] = 1;
+		}
+	}
+	int submitted = 0;
+	// Preserve the sky's negative-D ordering, including 0x3fd, above the
+	// level marker at 0x3fc that fixed Tiger Temple's black ring.
+	for (int slot = 0x3ff; slot >= 0; slot--)
+	{
+		if (!usedSlots[slot]) continue;
+		DR_PSYX_DRAW3D *marker = primMem->cursor;
+		if ((u8 *)(marker + 1) > (u8 *)primMem->guardEnd) return 1;
+		int layer = NativeDraw3D_BeginLayer(&view);
+		if (layer < 0) return submitted;
+		NativeDraw3DMaterial material = {0};
+		material.flags = NATIVE_DRAW3D_BACKGROUND | NATIVE_DRAW3D_DOUBLE_SIDED;
+		for (int piece = 3; piece >= 0; piece--)
+		{
+			int index = pieces[piece];
+			const struct SkyboxFace *faces = sky->ptrFaces[index];
+			// Retail links at the head of each slot, reversing submission.
+			for (int i = (u16)sky->numFaces[index] - 1; i >= 0; i--)
+			{
+				const struct SkyboxFace *face = &faces[i];
+				if (0x3ff + (s16)face->D / 4 != slot) continue;
+				const u16 offsets[3] = {face->A, face->B, face->C};
+				const struct ShortVertex *first = (const struct ShortVertex *)((const char *)sky->ptrVertex + face->A);
+				material.flags = NATIVE_DRAW3D_BACKGROUND | NATIVE_DRAW3D_DOUBLE_SIDED;
+				if (first->Color.cd & 2) material.flags |= NATIVE_DRAW3D_SEMI_TRANS;
+				NativeDraw3DVertex vertices[3];
+				for (int j = 0; j < 3; j++)
+				{
+					const struct ShortVertex *source = (const struct ShortVertex *)((const char *)sky->ptrVertex + offsets[j]);
+					vertices[j] = (NativeDraw3DVertex){.x=source->Position.vx, .y=source->Position.vy, .z=source->Position.vz,
+						.r=source->Color.r, .g=source->Color.g, .b=source->Color.b};
+				}
+				NativeDraw3D_AddTriangle(layer, &vertices[0], &vertices[1], &vertices[2], &material);
+			}
+		}
+		NativeDraw3D_EndLayer(layer);
+		NativeDraw3D_SetMarker(marker, layer);
+		AddPrim(&pb->ptrOT[slot], marker);
+		primMem->cursor = marker + 1;
+		submitted = 1;
+	}
+	return 1;
+}
+#endif
+
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80069bb0-0x80069cc4
 void DrawSky_Full(void *skybox, struct PushBuffer *pb, struct PrimMem *primMem)
 {
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+	if (DrawSky_SubmitNative(skybox, pb, primMem)) return;
+#endif
 #if defined(CTR_NATIVE)
 	float nativeDepthContext = NativePgxp_SetDepthContext(0.0f);
 #endif

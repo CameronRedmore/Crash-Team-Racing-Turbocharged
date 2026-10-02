@@ -17,6 +17,16 @@ void Platform_LogError(const char *fmt, ...)
 	(void)fmt;
 }
 
+void Platform_Log(const char *fmt, ...)
+{
+	(void)fmt;
+}
+
+void Platform_LogWarn(const char *fmt, ...)
+{
+	(void)fmt;
+}
+
 static NativeDraw3DView TestView(void)
 {
 	NativeDraw3DView view;

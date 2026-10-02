@@ -1,4 +1,5 @@
 #include <common.h>
+#include <math.h>
 
 #if defined(CTR_NATIVE)
 #include "platform/native_adhoc.h"
@@ -413,6 +414,13 @@ struct RenderBucketDrawContext
 	int vertexIndex;
 	int splitPlane;
 	int waterSplitSide;
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+	int nativeLayer;
+	int nativeOverlay;
+	int nativeMirroredPass;
+	int nativeScreenOffsetX;
+	int nativeGhostPass;
+#endif
 };
 
 enum
@@ -714,6 +722,9 @@ static void RenderBucket_LinkPrimRaw(uint32_t *otEntry, void *prim, u32 lenWord)
 	*otEntry = RenderBucket_OTAddress(prim);
 }
 
+// Each retail table has seven callbacks (0x1c bytes). The eight-word
+// scratch copy also includes the first word of the following table.
+enum { RB_INSTANCE_CALLBACK_COUNT = 7 };
 static const u32 sRenderBucketDispatchTable8008a428[8] = {
     0x8006c948, 0x8006c974, 0x8006c928, 0x8006c928, 0x8006c948, 0x8006c948, 0x8006c984, 0x8006ad88,
 };
@@ -1310,13 +1321,17 @@ static void RenderBucket_StoreMvpTranslation(struct InstDrawPerPlayer *idpp, con
 		const float scale = (viewDepth < 4096 ? 0.25f : 1.0f) * ((inst->flags & DRAW_HUGE) != 0 ? 4.0f : 1.0f);
 		NativePgxp_SetModelDepthScale(idpp, scale);
 	}
-	if (NATIVE_PGXP_ACTIVE() && (inst->flags & SCREENSPACE_INSTANCE) == 0)
+	if (NATIVE_PGXP_ACTIVE() || NATIVE_DRAW3D_ACTIVE())
 	{
 		double view[9], unused[3], result[3], rotation[9];
 		float cameraPos[3];
 		NativePgxp_GetPosition(&pb->pos, pb->pos.v, cameraPos);
 		NativePgxp_GetTransform(&pb->matrix_ViewProj, &pb->matrix_ViewProj.m[0][0], pb->matrix_ViewProj.t, view, unused);
-		NativePgxp_ModelViewTranslation(view, inst->matrix.t, pb->pos.v, cameraPos, result);
+		if (inst->flags & SCREENSPACE_INSTANCE)
+		{
+			for (int i = 0; i < 3; i++) result[i] = inst->matrix.t[i];
+		}
+		else NativePgxp_ModelViewTranslation(view, inst->matrix.t, pb->pos.v, cameraPos, result);
 		const double scale = (viewDepth < 4096 ? 4.0 : 1.0) * ((inst->flags & DRAW_HUGE) != 0 ? 0.25 : 1.0);
 		for (int row = 0; row < 3; row++)
 		{
@@ -1583,7 +1598,7 @@ static void RenderBucket_BuildM3x3(struct Instance *inst, struct ModelHeader *mh
 #if defined(CTR_NATIVE)
 static void RenderBucket_PreciseMvp(struct PushBuffer *pb, struct InstDrawPerPlayer *idpp, MATRIX *dst, const double *translation)
 {
-	if (!NATIVE_PGXP_ACTIVE()) return;
+	if (!NATIVE_PGXP_ACTIVE() && !NATIVE_DRAW3D_ACTIVE()) return;
 	double view[9], unused[3], result[9];
 	NativePgxp_GetTransform(&pb->matrix_ViewProj, &pb->matrix_ViewProj.m[0][0], pb->matrix_ViewProj.t, view, unused);
 	for (int row = 0; row < 3; row++)
@@ -1630,6 +1645,10 @@ static void RenderBucket_BuildMvp(struct PushBuffer *pb, struct InstDrawPerPlaye
 
 static void RenderBucket_BuildSplitViewMvp(struct PushBuffer *pb, struct InstDrawPerPlayer *idpp, MATRIX *projectionMvp)
 {
+#if defined(CTR_NATIVE)
+	double oldRotation[9], translation[3];
+	NativePgxp_GetTransform(&idpp->mvp, &idpp->mvp.m[0][0], idpp->mvp.t, oldRotation, translation);
+#endif
 	u32 m0;
 	u32 m1;
 	u32 m2;
@@ -1646,6 +1665,17 @@ static void RenderBucket_BuildSplitViewMvp(struct PushBuffer *pb, struct InstDra
 	RenderBucket_StoreMatrixWords(projectionMvp, m0, m1, m2, m3, m4);
 	RenderBucket_StoreViewMatrixForSplit(idpp);
 	RenderBucket_GteLoadRotMatrixWords(m0, m1, m2, m3, m4);
+#if defined(CTR_NATIVE)
+	if (NATIVE_DRAW3D_ACTIVE())
+	{
+		// Split decoders already apply m3x3 to their input vertices. Their
+		// stored MVP must therefore contain only the camera view rotation.
+		double view[9], unused[3];
+		NativePgxp_GetTransform(&pb->matrix_ViewProj, &pb->matrix_ViewProj.m[0][0], pb->matrix_ViewProj.t, view, unused);
+		NativePgxp_SetTransform(&idpp->mvp, &idpp->mvp.m[0][0], idpp->mvp.t, view, translation);
+		RenderBucket_PreciseMvp(pb, idpp, projectionMvp, translation);
+	}
+#endif
 }
 
 static void RenderBucket_StoreViewMatrixForSplit(struct InstDrawPerPlayer *idpp)
@@ -1702,7 +1732,18 @@ static void RenderBucket_BuildCustomMatrix(struct InstDrawPerPlayer *idpp, u32 i
 	RenderBucket_GteScaleMatrixColumns(&m0, &m1, &m2, &m3, &m4);
 	RenderBucket_GteLoadRotMatrixWords(0x1000, 0, 0xfffff600, 0, 0x1000);
 	RenderBucket_GteScaleMatrixColumns(&m0, &m1, &m2, &m3, &m4);
+#if defined(CTR_NATIVE)
+	double rotation[9], translation[3];
+	NativePgxp_GetTransform(&idpp->mvp, &idpp->mvp.m[0][0], idpp->mvp.t, rotation, translation);
+#endif
 	RenderBucket_StoreMatrixWords(&idpp->mvp, m0, m1, m2, m3, m4);
+#if defined(CTR_NATIVE)
+	if (NATIVE_PGXP_ACTIVE() || NATIVE_DRAW3D_ACTIVE())
+	{
+		for (int i = 0; i < 9; i++) rotation[i] = (&idpp->mvp.m[0][0])[i];
+		NativePgxp_SetTransform(&idpp->mvp, &idpp->mvp.m[0][0], idpp->mvp.t, rotation, translation);
+	}
+#endif
 	*projectionMvp = idpp->mvp;
 }
 
@@ -2274,6 +2315,17 @@ static struct RenderBucketEntry *RenderBucket_QueueDraw(struct Instance *inst, s
 	instPlayerBase = RenderBucket_InstancePlayerBase(inst, playerIndex);
 	idpp = RenderBucket_InstancePlayerIdpp(instPlayerBase);
 	pb = idpp->pushBuffer;
+
+#if defined(CTR_NATIVE)
+	// Selector 7 reads adjacent table data, not a setup/primitive callback.
+	// Do not report a successful draw for this invalid combination of flags.
+	if (((queuedFlags >> 16) & 7) >= RB_INSTANCE_CALLBACK_COUNT)
+	{
+		NativeDraw3D_ReportDiagnostic(NATIVE_DRAW3D_DIAG_MODEL_SETUP, "QueueDraw selector", queuedFlags);
+		idpp->instFlags = queuedFlags & ~DRAW_SUCCESSFUL;
+		return rbi;
+	}
+#endif
 
 #if defined(__vita__)
 	if (NativeAdhoc_IsSingleViewRenderActive() &&
@@ -3008,6 +3060,17 @@ static int RenderBucket_CheckProjectedPrim(struct RenderBucketDrawContext *ctx, 
 {
 	int depthMac0;
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+	if (NATIVE_DRAW3D_ACTIVE() && ctx->nativeLayer >= 0)
+	{
+		// Preserve retail lighting/depth state while camera-space geometry
+		// handles visibility, including the reflected pass's reversed winding.
+		ctx->nativeMirroredPass = cullXorMask != 0;
+		gte_avsz3();
+		gte_stopz(depthMac0Out);
+		return 1;
+	}
+#endif
 	// NOTE(aalhendi): Source-backs the shared retail projection gate:
 	// flag reject, optional NCLIP, AVSZ3, screen-window reject, then MAC0.
 	if ((s32)(gteFlag << 13) < 0)
@@ -3174,6 +3237,144 @@ static u8 RenderBucket_SaturateU8(int value)
 	return (u8)value;
 }
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+// The classic primitive writers still provide lighting/fades and texture state.
+// Their temporary packet contributes only colour/material; model coordinates
+// come directly from the animation FIFO, before integer screen projection.
+static int RenderBucket_SubmitNativePrimVertices(struct RenderBucketDrawContext *ctx, u32 command, const void *packet,
+                                                 const struct RenderBucketPackedVertex *packedVertices)
+{
+	if (!NATIVE_DRAW3D_ACTIVE() || ctx->nativeLayer < 0) return 0;
+	const POLY_G3 *g3 = packet;
+	const u8 code = g3->code;
+	const int textured = (code & 4) != 0;
+	const int gouraud = (code & 0x10) != 0;
+	const u8 *colors[3] = {&g3->r0, &g3->r0, &g3->r0};
+	const u8 *uv[3] = {NULL, NULL, NULL};
+	NativeDraw3DMaterial material = {0};
+	material.depthBias = (s8)(ctx->nativeMirroredPass ? ctx->inst->depthBiasSecondary : ctx->inst->depthBiasNormal);
+	material.screenOffsetX = (s8)ctx->nativeScreenOffsetX;
+	if (gouraud && !textured)
+	{
+		colors[1] = &g3->r1;
+		colors[2] = &g3->r2;
+	}
+	if (textured)
+	{
+		if (gouraud)
+		{
+			const POLY_GT3 *gt3 = packet;
+			colors[1] = &gt3->r1;
+			colors[2] = &gt3->r2;
+			uv[0] = &gt3->u0;
+			uv[1] = &gt3->u1;
+			uv[2] = &gt3->u2;
+			material.tpage = gt3->tpage;
+			material.clut = gt3->clut;
+		}
+		else
+		{
+			const POLY_FT3 *ft3 = packet;
+			uv[0] = &ft3->u0;
+			uv[1] = &ft3->u1;
+			uv[2] = &ft3->u2;
+			material.tpage = ft3->tpage;
+			material.clut = ft3->clut;
+		}
+		material.flags |= NATIVE_DRAW3D_TEXTURED;
+	}
+	if (ctx->nativeOverlay) material.flags |= NATIVE_DRAW3D_OVERLAY;
+	if (code & 2) material.flags |= NATIVE_DRAW3D_SEMI_TRANS;
+	if (ctx->nativeGhostPass)
+	{
+		material.flags |= NATIVE_DRAW3D_ORDERED_BLEND;
+		if (ctx->nativeGhostPass == 1) material.flags |= NATIVE_DRAW3D_BLEND_PAIR_START;
+		// Flat primitives obtain blending from DR_MODE rather than a texture.
+		if (!textured) material.tpage = ctx->nativeGhostPass == 1 ? 0x40 : 0x20;
+	}
+	if ((command & 0x10000000u) == 0)
+	{
+		material.flags |= NATIVE_DRAW3D_DOUBLE_SIDED;
+	}
+	else if ((((u16)ctx->idpp->instFlags ^ (u16)(command >> 14)) & 0x8000) != 0)
+	{
+		material.flags |= NATIVE_DRAW3D_REVERSE_WINDING;
+	}
+	if (gNativeMirrorModeDoubleFlipActive) material.flags ^= NATIVE_DRAW3D_REVERSE_WINDING;
+	if (ctx->nativeMirroredPass) material.flags ^= NATIVE_DRAW3D_REVERSE_WINDING;
+
+	NativeDraw3DVertex vertices[3] = {0};
+	for (int i = 0; i < 3; i++)
+	{
+		const struct RenderBucketPackedVertex *packed = &packedVertices[i];
+		vertices[i].x = (s16)packed->xy;
+		vertices[i].y = (s16)(packed->xy >> 16);
+		if (ctx->nativeMirroredPass)
+			vertices[i].y = (s16)(2 * (s16)ctx->idpp->splitLine - (s16)(packed->xy >> 16));
+		vertices[i].z = (s16)packed->z;
+		vertices[i].r = colors[i][0];
+		vertices[i].g = colors[i][1];
+		vertices[i].b = colors[i][2];
+		if (textured)
+		{
+			vertices[i].u = uv[i][0];
+			vertices[i].v = uv[i][1];
+		}
+	}
+	NativeDraw3D_AddTriangle(ctx->nativeLayer, &vertices[0], &vertices[1], &vertices[2], &material);
+	return 1;
+}
+
+static int RenderBucket_SubmitNativePrim(struct RenderBucketDrawContext *ctx, u32 command, const void *packet)
+{
+	return RenderBucket_SubmitNativePrimVertices(ctx, command, packet, &ctx->tempPacked[1]);
+}
+
+static int RenderBucket_SubmitNativeSplit(struct RenderBucketDrawContext *ctx, u32 command, const void *packet,
+                                          const struct RenderBucketSplitVertex *v0, const struct RenderBucketSplitVertex *v1,
+                                          const struct RenderBucketSplitVertex *v2)
+{
+	const struct RenderBucketPackedVertex packed[3] = {{v0->xy, v0->z}, {v1->xy, v1->z}, {v2->xy, v2->z}};
+	return RenderBucket_SubmitNativePrimVertices(ctx, command, packet, packed);
+}
+
+static int RenderBucket_SubmitNativeGhost(struct RenderBucketDrawContext *ctx, u32 command,
+                                          const struct RenderBucketGhostMaskPacket *mask, const void *body, int textured,
+                                          const struct RenderBucketPackedVertex *packed)
+{
+	if (!NATIVE_DRAW3D_ACTIVE() || ctx->nativeLayer < 0) return 0;
+	// Drop the whole pair if storage cannot hold both passes.
+	const NativeDraw3DLayer *layer = NativeDraw3D_GetLayer(ctx->nativeLayer);
+	if (layer == NULL) return 0;
+	if (layer->firstTriangle + layer->triangleCount + 2 > NATIVE_DRAW3D_MAX_TRIANGLES)
+	{
+		return 1;
+	}
+	// Compound retail packets have tagless bodies. Copy their colour/UV
+	// records into standard packets; screen coordinates remain unused.
+	POLY_F3 maskPrim = {0};
+	memcpy(&maskPrim.r0, &mask->colorAndCode, sizeof(mask->colorAndCode));
+	ctx->nativeGhostPass = 1;
+	RenderBucket_SubmitNativePrimVertices(ctx, command, &maskPrim, packed);
+	ctx->nativeGhostPass = 2;
+	if (textured)
+	{
+		POLY_GT3 bodyPrim = {0};
+		memcpy(&bodyPrim.r0, body, sizeof(struct RenderBucketTaglessGT3));
+		RenderBucket_SubmitNativePrimVertices(ctx, command, &bodyPrim, packed);
+	}
+	else
+	{
+		POLY_G3 bodyPrim = {0};
+		memcpy(&bodyPrim.r0, body, sizeof(struct RenderBucketTaglessG3));
+		RenderBucket_SubmitNativePrimVertices(ctx, command, &bodyPrim, packed);
+	}
+	ctx->nativeGhostPass = 0;
+	return 1;
+}
+
+#endif
+
 static int RenderBucket_DrawInstPrim_NormalAtOTEntry(struct RenderBucketDrawContext *ctx, u32 command, struct TextureLayout *tex, uint32_t *otEntry)
 {
 	(void)command;
@@ -3197,6 +3398,9 @@ static int RenderBucket_DrawInstPrim_NormalAtOTEntry(struct RenderBucketDrawCont
 		CtrGpu_WriteColorCode(&p->r1, (u32)MFC2(21));
 		CtrGpu_WriteColorCode(&p->r2, (u32)MFC2(22));
 		CTR_GteStoreSXY3(&p->x0, &p->x1, &p->x2);
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+		if (RenderBucket_SubmitNativePrim(ctx, command, p)) return 0;
+#endif
 		RenderBucket_LinkPrimRaw(otEntry, p, 0x06000000);
 		ctx->primMem->cursor = (char *)p + 0x1c;
 	}
@@ -3217,6 +3421,9 @@ static int RenderBucket_DrawInstPrim_NormalAtOTEntry(struct RenderBucketDrawCont
 		CtrGpu_WritePackedUVWord(&p->u1, texWord1);
 		CtrGpu_WritePackedUVWord(&p->u2, RenderBucket_ReadTextureWord(tex, RENDER_BUCKET_TEX_WORD2_OFFSET));
 		CTR_GteStoreSXY3(&p->x0, &p->x1, &p->x2);
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+		if (RenderBucket_SubmitNativePrim(ctx, command, p)) return 0;
+#endif
 		RenderBucket_LinkPrimRaw(otEntry, p, 0x09000000);
 		ctx->primMem->cursor = (char *)p + 0x28;
 	}
@@ -3334,6 +3541,9 @@ static int RenderBucket_DrawInstPrim_KeyRelicTokenAtRange(struct RenderBucketDra
 	CtrGpu_WritePackedUVWord(&p->u1, texWord1 | tpageMask);
 	CtrGpu_WritePackedUVWord(&p->u2, RenderBucket_ReadTextureWord(tex, RENDER_BUCKET_TEX_WORD2_OFFSET));
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+	if (RenderBucket_SubmitNativePrim(ctx, command, p)) return 0;
+#endif
 	RenderBucket_LinkPrimRaw(otEntry, p, 0x07000000);
 	ctx->primMem->cursor = (char *)p + 0x20;
 	return 0;
@@ -3429,6 +3639,9 @@ static int RenderBucket_DrawInstPrim_DepthFadeAtRange(struct RenderBucketDrawCon
 	CtrGpu_WritePackedUVWord(&p->u1, RenderBucket_ReadTextureWord(tex, RENDER_BUCKET_TEX_WORD1_OFFSET));
 	CtrGpu_WritePackedUVWord(&p->u2, RenderBucket_ReadTextureWord(tex, RENDER_BUCKET_TEX_WORD2_OFFSET));
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+	if (RenderBucket_SubmitNativePrim(ctx, command, p)) return 0;
+#endif
 	RenderBucket_LinkPrimRaw(otEntry, p, 0x09000000);
 	ctx->primMem->cursor = (char *)p + 0x28;
 	return 0;
@@ -3574,6 +3787,9 @@ static int RenderBucket_DrawInstPrim_LitTextureAtRange(struct RenderBucketDrawCo
 	CtrGpu_WritePackedUVWord(&p->u1, texWord1 | tpageMask);
 	CtrGpu_WritePackedUVWord(&p->u2, RenderBucket_ReadTextureWord(tex, RENDER_BUCKET_TEX_WORD2_OFFSET));
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+	if (RenderBucket_SubmitNativePrim(ctx, command, p)) return 0;
+#endif
 	RenderBucket_LinkPrimRaw(otEntry, p, 0x07000000);
 	ctx->primMem->cursor = (char *)p + 0x20;
 	return 0;
@@ -3637,6 +3853,9 @@ static int RenderBucket_DrawInstPrim_GhostAtRange(struct RenderBucketDrawContext
 		packet->body.color2 = (u32)MFC2(22);
 		CTR_GteStoreSXYReg(&packet->body.xy2, 14);
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+		if (RenderBucket_SubmitNativeGhost(ctx, command, mask, &packet->body, 0, &ctx->tempPacked[1])) return 0;
+#endif
 		RenderBucket_LinkPrimRaw(otEntry, packet, 0x0e000000);
 		ctx->primMem->cursor = packet + 1;
 	}
@@ -3655,6 +3874,9 @@ static int RenderBucket_DrawInstPrim_GhostAtRange(struct RenderBucketDrawContext
 		CTR_GteStoreSXYReg(&packet->body.xy2, 14);
 		packet->body.uv2 = RenderBucket_ReadTextureWord(tex, RENDER_BUCKET_TEX_WORD2_OFFSET);
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+		if (RenderBucket_SubmitNativeGhost(ctx, command, mask, &packet->body, 1, &ctx->tempPacked[1])) return 0;
+#endif
 		RenderBucket_LinkPrimRaw(otEntry, packet, 0x0f000000);
 		ctx->primMem->cursor = packet + 1;
 	}
@@ -3804,6 +4026,9 @@ static int RenderBucket_DrawSplitPrimitiveNormalAtOTEntry(struct RenderBucketDra
 		CtrGpu_WritePackedXY(&p->x0, v0->sxy);
 		CtrGpu_WritePackedXY(&p->x1, v1->sxy);
 		CtrGpu_WritePackedXY(&p->x2, v2->sxy);
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+		if (RenderBucket_SubmitNativeSplit(ctx, command, p, v0, v1, v2)) return 0;
+#endif
 		RenderBucket_LinkPrimRaw(otEntry, p, 0x06000000);
 		ctx->primMem->cursor = (char *)p + 0x1c;
 	}
@@ -3827,6 +4052,9 @@ static int RenderBucket_DrawSplitPrimitiveNormalAtOTEntry(struct RenderBucketDra
 		CtrGpu_WritePackedXY(&p->x2, v2->sxy);
 		p->u2 = (u8)v2->uv;
 		p->v2 = (u8)(v2->uv >> 8);
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+		if (RenderBucket_SubmitNativeSplit(ctx, command, p, v0, v1, v2)) return 0;
+#endif
 		RenderBucket_LinkPrimRaw(otEntry, p, 0x09000000);
 		ctx->primMem->cursor = (char *)p + 0x28;
 	}
@@ -3968,6 +4196,9 @@ static int RenderBucket_DrawSplitPrimitiveDepthFadeAtRange(struct RenderBucketDr
 	CtrGpu_WritePackedXY(&p->x2, v2->sxy);
 	p->u2 = (u8)v2->uv;
 	p->v2 = (u8)(v2->uv >> 8);
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+	if (RenderBucket_SubmitNativeSplit(ctx, command, p, v0, v1, v2)) return 0;
+#endif
 	RenderBucket_LinkPrimRaw(otEntry, p, 0x09000000);
 	ctx->primMem->cursor = (char *)p + 0x28;
 	return 0;
@@ -4027,6 +4258,10 @@ static int RenderBucket_DrawSplitPrimitiveGhostAtRange(struct RenderBucketDrawCo
 		packet->body.color2 = (u32)MFC2(22);
 		packet->body.xy2 = v2->sxy;
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+		const struct RenderBucketPackedVertex packed[3] = {{v0->xy, v0->z}, {v1->xy, v1->z}, {v2->xy, v2->z}};
+		if (RenderBucket_SubmitNativeGhost(ctx, command, mask, &packet->body, 0, packed)) return 0;
+#endif
 		RenderBucket_LinkPrimRaw(otEntry, packet, 0x0e000000);
 		ctx->primMem->cursor = packet + 1;
 	}
@@ -4048,6 +4283,10 @@ static int RenderBucket_DrawSplitPrimitiveGhostAtRange(struct RenderBucketDrawCo
 		packet->body.xy2 = v2->sxy;
 		packet->body.uv2 = texWord2;
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+		const struct RenderBucketPackedVertex packed[3] = {{v0->xy, v0->z}, {v1->xy, v1->z}, {v2->xy, v2->z}};
+		if (RenderBucket_SubmitNativeGhost(ctx, command, mask, &packet->body, 1, packed)) return 0;
+#endif
 		RenderBucket_LinkPrimRaw(otEntry, packet, 0x0f000000);
 		ctx->primMem->cursor = packet + 1;
 	}
@@ -4110,6 +4349,9 @@ static int RenderBucket_DrawSplitPrimitiveKeyRelicTokenAtRange(struct RenderBuck
 	CtrGpu_WriteColorCode(&p->r0, codeWord | RenderBucket_LightFlatTextureColor(v0->color, signedTest));
 	RenderBucket_WriteSplitFT3(p, v0, v1, v2, texWord0, texWord1 | tpageMask, texWord2);
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+	if (RenderBucket_SubmitNativeSplit(ctx, command, p, v0, v1, v2)) return 0;
+#endif
 	RenderBucket_LinkPrimRaw(otEntry, p, 0x07000000);
 	ctx->primMem->cursor = (char *)p + 0x20;
 	return 0;
@@ -4185,6 +4427,9 @@ static int RenderBucket_DrawSplitPrimitiveLitTextureAtRange(struct RenderBucketD
 	CtrGpu_WriteColorCode(&p->r0, codeWord | RenderBucket_LightFlatTextureColor(v0->color, signedTest));
 	RenderBucket_WriteSplitFT3(p, v0, v1, v2, texWord0, texWord1 | tpageMask, texWord2);
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+	if (RenderBucket_SubmitNativeSplit(ctx, command, p, v0, v1, v2)) return 0;
+#endif
 	RenderBucket_LinkPrimRaw(otEntry, p, 0x07000000);
 	ctx->primMem->cursor = (char *)p + 0x20;
 	return 0;
@@ -4523,7 +4768,17 @@ static int RenderBucket_DrawWaterSplitCandidate(struct RenderBucketDrawContext *
 	}
 
 	activeRange = RenderBucket_SelectWaterSplitHelperRange(ctx, command, activeRange);
-	return RenderBucket_DrawSplitPrimitiveAtRange(ctx, command, tex, activeRange, depthMac0, &out0, &out1, &out2);
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+	// The retail dimmed side shifts projected X after mirror projection.
+	ctx->nativeScreenOffsetX =
+	    (u32)(uintptr_t)ctx->inst->funcPtr[2] == RB_RETAIL_INST_FUNC2_SPLIT_DIM_XOR &&
+	    (guardDist ^ ctx->inst->specLightX) >= 0 ? 3 : 0;
+#endif
+	const int ret = RenderBucket_DrawSplitPrimitiveAtRange(ctx, command, tex, activeRange, depthMac0, &out0, &out1, &out2);
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+	ctx->nativeScreenOffsetX = 0;
+#endif
+	return ret;
 }
 
 static int RenderBucket_DrawWaterSplitClipped(struct RenderBucketDrawContext *ctx, u32 command, struct TextureLayout *tex, int depthMac0)
@@ -5450,9 +5705,88 @@ static int RenderBucket_RunInstanceSetupCallback(struct RenderBucketDrawContext 
 		// TODO(aalhendi): Port the remaining Instance+0x5c setup callbacks when
 		// their selector rows become live. Do not substitute the common-color path;
 		// that hides missing retail setup callbacks.
+#if defined(CTR_NATIVE)
+		NativeDraw3D_ReportDiagnostic(NATIVE_DRAW3D_DIAG_MODEL_SETUP, "instance setup", (u32)(uintptr_t)ctx->inst->funcPtr[0]);
+#endif
 		return 0;
 	}
 }
+
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+static int RenderBucket_BeginNativeModel(struct RenderBucketDrawContext *ctx)
+{
+	const u32 prim = (u32)(uintptr_t)ctx->inst->funcPtr[1];
+	// Screen models and the talking mask get private depth at their OT slot.
+	ctx->nativeOverlay = (ctx->inst->flags & SCREENSPACE_INSTANCE) ||
+	    (ctx->idpp->instFlags & PUSHBUFFER_EXISTS) ||
+	    (sdata->boolIsMaskThreadAlive && ctx->inst == sdata->instMaskHints3D);
+	if (!NATIVE_DRAW3D_ACTIVE()) return -1;
+	if (((u32)ctx->idpp->unkEC != RB_RETAIL_DRAWFUNC_NORMAL &&
+	     (u32)ctx->idpp->unkEC != RB_RETAIL_DRAWFUNC_NORMAL_ALT &&
+	     (u32)ctx->idpp->unkEC != RB_RETAIL_DRAWFUNC_SPLIT &&
+	     (u32)ctx->idpp->unkEC != RB_RETAIL_DRAWFUNC_SPECIAL &&
+	     (u32)ctx->idpp->unkEC != RB_RETAIL_DRAWFUNC_REFLECTION))
+	{
+		NativeDraw3D_ReportDiagnostic(NATIVE_DRAW3D_DIAG_MODEL_HANDLER, "BeginNativeModel", (u32)ctx->idpp->unkEC);
+		return -1;
+	}
+	if (prim != RB_RETAIL_INST_PRIM_NORMAL && prim != RB_RETAIL_INST_PRIM_SELECT_RANGE &&
+	     prim != RB_RETAIL_INST_PRIM_DEPTH_FADE && prim != RB_RETAIL_INST_PRIM_KEY_TOKEN &&
+	     prim != RB_RETAIL_INST_PRIM_CLAMP_DEPTH && prim != RB_RETAIL_INST_PRIM_LIT_TEXTURE &&
+	     prim != RB_RETAIL_INST_PRIM_GHOST)
+	{
+		NativeDraw3D_ReportDiagnostic(NATIVE_DRAW3D_DIAG_MODEL_PRIMITIVE, "BeginNativeModel", prim);
+		return -1;
+	}
+	const float scale = NativePgxp_GetModelDepthScale(ctx->idpp);
+	DR_PSYX_DRAW3D *marker = ctx->primMem->cursor;
+	if (!isfinite(scale) || scale <= 0.0f)
+	{
+		NativeDraw3D_ReportDiagnostic(NATIVE_DRAW3D_DIAG_MODEL_DEPTH_SCALE, "BeginNativeModel", (u32)ctx->inst->model->id);
+		return -1;
+	}
+	if (ctx->idpp->otRangeNormal == 0)
+	{
+		NativeDraw3D_ReportDiagnostic(NATIVE_DRAW3D_DIAG_MODEL_OT_RANGE, "BeginNativeModel", (u32)ctx->inst->model->id);
+		return -1;
+	}
+	if ((u8 *)(marker + 1) + sizeof(POLY_GT3) >= (u8 *)ctx->primMem->guardEnd)
+	{
+		return -1;
+	}
+	uint32_t *markerSlot = (uint32_t *)ctx->idpp->otRangeNormal + ctx->idpp->depthOffset[1];
+	// Title models reuse another model's allocated range instead of owning one.
+	if ((ctx->idpp->instFlags & RB_INSTANCE_SKIP_OT_RANGE) &&
+	    !CtrGpu_IsCurrentOTRange(sdata->gGT->backBuffer, markerSlot, markerSlot))
+	{
+		NativeDraw3D_ReportDiagnostic(NATIVE_DRAW3D_DIAG_MODEL_SHARED_RANGE, "BeginNativeModel", (u32)ctx->inst->model->id);
+		return -1;
+	}
+	NativeDraw3DView view = {0};
+	view.projection = (float)ctx->pb->distanceToScreen_PREV;
+	view.centerX = (float)ctx->pb->rect.w * 0.5f;
+	view.centerY = (float)ctx->pb->rect.h * 0.5f;
+	view.width = (float)ctx->pb->rect.w;
+	view.height = (float)ctx->pb->rect.h;
+	view.mirror = gNativeMirrorModeRenderActive != 0;
+	double rotation[9], translation[3];
+	NativePgxp_GetTransform(&ctx->idpp->mvp, &ctx->idpp->mvp.m[0][0], ctx->idpp->mvp.t, rotation, translation);
+	// Near models use four times the level's camera-space units; DRAW_HUGE
+	// applies the inverse adjustment. Scale every axis to preserve projection.
+	for (int i = 0; i < 9; i++) view.rotation[i] = rotation[i] * scale / 4096.0;
+	for (int i = 0; i < 3; i++) view.translation[i] = translation[i] * scale;
+	const int layer = NativeDraw3D_BeginLayer(&view);
+	if (layer < 0)
+	{
+		return -1;
+	}
+	NativeDraw3D_SetMarker(marker, layer);
+	// Keep the instance's viewport and position relative to retail UI/effects.
+	AddPrim(markerSlot, marker);
+	ctx->primMem->cursor = marker + 1;
+	return layer;
+}
+#endif
 
 static void RenderBucket_DispatchDrawFunc(struct RenderBucketDrawContext *ctx)
 {
@@ -5465,6 +5799,9 @@ static void RenderBucket_DispatchDrawFunc(struct RenderBucketDrawContext *ctx)
 		return;
 	}
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+	ctx->nativeLayer = RenderBucket_BeginNativeModel(ctx);
+#endif
 	switch ((u32)ctx->idpp->unkEC)
 	{
 	case RB_RETAIL_DRAWFUNC_NORMAL:
@@ -5635,6 +5972,9 @@ void RenderBucket_Execute(void *param_1, struct PrimMem *param_2)
 	for (; entry->inst != 0; entry++)
 	{
 		struct RenderBucketDrawContext ctx = {0};
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+		ctx.nativeLayer = -1;
+#endif
 
 		scratch->nextEntryPtr32 = (u32)(uintptr_t)(entry + 1);
 
@@ -5664,6 +6004,9 @@ void RenderBucket_Execute(void *param_1, struct PrimMem *param_2)
 			((gNativeMirrorModeRenderActive != 0) != (gNativeReverseTrackEnabled != 0));
 #endif
 		RenderBucket_DispatchDrawFunc(&ctx);
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+		NativeDraw3D_EndLayer(ctx.nativeLayer);
+#endif
 #if defined(CTR_NATIVE)
 		gNativeMirrorModeDoubleFlipActive = nativeMirrorDoubleFlipState;
 		gNativeMirrorModeRenderActive = nativeMirrorState;

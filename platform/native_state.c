@@ -14,7 +14,7 @@
 // NOTE(aalhendi): Snapshot tags are stored as little-endian four-character IDs
 // in native replay/state blobs. `CTRS` means CTR native State bundle.
 #define NATIVE_STATE_MAGIC              NATIVE_STATE_FOURCC('C', 'T', 'R', 'S')
-#define NATIVE_STATE_VERSION            3u
+#define NATIVE_STATE_VERSION            4u
 
 enum NativeStateRegionKind
 {

@@ -284,6 +284,11 @@ struct NativeRenderTarget
 #ifndef __vita__
 	// MSAA: draws go to the multisampled framebuffer, which is resolved into
 	// texture/framebuffer above before anything samples the target.
+#if NATIVE_DRAW3D_SUPPORTED
+	GLuint isolatedFramebuffer;
+	GLuint isolatedDepthStencilBuffer;
+	s32 isolatedWidth, isolatedHeight, isolatedSamples;
+#endif
 	GLuint msaaFramebuffer;
 	GLuint msaaColorBuffer;
 	GLuint msaaDepthStencilBuffer;
@@ -970,6 +975,10 @@ internal GLuint NativeRenderer_GetDrawFramebuffer(const struct NativeRenderTarge
 
 internal void NativeRenderer_DestroyRenderTarget(struct NativeRenderTarget *target)
 {
+#if NATIVE_DRAW3D_SUPPORTED
+	glDeleteFramebuffers(1, &target->isolatedFramebuffer);
+	glDeleteRenderbuffers(1, &target->isolatedDepthStencilBuffer);
+#endif
 #ifndef __vita__
 	NativeRenderer_DestroyMultisampleStorage(target);
 #endif
@@ -1652,9 +1661,10 @@ const char *gte_shader_32_rgba = "	uniform sampler2D s_texture;\n"
 // CTR's normal clip distance. Affine UVs still use W=1; their depth interpolates
 // 1/Z in screen space, just as it does after the perspective divide.
 //
-// Native 3D vertices (a_extra.z set, see native_draw3d.h) are already
+// Native vertices (a_extra.z set, see native_draw3d.h) are already
 // homogeneous: xy are screen coordinates times clip w, z is the clip depth and
 // w the camera depth. The host clips them at the near plane.
+// Native 2D uses the same input with clip w=1 and z=0, without depth testing.
 #define GTE_PERSPECTIVE_CORRECTION                                                                 \
 	"\tif (a_extra.z > 0.5) {\n"                                                            \
 	"\t\tgl_Position = Projection * vec4(a_position.xy, 0.0, a_position.w);\n"              \
@@ -4293,12 +4303,14 @@ internal int NativeRenderer_BuildDebugOverlayLines(char lines[][NATIVE_DEBUG_OVE
 	         (aaFrame != aaConfigured) ? "  frame:" : "",
 	         (aaFrame != aaConfigured) ? (((aaFrame >= 0) && (aaFrame < NATIVE_AA_MODE_COUNT)) ? aaNames[aaFrame] : "?") : "");
 	DBG_LINE("-- Geometry --");
+	DBG_LINE("Renderer %s", NATIVE_DRAW3D_ACTIVE() ? "Native 3D" : "Classic");
 	DBG_LINE("PGXP  %s  int-nclip %s",
 	         ((gNativePgxpMode >= 0) && (gNativePgxpMode < NATIVE_PGXP_MODE_COUNT)) ? pgxpNames[gNativePgxpMode] : "?",
 	         NativeRenderer_DebugOnOff(gNativePgxpIntegerNclipEnabled));
-	DBG_LINE("Depth buf %s", NativeRenderer_DebugOnOff(gNativeDepthBufferEnabled));
+	DBG_LINE("Depth buf %s", NativeRenderer_DebugOnOff(NATIVE_DEPTH_BUFFER_ACTIVE()));
 	DBG_LINE("Max LOD %s", NativeRenderer_DebugOnOff(gNativeMaxLodEnabled));
 	DBG_LINE("-- Look --");
+	DBG_LINE("Colour %s", gNativeColorDepth == NATIVE_COLOR_DEPTH_15BIT ? "15-bit" : "24-bit");
 	DBG_LINE("Dither  %s", NativeRenderer_DebugOnOff(gNativeDitheringEnabled));
 	DBG_LINE("Texture %s", g_cfg_bilinearFiltering ? "bilinear" : "nearest");
 	DBG_LINE("HD pause %s", ((gNativeHdPauseMode >= 0) && (gNativeHdPauseMode < 3)) ? pauseNames[gNativeHdPauseMode] : "?");
@@ -4306,6 +4318,7 @@ internal int NativeRenderer_BuildDebugOverlayLines(char lines[][NATIVE_DEBUG_OVE
 	DBG_LINE("Wire %s  Untextured %s", NativeRenderer_DebugOnOff(g_dbg_wireframeMode), NativeRenderer_DebugOnOff(g_dbg_texturelessMode));
 #endif
 	DBG_LINE("-- Enhancements --");
+	DBG_LINE("Precise minimap %s", NativeRenderer_DebugOnOff(gNativePreciseMinimapEnabled));
 	DBG_LINE("Frame rate %d (sel %d)%s", CTR_FRAMES_PER_SECOND, CTR_NATIVE_60FPS_SELECTED, gNativeForce30Fps ? " forced30" : "");
 	DBG_LINE("Phys %s AI %s Coll %s Steer %s", NativeRenderer_DebugOnOff(gNativeSmoothedPhysicsEnabled),
 	         NativeRenderer_DebugOnOff(gNativeSmoothedAIEnabled), NativeRenderer_DebugOnOff(gNativeSmoothedCollisionEnabled),
@@ -4660,6 +4673,92 @@ void NativeRenderer_SetDepthState(int enable, int write)
 		glDepthMask(write ? GL_TRUE : GL_FALSE);
 	}
 }
+
+#if NATIVE_DRAW3D_SUPPORTED
+static struct
+{
+	struct NativeRenderTarget *target;
+	GLint drawFramebuffer, readFramebuffer;
+} s_isolatedDepth;
+
+int NativeRenderer_BeginIsolatedDepth(void)
+{
+	if (s_isolatedDepth.target != NULL)
+	{
+		NativeDraw3D_ReportDiagnostic(NATIVE_DRAW3D_DIAG_OVERLAY_NESTED, "BeginIsolatedDepth", 0);
+		return 0;
+	}
+	GLint drawFramebuffer, readFramebuffer, renderbuffer;
+	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &drawFramebuffer);
+	glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &readFramebuffer);
+	glGetIntegerv(GL_RENDERBUFFER_BINDING, &renderbuffer);
+	struct NativeRenderTarget *target = s_previousOffscreenState ? &s_offscreenRenderTarget : &s_mainRenderTarget;
+	if ((GLuint)drawFramebuffer != NativeRenderer_GetDrawFramebuffer(target))
+	{
+		NativeDraw3D_ReportDiagnostic(NATIVE_DRAW3D_DIAG_OVERLAY_TARGET, "BeginIsolatedDepth", (u32)drawFramebuffer);
+		return 0;
+	}
+	const int samples = target->msaaFramebuffer && (GLuint)drawFramebuffer == target->msaaFramebuffer ? target->samples : 1;
+	if (!target->isolatedFramebuffer)
+	{
+		glGenFramebuffers(1, &target->isolatedFramebuffer);
+		glGenRenderbuffers(1, &target->isolatedDepthStencilBuffer);
+	}
+	if (target->isolatedWidth != target->width || target->isolatedHeight != target->height || target->isolatedSamples != samples)
+	{
+		glBindRenderbuffer(GL_RENDERBUFFER, target->isolatedDepthStencilBuffer);
+		if (samples > 1) glRenderbufferStorageMultisample(GL_RENDERBUFFER, samples, GL_DEPTH24_STENCIL8, target->width, target->height);
+		else glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, target->width, target->height);
+		target->isolatedWidth = target->width;
+		target->isolatedHeight = target->height;
+		target->isolatedSamples = samples;
+	}
+	glBindRenderbuffer(GL_RENDERBUFFER, (GLuint)renderbuffer);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, target->isolatedFramebuffer);
+	// Colour is shared, so this pass composites directly into the live target.
+	if (samples > 1) glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, target->msaaColorBuffer);
+	else glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, target->texture, 0);
+	glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, target->isolatedDepthStencilBuffer);
+	const GLenum isolatedStatus = glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
+	if (isolatedStatus != GL_FRAMEBUFFER_COMPLETE)
+	{
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, (GLuint)drawFramebuffer);
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, (GLuint)readFramebuffer);
+		NativeDraw3D_ReportDiagnostic(NATIVE_DRAW3D_DIAG_OVERLAY_FRAMEBUFFER, "BeginIsolatedDepth", (u32)isolatedStatus);
+		return 0;
+	}
+	// Preserve the PS1 draw-mask stencil while giving the model fresh depth.
+	const int scissor = s_previousScissorState;
+	NativeRenderer_SetScissorState(0);
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, (GLuint)drawFramebuffer);
+	glBlitFramebuffer(0, 0, target->width, target->height, 0, 0, target->width, target->height, GL_STENCIL_BUFFER_BIT, GL_NEAREST);
+	const int depthMode = s_previousDepthMode, depthWrite = s_previousDepthWrite;
+	NativeRenderer_SetDepthState(0, 1);
+	glClear(GL_DEPTH_BUFFER_BIT);
+	NativeRenderer_SetDepthState(depthMode, depthWrite);
+	NativeRenderer_SetScissorState(scissor);
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, target->isolatedFramebuffer);
+	s_isolatedDepth.target = target;
+	s_isolatedDepth.drawFramebuffer = drawFramebuffer;
+	s_isolatedDepth.readFramebuffer = readFramebuffer;
+	return 1;
+}
+
+void NativeRenderer_EndIsolatedDepth(void)
+{
+	struct NativeRenderTarget *target = s_isolatedDepth.target;
+	if (target == NULL) return;
+	const int scissor = s_previousScissorState;
+	NativeRenderer_SetScissorState(0);
+	// Only stencil is returned; the world depth attachment stays untouched.
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, target->isolatedFramebuffer);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, (GLuint)s_isolatedDepth.drawFramebuffer);
+	glBlitFramebuffer(0, 0, target->width, target->height, 0, 0, target->width, target->height, GL_STENCIL_BUFFER_BIT, GL_NEAREST);
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, (GLuint)s_isolatedDepth.readFramebuffer);
+	NativeRenderer_SetScissorState(scissor);
+	s_isolatedDepth.target = NULL;
+}
+#endif
 
 // Always passing still writes depth, unlike disabling the test, so geometry
 // drawn later is occluded by what was drawn in retail order.

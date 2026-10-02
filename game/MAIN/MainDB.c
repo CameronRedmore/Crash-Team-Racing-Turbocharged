@@ -6,9 +6,10 @@ enum
 #if defined(__vita__)
 	MAINDB_NATIVE_PRIMMEM_CAPACITY = 0x40000,
 #else
-	// Max detail subdivides all level geometry down to mosaic quads; a 1P
-	// track can pass 0x50000 per frame, and split screen multiplies that.
-	MAINDB_NATIVE_PRIMMEM_CAPACITY = 0x400000,
+	// Two arenas consume 12 MiB of the 15 MiB GPU-link token space, leaving
+	// room for OT ranges. Do not raise these to 8 MiB each without changing
+	// the 24-bit link encoding. Native overlays/effects need extra headroom.
+	MAINDB_NATIVE_PRIMMEM_CAPACITY = 0x600000,
 #endif
 };
 

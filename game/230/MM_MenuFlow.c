@@ -253,7 +253,7 @@ static struct MenuRow s_nativeOptionsRows[] =
 static struct MenuRow s_nativeEnhancementsRows[] =
 {
 #if NATIVE_DRAW3D_SUPPORTED
-	{NATIVE_MENU_STRING_RENDERER, 10, 1, 0, 0},
+	{NATIVE_MENU_STRING_RENDERER, 11, 1, 0, 0},
 	{NATIVE_MENU_STRING_PGXP, 0, 2, 1, 1},
 	{NATIVE_MENU_STRING_COLOR_DEPTH, 1, 3, 2, 2},
 	{NATIVE_MENU_STRING_TEXTURE_FILTER, 2, 4, 3, 3},
@@ -263,9 +263,10 @@ static struct MenuRow s_nativeEnhancementsRows[] =
 	{NATIVE_MENU_STRING_COLLISION_PHYSICS, 6, 8, 7, 7},
 	{NATIVE_MENU_STRING_STEERING_PHYSICS, 7, 9, 8, 8},
 	{NATIVE_MENU_STRING_DEPTH_BUFFER, 8, 10, 9, 9},
-	{NATIVE_MENU_STRING_HD_PAUSE, 9, 0, 10, 10},
+	{NATIVE_MENU_STRING_HD_PAUSE, 9, 11, 10, 10},
+	{NATIVE_MENU_STRING_PRECISE_MINIMAP, 10, 0, 11, 11},
 #else
-	{NATIVE_MENU_STRING_PGXP, 9, 1, 0, 0},
+	{NATIVE_MENU_STRING_PGXP, 10, 1, 0, 0},
 	{NATIVE_MENU_STRING_COLOR_DEPTH, 0, 2, 1, 1},
 	{NATIVE_MENU_STRING_TEXTURE_FILTER, 1, 3, 2, 2},
 	{NATIVE_MENU_STRING_MAX_LOD, 2, 4, 3, 3},
@@ -274,7 +275,8 @@ static struct MenuRow s_nativeEnhancementsRows[] =
 	{NATIVE_MENU_STRING_COLLISION_PHYSICS, 5, 7, 6, 6},
 	{NATIVE_MENU_STRING_STEERING_PHYSICS, 6, 8, 7, 7},
 	{NATIVE_MENU_STRING_DEPTH_BUFFER, 7, 9, 8, 8},
-	{NATIVE_MENU_STRING_HD_PAUSE, 8, 0, 9, 9},
+	{NATIVE_MENU_STRING_HD_PAUSE, 8, 10, 9, 9},
+	{NATIVE_MENU_STRING_PRECISE_MINIMAP, 9, 0, 10, 10},
 #endif
 	{RECTMENU_STRING_NONE},
 };
@@ -1101,6 +1103,13 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 		s_nativeEnhancementsMenu.ptrPrevBox_InHierarchy = menu;
 		menu->ptrNextBox_InHierarchy = &s_nativeEnhancementsMenu;
 		menu->state |= ONLY_DRAW_TITLE | DRAW_NEXT_MENU_IN_HIERARCHY;
+		return;
+	}
+
+	if (choose == NATIVE_MENU_STRING_PRECISE_MINIMAP)
+	{
+		gNativePreciseMinimapEnabled ^= 1;
+		save_config();
 		return;
 	}
 

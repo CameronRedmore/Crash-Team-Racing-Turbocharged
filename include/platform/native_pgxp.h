@@ -50,6 +50,9 @@ extern int gNativePgxpMode;
 // Use retail integer winding calculations while retaining PGXP geometry.
 extern int gNativePgxpIntegerNclipEnabled;
 extern int gNativeDepthBufferEnabled;
+extern int gNativePreciseMinimapEnabled;
+// Explicit HUD coordinates are independent of the 3D PGXP mode.
+#define NATIVE_PGXP_SCREEN_W (-1.0f)
 
 // Native 3D layers depth test against retail geometry, so the native renderer
 // implies the depth buffer.
@@ -58,7 +61,7 @@ extern int gNativeDepthBufferEnabled;
 #if NATIVE_PGXP_SUPPORTED
 
 #define NATIVE_PGXP_ACTIVE() (gNativePgxpMode != NATIVE_PGXP_MODE_OFF)
-#define NATIVE_VERTEX_TRACKING_ACTIVE() (NATIVE_PGXP_ACTIVE() || NATIVE_DEPTH_BUFFER_ACTIVE())
+#define NATIVE_VERTEX_TRACKING_ACTIVE() (NATIVE_PGXP_ACTIVE() || NATIVE_DEPTH_BUFFER_ACTIVE() || gNativePreciseMinimapEnabled)
 
 // Host range holding the double-buffered primitive memory. Lookups inside it
 // use a collision-free direct map; everything else goes through a small cache.
@@ -74,6 +77,9 @@ void NativePgxp_GteReadSXY(int reg, u32 value);
 void NativePgxp_StoreGteSXY(const void *dst, int reg, u32 value);
 void NativePgxp_CopyXY(const void *dst, const void *src, u32 value);
 void NativePgxp_BindWrittenXY(const void *dst, u32 value);
+// Explicit subpixel HUD coordinates, without GTE FIFO or world-depth state.
+// w is NATIVE_PGXP_SCREEN_W, so the GPU also uses them with 3D PGXP Off.
+void NativePgxp_SetScreenXY(const s16 *dst, float x, float y);
 
 // World rendering phases may bind CPU-written SXY words to recent GTE results
 // by value. HUD and menu drawing never does, so 2D packets stay retail.
@@ -189,6 +195,10 @@ static inline void NativePgxp_BindWrittenXY(const void *dst, u32 value)
 {
 	(void)dst;
 	(void)value;
+}
+static inline void NativePgxp_SetScreenXY(const s16 *dst, float x, float y)
+{
+	(void)dst; (void)x; (void)y;
 }
 static inline void NativePgxp_SetWorldPhase(int active)
 {

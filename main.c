@@ -343,6 +343,10 @@ void load_config(void)
 			{
 				gNativeMaxLodEnabled = (value != 0);
 			}
+			else if (strcmp("precise_minimap", buffer) == 0)
+			{
+				gNativePreciseMinimapEnabled = (value != 0);
+			}
 			else if (strcmp("pgxp_integer_nclip", buffer) == 0)
 			{
 				gNativePgxpIntegerNclipEnabled = (value != 0);
@@ -419,6 +423,7 @@ void save_config(void)
 		fprintf(config, "%s=%d\n", "color_depth", gNativeColorDepth);
 		fprintf(config, "%s=%d\n", "texture_filter", g_cfg_bilinearFiltering ? NATIVE_TEXTURE_FILTER_BILINEAR : NATIVE_TEXTURE_FILTER_NEAREST);
 		fprintf(config, "%s=%d\n", "pgxp_integer_nclip", gNativePgxpIntegerNclipEnabled != 0);
+		fprintf(config, "%s=%d\n", "precise_minimap", gNativePreciseMinimapEnabled != 0);
 		fprintf(config, "%s=%d\n", "max_lod", gNativeMaxLodEnabled != 0);
 		fprintf(config, "%s=%d\n", "depth_buffer", gNativeDepthBufferEnabled != 0);
 		fprintf(config, "%s=%d\n", "hd_pause_screen", gNativeHdPauseMode);

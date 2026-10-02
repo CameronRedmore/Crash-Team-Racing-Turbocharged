@@ -71,16 +71,47 @@ enum NativeDraw3DFlags
 	NATIVE_DRAW3D_DITHER = 0x10,
 	// Native super turbo pad tint (see NATIVE_GPU_TPAGE_SUPER_TURBO_TINT).
 	NATIVE_DRAW3D_SUPER_TURBO_TINT = 0x20,
+	// Keep every pass in the transparent phase, in triangle order, without
+	// depth writes. Used by ghost pairs, decals, particles and feedback effects.
+	NATIVE_DRAW3D_ORDERED_BLEND = 0x40,
+	// This triangle and its following body must fit in the GPU batch together.
+	NATIVE_DRAW3D_BLEND_PAIR_START = 0x80,
+	// Sky geometry draws at its OT position without depth testing or writing.
+	NATIVE_DRAW3D_BACKGROUND = 0x100,
+	// Isolated model depth at the marker's OT position (HUD/menu/hint mask).
+	NATIVE_DRAW3D_OVERLAY = 0x200,
 };
+
+enum NativeDraw3DDiagnosticEvent
+{
+	NATIVE_DRAW3D_DIAG_MODEL_SETUP,
+	NATIVE_DRAW3D_DIAG_MODEL_HANDLER,
+	NATIVE_DRAW3D_DIAG_MODEL_PRIMITIVE,
+	NATIVE_DRAW3D_DIAG_MODEL_DEPTH_SCALE,
+	NATIVE_DRAW3D_DIAG_MODEL_OT_RANGE,
+	NATIVE_DRAW3D_DIAG_MODEL_SHARED_RANGE,
+	NATIVE_DRAW3D_DIAG_LEVEL_INPUT,
+	NATIVE_DRAW3D_DIAG_OVERLAY_NESTED,
+	NATIVE_DRAW3D_DIAG_OVERLAY_TARGET,
+	NATIVE_DRAW3D_DIAG_OVERLAY_FRAMEBUFFER,
+	NATIVE_DRAW3D_DIAG_PROJECTED_PACKET,
+	NATIVE_DRAW3D_DIAG_COUNT,
+};
+
+// First occurrence is logged immediately; repeats are counted and reported
+// every ten seconds when recovery events occur. Ignored in Classic mode.
+void NativeDraw3D_ReportDiagnostic(enum NativeDraw3DDiagnosticEvent event, const char *source, u32 detail);
 
 typedef struct
 {
 	// Retail draw-mode word: texture page, blend mode and colour depth.
 	u16 tpage;
 	u16 clut;
-	u8 flags;
+	u16 flags;
 	// Retail OT draw-order bias. Negative values draw over coplanar surfaces.
 	s8 depthBias;
+	// Pixel offset applied after mirror projection (retail water side effects).
+	s8 screenOffsetX;
 } NativeDraw3DMaterial;
 
 typedef struct
@@ -148,6 +179,11 @@ int NativeDraw3D_AddTriangle(int layer, const NativeDraw3DVertex *v0, const Nati
 // PS1 quad order: triangles (v0, v1, v2) and (v1, v3, v2).
 int NativeDraw3D_AddQuad(int layer, const NativeDraw3DVertex *v0, const NativeDraw3DVertex *v1, const NativeDraw3DVertex *v2,
                          const NativeDraw3DVertex *v3, const NativeDraw3DMaterial *material);
+
+// A coloured line becomes a one-pixel-wide camera-space ribbon. Clips its
+// endpoints before constructing the ribbon, preserving perspective depth.
+int NativeDraw3D_AddLine(int layer, const NativeDraw3DVertex *v0, const NativeDraw3DVertex *v1,
+                         const NativeDraw3DMaterial *material, float width);
 
 // Writes a DR_PSYX_DRAW3D marker that draws `layer` at its OT position.
 void NativeDraw3D_SetMarker(void *packet, int layer);

@@ -39,6 +39,8 @@ void NativePhysics_WritePosition(struct Driver *d, NativePhysicsVec position);
 void NativePhysics_SetEnabled(int enabled);
 void NativePhysics_Reset(void);
 void NativePhysics_ResetDriver(struct Driver *d);
+void NativePhysics_UpdateTurboPadContact(struct Driver *d, u32 stepFlags);
+int NativePhysics_ConsumeTurboPadEntry(struct Driver *d);
 NativePhysicsVec NativePhysics_ReadVelocity(struct Driver *d);
 void NativePhysics_WriteVelocity(struct Driver *d, NativePhysicsVec value);
 void NativePhysics_UpdateSteeringMatrix(struct Driver *d);

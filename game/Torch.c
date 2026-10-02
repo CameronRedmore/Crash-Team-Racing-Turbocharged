@@ -1,5 +1,10 @@
 #include <common.h>
 
+#if defined(CTR_NATIVE)
+#include "platform/native_pgxp.h"
+extern int gNativeMirrorModeRenderActive;
+#endif
+
 enum
 {
 	TORCH_RING0_SCRATCH_OFFSET = 0x68,
@@ -266,12 +271,19 @@ static u16 Torch_ClampPackedCoord(u16 coord, u16 max)
 	return (u16)value;
 }
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+static s32 Torch_NativeFeedbackX(s32 x, u16 maxX);
+#endif
+
 static void Torch_WriteUvPair(enum TorchUvSlot slot, struct TorchPointSource source)
 {
 	struct TorchScratch *scratch = Torch_Scratch();
 	u32 point = Torch_ReadRingPointWord(source);
 	u16 x = Torch_ClampPackedCoord((u16)point, scratch->maxX);
 	u16 y = Torch_ClampPackedCoord((u16)(point >> 16), scratch->maxY);
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+	x = (u16)Torch_NativeFeedbackX(x, scratch->maxX);
+#endif
 	s32 u = (s32)x - (s32)(u8)scratch->tileUBase + scratch->rectX;
 	s32 v = (s32)y + scratch->rectYWithSwapchain;
 
@@ -304,6 +316,73 @@ static void Torch_LinkPrimitive(u32 *tagWord, const void *packet, uint32_t *ot, 
 	CtrGpu_LinkPacket24(ot, tagWord, packet, tag);
 }
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+// Like the retail scratchpad, this state is used only by the sequential torch
+// primitive emitters during Torch_Main. It is cleared after each particle.
+static struct
+{
+	int layer;
+	float radius[3];
+	float diagonal[3];
+	s8 depthBias;
+} s_torchNative = {.layer = -1};
+
+static s32 Torch_NativeFeedbackX(s32 x, u16 maxX)
+{
+	return s_torchNative.layer >= 0 && gNativeMirrorModeRenderActive ? maxX - x : x;
+}
+
+static int Torch_BeginNativeParticle(struct PushBuffer *pb, struct Particle *particle, u32 radius0, u32 radius1, u32 radius2)
+{
+	if (!NATIVE_DRAW3D_ACTIVE()) return -1;
+	NativeDraw3DView view = {0};
+	double rotation[9], translation[3];
+	NativePgxp_GetTransform(&pb->matrix_ViewProj, &pb->matrix_ViewProj.m[0][0], pb->matrix_ViewProj.t, rotation, translation);
+	const double position[3] = {Torch_ReadS32(particle, 0x24) / 256.0,
+	                           Torch_ReadS32(particle, 0x2c) / 256.0,
+	                           Torch_ReadS32(particle, 0x34) / 256.0};
+	for (int i = 0; i < 3; i++)
+		view.translation[i] = translation[i] + (rotation[i*3] * position[0] + rotation[i*3+1] * position[1] + rotation[i*3+2] * position[2]) / 4096.0;
+	view.rotation[0] = view.rotation[4] = view.rotation[8] = 1.0;
+	view.projection = (float)pb->distanceToScreen_PREV;
+	view.centerX = (float)pb->rect.w * 0.5f;
+	view.centerY = (float)pb->rect.h * 0.5f;
+	view.width = (float)pb->rect.w;
+	view.height = (float)pb->rect.h;
+	view.mirror = gNativeMirrorModeRenderActive != 0;
+	const u32 radii[3] = {radius0, radius1, radius2};
+	for (int i = 0; i < 3; i++)
+	{
+		s_torchNative.radius[i] = radii[i];
+		s_torchNative.diagonal[i] = (radii[i] * 0xb50u) >> 12;
+	}
+	s_torchNative.depthBias = Torch_ReadS8(particle, 0x18);
+	return NativeDraw3D_BeginLayer(&view);
+}
+
+static NativeDraw3DVertex Torch_NativeVertex(struct TorchPointSource source, u8 u, u8 v, const u8 *color)
+{
+	static const s8 direction[9][2] = {{0,0}, {0,-1}, {1,-1}, {1,0}, {1,1}, {0,1}, {-1,1}, {-1,0}, {-1,-1}};
+	int point = source.point / sizeof(u32);
+	float radius = (point != 0 && !(point & 1)) ? s_torchNative.diagonal[source.ring] : s_torchNative.radius[source.ring];
+	// Retail radius projection uses R22=0x0a00 for the vertical aspect.
+	return (NativeDraw3DVertex){.x=direction[point][0] * radius, .y=direction[point][1] * radius * 0.625f, .z=0,
+		.u=u, .v=v, .r=color[0], .g=color[1], .b=color[2]};
+}
+
+static NativeDraw3DMaterial Torch_NativeMaterial(u16 tpage, u16 clut)
+{
+	NativeDraw3DMaterial material = {0};
+	material.tpage = tpage;
+	material.clut = clut;
+	material.depthBias = s_torchNative.depthBias;
+	// Framebuffer distortion belongs after opaque geometry and leaves depth
+	// intact. UVs retain the retail feedback-texture addressing and clamping.
+	material.flags = NATIVE_DRAW3D_TEXTURED | NATIVE_DRAW3D_DOUBLE_SIDED | NATIVE_DRAW3D_ORDERED_BLEND;
+	return material;
+}
+#endif
+
 static u32 *Torch_EmitFT3(u32 *prim, uint32_t *ot, struct TorchPointSource uv0, struct TorchPointSource uv1, struct TorchPointSource uv2,
                           struct TorchPointSource xy0, struct TorchPointSource xy1, struct TorchPointSource xy2)
 {
@@ -321,6 +400,19 @@ static u32 *Torch_EmitFT3(u32 *prim, uint32_t *ot, struct TorchPointSource uv0, 
 	CtrGpu_WritePackedUVWord(&poly->u1, scratch->uv1.word);
 	CtrGpu_WritePackedXY(&poly->x2, Torch_ReadRingPointWord(xy2));
 	CtrGpu_WritePackedUVWord(&poly->u2, scratch->uv23.word);
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+	if (s_torchNative.layer >= 0)
+	{
+		NativeDraw3DVertex vertices[3] = {
+			Torch_NativeVertex(xy0, poly->u0, poly->v0, &poly->r0),
+			Torch_NativeVertex(xy1, poly->u1, poly->v1, &poly->r0),
+			Torch_NativeVertex(xy2, poly->u2, poly->v2, &poly->r0),
+		};
+		NativeDraw3DMaterial material = Torch_NativeMaterial(poly->tpage, poly->clut);
+		NativeDraw3D_AddTriangle(s_torchNative.layer, &vertices[0], &vertices[1], &vertices[2], &material);
+		return prim;
+	}
+#endif
 	Torch_LinkPrimitive(&poly->tag, poly, ot, 0x07000000);
 
 	return (u32 *)(poly + 1);
@@ -349,6 +441,20 @@ static u32 *Torch_EmitFT4(u32 *prim, uint32_t *ot, struct TorchPointSource uv0, 
 	CtrGpu_WritePackedUVWord(&poly->u2, uv23);
 	CtrGpu_WritePackedXY(&poly->x3, Torch_ReadRingPointWord(xy3));
 	CtrGpu_WritePackedUVWord(&poly->u3, uv23 >> 16);
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+	if (s_torchNative.layer >= 0)
+	{
+		NativeDraw3DVertex vertices[4] = {
+			Torch_NativeVertex(xy0, poly->u0, poly->v0, &poly->r0),
+			Torch_NativeVertex(xy1, poly->u1, poly->v1, &poly->r0),
+			Torch_NativeVertex(xy2, poly->u2, poly->v2, &poly->r0),
+			Torch_NativeVertex(xy3, poly->u3, poly->v3, &poly->r0),
+		};
+		NativeDraw3DMaterial material = Torch_NativeMaterial(poly->tpage, poly->clut);
+		NativeDraw3D_AddQuad(s_torchNative.layer, &vertices[0], &vertices[1], &vertices[2], &vertices[3], &material);
+		return prim;
+	}
+#endif
 	Torch_LinkPrimitive(&poly->tag, poly, ot, 0x09000000);
 
 	return (u32 *)(poly + 1);
@@ -398,6 +504,9 @@ static void Torch_Subset3_SetTpage(s32 x, s32 y)
 	u32 tile;
 
 	x = Torch_ClampSignedCoord(x, maxX);
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+	x = Torch_NativeFeedbackX(x, maxX);
+#endif
 	x += scratch->rectX;
 
 	y = Torch_ClampSignedCoord(y, maxY);
@@ -639,7 +748,21 @@ void Torch_Main(void *particleList_heatWarp, struct PushBuffer *pb, struct PrimM
 							sxy1 = MFC2(13);
 							card = Torch_Subset1_BuildCard(centerX, centerY, sxy0, sxy1);
 							Torch_Subset2_StoreCard(&card, centerX, centerY, TORCH_RING_2);
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+							s_torchNative.layer = Torch_BeginNativeParticle(pb, particle, radius0, radius1, radius2);
+#endif
 							prim = Torch_EmitParticle(prim, ot);
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+							if (s_torchNative.layer >= 0)
+							{
+								NativeDraw3D_EndLayer(s_torchNative.layer);
+								DR_PSYX_DRAW3D *marker = (DR_PSYX_DRAW3D *)prim;
+								NativeDraw3D_SetMarker(marker, s_torchNative.layer);
+								AddPrim(ot, marker);
+								prim = (u32 *)(marker + 1);
+								s_torchNative.layer = -1;
+							}
+#endif
 						}
 					}
 				}
