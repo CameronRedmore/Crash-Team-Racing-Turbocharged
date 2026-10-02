@@ -116,13 +116,45 @@ void Particle_RescaleNewParticles(struct Particle *p)
 }
 #endif
 
-// Per-update change for a value retail steps once per 30 FPS frame.
+#if CTR_NATIVE_60FPS
+// A particle's own 30 FPS frames are counted from its remaining life, which
+// drops by one per update, rather than from the global timer: bursts spawn
+// mid-frame, so their retail frames don't line up with the global ones. In
+// retail frames a particle has framesLeftInLife * 30 / rate left.
+static s64 Particle_FloorDiv(s64 n, s64 d)
+{
+	s64 q = n / d;
+
+	if (((n % d) != 0) && (n < 0))
+	{
+		q--;
+	}
+
+	return q;
+}
+
+// True after the update that completes one of this particle's 30 FPS frames,
+// i.e. when ceil(life * 30 / rate) dropped.
+static int Particle_IsRetailFrameEnd(const struct Particle *p)
+{
+	s64 life = p->framesLeftInLife;
+	int rate = CTR_FRAMES_PER_SECOND;
+
+	return Particle_FloorDiv(-life * FPS, rate) != Particle_FloorDiv(-(life + 1) * FPS, rate);
+}
+#endif
+
+// Per-update change for a value retail steps once per 30 FPS frame. Summed
+// over a particle's 30 FPS frame it totals step.
 static int Particle_FrameStep(const struct Particle *p, int step)
 {
 #if CTR_NATIVE_60FPS
 	if (Particle_IsFrameRateScaled(p))
 	{
-		return CTR_FRAME_STEP(step, sdata->gGT->timer);
+		s64 life = p->framesLeftInLife;
+		int rate = CTR_FRAMES_PER_SECOND;
+
+		return (int)(((s64)step * FPS * (life + 1)) / rate - ((s64)step * FPS * life) / rate);
 	}
 #endif
 	(void)p;
@@ -184,7 +216,17 @@ void Particle_FuncPtr_PotionShatter(struct Particle *p)
 	s16 scaleRandomQuotient;
 	int rng;
 
-	if (Particle_GetRetailVelocity(p, PARTICLE_AXIS_POS_Y) < PARTICLE_POTION_SHATTER_Y_SPEED_THRESHOLD)
+	int checkSpeed = 1;
+
+#if CTR_NATIVE_60FPS
+	// Retail checks the speed once per 30 FPS frame, after that frame's update.
+	if (Particle_IsFrameRateScaled(p))
+	{
+		checkSpeed = Particle_IsRetailFrameEnd(p);
+	}
+#endif
+
+	if (checkSpeed && (Particle_GetRetailVelocity(p, PARTICLE_AXIS_POS_Y) < PARTICLE_POTION_SHATTER_Y_SPEED_THRESHOLD))
 	{
 		if (p->axis[PARTICLE_AXIS_POS_X].velocity != 0)
 		{
@@ -347,10 +389,17 @@ void Particle_FuncPtr_ExhaustUnderwater(struct Particle *p)
 
 #if CTR_NATIVE_60FPS
 		// The pop now lasts several updates; stop it popping again and
-		// resetting the lifespan each time.
+		// resetting the lifespan each time, and hold it still as retail never
+		// moves it again before destroying it.
 		if (Particle_IsFrameRateScaled(p))
 		{
 			p->funcPtr = NULL;
+
+			for (int axis = 0; axis < 11; axis++)
+			{
+				p->axis[axis].velocity = 0;
+				p->axis[axis].accel = 0;
+			}
 		}
 #endif
 	}
