@@ -387,22 +387,8 @@ void MainFrame_GameLogic(struct GameTracker *gGT, struct GamepadSystem *gGamepad
 #if CTR_NATIVE_60FPS
 		if (CTR_NATIVE_60FPS_ACTIVE)
 		{
-		for (struct Particle *p = gGT->particleList_ordinary; p != NULL; p = p->next)
-		{
-			int markerAxis = (p->flagsAxis & (1u << 10)) != 0 ? 9 : 10;
-			if (p->axis[markerAxis].startVal != 0)
-			{
-				continue;
-			}
-
-			p->axis[markerAxis].startVal = 4;
-			p->framesLeftInLife = (s16)FPS_DOUBLE(p->framesLeftInLife);
-			for (int axis = 0; axis < 11; axis++)
-			{
-				p->axis[axis].velocity = (s16)FPS_HALF(p->axis[axis].velocity);
-				p->axis[axis].accel = (s16)FPS_HALF(p->axis[axis].accel);
-			}
-		}
+			Particle_RescaleNewParticles(gGT->particleList_ordinary);
+			Particle_RescaleNewParticles(gGT->particleList_heatWarp);
 		}
 #endif
 

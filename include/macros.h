@@ -68,6 +68,9 @@ extern int gNativeGhostReplayFpsOverride;
 #define FPS_HALF(x)                 (CTR_NATIVE_60FPS_ACTIVE ? (s32)(((s64)(x) * FPS) / CTR_FRAMES_PER_SECOND) : (x))
 #define CTR_FRAME_STEP(x, frame)    NativeFrameRate_Step((x), (u32)(frame), CTR_FRAMES_PER_SECOND)
 #define CTR_RETAIL_FRAME_TICK(frame) NativeFrameRate_Tick((u32)(frame), CTR_FRAMES_PER_SECOND)
+// First rendered frame of a 30 FPS frame (TICK is the last one), and that frame's number.
+#define CTR_RETAIL_FRAME_START(frame) (CTR_FRAME_STEP(1, (frame) - 1) != 0)
+#define CTR_RETAIL_FRAME_INDEX(frame) FPS_HALF(frame)
 #define FPS_LEFTSHIFT(x)            (CTR_NATIVE_60FPS_ACTIVE ? ((x) - 1) : (x))
 #define FPS_RIGHTSHIFT(x)           (CTR_NATIVE_60FPS_ACTIVE ? ((x) + 1) : (x))
 #else
@@ -81,6 +84,8 @@ extern int gNativeGhostReplayFpsOverride;
 #define FPS_RIGHTSHIFT(x)           (x)
 #define CTR_FRAME_STEP(x, frame)    (x)
 #define CTR_RETAIL_FRAME_TICK(frame) 1
+#define CTR_RETAIL_FRAME_START(frame) 1
+#define CTR_RETAIL_FRAME_INDEX(frame) (frame)
 #endif
 
 #if defined(CTR_NATIVE) && !defined(__vita__)

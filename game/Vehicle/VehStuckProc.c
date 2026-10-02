@@ -466,7 +466,9 @@ void VehStuckProc_MaskGrab_Animate(struct Thread *t, struct Driver *d)
 				// if particles are not spawned
 				if (d->KartStates.MaskGrab.boolParticlesSpawned == false)
 				{
+					PARTICLE_SPAWN_UNGATED_BEGIN();
 					VehStuckProc_MaskGrab_Particles(d);
+					PARTICLE_SPAWN_UNGATED_END();
 
 					// now they are spawned
 					d->KartStates.MaskGrab.boolParticlesSpawned = true;
@@ -1540,12 +1542,15 @@ void VehStuckProc_Warp_AddDustPuff1(struct ScratchpadStruct *sps)
 	struct GameTracker *gGT = sdata->gGT;
 
 	// if even frame don't spawn
-	if (gGT->timer & VEH_WARP_DUST_SPAWN_TIMER_BIT)
+	if (CTR_RETAIL_FRAME_INDEX(gGT->timer) & VEH_WARP_DUST_SPAWN_TIMER_BIT)
 	{
 		return;
 	}
 
+	// Warp_PhysAngular only runs on the last rendered frame of each 30 FPS frame.
+	PARTICLE_SPAWN_UNGATED_BEGIN();
 	struct Particle *p = Particle_Init(0, gGT->iconGroup[1], &data.emSet_Warppad[0]);
+	PARTICLE_SPAWN_UNGATED_END();
 
 	if (p == NULL)
 	{

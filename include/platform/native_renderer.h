@@ -20,6 +20,11 @@ TextureID NativeRenderer_GetPauseBackgroundTexture(void);
 #endif
 void NativeRenderer_PresentMainRenderTarget(void);
 void NativeRenderer_DrawGhostReplayOverlay(void);
+#ifndef __vita__
+// F6 debug overlay (settings and resolution readout).
+extern int gNativeDebugOverlayEnabled;
+void NativeRenderer_DrawDebugOverlayFrame(void);
+#endif
 void NativeRenderer_PresentVRAMDisplay(void);
 void NativeRenderer_PresentVRAMRect(int x, int y, int w, int h);
 void NativeRenderer_PresentStreamingTexture(TextureID texture, int contentHeight, int displayHeight);

@@ -388,7 +388,9 @@ void AH_MaskHint_Update()
 		{
 			AH_MaskHint_LerpVol(AH_MASKHINT_FULL_BLEND);
 
+			PARTICLE_SPAWN_UNGATED_BEGIN();
 			AH_MaskHint_SpawnParticles(AH_MASKHINT_LEAVE_PARTICLES, &D232.emSet_maskLeave[0], AH_MASKHINT_FULL_BLEND);
+			PARTICLE_SPAWN_UNGATED_END();
 
 			VehTalkMask_PlayXA(sdata->instMaskHints3D, D232.maskHintID);
 
@@ -438,7 +440,9 @@ void AH_MaskHint_Update()
 
 	case 5:
 
+		PARTICLE_SPAWN_UNGATED_BEGIN();
 		AH_MaskHint_SpawnParticles(AH_MASKHINT_VANISH_PARTICLES, &D232.emSet_maskLeave[0], AH_MASKHINT_FULL_BLEND);
+		PARTICLE_SPAWN_UNGATED_END();
 
 		// vanish sound
 		// NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b4b24-0x800b4b2c for mask vanish SFX.

@@ -18,6 +18,7 @@
 #endif
 #include "platform/native_log.h"
 #include "platform/native_perf.h"
+#include "platform/native_debug_font.h"
 #include "platform/native_renderer.h"
 
 #include <assert.h>
@@ -4230,6 +4231,228 @@ internal void NativeRenderer_DrawGhostReplayImageRegion(TextureID texture, int o
 	const int width = (imageW * overlayW) / s_ghostReplayControllerWidth;
 	const int height = (imageH * overlayH) / s_ghostReplayControllerHeight;
 	NativeRenderer_DrawGhostReplayQuad(texture, x, y, width, height);
+}
+#endif
+
+#ifndef __vita__
+// F6 debug overlay: a compact text readout of every renderer / enhancement
+// option, rendered on the CPU into a small RGBA texture and drawn over the frame.
+int gNativeDebugOverlayEnabled = 0;
+
+extern int gNativeMirrorModeEnabled;
+extern int gNativeDefaultCameraFar;
+extern int gNativeDefaultHudSpeedometer;
+extern int gNativeAIRacersMode;
+extern int gNativeMaxLodEnabled;
+extern int gNativeBorderlessEnabled;
+extern int g_cfg_bilinearFiltering;
+extern u32 gNativeCheatConfigMask;
+#ifdef CTR_INTERNAL
+extern int g_dbg_wireframeMode;
+extern int g_dbg_texturelessMode;
+#endif
+
+#define NATIVE_DEBUG_OVERLAY_MAX_LINES 40
+#define NATIVE_DEBUG_OVERLAY_LINE_CHARS 64
+#define NATIVE_DEBUG_OVERLAY_GLYPH 8
+#define NATIVE_DEBUG_OVERLAY_PAD 3
+
+global_variable TextureID s_debugOverlayTexture = 0;
+global_variable int s_debugOverlayTextureW = 0;
+global_variable int s_debugOverlayTextureH = 0;
+global_variable u64 s_debugOverlayLastCounter = 0;
+global_variable float s_debugOverlayFps = 0.0f;
+
+internal const char *NativeRenderer_DebugOnOff(int value)
+{
+	return value ? "ON" : "off";
+}
+
+internal int NativeRenderer_BuildDebugOverlayLines(char lines[][NATIVE_DEBUG_OVERLAY_LINE_CHARS])
+{
+	static const char *const aaNames[NATIVE_AA_MODE_COUNT] = {"Off", "FXAA", "MSAA 2x", "MSAA 4x", "MSAA 8x", "SSAA 2x", "SSAA 4x"};
+	static const char *const pgxpNames[NATIVE_PGXP_MODE_COUNT] = {"Off", "Geometry", "Perspective"};
+	static const char *const aiNames[NATIVE_AI_RACERS_MODE_COUNT] = {"Retail", "Extended", "Extended+Custom"};
+	static const char *const pauseNames[3] = {"Retail", "HD posterised", "HD smooth"};
+	int n = 0;
+#define DBG_LINE(...) \
+	do { if (n < NATIVE_DEBUG_OVERLAY_MAX_LINES) snprintf(lines[n++], NATIVE_DEBUG_OVERLAY_LINE_CHARS, __VA_ARGS__); } while (0)
+
+	const int aaConfigured = gNativeAntiAliasingMode;
+	const int aaFrame = s_frameAntiAliasingMode;
+	DBG_LINE("CTR DEBUG [F6]  %.1f fps", s_debugOverlayFps);
+	DBG_LINE("-- Resolution --");
+	DBG_LINE("Window  %dx%d", g_windowWidth, g_windowHeight);
+	DBG_LINE("Present %dx%d @%d,%d", s_presentViewport.w, s_presentViewport.h, s_presentViewport.x, s_presentViewport.y);
+	DBG_LINE("Render  %dx%d (logical %dx%d)", s_mainRenderTarget.width, s_mainRenderTarget.height,
+	         s_mainRenderTarget.logicalWidth, s_mainRenderTarget.logicalHeight);
+	DBG_LINE("Resolve %dx%d  maxRT %d", s_mainResolveWidth, s_mainResolveHeight, s_maxRenderTargetSize);
+	DBG_LINE("Samples %d  SS scale %.2f", (int)s_mainRenderTarget.samples, NativeRenderer_SupersampleScale(aaFrame));
+	DBG_LINE("-- Anti-aliasing --");
+	DBG_LINE("AA  %s%s%s", ((aaConfigured >= 0) && (aaConfigured < NATIVE_AA_MODE_COUNT)) ? aaNames[aaConfigured] : "?",
+	         (aaFrame != aaConfigured) ? "  frame:" : "",
+	         (aaFrame != aaConfigured) ? (((aaFrame >= 0) && (aaFrame < NATIVE_AA_MODE_COUNT)) ? aaNames[aaFrame] : "?") : "");
+	DBG_LINE("-- Geometry --");
+	DBG_LINE("PGXP  %s  int-nclip %s",
+	         ((gNativePgxpMode >= 0) && (gNativePgxpMode < NATIVE_PGXP_MODE_COUNT)) ? pgxpNames[gNativePgxpMode] : "?",
+	         NativeRenderer_DebugOnOff(gNativePgxpIntegerNclipEnabled));
+	DBG_LINE("Depth buf %s", NativeRenderer_DebugOnOff(gNativeDepthBufferEnabled));
+	DBG_LINE("Max LOD %s", NativeRenderer_DebugOnOff(gNativeMaxLodEnabled));
+	DBG_LINE("-- Look --");
+	DBG_LINE("Dither  %s", NativeRenderer_DebugOnOff(gNativeDitheringEnabled));
+	DBG_LINE("Texture %s", g_cfg_bilinearFiltering ? "bilinear" : "nearest");
+	DBG_LINE("HD pause %s", ((gNativeHdPauseMode >= 0) && (gNativeHdPauseMode < 3)) ? pauseNames[gNativeHdPauseMode] : "?");
+#ifdef CTR_INTERNAL
+	DBG_LINE("Wire %s  Untextured %s", NativeRenderer_DebugOnOff(g_dbg_wireframeMode), NativeRenderer_DebugOnOff(g_dbg_texturelessMode));
+#endif
+	DBG_LINE("-- Enhancements --");
+	DBG_LINE("Frame rate %d (sel %d)%s", CTR_FRAMES_PER_SECOND, CTR_NATIVE_60FPS_SELECTED, gNativeForce30Fps ? " forced30" : "");
+	DBG_LINE("Phys %s AI %s Coll %s Steer %s", NativeRenderer_DebugOnOff(gNativeSmoothedPhysicsEnabled),
+	         NativeRenderer_DebugOnOff(gNativeSmoothedAIEnabled), NativeRenderer_DebugOnOff(gNativeSmoothedCollisionEnabled),
+	         NativeRenderer_DebugOnOff(gNativeSmoothedSteeringEnabled));
+	DBG_LINE("AI racers %s", ((gNativeAIRacersMode >= 0) && (gNativeAIRacersMode < NATIVE_AI_RACERS_MODE_COUNT)) ? aiNames[gNativeAIRacersMode] : "?");
+	DBG_LINE("Cam far %s  Speedo %s", NativeRenderer_DebugOnOff(gNativeDefaultCameraFar), NativeRenderer_DebugOnOff(gNativeDefaultHudSpeedometer));
+	DBG_LINE("Mirror %s  Borderless %s", NativeRenderer_DebugOnOff(gNativeMirrorModeEnabled), NativeRenderer_DebugOnOff(gNativeBorderlessEnabled));
+	DBG_LINE("Cheats mask %08X", (unsigned)gNativeCheatConfigMask);
+#undef DBG_LINE
+	return n;
+}
+
+internal void NativeRenderer_DrawDebugOverlay(void)
+{
+	static char lines[NATIVE_DEBUG_OVERLAY_MAX_LINES][NATIVE_DEBUG_OVERLAY_LINE_CHARS];
+	static u8 pixels[(NATIVE_DEBUG_OVERLAY_LINE_CHARS * NATIVE_DEBUG_OVERLAY_GLYPH + 2 * NATIVE_DEBUG_OVERLAY_PAD) *
+	                 (NATIVE_DEBUG_OVERLAY_MAX_LINES * NATIVE_DEBUG_OVERLAY_GLYPH + 2 * NATIVE_DEBUG_OVERLAY_PAD) * 4];
+
+	if (!gNativeDebugOverlayEnabled)
+	{
+		s_debugOverlayLastCounter = 0;
+		return;
+	}
+
+	const u64 now = SDL_GetPerformanceCounter();
+	if (s_debugOverlayLastCounter != 0)
+	{
+		const float dt = (float)((double)(now - s_debugOverlayLastCounter) / (double)SDL_GetPerformanceFrequency());
+		if (dt > 0.0f)
+		{
+			s_debugOverlayFps = (s_debugOverlayFps == 0.0f) ? (1.0f / dt) : (s_debugOverlayFps * 0.95f + (1.0f / dt) * 0.05f);
+		}
+	}
+	s_debugOverlayLastCounter = now;
+
+	const int lineCount = NativeRenderer_BuildDebugOverlayLines(lines);
+	int maxChars = 0;
+	for (int i = 0; i < lineCount; i++)
+	{
+		const int len = (int)strlen(lines[i]);
+		if (len > maxChars) maxChars = len;
+	}
+
+	const int texW = maxChars * NATIVE_DEBUG_OVERLAY_GLYPH + 2 * NATIVE_DEBUG_OVERLAY_PAD;
+	const int texH = lineCount * NATIVE_DEBUG_OVERLAY_GLYPH + 2 * NATIVE_DEBUG_OVERLAY_PAD;
+	if ((texW <= 0) || (texH <= 0))
+	{
+		return;
+	}
+
+	// Translucent dark backdrop, then white glyphs with a 1px shadow.
+	for (int i = 0; i < texW * texH; i++)
+	{
+		pixels[i * 4 + 0] = 0;
+		pixels[i * 4 + 1] = 0;
+		pixels[i * 4 + 2] = 0;
+		pixels[i * 4 + 3] = 170;
+	}
+	for (int pass = 0; pass < 2; pass++)
+	{
+		for (int line = 0; line < lineCount; line++)
+		{
+			const char *text = lines[line];
+			const int isHeader = (text[0] == '-') || (text[0] == 'C');
+			for (int ci = 0; text[ci] != '\0'; ci++)
+			{
+				const int c = (unsigned char)text[ci];
+				if ((c < NATIVE_DEBUG_FONT_FIRST) || (c > NATIVE_DEBUG_FONT_LAST)) continue;
+				const unsigned char *glyph = &s_nativeDebugFont[(c - NATIVE_DEBUG_FONT_FIRST) * 8];
+				for (int gy = 0; gy < 8; gy++)
+				{
+					for (int gx = 0; gx < 8; gx++)
+					{
+						if (!(glyph[gy] & (1 << gx))) continue;
+						const int px = NATIVE_DEBUG_OVERLAY_PAD + ci * NATIVE_DEBUG_OVERLAY_GLYPH + gx + (pass == 0 ? 1 : 0);
+						const int py = NATIVE_DEBUG_OVERLAY_PAD + line * NATIVE_DEBUG_OVERLAY_GLYPH + gy + (pass == 0 ? 1 : 0);
+						if ((px >= texW) || (py >= texH)) continue;
+						u8 *dst = &pixels[(py * texW + px) * 4];
+						dst[0] = (pass == 0) ? 0 : (isHeader ? 255 : 230);
+						dst[1] = (pass == 0) ? 0 : (isHeader ? 220 : 230);
+						dst[2] = (pass == 0) ? 0 : (isHeader ? 80 : 230);
+						dst[3] = 255;
+					}
+				}
+			}
+		}
+	}
+
+	if (s_debugOverlayTexture == 0)
+	{
+		glGenTextures(1, &s_debugOverlayTexture);
+	}
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, s_debugOverlayTexture);
+	if ((texW != s_debugOverlayTextureW) || (texH != s_debugOverlayTextureH))
+	{
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texW, texH, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+		s_debugOverlayTextureW = texW;
+		s_debugOverlayTextureH = texH;
+	}
+	else
+	{
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, texW, texH, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+	}
+	s_lastBoundTexture = (TextureID)-1;
+
+	// Integer scale, kept small: 1x until the window is tall enough for 2x.
+	const int scale = (s_presentViewport.h >= 1440) ? 2 : 1;
+	const GLboolean previousStencilEnabled = glIsEnabled(GL_STENCIL_TEST);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	NativeRenderer_SetScissorState(0);
+	NativeRenderer_SetBlendMode(BM_NONE);
+	NativeRenderer_EnableDepth(0);
+	glEnable(GL_BLEND);
+	glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
+	glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+	glDisable(GL_STENCIL_TEST);
+
+	// GL origin is bottom-left: anchor to the top-left of the presented image.
+	NativeRenderer_DrawGhostReplayQuad(s_debugOverlayTexture, s_presentViewport.x + 6,
+	                                   s_presentViewport.y + s_presentViewport.h - texH * scale - 6, texW * scale, texH * scale);
+
+	// Put GL back in the state the cached BM_NONE blend mode and the next frame's
+	// draws assume: the raw alpha blend above bypassed the blend-mode cache.
+	glDisable(GL_BLEND);
+	glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
+	glBlendFuncSeparate(GL_ONE, GL_ZERO, GL_ONE, GL_ZERO);
+	if (previousStencilEnabled)
+	{
+		glEnable(GL_STENCIL_TEST);
+	}
+	glBindVertexArray(0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	s_previousShader = (ShaderID)-1;
+	s_lastBoundTexture = (TextureID)-1;
+}
+#endif
+
+#ifndef __vita__
+void NativeRenderer_DrawDebugOverlayFrame(void)
+{
+	NativeRenderer_DrawDebugOverlay();
 }
 #endif
 

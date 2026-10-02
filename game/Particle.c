@@ -68,13 +68,123 @@ CTR_STATIC_ASSERT(PARTICLE_SPIT_TIRE_FRAME_3 == 0xffe);
 CTR_STATIC_ASSERT(PARTICLE_SPIT_TIRE_FRAME_3_VELOCITY == 0xf801);
 CTR_STATIC_ASSERT(PARTICLE_EXHAUST_BUBBLEPOP_ICON_GROUP == 8);
 
+#if CTR_NATIVE_60FPS
+// High-framerate particles. Retail particles step once per 30 FPS frame. With
+// k = rate / 30 rendered frames per 30 FPS frame, a rescaled particle has
+// velocities v / k, accels a / k (spread over the k frames by
+// Particle_FrameStep), and lifespans k * n.
+
+static int Particle_IsFrameRateScaled(const struct Particle *p)
+{
+	return CTR_NATIVE_60FPS_ACTIVE && ((p->flagsSetColor & PARTICLE_SET_COLOR_FLAG_NATIVE_FRAME_RATE_SCALED) != 0);
+}
+
+// Retail moves by the velocity from before each frame's accel. Split into k
+// steps that lag shrinks, so velocities are offset to keep positions on the
+// retail path at every 30 FPS frame.
+static int Particle_FrameRateVelocityLag(int retailAccel)
+{
+	int rate = CTR_FRAMES_PER_SECOND;
+
+	return (int)(((s64)-retailAccel * FPS * (rate - FPS)) / (2 * (s64)rate * rate));
+}
+
+// Rescale particles spawned since the last update. Runs after thread ticks so
+// caller-adjusted axes are included.
+void Particle_RescaleNewParticles(struct Particle *p)
+{
+	for (; p != NULL; p = p->next)
+	{
+		if ((p->flagsSetColor & PARTICLE_SET_COLOR_FLAG_NATIVE_FRAME_RATE_SCALED) != 0)
+		{
+			continue;
+		}
+
+		p->flagsSetColor |= PARTICLE_SET_COLOR_FLAG_NATIVE_FRAME_RATE_SCALED;
+		p->framesLeftInLife = (s16)FPS_DOUBLE(p->framesLeftInLife);
+
+		// Special lines keep their packed colour in the last axis's velocity/accel.
+		int numAxes = ((p->flagsSetColor & PARTICLE_SET_COLOR_FLAG_SPECIAL_LINE) != 0) ? PARTICLE_AXIS_ICON_FRAME_OR_LINE_COLOR : 11;
+		for (int axis = 0; axis < numAxes; axis++)
+		{
+			int accel = p->axis[axis].accel;
+
+			p->axis[axis].velocity = (s16)(FPS_HALF(p->axis[axis].velocity) + Particle_FrameRateVelocityLag(accel));
+			p->axis[axis].accel = (s16)FPS_HALF(accel);
+		}
+	}
+}
+#endif
+
+// Per-update change for a value retail steps once per 30 FPS frame.
+static int Particle_FrameStep(const struct Particle *p, int step)
+{
+#if CTR_NATIVE_60FPS
+	if (Particle_IsFrameRateScaled(p))
+	{
+		return CTR_FRAME_STEP(step, sdata->gGT->timer);
+	}
+#endif
+	(void)p;
+	return step;
+}
+
+// Frame counts compared against framesLeftInLife.
+static int Particle_FrameCount(const struct Particle *p, int frames)
+{
+#if CTR_NATIVE_60FPS
+	if (Particle_IsFrameRateScaled(p))
+	{
+		return FPS_DOUBLE(frames);
+	}
+#endif
+	(void)p;
+	return frames;
+}
+
+// Axis velocity in retail per-30-FPS-frame units.
+static int Particle_GetRetailVelocity(const struct Particle *p, int axisIndex)
+{
+	const struct ParticleAxis *axis = &p->axis[axisIndex];
+
+#if CTR_NATIVE_60FPS
+	if (Particle_IsFrameRateScaled(p))
+	{
+		return FPS_DOUBLE(axis->velocity - Particle_FrameRateVelocityLag(FPS_DOUBLE(axis->accel)));
+	}
+#endif
+	return axis->velocity;
+}
+
+// Set an axis velocity from a retail per-30-FPS-frame value.
+static void Particle_SetRetailVelocity(struct Particle *p, int axisIndex, int velocity)
+{
+	struct ParticleAxis *axis = &p->axis[axisIndex];
+
+#if CTR_NATIVE_60FPS
+	if (Particle_IsFrameRateScaled(p))
+	{
+		int scaled = FPS_HALF(velocity) + Particle_FrameRateVelocityLag(FPS_DOUBLE(axis->accel));
+
+		// PotionShatter uses a zero X velocity to mean "not yet randomised".
+		if ((scaled == 0) && (velocity != 0))
+		{
+			scaled = (velocity > 0) ? 1 : -1;
+		}
+
+		velocity = scaled;
+	}
+#endif
+	axis->velocity = (s16)velocity;
+}
+
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8003eae0-0x8003ec18.
 void Particle_FuncPtr_PotionShatter(struct Particle *p)
 {
 	s16 scaleRandomQuotient;
 	int rng;
 
-	if (p->axis[PARTICLE_AXIS_POS_Y].velocity < PARTICLE_POTION_SHATTER_Y_SPEED_THRESHOLD)
+	if (Particle_GetRetailVelocity(p, PARTICLE_AXIS_POS_Y) < PARTICLE_POTION_SHATTER_Y_SPEED_THRESHOLD)
 	{
 		if (p->axis[PARTICLE_AXIS_POS_X].velocity != 0)
 		{
@@ -83,13 +193,15 @@ void Particle_FuncPtr_PotionShatter(struct Particle *p)
 
 		// random X
 		rng = MixRNG_Scramble();
-		p->axis[PARTICLE_AXIS_POS_X].velocity =
-		    rng + (rng / PARTICLE_POTION_SHATTER_XZ_RANDOM_RANGE) * -PARTICLE_POTION_SHATTER_XZ_RANDOM_RANGE - PARTICLE_POTION_SHATTER_XZ_RANDOM_CENTER;
+		Particle_SetRetailVelocity(
+		    p, PARTICLE_AXIS_POS_X,
+		    rng + (rng / PARTICLE_POTION_SHATTER_XZ_RANDOM_RANGE) * -PARTICLE_POTION_SHATTER_XZ_RANDOM_RANGE - PARTICLE_POTION_SHATTER_XZ_RANDOM_CENTER);
 
 		// random Z
 		rng = MixRNG_Scramble();
-		p->axis[PARTICLE_AXIS_POS_Z].velocity =
-		    rng + (rng / PARTICLE_POTION_SHATTER_XZ_RANDOM_RANGE) * -PARTICLE_POTION_SHATTER_XZ_RANDOM_RANGE - PARTICLE_POTION_SHATTER_XZ_RANDOM_CENTER;
+		Particle_SetRetailVelocity(
+		    p, PARTICLE_AXIS_POS_Z,
+		    rng + (rng / PARTICLE_POTION_SHATTER_XZ_RANDOM_RANGE) * -PARTICLE_POTION_SHATTER_XZ_RANDOM_RANGE - PARTICLE_POTION_SHATTER_XZ_RANDOM_CENTER);
 
 		// random scale
 		rng = MixRNG_Scramble();
@@ -98,8 +210,8 @@ void Particle_FuncPtr_PotionShatter(struct Particle *p)
 		{
 			scaleRandomQuotient = ((rng + 0xff) >> 8);
 		}
-		p->axis[PARTICLE_AXIS_SCALE_X_OR_LINE_SCALE].velocity =
-		    rng + scaleRandomQuotient * -PARTICLE_POTION_SHATTER_SCALE_RANDOM_RANGE + PARTICLE_POTION_SHATTER_SCALE_RANDOM_BASE;
+		Particle_SetRetailVelocity(p, PARTICLE_AXIS_SCALE_X_OR_LINE_SCALE,
+		                           rng + scaleRandomQuotient * -PARTICLE_POTION_SHATTER_SCALE_RANDOM_RANGE + PARTICLE_POTION_SHATTER_SCALE_RANDOM_BASE);
 	}
 	if (p->axis[PARTICLE_AXIS_POS_X].velocity == 0)
 	{
@@ -113,14 +225,14 @@ FadeShatterChannel:
 	{
 		if (0 < p->axis[PARTICLE_AXIS_COLOR_G].startVal)
 		{
-			p->axis[PARTICLE_AXIS_COLOR_G].startVal -= PARTICLE_POTION_SHATTER_FADE_STEP;
+			p->axis[PARTICLE_AXIS_COLOR_G].startVal -= Particle_FrameStep(p, PARTICLE_POTION_SHATTER_FADE_STEP);
 		}
 	}
 	else
 	{
 		if (0 < p->axis[PARTICLE_AXIS_COLOR_R].startVal)
 		{
-			p->axis[PARTICLE_AXIS_COLOR_R].startVal -= PARTICLE_POTION_SHATTER_FADE_STEP;
+			p->axis[PARTICLE_AXIS_COLOR_R].startVal -= Particle_FrameStep(p, PARTICLE_POTION_SHATTER_FADE_STEP);
 		}
 	}
 }
@@ -145,13 +257,13 @@ void Particle_FuncPtr_SpitTire(struct Particle *p)
 
 	// random X
 	rng = MixRNG_Scramble();
-	p->axis[PARTICLE_AXIS_POS_X].velocity =
-	    rng + (rng / PARTICLE_SPIT_TIRE_XZ_RANDOM_RANGE) * -PARTICLE_SPIT_TIRE_XZ_RANDOM_RANGE - PARTICLE_SPIT_TIRE_XZ_RANDOM_CENTER;
+	Particle_SetRetailVelocity(p, PARTICLE_AXIS_POS_X,
+	                           rng + (rng / PARTICLE_SPIT_TIRE_XZ_RANDOM_RANGE) * -PARTICLE_SPIT_TIRE_XZ_RANDOM_RANGE - PARTICLE_SPIT_TIRE_XZ_RANDOM_CENTER);
 
 	// random Z
 	rng = MixRNG_Scramble();
-	p->axis[PARTICLE_AXIS_POS_Z].velocity =
-	    rng + (rng / PARTICLE_SPIT_TIRE_XZ_RANDOM_RANGE) * -PARTICLE_SPIT_TIRE_XZ_RANDOM_RANGE - PARTICLE_SPIT_TIRE_XZ_RANDOM_CENTER;
+	Particle_SetRetailVelocity(p, PARTICLE_AXIS_POS_Z,
+	                           rng + (rng / PARTICLE_SPIT_TIRE_XZ_RANDOM_RANGE) * -PARTICLE_SPIT_TIRE_XZ_RANDOM_RANGE - PARTICLE_SPIT_TIRE_XZ_RANDOM_CENTER);
 
 	// scale value
 	scaleFrame = p->axis[PARTICLE_AXIS_SCALE_X_OR_LINE_SCALE].startVal;
@@ -163,8 +275,9 @@ void Particle_FuncPtr_SpitTire(struct Particle *p)
 	{
 		// random Y
 		rng = MixRNG_Scramble();
-		p->axis[PARTICLE_AXIS_POS_Y].velocity =
-		    rng + (rng / PARTICLE_SPIT_TIRE_FRAME_1_Y_RANDOM_RANGE) * -PARTICLE_SPIT_TIRE_FRAME_1_Y_RANDOM_RANGE + PARTICLE_SPIT_TIRE_FRAME_1_Y_BASE;
+		Particle_SetRetailVelocity(
+		    p, PARTICLE_AXIS_POS_Y,
+		    rng + (rng / PARTICLE_SPIT_TIRE_FRAME_1_Y_RANDOM_RANGE) * -PARTICLE_SPIT_TIRE_FRAME_1_Y_RANDOM_RANGE + PARTICLE_SPIT_TIRE_FRAME_1_Y_BASE);
 
 		// frame #2
 		p->axis[PARTICLE_AXIS_SCALE_X_OR_LINE_SCALE].startVal = PARTICLE_SPIT_TIRE_FRAME_2;
@@ -176,8 +289,9 @@ void Particle_FuncPtr_SpitTire(struct Particle *p)
 	{
 		// random Y
 		rng = MixRNG_Scramble();
-		p->axis[PARTICLE_AXIS_POS_Y].velocity =
-		    rng + (rng / PARTICLE_SPIT_TIRE_LATER_Y_RANDOM_RANGE) * -PARTICLE_SPIT_TIRE_LATER_Y_RANDOM_RANGE + PARTICLE_SPIT_TIRE_FRAME_2_Y_BASE;
+		Particle_SetRetailVelocity(
+		    p, PARTICLE_AXIS_POS_Y,
+		    rng + (rng / PARTICLE_SPIT_TIRE_LATER_Y_RANDOM_RANGE) * -PARTICLE_SPIT_TIRE_LATER_Y_RANDOM_RANGE + PARTICLE_SPIT_TIRE_FRAME_2_Y_BASE);
 
 		// frame #3
 		p->axis[PARTICLE_AXIS_SCALE_X_OR_LINE_SCALE].startVal = PARTICLE_SPIT_TIRE_FRAME_3;
@@ -189,10 +303,11 @@ void Particle_FuncPtr_SpitTire(struct Particle *p)
 	{
 		// random Y
 		rng = MixRNG_Scramble();
-		p->axis[PARTICLE_AXIS_POS_Y].velocity =
-		    rng + (rng / PARTICLE_SPIT_TIRE_LATER_Y_RANDOM_RANGE) * -PARTICLE_SPIT_TIRE_LATER_Y_RANDOM_RANGE + PARTICLE_SPIT_TIRE_FRAME_3_Y_BASE;
+		Particle_SetRetailVelocity(
+		    p, PARTICLE_AXIS_POS_Y,
+		    rng + (rng / PARTICLE_SPIT_TIRE_LATER_Y_RANDOM_RANGE) * -PARTICLE_SPIT_TIRE_LATER_Y_RANDOM_RANGE + PARTICLE_SPIT_TIRE_FRAME_3_Y_BASE);
 
-		p->axis[PARTICLE_AXIS_SCALE_X_OR_LINE_SCALE].velocity = PARTICLE_SPIT_TIRE_FRAME_3_VELOCITY;
+		Particle_SetRetailVelocity(p, PARTICLE_AXIS_SCALE_X_OR_LINE_SCALE, (s16)PARTICLE_SPIT_TIRE_FRAME_3_VELOCITY);
 		break;
 	}
 
@@ -210,7 +325,7 @@ void Particle_FuncPtr_ExhaustUnderwater(struct Particle *p)
 	struct IconGroup *icon;
 
 	if ((PARTICLE_EXHAUST_WATER_HEIGHT_THRESHOLD < ((p->axis[PARTICLE_AXIS_POS_Y].startVal >> 8) + p->driverInst->matrix.t[1])) &&
-	    (p->framesLeftInLife < PARTICLE_EXHAUST_POP_LIFE_THRESHOLD))
+	    (p->framesLeftInLife < Particle_FrameCount(p, PARTICLE_EXHAUST_POP_LIFE_THRESHOLD)))
 	{
 		// bubblepop
 		icon = sdata->gGT->iconGroup[PARTICLE_EXHAUST_BUBBLEPOP_ICON_GROUP];
@@ -226,7 +341,18 @@ void Particle_FuncPtr_ExhaustUnderwater(struct Particle *p)
 		}
 
 		p->axis[PARTICLE_AXIS_ROT_Y_OR_LINE_PREV_Z].startVal = MixRNG_Scramble() & PARTICLE_EXHAUST_ROTATION_RANDOM_MASK;
-		p->framesLeftInLife = 0;
+
+		// Retail shows the pop for one frame (0 here, then -1 next update).
+		p->framesLeftInLife = (s16)(Particle_FrameCount(p, 1) - 1);
+
+#if CTR_NATIVE_60FPS
+		// The pop now lasts several updates; stop it popping again and
+		// resetting the lifespan each time.
+		if (Particle_IsFrameRateScaled(p))
+		{
+			p->funcPtr = NULL;
+		}
+#endif
 	}
 }
 
@@ -472,8 +598,11 @@ void Particle_UpdateList(struct Particle **listHead, struct Particle *p)
 			{
 				struct ParticleAxis *axis = &p->axis[axisIndex];
 
+				// A rescaled accel is still a per-30-FPS-frame velocity change.
+				int accel = Particle_FrameStep(p, axis->accel);
+
 				axis->startVal += axis->velocity;
-				axis->velocity = (s16)(axis->velocity + axis->accel);
+				axis->velocity = (s16)(axis->velocity + accel);
 
 				if (((axisFlags >> 16) & 1) != 0 && osc != NULL)
 				{
@@ -1497,8 +1626,8 @@ struct Particle *Particle_Init(u32 param_1, struct IconGroup *ig, struct Particl
 	(void)param_1;
 
 #if CTR_NATIVE_60FPS
-	if (CTR_NATIVE_60FPS_ACTIVE && (sdata->UnusedPadding1 == 0) &&
-	    ((CTR_FRAME_STEP(1, gGT->timer - 1) == 0) || ((FPS_HALF(gGT->timer) & 1) != 0)))
+	// One spawn per 30 FPS frame, matching retail's emission rate.
+	if (CTR_NATIVE_60FPS_ACTIVE && (sdata->UnusedPadding1 == 0) && !CTR_RETAIL_FRAME_START(gGT->timer))
 	{
 		return NULL;
 	}
@@ -1570,6 +1699,12 @@ struct Particle *Particle_Init(u32 param_1, struct IconGroup *ig, struct Particl
 	}
 
 	Particle_Init_SetAxisFlags(p, flagsAxis & ~PARTICLE_AXIS_FLAG_FUNC_INIT);
+
+#if CTR_NATIVE_60FPS
+	// MainFrame rescales this particle for the frame rate after thread ticks,
+	// once callers have finished adjusting its axes.
+	p->flagsSetColor &= ~PARTICLE_SET_COLOR_FLAG_NATIVE_FRAME_RATE_SCALED;
+#endif
 
 	if (particleType == 0)
 	{
