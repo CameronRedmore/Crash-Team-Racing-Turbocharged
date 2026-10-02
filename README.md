@@ -26,9 +26,9 @@ You can play it from Web Browser as well from this link: [Web Browser Build](htt
 - Ghost Replay feature: Replay all your ghost datas as if you're seeing the run being played live with inputs viewer overlay.
 - Increased ghost data limits: No more 7 ghosts globally, now there are 7 ghosts data slot per track.
 - Stats viewer for characters in the character selection screen.
-- Online leaderboard for Time Trials and Relic Race results.
+- [PSVita/Windows/Web] Online leaderboard for Time Trials and Relic Race results (not available in Linux builds).
 - Splitscreen support for up to 4 players local multiplayer for PC and PSTV users or PSVita users with MiniVitaTV.
-- [PC Only] Discord Rich Presence support when playing with Discord opened.
+- [Windows Only] Discord Rich Presence support when playing with Discord opened.
 - Reverse tracks mode for Crash Cove, Roo's Tubes, Tiger Temple, Coco Park, Dragon Mines, Tiny Arena, Slide Coliseum and Turbo Track available in Time Trial and Relic Race mode.
 - Relic Race mode available outside of Adventure mode and accessible with any character.
 - Relic Race mode now has ghosts support.
@@ -47,9 +47,9 @@ You can play it from Web Browser as well from this link: [Web Browser Build](htt
 - The in-game pause menu opens the options menu, with settings that are unsafe mid-race locked, plus a Gamepad / Vibration row.
 - [PC/Web] HD Pause (Options > Enhancements): the pause backdrop is captured at full resolution instead of the original 4bpp tile grid. Off, Posterised or Smooth; the default is Smooth.
 - An "all characters" unlock toggle in the cheats menu.
-- [PC Only] PGXP option (Options > Enhancements): sub-pixel vertex precision removes polygon wobble, and the Perspective setting also removes affine texture warping.
+- [PC/Web] PGXP option (Options > Enhancements): sub-pixel vertex precision removes polygon wobble, and the Perspective setting also removes affine texture warping.
 - [PC/Web] Options > Enhancements groups PGXP, detail level, and independent Original/Smoothed settings for player physics, AI, collisions, and steering. Smoothed uses floating-point calculations; Original remains the default for player physics, AI and steering, while collisions default to Smoothed. Delete toggles player physics in development builds.
-- [PC Only] Detail option (Options > Enhancements): Maximum keeps tracks and models at their highest level of detail at every distance (sharpest textures, no low-poly models).
+- [PC/Web] Detail option (Options > Enhancements): Maximum keeps tracks and models at their highest level of detail at every distance (sharpest textures, no low-poly models).
 - [PC/Web] Depth Buffer (Options > Enhancements): optional per-pixel depth testing corrects overlapping world polygons. Works with every PGXP setting; Off retains original polygon ordering; the default is On.
 - [PC/Web] Anti-aliasing option (Options, cycle with left/right): Off, FXAA, MSAA 2x/4x/8x, or SSAA 2x/4x. MSAA smooths polygon edges at low cost; SSAA renders at 2x or 4x the pixel count and box-filters down, which also smooths texture and sub-pixel detail. FXAA remains the default; MSAA sample counts are capped at the GPU's limit.
 
@@ -101,6 +101,8 @@ Download a custom character in the form of an `.xdelta` patch and place it in th
   - on PC: in the `mods/customracers` folder next to the CTR: Turbocharged executable, so that the final path is `mods/customracers/YOUR_CHARACTER.ctrr`.
 
 ## How to set up Online functionalities on PC
+
+Online functionality is only available in the Windows and Web builds, not on Linux.
 
 In order to be able to auto submit your new records in Time Trial and Relic Race modes on PC, you need to set up an account first.
 - Navigate to https://www.rinnegatamante.eu/ctr/account/ and create an account.
