@@ -434,7 +434,7 @@ void PushBuffer_SetMatrixVP(struct PushBuffer *pb)
 #endif
 
 #if defined(CTR_NATIVE)
-	if (NATIVE_PGXP_ACTIVE())
+	if (NATIVE_PGXP_ACTIVE() || NATIVE_DRAW3D_ACTIVE())
 	{
 		float pos[3], rot[3];
 		NativePgxp_GetPosition(&pb->pos, pb->pos.v, pos);

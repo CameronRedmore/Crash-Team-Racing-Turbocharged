@@ -15,6 +15,12 @@ int gNativeMirrorModeRenderActive;
 int gNativeMirrorModeDoubleFlipActive;
 extern int GTE_operator(int op);
 
+// native_draw3d.c (linked for the renderer mode globals) logs overflows.
+void Platform_LogError(const char *fmt, ...)
+{
+	(void)fmt;
+}
+
 static void close_to(double actual, double expected)
 {
 	assert(fabs(actual - expected) < 0.0001);

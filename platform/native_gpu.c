@@ -136,6 +136,9 @@ typedef struct
 	int drawPrimMode;
 	bool psxDrawMaskSet;
 	bool framebufferFeedbackRunActive;
+	// Depth-tested native triangles may share a semi-transparent split: depth
+	// keeps their opaque texels ordered, and blended passes stay in order.
+	bool mergeSemiTransSplits;
 #ifdef __vita__
 	u32 primitiveOrder;
 	u16 currentPrimitiveOrder;
@@ -988,7 +991,7 @@ internal void NativeGpu_ApplyPgxp(GrVertex *vertex, VERTTYPE *const *points, int
 	float w[4];
 	float depth[4];
 	b32 perspective = gNativePgxpMode == NATIVE_PGXP_MODE_PERSPECTIVE;
-	b32 worldDepth = gNativeDepthBufferEnabled;
+	b32 worldDepth = NATIVE_DEPTH_BUFFER_ACTIVE();
 	b32 retailOrder = 0;
 	int recovered = 0;
 
@@ -1682,7 +1685,7 @@ internal void AddSplit(bool semiTrans, bool textured, bool framebufferFeedback, 
 #endif
 
 	// FIXME: compare drawing environment too?
-	if (!psxTexturedSemiTrans && curSplit->blendMode == blendMode && curSplit->texFormat == texFormat && curSplit->textureId == textureId &&
+	if ((!psxTexturedSemiTrans || s_gpu.mergeSemiTransSplits) && curSplit->blendMode == blendMode && curSplit->texFormat == texFormat && curSplit->textureId == textureId &&
 	    curSplit->drawPrimMode == s_gpu.drawPrimMode && curSplit->psxTexturedSemiTrans == psxTexturedSemiTrans &&
 	    curSplit->psxTextureOutputSTP == psxTextureOutputSTP && curSplit->psxDrawMaskSet == s_gpu.psxDrawMaskSet &&
 	    curSplit->superTurboTint == superTurboTint &&
@@ -1961,7 +1964,7 @@ internal void NativeGpu_DrawSplitRangePass(const GPUDrawSplit *split, int semiTr
 #ifdef __vita__
 	NativeRenderer_SetDepthState(1, depthWrite);
 #else
-	NativeRenderer_SetDepthState(gNativeDepthBufferEnabled && split->worldDepth && drawOnScreen, depthWrite);
+	NativeRenderer_SetDepthState(NATIVE_DEPTH_BUFFER_ACTIVE() && split->worldDepth && drawOnScreen, depthWrite);
 	NativeRenderer_SetDepthAlwaysPass(split->worldDepth == NATIVE_GPU_WORLD_DEPTH_RETAIL_ORDER);
 #endif
 	NativeRenderer_DrawTriangles(startVertex, numVerts / 3);
@@ -2829,7 +2832,7 @@ internal void NativeGpu_DrawPreparedFrame(GrVertex *vertices, GPUDrawSplit *spli
 		}
 	}
 #else
-	if (gNativeDepthBufferEnabled)
+	if (NATIVE_DEPTH_BUFFER_ACTIVE())
 	{
 		NativeGpu_DrawWorldDepthSplits();
 	}
@@ -3659,6 +3662,153 @@ internal void ProcessDrawEnvCommand(u32 code)
 	}
 }
 
+#if NATIVE_DRAW3D_SUPPORTED
+// NOTE: Native 3D layers reach the batches in the order their two depth passes
+// want: opaque triangles grouped by shader state, since the depth test decides
+// their visibility, then translucent triangles from far to near.
+// NativeGpu_DrawWorldDepthSplits draws the blended passes after every opaque
+// surface of the viewport, keeping this order.
+
+// Relative depth offset per retail draw-order unit. It only separates coplanar
+// surfaces (road markings over road), which retail orders with the OT bias.
+#define NATIVE_GPU_DRAW3D_DEPTH_BIAS_SCALE (1.0f / 2048.0f)
+
+global_variable u32 s_gpuDraw3DOrder[NATIVE_DRAW3D_MAX_TRIANGLES];
+global_variable const NativeDraw3DTriangle *s_gpuDraw3DSortTriangles;
+
+internal u32 NativeGpu_Draw3DStateKey(const NativeDraw3DMaterial *material)
+{
+	// The fields AddSplit splits on for opaque draws: texture format, textured
+	// and the super turbo shader.
+	return ((u32)(material->tpage >> 7) & 3u) | (((material->flags & NATIVE_DRAW3D_TEXTURED) != 0) ? 4u : 0u) |
+	       (((material->flags & NATIVE_DRAW3D_SUPER_TURBO_TINT) != 0) ? 8u : 0u);
+}
+
+internal int NativeGpu_Draw3DCompareOpaque(const void *a, const void *b)
+{
+	const u32 ia = *(const u32 *)a;
+	const u32 ib = *(const u32 *)b;
+	const u32 ka = NativeGpu_Draw3DStateKey(&s_gpuDraw3DSortTriangles[ia].material);
+	const u32 kb = NativeGpu_Draw3DStateKey(&s_gpuDraw3DSortTriangles[ib].material);
+
+	if (ka != kb) return ka < kb ? -1 : 1;
+	return ia < ib ? -1 : (ia > ib);
+}
+
+internal int NativeGpu_Draw3DCompareTranslucent(const void *a, const void *b)
+{
+	const u32 ia = *(const u32 *)a;
+	const u32 ib = *(const u32 *)b;
+	const float da = s_gpuDraw3DSortTriangles[ia].sortDepth;
+	const float db = s_gpuDraw3DSortTriangles[ib].sortDepth;
+
+	if (da != db) return da > db ? -1 : 1;
+	return ia < ib ? -1 : (ia > ib);
+}
+
+internal void NativeGpu_EmitDraw3DTriangle(const NativeDraw3DView *view, const NativeDraw3DTriangle *triangle, float ofsX, float ofsY)
+{
+	const NativeDraw3DMaterial *material = &triangle->material;
+	const bool textured = (material->flags & NATIVE_DRAW3D_TEXTURED) != 0;
+	const bool semiTrans = (material->flags & NATIVE_DRAW3D_SEMI_TRANS) != 0;
+	const bool superTurboTint = textured && ((material->flags & NATIVE_DRAW3D_SUPER_TURBO_TINT) != 0);
+	const u16 tpage = (u16)(material->tpage | (superTurboTint ? NATIVE_GPU_TPAGE_SUPER_TURBO_TINT : 0));
+
+	activeDrawEnv.tpage = tpage;
+	AddSplit(semiTrans, textured, false, (s16)material->clut);
+	NativeGpu_SetWorldDepthSplit(NATIVE_GPU_WORLD_DEPTH_TESTED);
+
+	GrVertex *vertex = &s_gpu.vertexBuffer[s_gpu.vertexIndex];
+	memset(vertex, 0, sizeof(GrVertex) * 3);
+
+	// Clip z = w - 2 * near / bias, so NDC depth is 1 - 2 * near / (depth * bias),
+	// the PGXP encoding. The bias factor only moves depth, not the projection.
+	float biasFactor = 1.0f + (float)material->depthBias * NATIVE_GPU_DRAW3D_DEPTH_BIAS_SCALE;
+	const float nearDepth = (2.0f * NATIVE_DRAW3D_NEAR_PLANE) / (biasFactor > 0.5f ? biasFactor : 0.5f);
+	for (int i = 0; i < 3; i++)
+	{
+		const float x = view->mirror ? -triangle->position[i][0] : triangle->position[i][0];
+		const float y = triangle->position[i][1];
+		const float z = triangle->position[i][2];
+
+		vertex[i].x = view->projection * x + (view->centerX + ofsX) * z;
+		vertex[i].y = view->projection * y + (view->centerY + ofsY) * z;
+		vertex[i].w = z - nearDepth;
+		vertex[i].depth = z;
+		vertex[i].clipSpace = 1;
+	}
+
+	if (textured)
+	{
+		const u8 dither = ((material->flags & NATIVE_DRAW3D_DITHER) != 0) || activeDrawEnv.dtd;
+		MakeTexcoordTriangle(vertex, (u8 *)triangle->uv[0], (u8 *)triangle->uv[1], (u8 *)triangle->uv[2], tpage, (s16)material->clut, dither);
+		if (g_cfg_bilinearFiltering)
+		{
+			// Sample texel centres; retail sprites use the same offset.
+			for (int i = 0; i < 3; i++)
+			{
+				vertex[i].tcx = -1;
+				vertex[i].tcy = -1;
+			}
+		}
+	}
+	else
+	{
+		MakeTexcoordTriangleZero(vertex, 1);
+	}
+
+	MakeColourTriangle(vertex, true, (u8 *)triangle->color[0], (u8 *)triangle->color[1], (u8 *)triangle->color[2]);
+	if (superTurboTint)
+	{
+		MakeColourSuperTurboTint(vertex, 3);
+	}
+
+	s_gpu.vertexIndex += 3;
+}
+
+internal void NativeGpu_EmitDraw3DLayer(int layerIndex)
+{
+	const NativeDraw3DLayer *layer = NativeDraw3D_GetLayer(layerIndex);
+	if ((layer == NULL) || (layer->triangleCount == 0))
+	{
+		return;
+	}
+
+	const NativeDraw3DTriangle *triangles = NativeDraw3D_GetTriangles() + layer->firstTriangle;
+	const u32 count = layer->triangleCount;
+	u32 opaqueCount = 0;
+	u32 translucentCount = 0;
+
+	for (u32 i = 0; i < count; i++)
+	{
+		if ((triangles[i].material.flags & NATIVE_DRAW3D_SEMI_TRANS) != 0)
+		{
+			s_gpuDraw3DOrder[count - 1 - translucentCount++] = i;
+		}
+		else
+		{
+			s_gpuDraw3DOrder[opaqueCount++] = i;
+		}
+	}
+
+	s_gpuDraw3DSortTriangles = triangles;
+	qsort(s_gpuDraw3DOrder, opaqueCount, sizeof(u32), NativeGpu_Draw3DCompareOpaque);
+	qsort(s_gpuDraw3DOrder + opaqueCount, translucentCount, sizeof(u32), NativeGpu_Draw3DCompareTranslucent);
+
+	float ofsX, ofsY;
+	DrawEnvOffset(&ofsX, &ofsY);
+
+	const u16 savedTpage = activeDrawEnv.tpage;
+	s_gpu.mergeSemiTransSplits = true;
+	for (u32 i = 0; (i < count) && NativeGpu_HasPacketVertexRoom(); i++)
+	{
+		NativeGpu_EmitDraw3DTriangle(&layer->view, &triangles[s_gpuDraw3DOrder[i]], ofsX, ofsY);
+	}
+	s_gpu.mergeSemiTransSplits = false;
+	activeDrawEnv.tpage = savedTpage;
+}
+#endif
+
 internal int ProcessPsyXPrims(P_TAG *polyTag)
 {
 	const int primSubType = polyTag->code & 0x0F;
@@ -3680,6 +3830,17 @@ internal int ProcessPsyXPrims(P_TAG *polyTag)
 		DR_PSYX_DBGMARKER *psydbg = (DR_PSYX_DBGMARKER *)polyTag;
 		s_gpu.currentSplitDebugText = psydbg->text;
 		return 2;
+	}
+	case 0x03:
+	{
+		// Native 3D layer marker (see native_draw3d.h).
+		DR_PSYX_DRAW3D *marker = (DR_PSYX_DRAW3D *)polyTag;
+#if NATIVE_DRAW3D_SUPPORTED
+		NativeGpu_EmitDraw3DLayer((int)(marker->code & 0x00ffffffu));
+#else
+		(void)marker;
+#endif
+		return 1;
 	}
 	}
 

@@ -1194,6 +1194,7 @@ typedef struct
 #ifndef __vita__
 	GLint psxSemiTransPassLoc;
 	GLint psxDitherEnabledLoc;
+	GLint psxColorDepth15Loc;
 #endif
 	GLint psxDrawMaskSetLoc;
 	GLint psxTextureOutputStpLoc;
@@ -1250,6 +1251,7 @@ GLint u_texelSizeLoc;
 #ifndef __vita__
 GLint u_psxSemiTransPassLoc;
 GLint u_psxDitherEnabledLoc;
+GLint u_psxColorDepth15Loc;
 #endif
 GLint u_psxDrawMaskSetLoc;
 GLint u_psxTextureOutputStpLoc;
@@ -1395,18 +1397,30 @@ internal void NativeRenderer_DestroyPSXShaders(void)
 #ifdef __vita__
 #define GPU_DITHERING "\tvec4 dither(vec4 color) { return color; }\n"
 #else
+// NOTE: v_ditherCoord holds screen xy scaled by clip w, plus w, all
+// interpolated in perspective. Dividing gives the exact screen pixel for both
+// retail vertices and native clip-space vertices, including near-plane
+// clipped native triangles whose off-screen corners have no screen position.
+// 15-bit colour truncates to the PS1 framebuffer's 5 bits per channel after
+// dithering and expands back like the VRAM presentation does.
 #define GPU_DITHERING                                             \
 	"\tuniform int psxDitherEnabled;\n"                            \
+	"\tuniform int psxColorDepth15;\n"                             \
 	"	const mat4 c_dither = mat4(\n"                              \
 	"		-4.0,  +0.0,  -3.0,  +1.0,\n"                              \
 	"		+2.0,  -2.0,  +3.0,  -1.0,\n"                              \
 	"		-3.0,  +1.0,  -4.0,  +0.0,\n"                              \
 	"		+3.0,  -1.0,  +2.0,  -2.0) / 255.0;\n"                     \
 	"	vec4 dither(vec4 color) {\n"                                \
-	"		ivec2 dc = ivec2(mod(floor(v_ditherCoord), 4.0));\n"       \
+	"		ivec2 dc = ivec2(mod(floor(v_ditherCoord.xy / v_ditherCoord.z), 4.0));\n" \
 	"		color.xyz += vec3(c_dither[dc.x][dc.y] * v_texcoord.w * float(psxDitherEnabled));\n" \
+	"		if (psxColorDepth15 != 0) {\n"                            \
+	"			vec3 color5 = floor(clamp(color.xyz, 0.0, 1.0) * (255.0 / 8.0) + vec3(0.0001));\n" \
+	"			color.xyz = (color5 * 8.0 + floor(color5 * 0.25)) * (1.0 / 255.0);\n" \
+	"		}\n"                                                       \
 	"		return color;\n"                                           \
-	"	}\n"
+	"	}\n"                                                        \
+	"	vec4 psxShade() { return (v_clipSpace > 0.5) ? v_colorPerspective : v_color; }\n"
 #endif
 
 #ifdef __vita__
@@ -1435,7 +1449,7 @@ internal void NativeRenderer_DestroyPSXShaders(void)
 	"		float stpBoost5 = min(31.0, floor((stpLum5 * 5.0 + 3.0) * 0.25));\n"                      \
 	"		color.rgb = vec3(floor(stpLum5 * 0.3), stpBoost5, min(31.0, stpBoost5 + 2.0)) * (8.0 / 255.0);\n" \
 	"#endif\n"                                                                                         \
-	"		gl_FragColor = dither(color * v_color);\n"                                                   \
+	"		gl_FragColor = dither(color * psxShade());\n"                                                   \
 	"		gl_FragColor.a = max(psxDrawMaskSet, psxTextureOutputStp * sampledStp);\n"
 #endif
 
@@ -1554,10 +1568,15 @@ global_variable const char *gte_shader_cached_p4 =
 // coordinates perspective-correctly. Gouraud colour and the dither pattern stay
 // screen-space like the PS1 rasteriser (DuckStation's default as well), and the
 // per-polygon page/CLUT is flat so it never picks up interpolation error.
+// Native 3D triangles shade in perspective instead: screen-linear interpolation
+// is undefined across a clipped corner behind the camera, and drivers
+// disagree (Mesa turns it black).
 global_variable const char *gpu_shader_common = "	centroid varying vec4 v_texcoord;\n"
                                                 "	PSX_NOPERSPECTIVE varying vec4 v_color;\n"
+                                                "	varying vec4 v_colorPerspective;\n"
+                                                "	flat varying float v_clipSpace;\n"
                                                 "	flat varying vec4 v_page_clut;\n"
-                                                "	PSX_NOPERSPECTIVE varying vec2 v_ditherCoord;\n"
+                                                "	varying vec3 v_ditherCoord;\n"
                                                 "	varying float v_z;\n";
 #else
 global_variable const char *gpu_shader_common = "	centroid varying vec4 v_texcoord;\n"
@@ -1583,7 +1602,7 @@ const char *gte_shader_untextured = "\tuniform float psxDrawMaskSet;\n"
 	"		gl_FragColor.a = psxDrawMaskSet;\n"
 #else
 #define GPU_RGBA_FRAGMENT_OUTPUT                                    \
-	"		gl_FragColor = dither(color * v_color);\n"              \
+	"		gl_FragColor = dither(color * psxShade());\n"              \
 	"		gl_FragColor.a = psxDrawMaskSet;\n"
 #endif
 
@@ -1621,7 +1640,8 @@ const char *gte_shader_32_rgba = "	uniform sampler2D s_texture;\n"
 #define GTE_ORDER_DEPTH_ATTRIBUTE   "\tattribute float a_orderDepth;\n"
 #define GTE_PERSPECTIVE_CORRECTION                                                                 \
 	"\tgl_Position = Projection * vec4(a_position.xy, 0.0, 1.0);\n"                           \
-	"\tgl_Position.z = 1.0 - a_orderDepth * (2.0 / 65535.0);\n"
+	"\tgl_Position.z = 1.0 - a_orderDepth * (2.0 / 65535.0);\n"                               \
+	"\tv_ditherCoord = a_position.xy;\n"
 #else
 #define GTE_ORDER_DEPTH_ATTRIBUTE   ""
 // NOTE: a_position.z is the PGXP view depth (0 = affine). Scaling the whole
@@ -1630,12 +1650,25 @@ const char *gte_shader_32_rgba = "	uniform sampler2D s_texture;\n"
 // World depth uses an infinite-far reciprocal projection with near=32, below
 // CTR's normal clip distance. Affine UVs still use W=1; their depth interpolates
 // 1/Z in screen space, just as it does after the perspective divide.
+//
+// Native 3D vertices (a_extra.z set, see native_draw3d.h) are already
+// homogeneous: xy are screen coordinates times clip w, z is the clip depth and
+// w the camera depth. The host clips them at the near plane.
 #define GTE_PERSPECTIVE_CORRECTION                                                                 \
-	"\tgl_Position = Projection * vec4(a_position.xy, 0.0, 1.0);\n"                           \
-	"\tgl_Position *= (a_position.z > 0.0) ? a_position.z : 1.0;\n"                         \
-	"\tif (a_position.w > 0.0) {\n"                                                       \
-	"\t\tgl_Position.z = (1.0 - 64.0 / max(a_position.w, 32.0)) * gl_Position.w;\n"       \
-	"\t}\n"
+	"\tif (a_extra.z > 0.5) {\n"                                                            \
+	"\t\tgl_Position = Projection * vec4(a_position.xy, 0.0, a_position.w);\n"              \
+	"\t\tgl_Position.z = a_position.z;\n"                                                   \
+	"\t\tv_ditherCoord = a_position.xyw;\n"                                                 \
+	"\t} else {\n"                                                                          \
+	"\t\tgl_Position = Projection * vec4(a_position.xy, 0.0, 1.0);\n"                       \
+	"\t\tgl_Position *= (a_position.z > 0.0) ? a_position.z : 1.0;\n"                       \
+	"\t\tif (a_position.w > 0.0) {\n"                                                       \
+	"\t\t\tgl_Position.z = (1.0 - 64.0 / max(a_position.w, 32.0)) * gl_Position.w;\n"      \
+	"\t\t}\n"                                                                               \
+	"\t\tv_ditherCoord = vec3(a_position.xy, 1.0) * gl_Position.w;\n"                      \
+	"\t}\n"                                                                                 \
+	"\tv_colorPerspective = vec4(a_color.xyz * a_texcoord.z, a_color.w);\n"                 \
+	"\tv_clipSpace = a_extra.z;\n"
 #endif
 
 #if NATIVE_PGXP_SUPPORTED
@@ -1670,12 +1703,11 @@ const char *gte_shader_32_rgba = "	uniform sampler2D s_texture;\n"
 	GTE_POSITION_ATTRIBUTES                                                                                       \
 	"	attribute vec4 a_texcoord; // uv, color multiplier, dither\n"                                                \
 		"	attribute vec4 a_color;\n"                                                                                   \
-		"	attribute vec4 a_extra; // texcoord.xy ofs, unused.xy\n"                                                     \
+		"	attribute vec4 a_extra; // texcoord.xy ofs, native clip-space flag, unused\n"                                \
 		GTE_ORDER_DEPTH_ATTRIBUTE                                                                                         \
 		"	uniform mat4 Projection;\n"                                                                                  \
 	"	const vec2 c_UVFudge = vec2(0.00025, 0.00025);\n"                                                            \
 	"	void main() {\n"                                                                                             \
-	"		v_ditherCoord = a_position.xy;\n"                                                                           \
 	"		v_texcoord = a_texcoord;\n"                                                                                 \
 	"		v_texcoord.xy += a_extra.xy * 0.5;\n"                                                                       \
 	"		v_color = a_color;\n"                                                                                       \
@@ -1942,6 +1974,7 @@ internal void NativeRenderer_CompilePSXShader(GTEShader *sh, const char *source,
 #ifndef __vita__
 	sh->psxSemiTransPassLoc = glGetUniformLocation(sh->shader, "psxSemiTransPass");
 	sh->psxDitherEnabledLoc = glGetUniformLocation(sh->shader, "psxDitherEnabled");
+	sh->psxColorDepth15Loc = glGetUniformLocation(sh->shader, "psxColorDepth15");
 #endif
 	sh->psxDrawMaskSetLoc = glGetUniformLocation(sh->shader, "psxDrawMaskSet");
 	sh->psxTextureOutputStpLoc = glGetUniformLocation(sh->shader, "psxTextureOutputStp");
@@ -2627,6 +2660,7 @@ void NativeRenderer_SetTexture(TextureID texture, TexFormat texFormat, int semiT
 #ifndef __vita__
 	u_psxSemiTransPassLoc = shader->psxSemiTransPassLoc;
 	u_psxDitherEnabledLoc = shader->psxDitherEnabledLoc;
+	u_psxColorDepth15Loc = shader->psxColorDepth15Loc;
 #endif
 	u_psxDrawMaskSetLoc = shader->psxDrawMaskSetLoc;
 	u_psxTextureOutputStpLoc = shader->psxTextureOutputStpLoc;
@@ -2652,6 +2686,10 @@ void NativeRenderer_SetTexture(TextureID texture, TexFormat texFormat, int semiT
 	if (u_psxDitherEnabledLoc >= 0)
 	{
 		glUniform1i(u_psxDitherEnabledLoc, gNativeDitheringEnabled != 0);
+	}
+	if (u_psxColorDepth15Loc >= 0)
+	{
+		glUniform1i(u_psxColorDepth15Loc, gNativeColorDepth == NATIVE_COLOR_DEPTH_15BIT);
 	}
 #endif
 

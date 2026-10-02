@@ -252,14 +252,30 @@ static struct MenuRow s_nativeOptionsRows[] =
 #ifndef __vita__
 static struct MenuRow s_nativeEnhancementsRows[] =
 {
-	{NATIVE_MENU_STRING_PGXP, 7, 1, 0, 0},
-	{NATIVE_MENU_STRING_MAX_LOD, 0, 2, 1, 1},
-	{NATIVE_MENU_STRING_PHYSICS, 1, 3, 2, 2},
-	{NATIVE_MENU_STRING_AI_PHYSICS, 2, 4, 3, 3},
-	{NATIVE_MENU_STRING_COLLISION_PHYSICS, 3, 5, 4, 4},
-	{NATIVE_MENU_STRING_STEERING_PHYSICS, 4, 6, 5, 5},
-	{NATIVE_MENU_STRING_DEPTH_BUFFER, 5, 7, 6, 6},
-	{NATIVE_MENU_STRING_HD_PAUSE, 6, 0, 7, 7},
+#if NATIVE_DRAW3D_SUPPORTED
+	{NATIVE_MENU_STRING_RENDERER, 10, 1, 0, 0},
+	{NATIVE_MENU_STRING_PGXP, 0, 2, 1, 1},
+	{NATIVE_MENU_STRING_COLOR_DEPTH, 1, 3, 2, 2},
+	{NATIVE_MENU_STRING_TEXTURE_FILTER, 2, 4, 3, 3},
+	{NATIVE_MENU_STRING_MAX_LOD, 3, 5, 4, 4},
+	{NATIVE_MENU_STRING_PHYSICS, 4, 6, 5, 5},
+	{NATIVE_MENU_STRING_AI_PHYSICS, 5, 7, 6, 6},
+	{NATIVE_MENU_STRING_COLLISION_PHYSICS, 6, 8, 7, 7},
+	{NATIVE_MENU_STRING_STEERING_PHYSICS, 7, 9, 8, 8},
+	{NATIVE_MENU_STRING_DEPTH_BUFFER, 8, 10, 9, 9},
+	{NATIVE_MENU_STRING_HD_PAUSE, 9, 0, 10, 10},
+#else
+	{NATIVE_MENU_STRING_PGXP, 9, 1, 0, 0},
+	{NATIVE_MENU_STRING_COLOR_DEPTH, 0, 2, 1, 1},
+	{NATIVE_MENU_STRING_TEXTURE_FILTER, 1, 3, 2, 2},
+	{NATIVE_MENU_STRING_MAX_LOD, 2, 4, 3, 3},
+	{NATIVE_MENU_STRING_PHYSICS, 3, 5, 4, 4},
+	{NATIVE_MENU_STRING_AI_PHYSICS, 4, 6, 5, 5},
+	{NATIVE_MENU_STRING_COLLISION_PHYSICS, 5, 7, 6, 6},
+	{NATIVE_MENU_STRING_STEERING_PHYSICS, 6, 8, 7, 7},
+	{NATIVE_MENU_STRING_DEPTH_BUFFER, 7, 9, 8, 8},
+	{NATIVE_MENU_STRING_HD_PAUSE, 8, 0, 9, 9},
+#endif
 	{RECTMENU_STRING_NONE},
 };
 #endif
@@ -426,6 +442,7 @@ extern u32 gNativeCheatConfigMask;
 #ifndef __vita__
 extern int gNativeDitheringEnabled;
 extern int gNativeBorderlessEnabled;
+extern int g_cfg_bilinearFiltering;
 #endif
 extern int gNativeGhostReplayMode;
 extern void save_config();
@@ -1126,7 +1143,46 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 
 	if (choose == NATIVE_MENU_STRING_DEPTH_BUFFER)
 	{
-		gNativeDepthBufferEnabled ^= 1;
+		// Native 3D always depth tests; the option belongs to Classic.
+		if (!NATIVE_DRAW3D_ACTIVE())
+		{
+			gNativeDepthBufferEnabled ^= 1;
+			save_config();
+		}
+		return;
+	}
+
+	if (choose == NATIVE_MENU_STRING_RENDERER)
+	{
+#if NATIVE_DRAW3D_SUPPORTED
+		gNativeRendererMode = (gNativeRendererMode + 1) % NATIVE_RENDERER_MODE_COUNT;
+		if (button & (BTN_LEFT | BTN_RIGHT))
+		{
+			OtherFX_Play(0, 1);
+		}
+		save_config();
+#endif
+		return;
+	}
+
+	if (choose == NATIVE_MENU_STRING_COLOR_DEPTH)
+	{
+		gNativeColorDepth = (gNativeColorDepth + 1) % NATIVE_COLOR_DEPTH_COUNT;
+		if (button & (BTN_LEFT | BTN_RIGHT))
+		{
+			OtherFX_Play(0, 1);
+		}
+		save_config();
+		return;
+	}
+
+	if (choose == NATIVE_MENU_STRING_TEXTURE_FILTER)
+	{
+		g_cfg_bilinearFiltering ^= 1;
+		if (button & (BTN_LEFT | BTN_RIGHT))
+		{
+			OtherFX_Play(0, 1);
+		}
 		save_config();
 		return;
 	}

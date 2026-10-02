@@ -34,10 +34,13 @@ typedef struct
 {
 #if NATIVE_PGXP_SUPPORTED
 	// Sub-pixel when PGXP recovered the GTE vertex, otherwise retail integers.
+	// Native 3D vertices (clipSpace set) hold screen xy times clip w here.
 	float x, y;
 	// Perspective divisor for PGXP polygons; 0 keeps retail affine mapping.
+	// Clip depth for native 3D vertices.
 	float w;
 	// Optional world depth, independent of the texture perspective divisor.
+	// Clip w (camera depth) for native 3D vertices.
 	float depth;
 	s16 page, clut;
 #else
@@ -47,7 +50,8 @@ typedef struct
 	u8 u, v, bright, dither;
 	u8 r, g, b, a;
 
-	s8 tcx, tcy, _p0, _p1;
+	// clipSpace marks native 3D vertices (see native_draw3d.h).
+	s8 tcx, tcy, clipSpace, _p1;
 	u16 orderDepth;
 #if NATIVE_PGXP_SUPPORTED
 	// Keeps the float attributes 4-byte aligned in the vertex buffer.

@@ -1305,7 +1305,7 @@ static void RenderBucket_StoreMvpTranslation(struct InstDrawPerPlayer *idpp, con
 	CTC2(viewPos->vy, 6);
 	CTC2(viewPos->vz, 7);
 #if defined(CTR_NATIVE)
-	if (gNativeDepthBufferEnabled)
+	if (NATIVE_DEPTH_BUFFER_ACTIVE())
 	{
 		const float scale = (viewDepth < 4096 ? 0.25f : 1.0f) * ((inst->flags & DRAW_HUGE) != 0 ? 4.0f : 1.0f);
 		NativePgxp_SetModelDepthScale(idpp, scale);

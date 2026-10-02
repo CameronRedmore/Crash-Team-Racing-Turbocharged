@@ -18,6 +18,7 @@
 #include "RenderBucket/RenderBucket_QueueExecute.c"
 #include "RenderLevel/AnimateWater.c"
 #include "RenderLevel/RenderLists.c"
+#include "RenderLevel/NativeDrawLevel.c"
 #include "DrawTires.c"
 #include "RenderStars.c"
 #include "Torch.c"

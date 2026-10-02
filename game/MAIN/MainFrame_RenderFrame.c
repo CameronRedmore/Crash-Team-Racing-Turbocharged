@@ -43,6 +43,8 @@ void MainFrame_RenderFrame(struct GameTracker *gGT, struct GamepadSystem *gGamep
 #if defined(__vita__)
 	NativeAdhoc_BeginRenderFrame(gGT);
 #endif
+	// Last frame's OT, and the native layers it referenced, have been drawn.
+	NativeDraw3D_BeginFrame();
 #endif
 
 	MAINFRAME_PERF_BEGIN(NATIVE_PERF_BUCKET_MAINFRAME_SETUP);
@@ -1120,6 +1122,95 @@ static void RenderAllLevelGeometry_NativeViewports(struct GameTracker *gGT, stru
 }
 #endif
 
+#if NATIVE_DRAW3D_SUPPORTED
+// Native 3D level geometry: the retail vertex animation, LOD thresholds and
+// BSP render lists for every viewport, then NativeDrawLevel instead of the
+// projecting overlays. The sky and glow keep their retail packets.
+static void RenderAllLevelGeometry_Native(struct GameTracker *gGT, struct Level *level1, struct mesh_info *ptr_mesh_info)
+{
+	struct MainRenderLevelGeometryScratch *scratch = CTR_SCRATCHPAD_PTR(struct MainRenderLevelGeometryScratch, 0);
+	const int numPlyrCurrGame = gGT->numPlyrCurrGame;
+	int *const *visOVert = gGT->visMem1->visOVertList;
+
+	CTR_ClearRenderLists_1P2P(gGT, numPlyrCurrGame);
+
+	if ((level1->configFlags & 4) == 0)
+	{
+		switch (numPlyrCurrGame)
+		{
+		case 1:
+			AnimateWater1P(FPS_HALF(gGT->timer), level1->numWaterVertices, level1->ptr_water, level1->ptr_tex_waterEnvMap, visOVert[0]);
+			break;
+		case 2:
+			AnimateWater2P(FPS_HALF(gGT->timer), level1->numWaterVertices, level1->ptr_water, level1->ptr_tex_waterEnvMap, visOVert[0], visOVert[1]);
+			break;
+		case 3:
+			AnimateWater3P(FPS_HALF(gGT->timer), level1->numWaterVertices, level1->ptr_water, level1->ptr_tex_waterEnvMap, visOVert[0], visOVert[1],
+			               visOVert[2]);
+			break;
+		default:
+			AnimateWater4P(FPS_HALF(gGT->timer), level1->numWaterVertices, level1->ptr_water, level1->ptr_tex_waterEnvMap, visOVert[0], visOVert[1],
+			               visOVert[2], visOVert[3]);
+			break;
+		}
+	}
+	else if (numPlyrCurrGame == 1)
+	{
+		AnimateQuad(FPS_HALF((s64)gGT->timer * 128), level1->numSCVert, level1->ptrSCVert, gGT->visMem1->visSCVertList[0]);
+	}
+
+	gGT->bspLeafsDrawn = 0;
+	RenderLists_PreInit();
+
+	for (int i = 0; i < numPlyrCurrGame; i++)
+	{
+		struct PushBuffer *pushBuffer = &gGT->pushBuffer[i];
+
+		if ((numPlyrCurrGame == 1) &&
+		    ((gGT->levelID == ADVENTURE_GARAGE) || (((gGT->gameMode1 & GAME_CUTSCENE) != 0) && (gGT->levelID != INTRO_CRASH))))
+		{
+			scratch->depthScale = 0x1e00;
+			scratch->bspLodDistanceThreshold = 0x640;
+			scratch->textureLodDepthThreshold0 = 0x640;
+			scratch->textureLodDepthThreshold1 = 0x500;
+			scratch->topLevelNearDepthThreshold = 0x280;
+			scratch->recursiveNearDepthThreshold = 0x140;
+			scratch->fullDynamicFadeDepthStart = scratch->bspLodDistanceThreshold + MAIN_RENDER_LEVEL_GEOMETRY_FULL_DYNAMIC_FADE_OFFSET;
+		}
+		else
+		{
+			s32 distToScreen = pushBuffer->distanceToScreen_PREV;
+			scratch->depthScale = RenderAllLevelGeometry_ScaleDistanceShift8(distToScreen, 0x2080);
+			scratch->bspLodDistanceThreshold = CTR_MipsMulLo(distToScreen, 0x1a);
+			scratch->textureLodDepthThreshold0 = CTR_MipsMulLo(distToScreen, 0x18);
+			scratch->textureLodDepthThreshold1 = CTR_MipsMulLo(distToScreen, 0xc);
+			scratch->topLevelNearDepthThreshold = CTR_MipsMulLo(distToScreen, 7);
+			scratch->recursiveNearDepthThreshold = RenderAllLevelGeometry_ScaleDistanceShift8(distToScreen, 0x380);
+			scratch->fullDynamicFadeDepthStart = CTR_MipsAddLo(scratch->bspLodDistanceThreshold, MAIN_RENDER_LEVEL_GEOMETRY_FULL_DYNAMIC_FADE_OFFSET);
+		}
+		RenderAllLevelGeometry_ApplyNativeMaxLod(scratch);
+
+		gGT->bspLeafsDrawn += RenderLists_Init1P2P(ptr_mesh_info->bspRoot, gGT->visMem1->visLeafList[i], pushBuffer, (u32)&gGT->LevRenderLists[i],
+		                                           gGT->visMem1->bspList[i], 1);
+		NativeDrawLevel_Viewport(pushBuffer, &gGT->backBuffer->primMem, ptr_mesh_info, &gGT->LevRenderLists[i],
+		                         gGT->visMem1->visFaceList[i], level1->ptr_tex_waterEnvMap);
+	}
+
+	// Retail draws the skybox in single player only.
+	if (numPlyrCurrGame == 1)
+	{
+		DrawSky_Full(level1->ptr_skybox, &gGT->pushBuffer[0], &gGT->backBuffer->primMem);
+	}
+	if ((numPlyrCurrGame > 1) || ((level1->configFlags & 1) != 0))
+	{
+		for (int i = 0; i < numPlyrCurrGame; i++)
+		{
+			CAM_SkyboxGlow(&level1->glowGradient[0], &gGT->pushBuffer[i], &gGT->backBuffer->primMem, &gGT->pushBuffer[i].ptrOT[0x3ff]);
+		}
+	}
+}
+#endif
+
 void RenderAllLevelGeometry(struct GameTracker *gGT, struct Level *level1, struct mesh_info *ptr_mesh_info)
 {
 	int i;
@@ -1139,6 +1230,14 @@ void RenderAllLevelGeometry(struct GameTracker *gGT, struct Level *level1, struc
 	}
 
 	numPlyrCurrGame = gGT->numPlyrCurrGame;
+
+#if NATIVE_DRAW3D_SUPPORTED
+	if (NATIVE_DRAW3D_ACTIVE())
+	{
+		RenderAllLevelGeometry_Native(gGT, level1, ptr_mesh_info);
+		return;
+	}
+#endif
 
 #if defined(__vita__)
 	if (NativeAdhoc_IsSingleViewRenderActive())

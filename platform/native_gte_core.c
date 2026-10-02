@@ -435,7 +435,7 @@ internal int GTE_RotTransPers(int idx, int lm)
 
 		GTE_PgxpRotTransPers(result[0], result[1], result[2], (u32)h_over_sz3, lm);
 	}
-	else if (gNativeDepthBufferEnabled)
+	else if (NATIVE_DEPTH_BUFFER_ACTIVE())
 	{
 		// Depth tracking also works with PGXP Off: keep retail screen positions,
 		// transforms and winding, but retain the camera-space Z lost by packets.

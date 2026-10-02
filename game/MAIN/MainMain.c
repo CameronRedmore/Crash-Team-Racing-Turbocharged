@@ -9,6 +9,9 @@
 extern int cfg_language;
 
 #if defined(CTR_NATIVE) && defined(CTR_INTERNAL)
+// Skips game logic while rendering continues (Scroll Lock in internal builds).
+int g_dbg_freezeGameLogic = 0;
+
 static struct NativePerfFrameInfo MainPerf_FrameInfo(struct GameTracker *gGT)
 {
 	struct NativePerfFrameInfo info;
@@ -521,6 +524,10 @@ u32 main(void)
 					if ((gGT->gameMode1 & LOADING) == 0
 #if defined(CTR_NATIVE)
 					    && nativeGhostRunSimulation
+#endif
+#if defined(CTR_NATIVE) && defined(CTR_INTERNAL)
+					    // Held world state for renderer comparisons (Scroll Lock).
+					    && !g_dbg_freezeGameLogic
 #endif
 					)
 					{

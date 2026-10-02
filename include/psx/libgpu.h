@@ -612,6 +612,14 @@ typedef struct
 	const char *text;
 } DR_PSYX_DBGMARKER;
 
+// Draws a native 3D layer (see native_draw3d.h); the low 24 code bits hold
+// the layer index.
+typedef struct
+{
+	DECLARE_P_ADDR
+	uint32_t code;
+} DR_PSYX_DRAW3D;
+
 /*
  * Environment
  */

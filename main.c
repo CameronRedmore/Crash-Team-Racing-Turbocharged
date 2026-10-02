@@ -92,6 +92,7 @@ int gNativeRelicRaceResultTier = -1;
 #include "platform/native_gpu.c"
 #include "platform/native_gte_core.c"
 #include "platform/native_pgxp.c"
+#include "platform/native_draw3d.c"
 #include "platform/native_physics.c"
 #include "platform/native_collision.c"
 #if !defined(__EMSCRIPTEN__)
@@ -361,6 +362,26 @@ void load_config(void)
 					gNativePgxpMode = value;
 				}
 			}
+#if NATIVE_DRAW3D_SUPPORTED
+			else if (strcmp("renderer", buffer) == 0)
+			{
+				if ((value >= NATIVE_RENDERER_CLASSIC) && (value < NATIVE_RENDERER_MODE_COUNT))
+				{
+					gNativeRendererMode = value;
+				}
+			}
+#endif
+			else if (strcmp("color_depth", buffer) == 0)
+			{
+				if ((value >= NATIVE_COLOR_DEPTH_TRUE) && (value < NATIVE_COLOR_DEPTH_COUNT))
+				{
+					gNativeColorDepth = value;
+				}
+			}
+			else if (strcmp("texture_filter", buffer) == 0)
+			{
+				g_cfg_bilinearFiltering = (value == NATIVE_TEXTURE_FILTER_BILINEAR);
+			}
 #endif
 			else if (NativeConfig_SetCheat(buffer, value))
 			{
@@ -392,6 +413,11 @@ void save_config(void)
 		fprintf(config, "%s=%d\n", "dithering", gNativeDitheringEnabled != 0);
 		fprintf(config, "%s=%d\n", "borderless", gNativeBorderlessEnabled != 0);
 		fprintf(config, "%s=%d\n", "pgxp", gNativePgxpMode);
+#if NATIVE_DRAW3D_SUPPORTED
+		fprintf(config, "%s=%d\n", "renderer", gNativeRendererMode);
+#endif
+		fprintf(config, "%s=%d\n", "color_depth", gNativeColorDepth);
+		fprintf(config, "%s=%d\n", "texture_filter", g_cfg_bilinearFiltering ? NATIVE_TEXTURE_FILTER_BILINEAR : NATIVE_TEXTURE_FILTER_NEAREST);
 		fprintf(config, "%s=%d\n", "pgxp_integer_nclip", gNativePgxpIntegerNclipEnabled != 0);
 		fprintf(config, "%s=%d\n", "max_lod", gNativeMaxLodEnabled != 0);
 		fprintf(config, "%s=%d\n", "depth_buffer", gNativeDepthBufferEnabled != 0);

@@ -11,6 +11,7 @@ extern u32 gNativeCheatConfigMask;
 #ifndef __vita__
 extern int gNativeDitheringEnabled;
 extern int gNativeBorderlessEnabled;
+extern int g_cfg_bilinearFiltering;
 #endif
 extern int gNativeControlsSelectedColumn;
 extern int gNativeControlsSelectedAction;
@@ -401,7 +402,15 @@ static char *RECTMENU_GetString(s16 stringIndex)
 	case NATIVE_MENU_STRING_PGXP:
 		return (char *)pgxp[languageRow][gNativePgxpMode];
 	case NATIVE_MENU_STRING_DEPTH_BUFFER:
+		// The native renderer always depth tests; the option applies to Classic.
+		if (NATIVE_DRAW3D_ACTIVE()) return "DEPTH BUFFER: ALWAYS ON";
 		return gNativeDepthBufferEnabled ? "DEPTH BUFFER: ON" : "DEPTH BUFFER: OFF";
+	case NATIVE_MENU_STRING_RENDERER:
+		return gNativeRendererMode == NATIVE_RENDERER_NATIVE ? "RENDERER: NATIVE 3D" : "RENDERER: CLASSIC";
+	case NATIVE_MENU_STRING_COLOR_DEPTH:
+		return gNativeColorDepth == NATIVE_COLOR_DEPTH_15BIT ? "COLOUR DEPTH: 15-BIT PS1" : "COLOUR DEPTH: 24-BIT";
+	case NATIVE_MENU_STRING_TEXTURE_FILTER:
+		return g_cfg_bilinearFiltering ? "TEXTURES: BILINEAR" : "TEXTURES: NEAREST";
 	case NATIVE_MENU_STRING_HD_PAUSE:
 		return gNativeHdPauseMode == 0 ? "PAUSE SCREEN: ORIGINAL" : (gNativeHdPauseMode == 1 ? "PAUSE SCREEN: HD" : "PAUSE SCREEN: HD SMOOTH");
 	case NATIVE_MENU_STRING_ENHANCEMENTS:
@@ -826,6 +835,9 @@ static b32 RECTMENU_NativeOptionsHorizontalInput(struct RectMenu *menu)
 	        (stringIndex <= NATIVE_MENU_STRING_AUDIO_MODE)) ||
 	       (stringIndex == NATIVE_MENU_STRING_AI_RACERS) ||
 	       (stringIndex == NATIVE_MENU_STRING_PGXP) ||
+	       (stringIndex == NATIVE_MENU_STRING_RENDERER) ||
+	       (stringIndex == NATIVE_MENU_STRING_COLOR_DEPTH) ||
+	       (stringIndex == NATIVE_MENU_STRING_TEXTURE_FILTER) ||
 	       (stringIndex == NATIVE_MENU_STRING_DEPTH_BUFFER) ||
 	       (stringIndex == NATIVE_MENU_STRING_HD_PAUSE) ||
 	       (stringIndex == NATIVE_MENU_STRING_MAX_LOD) ||

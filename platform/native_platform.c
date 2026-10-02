@@ -35,6 +35,9 @@ int g_dbg_polygonSelected = 0;
 
 extern int g_cfg_bilinearFiltering;
 extern int g_dbg_emulatorPaused;
+#ifdef CTR_INTERNAL
+extern int g_dbg_freezeGameLogic;
+#endif
 extern int g_dbg_texturelessMode;
 extern int g_dbg_wireframeMode;
 extern int g_windowHeight;
@@ -338,6 +341,16 @@ internal void Platform_HandleKey(int key, char down)
 		case SDL_SCANCODE_INSERT:
 			gNativePgxpMode = (gNativePgxpMode + 1) % NATIVE_PGXP_MODE_COUNT;
 			Platform_LogWarn("[CTR Native] PGXP mode: %d\n", gNativePgxpMode);
+			break;
+#endif
+		case SDL_SCANCODE_SCROLLLOCK:
+			g_dbg_freezeGameLogic ^= 1;
+			Platform_LogWarn("[CTR Native] game logic frozen: %d\n", g_dbg_freezeGameLogic);
+			break;
+#if NATIVE_DRAW3D_SUPPORTED
+		case SDL_SCANCODE_PAGEDOWN:
+			gNativeRendererMode = (gNativeRendererMode + 1) % NATIVE_RENDERER_MODE_COUNT;
+			Platform_LogWarn("[CTR Native] renderer: %s\n", gNativeRendererMode == NATIVE_RENDERER_NATIVE ? "native 3D" : "classic");
 			break;
 #endif
 #ifndef __vita__

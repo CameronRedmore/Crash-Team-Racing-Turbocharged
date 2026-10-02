@@ -3,6 +3,7 @@
 
 #include <macros.h>
 #include <stddef.h>
+#include <platform/native_draw3d.h>
 
 // NOTE: Precision geometry transform pipeline, modelled on DuckStation's PGXP.
 // RTPS/RTPT truncate every projected vertex to an integer SXY before the CPU
@@ -50,10 +51,14 @@ extern int gNativePgxpMode;
 extern int gNativePgxpIntegerNclipEnabled;
 extern int gNativeDepthBufferEnabled;
 
+// Native 3D layers depth test against retail geometry, so the native renderer
+// implies the depth buffer.
+#define NATIVE_DEPTH_BUFFER_ACTIVE() (gNativeDepthBufferEnabled || NATIVE_DRAW3D_ACTIVE())
+
 #if NATIVE_PGXP_SUPPORTED
 
 #define NATIVE_PGXP_ACTIVE() (gNativePgxpMode != NATIVE_PGXP_MODE_OFF)
-#define NATIVE_VERTEX_TRACKING_ACTIVE() (NATIVE_PGXP_ACTIVE() || gNativeDepthBufferEnabled)
+#define NATIVE_VERTEX_TRACKING_ACTIVE() (NATIVE_PGXP_ACTIVE() || NATIVE_DEPTH_BUFFER_ACTIVE())
 
 // Host range holding the double-buffered primitive memory. Lookups inside it
 // use a collision-free direct map; everything else goes through a small cache.
