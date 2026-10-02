@@ -28,6 +28,8 @@ enum
 	UI_RACE_CLOCK_PB_TOP_GAP = 4,
 	UI_RACE_CLOCK_PB_ROW_Y_STEP = 8,
 	UI_RACE_CLOCK_RELIC_PB_Y_OFFSET = 0x34,
+	UI_RACE_CLOCK_RELIC_TIER_COUNT = 3,
+	UI_RACE_CLOCK_RELIC_ROW_Y_STEP = 0x1c,
 	UI_RACE_CLOCK_PB_SLOW_ONE_SECOND = UI_RACE_CLOCK_TICKS_PER_SECOND,
 	UI_RACE_CLOCK_PB_SLOW_TWO_SECONDS = UI_RACE_CLOCK_TICKS_PER_SECOND * 2,
 	UI_RACE_CLOCK_RESULTS_TWO_COLUMN_LAPS = 7,
@@ -63,6 +65,49 @@ static void UI_DrawRacePersonalBest(u16 labelPosX, int posY)
 	else
 	{
 		DecalFont_DrawLine("--:--:--", timeX, posY, FONT_SMALL, PERIWINKLE);
+	}
+}
+
+static void UI_DrawRelicTargets(u16 labelPosX, u16 labelPosY, struct Driver *driver)
+{
+	static const int labels[UI_RACE_CLOCK_RELIC_TIER_COUNT] = {LNG_SAPPHIRE, LNG_GOLD, LNG_PLATINUM};
+	static const int colors[UI_RACE_CLOCK_RELIC_TIER_COUNT] = {TROPY_LIGHT_BLUE, PAPU_YELLOW, SILVER};
+	struct GameTracker *gGT = sdata->gGT;
+	int row = 0;
+
+	for (int tier = 0; tier < UI_RACE_CLOCK_RELIC_TIER_COUNT; tier++)
+	{
+		int target = data.RelicTime[gGT->levelID * UI_RACE_CLOCK_RELIC_TIER_COUNT + tier];
+		if (gNativeRelicRaceMode != 0)
+		{
+			// Standalone relic races record earned tiers through the track's best time.
+			if ((sdata->ptrActiveHighScoreEntry != NULL) &&
+			    (sdata->ptrActiveHighScoreEntry[1].time < MEMCARD_HIGH_SCORE_DEFAULT_TIME) &&
+			    (sdata->ptrActiveHighScoreEntry[1].time <= (u32)target))
+			{
+				continue;
+			}
+		}
+		else if (CHECK_ADV_BIT(sdata->advProgress.rewards,
+		                      ADV_REWARD_FIRST_SAPPHIRE_RELIC + ADV_REWARD_RELIC_TIER_STRIDE * tier + gGT->levelID))
+		{
+			continue;
+		}
+
+		int color = driver->timeElapsedInRace > target ? GRAY : colors[tier];
+		int rowY = (int)(s16)labelPosY + row * UI_RACE_CLOCK_RELIC_ROW_Y_STEP;
+		DecalFont_DrawLine(sdata->lngStrings[labels[tier]], (int)(s16)labelPosX,
+		                   rowY + UI_RACE_CLOCK_RELIC_HUD_LABEL_Y_OFFSET, FONT_SMALL, color);
+		DecalFont_DrawLine(RECTMENU_DrawTime(target), (int)(s16)labelPosX,
+		                   rowY + UI_RACE_CLOCK_RELIC_HUD_TIME_Y_OFFSET, FONT_BIG, color);
+		row++;
+	}
+
+	if (gNativeRelicRaceMode != 0)
+	{
+		int pbY = (int)(s16)labelPosY + UI_RACE_CLOCK_RELIC_PB_Y_OFFSET +
+		          (row > 0 ? row - 1 : -1) * UI_RACE_CLOCK_RELIC_ROW_Y_STEP;
+		UI_DrawRacePersonalBest(labelPosX, pbY);
 	}
 }
 
@@ -528,6 +573,14 @@ void UI_DrawRaceClock(u16 labelPosX, u16 labelPosY, u32 flags, struct Driver *dr
 
 	// === Relic Race Only ===
 
+#if defined(CTR_NATIVE)
+	if ((flags & UI_RACE_CLOCK_SHOW_RESULTS) == 0)
+	{
+		UI_DrawRelicTargets(labelPosX, labelPosY, driver);
+		return;
+	}
+#endif
+
 	u32 *rewardsSet = sdata->advProgress.rewards;
 
 	// If did not unlock relic, draw NEXT goal
@@ -611,12 +664,6 @@ LAB_8004f378:
 	sdata->raceClockStr[6] = sdata->relicTime_1ms + '0';
 	DecalFont_DrawLine(sdata->raceClockStr, (int)(s16)relicTimeX, (int)relicTimeY, FONT_BIG, (int)(s16)(lapOrRelicColor & (0xffff ^ JUSTIFY_RIGHT)));
 
-#if defined(CTR_NATIVE)
-	if (((flags & UI_RACE_CLOCK_SHOW_RESULTS) == 0) && (gNativeRelicRaceMode != 0))
-	{
-		UI_DrawRacePersonalBest(labelPosX, (int)(s16)labelPosY + UI_RACE_CLOCK_RELIC_PB_Y_OFFSET);
-	}
-#endif
 }
 
 // countdown clock, used for Battle Mode and Crystal Challenge
