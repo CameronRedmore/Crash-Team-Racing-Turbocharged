@@ -1251,6 +1251,8 @@ void MM_Characters_DrawWindows(b32 boolShowDrivers)
 		// so that each camera can only see one driver
 		idpp[playerIndex].pushBuffer = pb;
 
+		// numPlyrNextGame is at most 4; GCC can't see that through the u8 loop bound.
+		CTR_ASSUME(playerIndex < 4);
 		s16 *currCharacterID = &D230.characterSelectPlayerState.currentCharacterID[playerIndex];
 #if defined(CTR_NATIVE)
 		const s16 desiredCustomPreview = (s16)NativeCustomRacer_GetPlayerSelection(playerIndex);

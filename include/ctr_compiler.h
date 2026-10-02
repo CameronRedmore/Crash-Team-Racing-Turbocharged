@@ -33,6 +33,16 @@
 #define CTR_TRAP() abort()
 #endif
 
+// Tells the optimizer about an invariant it can't prove, e.g. to silence
+// -Warray-bounds false positives. The condition must always hold.
+#if defined(_MSC_VER) && !defined(__clang__)
+#define CTR_ASSUME(cond) __assume(cond)
+#elif defined(__GNUC__) || defined(__clang__)
+#define CTR_ASSUME(cond) do { if (!(cond)) __builtin_unreachable(); } while (0)
+#else
+#define CTR_ASSUME(cond) ((void)0)
+#endif
+
 #if defined(__GNUC__) && !defined(__clang__)
 #define CTR_GCC_OPTIMIZE_O0 __attribute__((optimize("O0")))
 #else
