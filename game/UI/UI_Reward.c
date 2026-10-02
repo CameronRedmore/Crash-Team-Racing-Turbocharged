@@ -282,7 +282,6 @@ void UI_ThTick_big1(struct Thread *bucket)
 {
 	struct UiElement3D *obj = bucket->object;
 	struct Instance *inst = bucket->inst;
-	struct GameTracker *gGT = sdata->gGT;
 
 	s16 scale = obj->scale;
 	CTR_WriteU32LE(&inst->matrix.m[0][0], scale);
@@ -304,6 +303,7 @@ void UI_ThTick_big1(struct Thread *bucket)
 	}
 
 #if defined(__vita__)
+	struct GameTracker *gGT = sdata->gGT;
 	if (NativeAdhoc_IsConnected() && (gGT != NULL) && (gGT->numPlyrCurrGame == 2) && ((gGT->gameMode1 & MAIN_MENU) == 0))
 	{
 		int owner = -1;

@@ -29,11 +29,20 @@
 #else
 #define STB_IMAGE_STATIC
 #define STBI_ONLY_PNG
+#define STBI_NO_GIF
 #define STBI_NO_HDR
 #define STBI_NO_LINEAR
 #define STBI_NO_STDIO
 #define STB_IMAGE_IMPLEMENTATION
+// STB_IMAGE_STATIC leaves the loaders we don't call as unused statics.
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
 #include "../externals/SDL/src/video/stb_image.h"
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 #endif
 
 #ifdef _WIN32
@@ -2639,6 +2648,7 @@ void NativeRenderer_SetTexture(TextureID texture, TexFormat texFormat, int semiT
 		shader = &s_gteShaderVariants[texFormat][variant];
 	}
 #else
+	(void)blendMode;
 	(void)textured;
 	(void)textureFullyOpaque;
 	(void)cachedP4;

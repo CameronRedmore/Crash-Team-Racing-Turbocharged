@@ -2,7 +2,9 @@
 
 #if defined(CTR_NATIVE)
 #include "platform/native_adhoc.h"
+#if defined(__vita__)
 static int s_nativeAdhocRouletteSoundActive;
+#endif
 extern int cfg_language;
 
 static const char *s_nativeReplayControlText[6][2] =

@@ -95,7 +95,7 @@ static struct MenuRow s_nativeLapRows[] =
 	{NATIVE_MENU_STRING_LAP_7, 5, 7, 6, 6},
 	{NATIVE_MENU_STRING_LAP_8, 6, 8, 7, 7},
 	{NATIVE_MENU_STRING_LAP_9, 7, 8, 8, 8},
-	{RECTMENU_STRING_NONE},
+	{.stringIndex = RECTMENU_STRING_NONE},
 };
 
 static b32 s_nativeLapSelectionInitialized;
@@ -132,7 +132,7 @@ static struct MenuRow s_reverseVariantRows[] =
 {
 	{NATIVE_MENU_STRING_TRACK_NORMAL, 1, 1, 0, 0},
 	{NATIVE_MENU_STRING_TRACK_REVERSE, 0, 0, 1, 1},
-	{RECTMENU_STRING_NONE},
+	{.stringIndex = RECTMENU_STRING_NONE},
 };
 
 static struct MenuRow s_tigerTempleVariantRows[] =
@@ -140,7 +140,7 @@ static struct MenuRow s_tigerTempleVariantRows[] =
 	{NATIVE_MENU_STRING_TRACK_NORMAL, 2, 1, 0, 0},
 	{NATIVE_MENU_STRING_TRACK_REVERSE, 0, 2, 1, 1},
 	{NATIVE_MENU_STRING_TRACK_ALTERNATIVE, 1, 0, 2, 2},
-	{RECTMENU_STRING_NONE},
+	{.stringIndex = RECTMENU_STRING_NONE},
 };
 
 static struct RectMenu s_reverseVariantMenu =

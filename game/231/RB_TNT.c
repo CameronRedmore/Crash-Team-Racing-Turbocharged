@@ -5,7 +5,6 @@
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800ad310-0x800ad44c.
 void RB_TNT_ThTick_ThrowOffHead(struct Thread *t)
 {
-	struct GameTracker *gGT = sdata->gGT;
 	struct Instance *inst;
 	struct MineWeapon *mw;
 
@@ -247,15 +246,12 @@ void RB_TNT_ThTick_ThrowOnHead(struct Thread *t)
 	struct MineWeapon *mw;
 	struct Instance *inst;
 	s16 *array;
-	struct GameTracker *gGT;
 
 	SVec3 rot;
 	s16 distHead;
 
 	// temporary rotation matrix
 	MATRIX localMatrix;
-
-	gGT = sdata->gGT;
 
 	inst = t->inst;
 

@@ -637,8 +637,8 @@ static void MM_Characters_NativeDrawPageHints(void)
 		                 0, MM_CHARACTER_SELECT_PAGE_HINT_ARROW_SCALE, 0);
 	}
 
-	char pageText[8];
-	sprintf(pageText, "%d/%d", (int)s_nativeCharacterSelectPage + 1, (int)pageCount);
+	char pageText[24];
+	snprintf(pageText, sizeof(pageText), "%d/%d", (int)s_nativeCharacterSelectPage + 1, (int)pageCount);
 	DecalFont_DrawLine(pageText, pageCountX, pageCountY,
 	                   FONT_SMALL, pageCountJustify | PERIWINKLE);
 }
@@ -1112,7 +1112,7 @@ struct Model *MM_Characters_GetModelByName(const char *name)
 
 	// The LEV model table has numModels entries, without a guaranteed null
 	// terminator. A missing preview must not read past the table.
-	for (s32 modelIndex = 0; modelIndex < level1->numModels; modelIndex++)
+	for (u32 modelIndex = 0; modelIndex < level1->numModels; modelIndex++)
 	{
 		model = models[modelIndex];
 		if (model == NULL)

@@ -9,7 +9,16 @@
 
 #include <stdint.h>
 
+#include <psx/libgte.h>
 #include <platform/native_pgxp.h>
+
+// Matrix loads hand the source MATRIX to PGXP through its own fields so callers
+// don't need s16/s32 pointer casts that break strict aliasing.
+static inline void NativeGte_PgxpLoadMatrix(const void *key, int bank)
+{
+	const MATRIX *m = (const MATRIX *)key;
+	NativePgxp_LoadTransform(key, &m->m[0][0], m->t, bank);
+}
 
 /* Psy-X specific calls */
 
@@ -231,26 +240,6 @@ extern int doCOP2(int op);
 		CTC2(r2 << 4, 23);          \
 	}
 
-// load ctc2 8-11
-#define gte_SetLightMatrix(r0)                      \
-	{                                               \
-		CTC2(CTR_ReadU32LE((char *)(r0)), 8);       \
-		CTC2(CTR_ReadU32LE((char *)(r0) + 4), 9);   \
-		CTC2(CTR_ReadU32LE((char *)(r0) + 8), 10);  \
-		CTC2(CTR_ReadU32LE((char *)(r0) + 12), 11); \
-		CTC2(CTR_ReadU32LE((char *)(r0) + 16), 12); \
-	}
-
-// load ctc2 16-20
-#define gte_SetColorMatrix(r0)                      \
-	{                                               \
-		CTC2(CTR_ReadU32LE((char *)(r0)), 16);      \
-		CTC2(CTR_ReadU32LE((char *)(r0) + 4), 17);  \
-		CTC2(CTR_ReadU32LE((char *)(r0) + 8), 18);  \
-		CTC2(CTR_ReadU32LE((char *)(r0) + 12), 19); \
-		CTC2(CTR_ReadU32LE((char *)(r0) + 16), 20); \
-	}
-
 // load ctc2 0-4
 #define gte_SetRotMatrix(r0)                       \
 	{                                              \
@@ -259,7 +248,7 @@ extern int doCOP2(int op);
 		CTC2(CTR_ReadU32LE((char *)(r0) + 8), 2);  \
 		CTC2(CTR_ReadU32LE((char *)(r0) + 12), 3); \
 		CTC2(CTR_ReadU32LE((char *)(r0) + 16), 4); \
-		NativePgxp_LoadTransform((r0), (const s16 *)(r0), (const s32 *)((const char *)(r0) + 20), 0); \
+		NativeGte_PgxpLoadMatrix((r0), 0); \
 	}
 
 // load ctc2 5-7
@@ -276,7 +265,7 @@ extern int doCOP2(int op);
 		CTC2(CTR_ReadU32LE((char *)(r0) + 20), 5); \
 		CTC2(CTR_ReadU32LE((char *)(r0) + 24), 6); \
 		CTC2(CTR_ReadU32LE((char *)(r0) + 28), 7); \
-		NativePgxp_LoadTransform((r0), (const s16 *)(r0), (const s32 *)((const char *)(r0) + 20), 4); \
+		NativeGte_PgxpLoadMatrix((r0), 4); \
 	}
 
 // ctc2 8-12
@@ -287,7 +276,7 @@ extern int doCOP2(int op);
 		CTC2(CTR_ReadU32LE((char *)(r0) + 8), 10);  \
 		CTC2(CTR_ReadU32LE((char *)(r0) + 12), 11); \
 		CTC2(CTR_ReadU32LE((char *)(r0) + 16), 12); \
-		NativePgxp_LoadTransform((r0), (const s16 *)(r0), (const s32 *)((const char *)(r0) + 20), 1); \
+		NativeGte_PgxpLoadMatrix((r0), 1); \
 	}
 
 // ctc2 16-20

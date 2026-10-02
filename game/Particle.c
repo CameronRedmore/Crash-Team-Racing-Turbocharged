@@ -1354,7 +1354,7 @@ static int Particle_RenderList_SubmitNative(struct PushBuffer *pb, struct Partic
 	{
 		const struct ParticleSpecialPacket *line = packet;
 		const u32 colors[2] = {line->line.color0AndCode, line->line.color1};
-		NativeDraw3DVertex vertices[2] = {{0}, {0}};
+		NativeDraw3DVertex vertices[2] = {0};
 		for (int i = 0; i < 2; i++)
 		{
 			vertices[i].r = (u8)colors[i];

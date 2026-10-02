@@ -186,9 +186,6 @@ static void LevInstDef_FindTurboVisualQuads(struct mesh_info *mesh)
 		const s64 triggerArea = (s64)(triggerSpanX > 0 ? triggerSpanX : 1) * (s64)(triggerSpanZ > 0 ? triggerSpanZ : 1);
 		int bestIndex = -1;
 		int bestScore = -0x7fffffff;
-		int bestTriggerOverlap = 0;
-		int bestCandidateOverlap = 0;
-		int bestYDelta = 0;
 		for (int candidateIndex = 0; candidateIndex < numQuadBlocks; candidateIndex++)
 		{
 			const struct QuadBlock *candidate = &quadBlocks[candidateIndex];
@@ -247,9 +244,6 @@ static void LevInstDef_FindTurboVisualQuads(struct mesh_info *mesh)
 				{
 					bestScore = score;
 					bestIndex = candidateIndex;
-					bestTriggerOverlap = triggerOverlap;
-					bestCandidateOverlap = candidateOverlap;
-					bestYDelta = yDelta;
 				}
 			}
 		}

@@ -11,6 +11,8 @@ static inline int VehPickupItem_ShouldPlayLocalDriverFx(struct Driver *driver)
 	{
 		return NativeAdhoc_ShouldPresentDriver(driver->driverID);
 	}
+#else
+	(void)driver;
 #endif
 	return 1;
 }

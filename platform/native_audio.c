@@ -3674,11 +3674,11 @@ int NativeAudio_RestoreState(const void *src, int srcSize)
 	{
 		return 0;
 	}
-	if ((snapshot->spuAllocCursor < 0) || (snapshot->spuAllocCursor > NATIVE_AUDIO_SPU_MEMSIZE))
+	if ((snapshot->spuAllocCursor < 0) || (snapshot->spuAllocCursor > (int)NATIVE_AUDIO_SPU_MEMSIZE))
 	{
 		return 0;
 	}
-	if ((snapshot->spuTransferOffset < 0) || (snapshot->spuTransferOffset > NATIVE_AUDIO_SPU_MEMSIZE))
+	if ((snapshot->spuTransferOffset < 0) || (snapshot->spuTransferOffset > (int)NATIVE_AUDIO_SPU_MEMSIZE))
 	{
 		return 0;
 	}

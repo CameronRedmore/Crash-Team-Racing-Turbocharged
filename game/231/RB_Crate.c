@@ -89,6 +89,8 @@ static int RB_CrateAny_ShouldPlayBreakSound(struct Driver *driver)
 	{
 		return NativeAdhoc_ShouldPresentDriver(driver->driverID);
 	}
+#else
+	(void)driver;
 #endif
 	return 1;
 }

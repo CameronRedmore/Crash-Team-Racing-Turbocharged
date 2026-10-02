@@ -190,7 +190,7 @@ static void MM_CupSelect_CustomCups_Update(struct RectMenu *menu)
 	struct GameTracker *gGT = sdata->gGT;
 	const struct MMCupSelectCustomCupsText *customText = MM_CupSelect_CustomCups_GetText();
 
-	DecalFont_DrawLine(customText->openEditor, 0x100, 0x4, FONT_SMALL, JUSTIFY_CENTER | ORANGE);
+	DecalFont_DrawLine((char *)customText->openEditor, 0x100, 0x4, FONT_SMALL, JUSTIFY_CENTER | ORANGE);
 
 	if (D230.cupSelectTransition.state != IN_MENU)
 	{
@@ -302,8 +302,8 @@ static void MM_CupSelect_CustomCups_Update(struct RectMenu *menu)
 	    0x50,
 	};
 
-	DecalFont_DrawLine(customText->editCup, 0x100, helpWindow.y + 0x18, FONT_SMALL, JUSTIFY_CENTER | PERIWINKLE);
-	DecalFont_DrawLine(customText->randomize, 0x100, helpWindow.y + 0x30, FONT_SMALL, JUSTIFY_CENTER | PERIWINKLE);
+	DecalFont_DrawLine((char *)customText->editCup, 0x100, helpWindow.y + 0x18, FONT_SMALL, JUSTIFY_CENTER | PERIWINKLE);
+	DecalFont_DrawLine((char *)customText->randomize, 0x100, helpWindow.y + 0x30, FONT_SMALL, JUSTIFY_CENTER | PERIWINKLE);
 
 	RECTMENU_DrawInnerRect(&selectedCupWindow, 1, gGT->backBuffer->otMem.uiOT);
 	RECTMENU_DrawInnerRect(&helpWindow, 1, gGT->backBuffer->otMem.uiOT);

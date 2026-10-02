@@ -1724,7 +1724,7 @@ internal void NativeCustomRacer_ApplyVramPatches(u64 selectedMask, int uploadRet
 	const size_t vramWordCount = (size_t)VRAM_WIDTH * (size_t)VRAM_HEIGHT;
 	u16 *retailVram = (u16 *)calloc(vramWordCount, sizeof(u16));
 	u16 *customVram = (u16 *)calloc(vramWordCount, sizeof(u16));
-	u16 patchRow[VRAM_WIDTH];
+	u32 patchRow[VRAM_WIDTH / 2];
 	if ((retailVram == NULL) || (customVram == NULL) ||
 	    !NativeCustomRacer_ApplyVramFileToBuffer(s_nativeCustomRacerRetailSharedVram,
 	                                             s_nativeCustomRacerRetailSharedVramSize, retailVram) ||
@@ -1768,7 +1768,7 @@ internal void NativeCustomRacer_ApplyVramPatches(u64 selectedMask, int uploadRet
 
 				RECT16 rect = {(s16)startX, (s16)y, (s16)(x - startX), 1};
 				memcpy(patchRow, &customVram[rowOffset + startX], (size_t)rect.w * sizeof(u16));
-				LoadImage(&rect, (u32 *)patchRow);
+				LoadImage(&rect, patchRow);
 			}
 		}
 		free(vrm);

@@ -17,7 +17,7 @@ static struct MenuRow s_onlineGhostRows[] =
 {
     {NATIVE_MENU_STRING_WATCH_GHOST, 1, 1, 0, 0},
     {LNG_TIME_TRIAL_EXIT, 0, 0, 1, 1},
-    {RECTMENU_STRING_NONE},
+    {.stringIndex = RECTMENU_STRING_NONE},
 };
 
 static struct RectMenu s_onlineGhostMenu =

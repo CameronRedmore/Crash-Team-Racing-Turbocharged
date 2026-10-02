@@ -1756,6 +1756,8 @@ internal void AddSplit(bool semiTrans, bool textured, bool framebufferFeedback, 
 	const bool p4SuperTurboTint = p4CacheEligible && superTurboTint;
 	const s16 p4Page = p4CacheEligible ? GetTPageBase(tpage) : -1;
 	const u16 p4Clut = p4CacheEligible ? (u16)clut : 0;
+#else
+	(void)clut;
 #endif
 
 	// FIXME: compare drawing environment too?

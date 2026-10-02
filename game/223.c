@@ -206,7 +206,7 @@ void RR_EndEvent_DrawMenu(void)
 	if (driver->numTimeCrates != gGT->timeCratesInLEV)
 	{
 		// if race ended 59-80 frames ago
-		if ((u32)(sdata->framesSinceRaceEnded - FPS_DOUBLE(RR_MISSED_CRATE_SKIP_BASE)) < FPS_DOUBLE(RR_MISSED_CRATE_SKIP_PERFECT_WINDOW))
+		if ((u32)(sdata->framesSinceRaceEnded - FPS_DOUBLE(RR_MISSED_CRATE_SKIP_BASE)) < (u32)FPS_DOUBLE(RR_MISSED_CRATE_SKIP_PERFECT_WINDOW))
 		{
 			// advance timer to 140 frames, since we can skip the amount of time
 			// that would have been taken to draw "PERFECT" text
@@ -215,7 +215,7 @@ void RR_EndEvent_DrawMenu(void)
 
 		// if race ended 229-250 frames ago, and no relic was won
 		if (((gGT->gameModeEnd & NEW_RELIC) == 0) &&
-		    ((u32)(sdata->framesSinceRaceEnded - FPS_DOUBLE(RR_MISSED_CRATE_SKIP_BASE)) < FPS_DOUBLE(RR_MISSED_CRATE_SKIP_RELIC_WINDOW)))
+		    ((u32)(sdata->framesSinceRaceEnded - FPS_DOUBLE(RR_MISSED_CRATE_SKIP_BASE)) < (u32)FPS_DOUBLE(RR_MISSED_CRATE_SKIP_RELIC_WINDOW)))
 		{
 			// advance timer to 370 frames, since we can skip the amount of time
 			// that would have been taken to draw the animation
@@ -369,7 +369,7 @@ void RR_EndEvent_DrawMenu(void)
 				drawCountdown = 1;
 			}
 
-			else if ((u32)(elapsedFrames - FPS_DOUBLE(RR_COUNTDOWN_START_FRAME)) < FPS_DOUBLE(RR_COUNTDOWN_WINDOW_FRAMES))
+			else if ((u32)(elapsedFrames - FPS_DOUBLE(RR_COUNTDOWN_START_FRAME)) < (u32)FPS_DOUBLE(RR_COUNTDOWN_WINDOW_FRAMES))
 			{
 				// 20 frames after fly-in starts, do the countdown
 				if (elapsedFrames >= FPS_DOUBLE(RR_COUNTDOWN_TICK_START_FRAME))

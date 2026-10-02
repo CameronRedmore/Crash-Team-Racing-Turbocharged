@@ -383,7 +383,9 @@ int CS_Thread_UseOpcode(struct Instance *instance, struct CutsceneObj *cs)
 		}
 	}
 
+#ifndef CTR_NATIVE
 afterCameraAndSkipChecks:
+#endif
 	opcodeChanged = 0;
 	if (elapsedTimeRemaining == 0)
 	{

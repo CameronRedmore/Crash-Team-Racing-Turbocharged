@@ -329,7 +329,6 @@ void RB_Warpball_TurnAround(struct Thread *t)
 	struct TrackerWeapon *tw;
 	struct Instance *inst;
 	TrackerWeaponFlags flags;
-	struct GameTracker *gGT = sdata->gGT;
 	s16 rot;
 
 	tw = t->object;

@@ -2140,11 +2140,6 @@ internal int NativeCheckpoint_ValidateHeaderMode(const struct NativeCheckpointHe
 	return 1;
 }
 
-internal int NativeCheckpoint_ValidateHeader(const struct NativeCheckpointHeader *header, int srcSize)
-{
-	return NativeCheckpoint_ValidateHeaderMode(header, srcSize, true);
-}
-
 internal int NativeCheckpoint_GetSizeMode(b32 includeNativeState)
 {
 	struct NativeCheckpointHeader header;

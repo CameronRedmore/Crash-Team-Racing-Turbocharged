@@ -21,6 +21,11 @@ void Platform_LogError(const char *fmt, ...)
 	(void)fmt;
 }
 
+void Platform_LogWarn(const char *fmt, ...)
+{
+	(void)fmt;
+}
+
 static void close_to(double actual, double expected)
 {
 	assert(fabs(actual - expected) < 0.0001);

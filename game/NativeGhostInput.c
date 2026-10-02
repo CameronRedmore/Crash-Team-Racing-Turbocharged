@@ -470,19 +470,6 @@ void NativeGhostInput_ClearSelection(void)
     gNativeGhostReplayFpsOverride = -1;
 }
 
-static u8 NativeGhostInput_QuantizeRightStickX(u8 value)
-{
-    if (value < 0x80)
-    {
-        return (u8)(((u32)value * 15u + 63u) / 127u);
-    }
-    if (value == 0x80)
-    {
-        return 16;
-    }
-    return (u8)(16u + (((u32)value - 128u) * 15u + 63u) / 127u);
-}
-
 static u8 NativeGhostInput_DequantizeRightStickX(u8 value)
 {
     value &= NATIVE_GHOST_INPUT_STICK_RX_MASK;

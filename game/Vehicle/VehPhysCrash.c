@@ -193,6 +193,9 @@ static int VehPhysCrash_ShouldPlayLocalFeedback(struct Driver *driver, struct Dr
 			driver->driverID,
 			otherDriver != NULL ? otherDriver->driverID : -1);
 	}
+#else
+	(void)driver;
+	(void)otherDriver;
 #endif
 	return 1;
 }

@@ -84,7 +84,7 @@ static struct MenuRow s_nativeExtraDifficultyRows[MM_NATIVE_DIFFICULTY_COUNT + 1
 	{LNG_HARD, 1, 3, 2, 2},
 	{NATIVE_MENU_STRING_SUPER_HARD, 2, 4, 3, 3},
 	{NATIVE_MENU_STRING_ULTRA_HARD, 3, 4, 4, 4},
-	{RECTMENU_STRING_NONE},
+	{.stringIndex = RECTMENU_STRING_NONE},
 };
 
 static struct RectMenu s_nativeExtraDifficultyMenu =
@@ -103,7 +103,7 @@ static struct MenuRow s_nativeLanguageRows[MM_NATIVE_LANGUAGE_COUNT + 1] =
 	{LNG_ITALIAN, 2, 4, 3, 3},
 	{LNG_SPANISH, 3, 5, 4, 4},
 	{LNG_DUTCH, 4, 5, 5, 5},
-	{RECTMENU_STRING_NONE},
+	{.stringIndex = RECTMENU_STRING_NONE},
 };
 
 #if defined(__vita__)
@@ -115,20 +115,20 @@ static struct MenuRow s_nativeAdhocModeRows[] =
 {
 	{LNG_ARCADE, 0, 1, 0, 0},
 	{LNG_VS, 0, 1, 1, 1},
-	{RECTMENU_STRING_NONE},
+	{.stringIndex = RECTMENU_STRING_NONE},
 };
 
 static struct MenuRow s_nativeAdhocRoleRows[] =
 {
 	{LNG_NA_241, 0, 1, 0, 0},
 	{LNG_NA_242, 0, 1, 1, 1},
-	{RECTMENU_STRING_NONE},
+	{.stringIndex = RECTMENU_STRING_NONE},
 };
 
 static struct MenuRow s_nativeAdhocWaitRows[] =
 {
 	{LNG_CANCEL, 0, 0, 0, 0},
-	{RECTMENU_STRING_NONE},
+	{.stringIndex = RECTMENU_STRING_NONE},
 };
 
 static struct RectMenu s_nativeAdhocModeMenu =
@@ -172,7 +172,7 @@ static struct MenuRow s_nativeMainMenuBasic[] =
 	{LNG_OPTIONS, 5, 7, 6, 6},
 	{NATIVE_MENU_STRING_EXIT_GAME, 6, 7, 7, 7},
 #endif
-	{RECTMENU_STRING_NONE},
+	{.stringIndex = RECTMENU_STRING_NONE},
 };
 
 static struct MenuRow s_nativeMainMenuWithScrapbook[] =
@@ -193,7 +193,7 @@ static struct MenuRow s_nativeMainMenuWithScrapbook[] =
 	{LNG_SCRAPBOOK, 6, 8, 7, 7},
 	{NATIVE_MENU_STRING_EXIT_GAME, 7, 8, 8, 8},
 #endif
-	{RECTMENU_STRING_NONE},
+	{.stringIndex = RECTMENU_STRING_NONE},
 };
 
 static struct MenuRow s_nativeTimeTrialRows[] =
@@ -210,7 +210,7 @@ static struct MenuRow s_nativeTimeTrialRows[] =
 	{NATIVE_MENU_STRING_GHOST_REPLAY, 1, 3, 2, 2},
 	{LNG_HIGH_SCORE, 2, 0, 3, 3},
 #endif
-	{RECTMENU_STRING_NONE},
+	{.stringIndex = RECTMENU_STRING_NONE},
 };
 
 static struct MenuRow s_nativeOptionsRows[] =
@@ -246,7 +246,7 @@ static struct MenuRow s_nativeOptionsRows[] =
 	{NATIVE_MENU_STRING_AI_RACERS, 13, 15, 14, 14},
 	{NATIVE_MENU_STRING_MIRROR_MODE, 14, 0, 15, 15},
 #endif
-	{RECTMENU_STRING_NONE},	{RECTMENU_STRING_NONE}, // spare slot, the in-game pause menu appends a row here
+	{.stringIndex = RECTMENU_STRING_NONE},	{.stringIndex = RECTMENU_STRING_NONE}, // spare slot, the in-game pause menu appends a row here
 };
 
 #ifndef __vita__
@@ -278,7 +278,7 @@ static struct MenuRow s_nativeEnhancementsRows[] =
 	{NATIVE_MENU_STRING_HD_PAUSE, 8, 10, 9, 9},
 	{NATIVE_MENU_STRING_PRECISE_MINIMAP, 9, 0, 10, 10},
 #endif
-	{RECTMENU_STRING_NONE},
+	{.stringIndex = RECTMENU_STRING_NONE},
 };
 #endif
 
@@ -295,7 +295,7 @@ static struct MenuRow s_nativeCheatsRows[] =
 	{NATIVE_MENU_STRING_CHEAT_ADV, 7, 9, 8, 8},
 	{NATIVE_MENU_STRING_CHEAT_TURBOCOUNT, 8, 10, 9, 9},
 	{NATIVE_MENU_STRING_CHEAT_CHARACTERS, 9, 10, 10, 10},
-	{RECTMENU_STRING_NONE},
+	{.stringIndex = RECTMENU_STRING_NONE},
 };
 
 static struct MenuRow s_nativeControlsRows[] =
@@ -314,7 +314,7 @@ static struct MenuRow s_nativeControlsRows[] =
 	{NATIVE_MENU_STRING_CONTROL_LEFT, 10, 12, 11, 11},
 	{NATIVE_MENU_STRING_CONTROL_RIGHT, 11, 13, 12, 12},
 	{NATIVE_MENU_STRING_CONTROL_START, 12, 1, 13, 13},
-	{RECTMENU_STRING_NONE},
+	{.stringIndex = RECTMENU_STRING_NONE},
 };
 
 static struct MenuRow s_nativeBossFightRows[] =
@@ -325,7 +325,7 @@ static struct MenuRow s_nativeBossFightRows[] =
 	{LNG_PINSTRIPE, 2, 4, 3, 3},
 	{LNG_N_OXIDE_FULL, 3, 5, 4, 4},
 	{NATIVE_MENU_STRING_OXIDE_FINAL, 4, 5, 5, 5},
-	{RECTMENU_STRING_NONE},
+	{.stringIndex = RECTMENU_STRING_NONE},
 };
 
 static void MM_NativeLanguageBootMenuProc(struct RectMenu *menu);
@@ -899,13 +899,13 @@ static void MM_NativeOptionsConfigureRows(b32 inGame)
 	if (inGame)
 	{
 		rows[baseCount] = (struct MenuRow){NATIVE_MENU_STRING_GAMEPAD, (char)last, 0, (char)baseCount, (char)baseCount};
-		rows[baseCount + 1] = (struct MenuRow){RECTMENU_STRING_NONE};
+		rows[baseCount + 1] = (struct MenuRow){.stringIndex = RECTMENU_STRING_NONE};
 		rows[last].rowOnPressDown = (char)baseCount;
 		rows[0].rowOnPressUp = (char)baseCount;
 	}
 	else
 	{
-		rows[baseCount] = (struct MenuRow){RECTMENU_STRING_NONE};
+		rows[baseCount] = (struct MenuRow){.stringIndex = RECTMENU_STRING_NONE};
 		rows[last].rowOnPressDown = 0;
 		rows[0].rowOnPressUp = (char)last;
 	}
@@ -2104,7 +2104,7 @@ static struct MenuRow s_nativeAdventureRows[] =
 	{NATIVE_MENU_STRING_QUICK_LOAD, 0, 1, 0, 0},
 	{0x8d, 0, 2, 1, 1},
 	{0x8e, 1, 2, 2, 2},
-	{RECTMENU_STRING_NONE},
+	{.stringIndex = RECTMENU_STRING_NONE},
 };
 static b32 s_nativeAdventureHasQuickLoad;
 

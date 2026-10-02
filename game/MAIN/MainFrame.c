@@ -46,6 +46,9 @@ static void MainFrame_DrawClockEffect(struct GameTracker *gGT, struct Driver *dr
 		DISPLAY_Blur_Main(&fullscreenPushBuffer, strength);
 		return;
 	}
+#else
+	(void)gGT;
+	(void)driver;
 #endif
 	DISPLAY_Blur_Main(retailPushBuffer, strength);
 }

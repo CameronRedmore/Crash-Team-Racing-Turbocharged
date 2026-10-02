@@ -48,7 +48,6 @@ void SelectProfile_QueueLoadHub_MenuProc(struct RectMenu *menu)
 void SelectProfile_ThTick(struct Thread *t)
 {
 	struct SelectProfileLoadSaveObj *obj;
-	struct SelectProfileLoadSaveIcon *icon;
 	int i;
 
 	obj = (struct SelectProfileLoadSaveObj *)t->object;
@@ -281,7 +280,6 @@ void SelectProfile_Init(u16 flags)
 {
 	struct GameTracker *gGT;
 	struct SelectProfileLoadSaveObj *obj;
-	struct SelectProfileLoadSaveIcon *icon;
 	struct Thread *t;
 	int i;
 

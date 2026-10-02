@@ -1116,7 +1116,7 @@ static int RenderBucket_NativeAnimationFraction(struct Instance *inst)
 	if (CTR_FRAMES_PER_SECOND > 60 && INSTANCE_Use60FpsAnimation(inst))
 	{
 		struct ModelHeader *header = inst->model->headers;
-		if (header->ptrAnimations && inst->animIndex >= 0 && inst->animIndex < header->numAnimations)
+		if (header->ptrAnimations && inst->animIndex < header->numAnimations)
 		{
 			struct ModelAnim *anim = header->ptrAnimations[inst->animIndex];
 			if (anim && (anim->numFrames & 0x8000) == 0)
@@ -5721,11 +5721,11 @@ static int RenderBucket_BeginNativeModel(struct RenderBucketDrawContext *ctx)
 	    (ctx->idpp->instFlags & PUSHBUFFER_EXISTS) ||
 	    (sdata->boolIsMaskThreadAlive && ctx->inst == sdata->instMaskHints3D);
 	if (!NATIVE_DRAW3D_ACTIVE()) return -1;
-	if (((u32)ctx->idpp->unkEC != RB_RETAIL_DRAWFUNC_NORMAL &&
-	     (u32)ctx->idpp->unkEC != RB_RETAIL_DRAWFUNC_NORMAL_ALT &&
-	     (u32)ctx->idpp->unkEC != RB_RETAIL_DRAWFUNC_SPLIT &&
-	     (u32)ctx->idpp->unkEC != RB_RETAIL_DRAWFUNC_SPECIAL &&
-	     (u32)ctx->idpp->unkEC != RB_RETAIL_DRAWFUNC_REFLECTION))
+	if ((ctx->idpp->unkEC != RB_RETAIL_DRAWFUNC_NORMAL &&
+	     ctx->idpp->unkEC != RB_RETAIL_DRAWFUNC_NORMAL_ALT &&
+	     ctx->idpp->unkEC != RB_RETAIL_DRAWFUNC_SPLIT &&
+	     ctx->idpp->unkEC != RB_RETAIL_DRAWFUNC_SPECIAL &&
+	     ctx->idpp->unkEC != RB_RETAIL_DRAWFUNC_REFLECTION))
 	{
 		NativeDraw3D_ReportDiagnostic(NATIVE_DRAW3D_DIAG_MODEL_HANDLER, "BeginNativeModel", (u32)ctx->idpp->unkEC);
 		return -1;
