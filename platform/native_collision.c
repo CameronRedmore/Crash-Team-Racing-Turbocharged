@@ -126,6 +126,27 @@ double NativeCollision_HitFraction(struct ScratchpadStruct *sps)
 	if (s_collisionSweep.sps==sps && (s32)round(s_collisionSweep.fraction*4096)==sps->hitFraction) return s_collisionSweep.fraction;
 	return sps->hitFraction/4096.0;
 }
+static NativePhysicsVec NC_ClosestOnTriangle(NativePhysicsVec p, NativePhysicsVec a, NativePhysicsVec b, NativePhysicsVec c)
+{
+	NativePhysicsVec ab=NC_Sub(b,a), ac=NC_Sub(c,a), ap=NC_Sub(p,a);
+	double d1=NC_Dot(ab,ap), d2=NC_Dot(ac,ap);
+	if (d1<=0 && d2<=0) return a;
+	NativePhysicsVec bp=NC_Sub(p,b);
+	double d3=NC_Dot(ab,bp), d4=NC_Dot(ac,bp);
+	if (d3>=0 && d4<=d3) return b;
+	double vc=d1*d4-d3*d2;
+	if (vc<=0 && d1>=0 && d3<=0) return NC_Add(a,NC_Scale(ab,d1/(d1-d3)));
+	NativePhysicsVec cp=NC_Sub(p,c);
+	double d5=NC_Dot(ab,cp), d6=NC_Dot(ac,cp);
+	if (d6>=0 && d5<=d6) return c;
+	double vb=d5*d2-d1*d6;
+	if (vb<=0 && d2>=0 && d6<=0) return NC_Add(a,NC_Scale(ac,d2/(d2-d6)));
+	double va=d3*d6-d5*d4;
+	if (va<=0 && (d4-d3)>=0 && (d5-d6)>=0) return NC_Add(b,NC_Scale(NC_Sub(c,b),(d4-d3)/((d4-d3)+(d5-d6))));
+	double denominator=va+vb+vc;
+	if (fabs(denominator)<1e-12) return a;
+	return NC_Add(a,NC_Add(NC_Scale(ab,vb/denominator),NC_Scale(ac,vc/denominator)));
+}
 static NativePhysicsVec NC_Vertex(const SVec3 *v) { return (NativePhysicsVec){v->x,v->y,v->z}; }
 static SVec3 NC_Export(NativePhysicsVec v) { return (SVec3){.x=(s16)round(v.x),.y=(s16)round(v.y),.z=(s16)round(v.z)}; }
 static int NC_OverlapsTriangle(NativePhysicsVec point, double radius,
@@ -192,8 +213,15 @@ void NativeCollision_MovedTriangle(struct ScratchpadStruct *sps, struct BspSearc
 	if (s_collisionSweep.sps==sps) s_collisionSweep.fraction=hit.fraction;
 	sps->hitLevelTriangle.v0=a->pLevelVertex; sps->hitLevelTriangle.v1=b->pLevelVertex; sps->hitLevelTriangle.v2=c->pLevelVertex;
 	sps->hitBspSearchTriangle.v0=a; sps->hitBspSearchTriangle.v1=b; sps->hitBspSearchTriangle.v2=c;
-	sps->hit.hitPos=NC_Export(hit.point);
-	sps->hit.pushOut=sps->hit.hitPos;
+	// Like retail, the exported hit position is the triangle point nearest the
+	// requested end of the sweep, not the contact point. Surface pushback and
+	// rollback normals compare it with the driver's position after movement;
+	// a contact at the start of a long step otherwise reads as penetration
+	// along the direction of travel and adds speed every frame on slopes.
+	NativePhysicsVec av=NC_Vertex(&a->pos), bv=NC_Vertex(&b->pos), cv=NC_Vertex(&c->pos);
+	NativePhysicsVec faceNormal=NC_Normalize(NC_Cross(NC_Sub(bv,av),NC_Sub(cv,av)));
+	sps->hit.hitPos=NC_Export(NC_ClosestOnTriangle(end,av,bv,cv));
+	sps->hit.pushOut=NC_Export(NC_Sub(end,NC_Scale(faceNormal,NC_Dot(NC_Sub(end,av),faceNormal))));
 	sps->hit.normalAxis=a->normalAxis;
 	sps->hit.plane=a->plane;
 	sps->hit.plane.normal=NC_Export(NC_Scale(hit.normal,4096));

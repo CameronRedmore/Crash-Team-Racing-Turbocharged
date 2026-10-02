@@ -505,6 +505,56 @@ static void test_road_seam_normals(void)
 	}
 }
 
+static void test_slope_contact_pushback(void)
+{
+	// A kart resting on an uphill road touches it at the start of each step.
+	// Surface pushback must not read the step itself as penetration; when the
+	// contact point was exported, speed grew by a quarter per 30 FPS frame.
+	struct QuadBlock road={.quadFlags=QUADBLOCK_FLAG_GROUND};
+	NativePhysicsVec n=NC_Normalize((NativePhysicsVec){-734,4024,204});
+	NativePhysicsVec side=NC_Normalize(NC_Cross(n,(NativePhysicsVec){0,0,1})), fwd=NC_Cross(side,n);
+	NativePhysicsVec origin={-13766,17,-1578};
+	struct BspSearchVertex a={0},b={0},c={0};
+	a.pos=NC_Export(NC_Add(origin,NC_Scale(fwd,-2000)));
+	b.pos=NC_Export(NC_Add(origin,NC_Add(NC_Scale(fwd,2000),NC_Scale(side,2000))));
+	c.pos=NC_Export(NC_Add(origin,NC_Add(NC_Scale(fwd,2000),NC_Scale(side,-2000))));
+	NativePhysicsVec av=NC_Vertex(&a.pos),bv=NC_Vertex(&b.pos),cv=NC_Vertex(&c.pos);
+	NativePhysicsVec face=NC_Normalize(NC_Cross(NC_Sub(bv,av),NC_Sub(cv,av)));
+	if (face.y<0) face=NC_Scale(face,-1);
+	a.plane.normal=NC_Export(NC_Scale(face,4096));
+	NativePhysicsVec onPlane=NC_Sub(origin,NC_Scale(face,NC_Dot(NC_Sub(origin,av),face)));
+	for (int option=0;option<NATIVE_FRAME_RATE_COUNT;option++)
+	{
+		gNative60FpsEnabled=option;
+		double elapsed=32.0*30/CTR_FRAMES_PER_SECOND;
+		struct Driver d={.driverID=7};
+		NativePhysicsVec velocity={12812,1609,-3908};
+		NativePhysicsVec start=NC_Add(onPlane,NC_Scale(face,25));
+		struct ScratchpadStruct s={0};
+		s.candidate.ptrQuadblock=&road; s.Input1.hitRadius=25; s.hitFraction=4096;
+		NativeCollision_BeginSweep(&s,start,NC_Scale(velocity,elapsed/32/256));
+		NativeCollision_MovedTriangle(&s,&a,&b,&c);
+		assert(s.boolDidTouchQuadblock==1 && NativeCollision_HitFraction(&s)<1e-9);
+		NativeCollision_EndSweep();
+		// The impact keeps tangential motion, which then completes the step.
+		NativePhysicsVec tangent=NC_Sub(velocity,NC_Scale(face,NC_Dot(velocity,face)));
+		NativePhysicsVec end=NC_Add(start,NC_Scale(tangent,elapsed/32/256));
+		NativePhysics_WritePosition(&d,NC_Scale(NC_Sub(end,NC_Scale(face,25)),256));
+		NativePhysics_WriteVelocity(&d,tangent);
+		d.collisionFlags=DRIVER_COLL_FLAG_SURFACE_PUSHBACK;
+		d.spsHitPos=s.hit.hitPos;
+		d.spsNormalVec=s.hit.plane.normal;
+		d.quadBlockHeight=(s32)(onPlane.y*256);
+		sdata->gGT->timer=0;
+		sdata->gGT->elapsedTimeMS=(s32)elapsed;
+		NativePhysics_SurfacePushback(&d);
+		NativePhysicsVec after=NativePhysics_ReadVelocity(&d);
+		// Only integer hit position rounding may remain, as in retail.
+		assert(sqrt(NC_Dot(NC_Sub(after,tangent),NC_Sub(after,tangent)))<64*elapsed/32*1.0);
+	}
+	gNative60FpsEnabled=0;
+}
+
 int main(void)
 {
 	struct Driver d = {0}, other = {0};
@@ -617,6 +667,7 @@ int main(void)
 	test_pad_contact();
 	test_pad_boost_counter();
 	test_road_seam_normals();
+	test_slope_contact_pushback();
 	test_collision_response();
 	test_surface_forces();
 	test_mud_drag();
