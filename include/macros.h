@@ -107,14 +107,6 @@ extern int gNativeMaxLodEnabled;
 #define CTR_NATIVE_MAX_LOD_ACTIVE 0
 #endif
 
-// Keep clipping and degenerate rejection, but draw either polygon winding.
-#if defined(CTR_NATIVE) && !defined(__vita__)
-extern int gNativeBackfaceCullingDisabled;
-#define CTR_NATIVE_NO_BACKFACE_CULLING_ACTIVE (gNativeBackfaceCullingDisabled != 0)
-#else
-#define CTR_NATIVE_NO_BACKFACE_CULLING_ACTIVE 0
-#endif
-
 // Pause screen backdrop: 0 = retail VRAM copy, 1 = full resolution (posterised), 2 = full resolution (smooth).
 #if defined(CTR_NATIVE) && !defined(__vita__)
 extern int gNativeHdPauseMode;

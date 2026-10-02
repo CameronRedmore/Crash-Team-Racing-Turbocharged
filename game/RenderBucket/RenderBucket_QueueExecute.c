@@ -3029,7 +3029,7 @@ static int RenderBucket_CheckProjectedPrim(struct RenderBucketDrawContext *ctx, 
 		}
 
 		cullXor = (s32)cullFlags ^ (s32)(command << 2);
-		if (!CTR_NATIVE_NO_BACKFACE_CULLING_ACTIVE && (s32)((u32)opZ ^ (u32)cullXor) <= 0)
+		if ((s32)((u32)opZ ^ (u32)cullXor) <= 0)
 		{
 			return 0;
 		}
@@ -3548,7 +3548,7 @@ static int RenderBucket_DrawInstPrim_LitTextureAtRange(struct RenderBucketDrawCo
 		// NOTE(aalhendi): Retail tests raw OT pointer bits here. Native uses the
 		// 24-bit OT/tag address domain so host pointer high bits cannot affect
 		// primitive visibility.
-		if (!CTR_NATIVE_NO_BACKFACE_CULLING_ACTIVE && (s32)(otSide & (u32)signedTest) < 0)
+		if ((s32)(otSide & (u32)signedTest) < 0)
 		{
 			return 0;
 		}
@@ -4160,7 +4160,7 @@ static int RenderBucket_DrawSplitPrimitiveLitTextureAtRange(struct RenderBucketD
 	{
 		u32 otSide = RenderBucket_OTAddress(otEntry) << 3;
 
-		if (!CTR_NATIVE_NO_BACKFACE_CULLING_ACTIVE && (s32)(otSide & (u32)signedTest) < 0)
+		if ((s32)(otSide & (u32)signedTest) < 0)
 		{
 			return 0;
 		}

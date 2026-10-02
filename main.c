@@ -204,7 +204,6 @@ int gNativeAntiAliasingEnabled = 1;
 int gNativeDitheringEnabled = 1;
 int gNativeBorderlessEnabled = 0;
 int gNativeMaxLodEnabled = 1;
-int gNativeBackfaceCullingDisabled = 1;
 int gNativeHdPauseMode = 2;
 #endif
 int cfg_language = 2; // Default: PAL UK language
@@ -343,10 +342,6 @@ void load_config(void)
 			{
 				gNativePgxpIntegerNclipEnabled = (value != 0);
 			}
-			else if (strcmp("disable_backface_culling", buffer) == 0)
-			{
-				gNativeBackfaceCullingDisabled = (value != 0);
-			}
 			else if (strcmp("depth_buffer", buffer) == 0)
 			{
 				gNativeDepthBufferEnabled = (value != 0);
@@ -395,7 +390,6 @@ void save_config(void)
 		fprintf(config, "%s=%d\n", "pgxp", gNativePgxpMode);
 		fprintf(config, "%s=%d\n", "pgxp_integer_nclip", gNativePgxpIntegerNclipEnabled != 0);
 		fprintf(config, "%s=%d\n", "max_lod", gNativeMaxLodEnabled != 0);
-		fprintf(config, "%s=%d\n", "disable_backface_culling", gNativeBackfaceCullingDisabled != 0);
 		fprintf(config, "%s=%d\n", "depth_buffer", gNativeDepthBufferEnabled != 0);
 		fprintf(config, "%s=%d\n", "hd_pause_screen", gNativeHdPauseMode);
 		fprintf(config, "%s=%d\n", "smoothed_physics", gNativeSmoothedPhysicsEnabled != 0);

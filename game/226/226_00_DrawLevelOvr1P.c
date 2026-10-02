@@ -2722,7 +2722,7 @@ static int DrawLevelOvr1P_ShouldEmitClipRecordNclip(s32 nclip, const struct Draw
 		return 0;
 	}
 
-	if (CTR_NATIVE_NO_BACKFACE_CULLING_ACTIVE || header < 0)
+	if (header < 0)
 	{
 		return 1;
 	}
@@ -3601,11 +3601,6 @@ static int DrawLevelOvr1P_ConsumeClipRecords(struct PushBuffer *pb, struct PrimM
 static int DrawLevelOvr1P_SelectDirectBit(s32 nclipResult, u32 tableWord, u32 drawOrderLow, int negateResult, u32 directBit)
 {
 	u32 resultBits;
-
-	if (CTR_NATIVE_NO_BACKFACE_CULLING_ACTIVE && nclipResult != 0)
-	{
-		return directBit;
-	}
 
 	if (nclipResult == 0)
 	{
