@@ -1105,10 +1105,12 @@ static void VehPhysForce_TranslateMatrix_UpdateWake(struct Instance *inst, struc
 			{
 				int i;
 
+				PARTICLE_SPAWN_UNGATED_BEGIN();
 				for (i = VEH_PHYS_FORCE_WAKE_BURST_PARTICLE_COUNT; i > 0; i--)
 				{
 					VehPhysForce_TranslateMatrix_SpawnWakeParticle(d);
 				}
+				PARTICLE_SPAWN_UNGATED_END();
 			}
 		}
 	}

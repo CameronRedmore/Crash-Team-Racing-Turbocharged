@@ -81,6 +81,7 @@ static void RB_Orca_SpawnSplash(struct Instance *orcaInst)
 
 	gGT = sdata->gGT;
 
+	PARTICLE_SPAWN_UNGATED_BEGIN();
 	for (i = 0; i < 0xF; i++)
 	{
 		particle = Particle_Init(0, gGT->iconGroup[1], &emSet_OrcaSplash[0]);
@@ -95,6 +96,7 @@ static void RB_Orca_SpawnSplash(struct Instance *orcaInst)
 		particle->renderDepthLimit = 0x1000;
 		particle->axis[2].startVal += (orcaInst->matrix.t[2] << 8) + (particle->axis[2].velocity << 4);
 	}
+	PARTICLE_SPAWN_UNGATED_END();
 }
 
 void RB_Orca_ThTick(struct Thread *t)

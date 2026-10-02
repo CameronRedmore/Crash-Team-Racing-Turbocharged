@@ -171,28 +171,8 @@ struct Particle *VehEmitter_Exhaust(struct Driver *d, VECTOR *exhaustPos, VECTOR
 	struct GameTracker *gGT = sdata->gGT;
 	struct Instance *dInst = d->instSelf;
 
-#if CTR_NATIVE_60FPS
-	int numPlyr60 = gGT->numPlyrCurrGame;
-	int timer60 = gGT->timer;
-	if (CTR_FRAMES_PER_SECOND > 60)
-	{
-		if (CTR_FRAME_STEP(2, timer60 - 1) == 0) return NULL;
-		timer60 = (int)(((s64)(u32)timer60 * 60) / CTR_FRAMES_PER_SECOND);
-	}
-	if (CTR_NATIVE_60FPS_ACTIVE && d->driverID < numPlyr60)
-	{
-		if ((numPlyr60 == 1 && (timer60 & 1) != 0) ||
-		    (numPlyr60 == 2 && (timer60 & 2) != 0) ||
-		    (numPlyr60 > 2 && (timer60 & 4) != 0))
-		{
-			return NULL;
-		}
-	}
-	else if (CTR_NATIVE_60FPS_ACTIVE && ((timer60 & 4) != 0))
-	{
-		return NULL;
-	}
-#endif
+	// At high frame rates, Particle_Init and the 30 FPS frame index in
+	// VehEmitter_ShouldSkipExhaust keep exhaust at the retail emission rate.
 
 	if (d->invisibleTimer != 0)
 	{
@@ -235,19 +215,7 @@ struct Particle *VehEmitter_Exhaust(struct Driver *d, VECTOR *exhaustPos, VECTOR
 		emSet = &data.emSet_Exhaust_Water[0];
 	}
 
-#if CTR_NATIVE_60FPS
-	if (CTR_NATIVE_60FPS_ACTIVE)
-	{
-		sdata->UnusedPadding1 = 1;
-	}
-#endif
 	struct Particle *p = Particle_Init(0, gGT->iconGroup[exhaustType], emSet);
-#if CTR_NATIVE_60FPS
-	if (CTR_NATIVE_60FPS_ACTIVE)
-	{
-		sdata->UnusedPadding1 = 0;
-	}
-#endif
 
 	if (p == NULL)
 	{
@@ -669,7 +637,14 @@ static void VehEmitter_Skidmarks(struct Thread *thread, struct Driver *d, Terrai
 static void VehEmitter_MudSplash(struct Driver *d)
 {
 	struct GameTracker *gGT = sdata->gGT;
-	int count = ((d->actionsFlagSet & ACTION_STARTED_TOUCH_GROUND) == 0) ? VEH_EMITTER_MUD_SPLASH_NORMAL_COUNT : VEH_EMITTER_MUD_SPLASH_LANDING_COUNT;
+	int landing = (d->actionsFlagSet & ACTION_STARTED_TOUCH_GROUND) != 0;
+	int count = landing ? VEH_EMITTER_MUD_SPLASH_LANDING_COUNT : VEH_EMITTER_MUD_SPLASH_NORMAL_COUNT;
+
+	// the landing splash is a one-shot burst
+	if (landing)
+	{
+		PARTICLE_SPAWN_UNGATED_BEGIN();
+	}
 
 	for (; count != 0; count--)
 	{
@@ -689,6 +664,8 @@ static void VehEmitter_MudSplash(struct Driver *d)
 		p->axis[0].accel -= p->axis[0].velocity >> VEH_EMITTER_MUD_SPLASH_VELOCITY_SHIFT;
 		p->axis[2].accel -= p->axis[2].velocity >> VEH_EMITTER_MUD_SPLASH_VELOCITY_SHIFT;
 	}
+
+	PARTICLE_SPAWN_UNGATED_END();
 }
 
 static void VehEmitter_TerrainEffects(struct Thread *thread, struct Driver *d, struct Terrain *terrain, TerrainFlags terrainFlags, int absSpeedApprox)
@@ -725,7 +702,9 @@ static void VehEmitter_TerrainEffects(struct Thread *thread, struct Driver *d, s
 		if (absJump > VEH_EMITTER_LANDING_SPARK_MIN_JUMP)
 		{
 			VehEmitter_SetRotTransMatrix(m);
+			PARTICLE_SPAWN_UNGATED_BEGIN();
 			VehEmitter_Sparks_Ground(d, &data.emSet_GroundSparks[0]);
+			PARTICLE_SPAWN_UNGATED_END();
 		}
 	}
 
@@ -733,7 +712,7 @@ static void VehEmitter_TerrainEffects(struct Thread *thread, struct Driver *d, s
 	{
 		struct ParticleEmitter *emSet = terrain->em_OddFrame;
 
-		if ((terrain->em_EvenFrame != NULL) && ((gGT->timer & 1) != 0))
+		if ((terrain->em_EvenFrame != NULL) && ((CTR_RETAIL_FRAME_INDEX(gGT->timer) & 1) != 0))
 		{
 			emSet = terrain->em_EvenFrame;
 		}
@@ -916,10 +895,11 @@ static void VehEmitter_SkidmarkAudio(struct Thread *thread, struct Driver *d, st
 static int VehEmitter_ShouldSkipExhaust(struct Thread *thread, struct Driver *d)
 {
 	struct GameTracker *gGT = sdata->gGT;
+	u32 retailFrame = (u32)CTR_RETAIL_FRAME_INDEX(gGT->timer);
 
 	if (thread->modelIndex == DYNAMIC_ROBOT_CAR)
 	{
-		if ((gGT->timer & 3) != (d->driverID & 3))
+		if ((retailFrame & 3) != (d->driverID & 3))
 		{
 			return 1;
 		}
@@ -935,7 +915,7 @@ static int VehEmitter_ShouldSkipExhaust(struct Thread *thread, struct Driver *d)
 
 		if (numPlyr > 1)
 		{
-			if (((numPlyr != 2) || ((gGT->timer & 1) != d->driverID)) && ((gGT->timer & 3) != d->driverID))
+			if (((numPlyr != 2) || ((retailFrame & 1) != d->driverID)) && ((retailFrame & 3) != d->driverID))
 			{
 				return 1;
 			}

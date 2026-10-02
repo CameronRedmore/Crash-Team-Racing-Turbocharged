@@ -92,6 +92,21 @@ enum ParticleSetColorFlags
 	PARTICLE_SET_COLOR_FLAG_DRIVER_LOCAL_IGNORE_Y = 0x8000,
 };
 
+#if defined(CTR_NATIVE)
+// Native-only: set once a particle's velocities and lifespan have been
+// rescaled for the high-framerate mode. Retail never reads or sets 0x0010.
+#define PARTICLE_SET_COLOR_FLAG_NATIVE_FRAME_RATE_SCALED 0x0010
+
+// Native-only: at high frame rates Particle_Init only spawns on the first
+// rendered frame of each 30 FPS frame. Wrap one-shot bursts, and callers that
+// already pace themselves to 30 FPS frames, so they always spawn.
+#define PARTICLE_SPAWN_UNGATED_BEGIN() (sdata->UnusedPadding1 = 1)
+#define PARTICLE_SPAWN_UNGATED_END()   (sdata->UnusedPadding1 = 0)
+#else
+#define PARTICLE_SPAWN_UNGATED_BEGIN() ((void)0)
+#define PARTICLE_SPAWN_UNGATED_END()   ((void)0)
+#endif
+
 enum ParticleEmitterFlags
 {
 	PARTICLE_EMITTER_FLAG_BASE_START = 0x0001,

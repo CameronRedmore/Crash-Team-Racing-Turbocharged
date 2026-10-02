@@ -66,6 +66,7 @@ void RB_Explosion_InitPotion(struct Instance *inst)
 	}
 
 	// particles for potion shatter
+	PARTICLE_SPAWN_UNGATED_BEGIN();
 	for (int i = 0; i < 5; i++)
 	{
 		// Create instance in particle pool
@@ -98,6 +99,7 @@ void RB_Explosion_InitPotion(struct Instance *inst)
 
 		p->funcPtr = Particle_FuncPtr_PotionShatter;
 	}
+	PARTICLE_SPAWN_UNGATED_END();
 
 	RB_Potion_OnShatter_TeethSearch(inst);
 	return;

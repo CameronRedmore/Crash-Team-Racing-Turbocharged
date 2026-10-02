@@ -330,21 +330,17 @@ internal void Platform_HandleKey(int key, char down)
 			g_cfg_bilinearFiltering ^= 1;
 			Platform_LogWarn("[CTR Native] filtering mode: %d\n", g_cfg_bilinearFiltering);
 			break;
-#if NATIVE_PGXP_SUPPORTED
 		case SDL_SCANCODE_END:
-			gNativePgxpIntegerNclipEnabled ^= 1;
-			Platform_LogWarn("[CTR Native] NCLIP: %s\n", gNativePgxpIntegerNclipEnabled ? "integer" : "PGXP precise");
+			gNativeDepthBufferEnabled ^= 1;
+			Platform_LogWarn("[CTR Native] depth buffer: %d\n", gNativeDepthBufferEnabled);
 			break;
+#if NATIVE_PGXP_SUPPORTED
 		case SDL_SCANCODE_INSERT:
 			gNativePgxpMode = (gNativePgxpMode + 1) % NATIVE_PGXP_MODE_COUNT;
 			Platform_LogWarn("[CTR Native] PGXP mode: %d\n", gNativePgxpMode);
 			break;
 #endif
 #ifndef __vita__
-		case SDL_SCANCODE_DELETE:
-			NativePhysics_SetEnabled(!gNativeSmoothedPhysicsEnabled);
-			Platform_LogWarn("[CTR Native] physics: %s\n", gNativeSmoothedPhysicsEnabled ? "smoothed" : "original");
-			break;
 		case SDL_SCANCODE_HOME:
 			gNativeMaxLodEnabled ^= 1;
 			Platform_LogWarn("[CTR Native] max detail: %d\n", gNativeMaxLodEnabled);
@@ -574,6 +570,9 @@ void Platform_EndScene(void)
 	NativeRenderer_StoreFrameBuffer(NativeGpu_GetRenderDispEnv()->disp.x, NativeGpu_GetRenderDispEnv()->disp.y, NativeGpu_GetRenderDispEnv()->disp.w, NativeGpu_GetRenderDispEnv()->disp.h);
 	NativeRenderer_PresentMainRenderTarget();
 	NativeRenderer_DrawGhostReplayOverlay();
+#ifndef __vita__
+	NativeRenderer_DrawDebugOverlayFrame();
+#endif
 	NativeRenderer_EndGpuFrame();
 	NativeRenderer_SwapWindow();
 	NativePerf_EndScope(NATIVE_PERF_BUCKET_PLATFORM_END_SCENE);
@@ -712,6 +711,17 @@ void Platform_PollHostEvents(void)
 				{
 					Platform_HandleFullscreenToggle();
 				}
+				break;
+			}
+
+			if (key == SDL_SCANCODE_F6)
+			{
+#ifndef __vita__
+				if ((down != 0) && (event.key.repeat == 0))
+				{
+					gNativeDebugOverlayEnabled ^= 1;
+				}
+#endif
 				break;
 			}
 

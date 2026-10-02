@@ -252,7 +252,7 @@ void RB_FlameJet_Particles(struct Instance *inst, struct FlameJet *fjObj)
 		particle1->renderDepthLimit = 0x1e00;
 		particle1->otIndexOffset = inst->depthBiasNormal - 1;
 
-		if ((gGT->timer & 1) != 0)
+		if ((CTR_RETAIL_FRAME_INDEX(gGT->timer) & 1) != 0)
 		{
 			particle1->axis[4].startVal = -particle1->axis[4].startVal;
 			particle1->axis[4].velocity = -particle1->axis[4].velocity;

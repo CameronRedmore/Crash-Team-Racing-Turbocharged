@@ -1168,6 +1168,9 @@ struct Particle *Particle_Init(u32 param_1, struct IconGroup *ig, struct Particl
 void Particle_FuncPtr_PotionShatter(struct Particle *p);
 void Particle_FuncPtr_SpitTire(struct Particle *p);
 void Particle_FuncPtr_ExhaustUnderwater(struct Particle *p);
+#if defined(CTR_NATIVE)
+void Particle_RescaleNewParticles(struct Particle *p);
+#endif
 void Vector_SpecLightSpin3D(struct Instance *inst, const SVec3 *rot, const SVec3 *lightDir);
 void Vector_SpecLightNoSpin3D(struct Instance *inst, const SVec3 *rot, const SVec3 *lightDir);
 
