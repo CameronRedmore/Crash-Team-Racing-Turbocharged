@@ -10,7 +10,7 @@ You can play it from Web Browser as well from this link: [Web Browser Build](htt
 
 - True widescreen with no stretching.
 - Internal resolution of the renderer bumped to 960x544.
-- MSAA 4x (PSVita) / FXAA (PC) for anti-aliasing.
+- MSAA 4x (PSVita) / FXAA, MSAA or SSAA (PC) for anti-aliasing.
 - Penta Penguin has its stats set to its PAL/NTSC-J counterpart (6/6/6).
 - Playable Nitrous Oxide (Unlockable via the original Spyro 2 Demo cheatcode). (Credits: [Original mod](https://github.com/CTR-tools/CTR-ModSDK/tree/main/mods/Modules/OxideFix))
 - Reserves Meter (Credits: [Original mod](https://github.com/CTR-tools/CTR-ModSDK/tree/main/mods/Modules/ReservesMeter))
@@ -43,11 +43,15 @@ You can play it from Web Browser as well from this link: [Web Browser Build](htt
 - Selectable 30, 60, 90, 120, 144, and 240 FPS in the Options menu, with scaled game timing, interpolated model animation, and frame-rate-correct menu, UI, and effect animations. Higher rates need sufficient CPU/GPU performance; pacing retains the original NTSC clock (approximately 59.82 FPS for the 60 FPS setting).
 - Additional FPS options and high precision rendering, including sub-pixel vertex precision and perspective-correct textures.
 - High precision physics and collision options, level-of-detail overrides, and optional depth buffering.
-- Adventure Mode character switching and automatic progress saving.
+- Adventure Mode character switching and automatic progress saving, with a CONTINUE option at the top of the Adventure menu that loads your last autosave directly.
+- The in-game pause menu opens the options menu, with settings that are unsafe mid-race locked, plus a Gamepad / Vibration row.
+- [PC/Web] HD Pause (Options > Enhancements): the pause backdrop is captured at full resolution instead of the original 4bpp tile grid. Off, Posterised or Smooth; the default is Smooth.
+- An "all characters" unlock toggle in the cheats menu.
 - [PC Only] PGXP option (Options > Enhancements): sub-pixel vertex precision removes polygon wobble, and the Perspective setting also removes affine texture warping.
 - [PC/Web] Options > Enhancements groups PGXP, detail level, and independent Original/Smoothed settings for player physics, AI, collisions, and steering. Smoothed uses floating-point calculations; Original remains the default for player physics, AI and steering, while collisions default to Smoothed. Delete toggles player physics in development builds.
 - [PC Only] Detail option (Options > Enhancements): Maximum keeps tracks and models at their highest level of detail at every distance (sharpest textures, no low-poly models).
 - [PC/Web] Depth Buffer (Options > Enhancements): optional per-pixel depth testing corrects overlapping world polygons. Works with every PGXP setting; Off retains original polygon ordering; the default is On.
+- [PC/Web] Anti-aliasing option (Options, cycle with left/right): Off, FXAA, MSAA 2x/4x/8x, or SSAA 2x/4x. MSAA smooths polygon edges at low cost; SSAA renders at 2x or 4x the pixel count and box-filters down, which also smooths texture and sub-pixel detail. FXAA remains the default; MSAA sample counts are capped at the GPU's limit.
 
 ## Online leaderboard
 

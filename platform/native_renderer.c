@@ -280,6 +280,16 @@ struct NativeRenderTarget
 	s32 height;
 	s32 logicalWidth;
 	s32 logicalHeight;
+#ifndef __vita__
+	// MSAA: draws go to the multisampled framebuffer, which is resolved into
+	// texture/framebuffer above before anything samples the target.
+	GLuint msaaFramebuffer;
+	GLuint msaaColorBuffer;
+	GLuint msaaDepthStencilBuffer;
+	s32 samples;
+	s32 msaaWidth;
+	s32 msaaHeight;
+#endif
 };
 
 global_variable struct NativeRenderTarget s_mainRenderTarget;
@@ -288,6 +298,19 @@ global_variable struct NativeRenderTarget s_offscreenRenderTarget;
 // Full-resolution greyscale copy of the main target, used as the pause backdrop.
 global_variable struct NativeRenderTarget s_pauseBackgroundTarget;
 global_variable b32 s_pauseBackgroundTargetReady = false;
+
+// SSAA renders the main target above presentation resolution and box-filters
+// it down into this target. Width/height below are the presentation size.
+global_variable struct NativeRenderTarget s_supersampleResolveTarget;
+global_variable b32 s_supersampleResolveTargetReady = false;
+global_variable s32 s_mainResolveWidth;
+global_variable s32 s_mainResolveHeight;
+
+// Latched at BeginScene so a menu change cannot resize the target mid-frame.
+global_variable int s_frameAntiAliasingMode = NATIVE_AA_OFF;
+global_variable GLint s_maxSamples = 0;
+global_variable GLint s_maxRenderTargetSize = 4096;
+global_variable int s_multisampleFailedSamples = 0;
 #endif
 
 global_variable TextureID s_whiteTexture = (TextureID)-1;
@@ -363,7 +386,6 @@ void NativeRenderer_DestroyStreamingTexture(TextureID texture)
 int g_windowWidth = 0;
 int g_windowHeight = 0;
 #ifndef __vita__
-extern int gNativeAntiAliasingEnabled;
 extern int gNativeDitheringEnabled;
 #endif
 
@@ -393,6 +415,9 @@ global_variable GLint s_presentRgbaFlipYLoc = -1;
 #ifndef __vita__
 global_variable GLint s_presentRgbaTexelSizeLoc = -1;
 global_variable GLint s_presentRgbaFxaaLoc = -1;
+global_variable GLuint s_downsampleShader = 0;
+global_variable GLint s_downsampleSrcSizeLoc = -1;
+global_variable GLint s_downsampleDstSizeLoc = -1;
 #endif
 global_variable GLuint s_vramQuadVAO = 0;
 global_variable GLuint s_vramQuadVBO = 0;
@@ -546,6 +571,11 @@ void NativeRenderer_Shutdown(void)
 		NativeRenderer_DestroyRenderTarget(&s_pauseBackgroundTarget);
 		s_pauseBackgroundTargetReady = false;
 	}
+	if (s_supersampleResolveTargetReady)
+	{
+		NativeRenderer_DestroyRenderTarget(&s_supersampleResolveTarget);
+		s_supersampleResolveTargetReady = false;
+	}
 #endif
 	glDeleteFramebuffers(1, &s_glVramFramebuffer);
 
@@ -576,6 +606,7 @@ void NativeRenderer_Shutdown(void)
 	glDeleteProgram(s_packShader);
 #ifndef __vita__
 	glDeleteProgram(s_pauseBackgroundShader);
+	glDeleteProgram(s_downsampleShader);
 #endif
 	glDeleteProgram(s_presentVramShader);
 	glDeleteProgram(s_presentRgbaShader);
@@ -637,6 +668,10 @@ void NativeRenderer_BeginScene(void)
 #endif
 
 	NativePerf_BeginScope(NATIVE_PERF_BUCKET_RENDERER_BEGIN_SCENE);
+#ifndef __vita__
+	s_frameAntiAliasingMode = ((gNativeAntiAliasingMode >= NATIVE_AA_OFF) && (gNativeAntiAliasingMode < NATIVE_AA_MODE_COUNT)) ? gNativeAntiAliasingMode
+	                                                                                                                         : NATIVE_AA_OFF;
+#endif
 #ifdef __vita__
 	if (++s_p4FrameSerial == 0)
 	{
@@ -832,8 +867,111 @@ internal void NativeRenderer_InitRenderTarget(struct NativeRenderTarget *target)
 	target->logicalHeight = 0;
 }
 
+#ifndef __vita__
+internal void NativeRenderer_DestroyMultisampleStorage(struct NativeRenderTarget *target)
+{
+	if (target->msaaFramebuffer != 0)
+	{
+		glDeleteFramebuffers(1, &target->msaaFramebuffer);
+		glDeleteRenderbuffers(1, &target->msaaColorBuffer);
+		glDeleteRenderbuffers(1, &target->msaaDepthStencilBuffer);
+	}
+	target->msaaFramebuffer = 0;
+	target->msaaColorBuffer = 0;
+	target->msaaDepthStencilBuffer = 0;
+	target->samples = 0;
+	target->msaaWidth = 0;
+	target->msaaHeight = 0;
+}
+
+// Allocate (or drop, for samples <= 1) multisampled colour and depth/stencil
+// storage matching the target's current size.
+internal void NativeRenderer_EnsureMultisampleStorage(struct NativeRenderTarget *target, int samples)
+{
+	if ((samples <= 1) || (samples == s_multisampleFailedSamples))
+	{
+		if (target->msaaFramebuffer != 0)
+		{
+			NativeRenderer_DestroyMultisampleStorage(target);
+		}
+		return;
+	}
+
+	if ((target->samples == samples) && (target->msaaWidth == target->width) && (target->msaaHeight == target->height))
+	{
+		return;
+	}
+
+	if (target->msaaFramebuffer == 0)
+	{
+		glGenFramebuffers(1, &target->msaaFramebuffer);
+		glGenRenderbuffers(1, &target->msaaColorBuffer);
+		glGenRenderbuffers(1, &target->msaaDepthStencilBuffer);
+	}
+
+	glBindRenderbuffer(GL_RENDERBUFFER, target->msaaColorBuffer);
+	glRenderbufferStorageMultisample(GL_RENDERBUFFER, samples, GL_RGBA8, target->width, target->height);
+	glBindRenderbuffer(GL_RENDERBUFFER, target->msaaDepthStencilBuffer);
+	glRenderbufferStorageMultisample(GL_RENDERBUFFER, samples, GL_DEPTH24_STENCIL8, target->width, target->height);
+	glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, target->msaaFramebuffer);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, target->msaaColorBuffer);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, target->msaaDepthStencilBuffer);
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+	{
+		NATIVE_RENDERER_ERROR("failed to create %dx MSAA render target, falling back to no MSAA\n", samples);
+		NativeRenderer_DestroyMultisampleStorage(target);
+		s_multisampleFailedSamples = samples;
+		return;
+	}
+
+	target->samples = samples;
+	target->msaaWidth = target->width;
+	target->msaaHeight = target->height;
+}
+
+internal int NativeRenderer_MultisampleCount(int mode)
+{
+	int samples = 0;
+	switch (mode)
+	{
+	case NATIVE_AA_MSAA_2X: samples = 2; break;
+	case NATIVE_AA_MSAA_4X: samples = 4; break;
+	case NATIVE_AA_MSAA_8X: samples = 8; break;
+	default: return 0;
+	}
+	return (samples > s_maxSamples) ? s_maxSamples : samples;
+}
+
+// Per-axis render scale, so SSAA 2X has twice and SSAA 4X four times the pixels.
+internal float NativeRenderer_SupersampleScale(int mode)
+{
+	switch (mode)
+	{
+	case NATIVE_AA_SSAA_2X: return 1.41421356f;
+	case NATIVE_AA_SSAA_4X: return 2.0f;
+	default: return 1.0f;
+	}
+}
+#endif
+
+internal GLuint NativeRenderer_GetDrawFramebuffer(const struct NativeRenderTarget *target)
+{
+#ifndef __vita__
+	if (target->samples > 1)
+	{
+		return target->msaaFramebuffer;
+	}
+#endif
+	return target->framebuffer;
+}
+
 internal void NativeRenderer_DestroyRenderTarget(struct NativeRenderTarget *target)
 {
+#ifndef __vita__
+	NativeRenderer_DestroyMultisampleStorage(target);
+#endif
 	glDeleteFramebuffers(1, &target->framebuffer);
 	glDeleteRenderbuffers(1, &target->stencilBuffer);
 	NativeRenderer_DestroyTexture(target->texture);
@@ -890,10 +1028,33 @@ internal void NativeRenderer_BindMainRenderTarget(void)
 	}
 #endif
 
+#ifndef __vita__
+	s_mainResolveWidth = (physicalWidth < 1) ? 1 : physicalWidth;
+	s_mainResolveHeight = (physicalHeight < 1) ? 1 : physicalHeight;
+	float scale = NativeRenderer_SupersampleScale(s_frameAntiAliasingMode);
+	if (scale > 1.0f)
+	{
+		// Keep the aspect ratio when the GPU's maximum target size limits the scale.
+		const int largestSide = (s_mainResolveWidth > s_mainResolveHeight) ? s_mainResolveWidth : s_mainResolveHeight;
+		if ((float)largestSide * scale > (float)s_maxRenderTargetSize)
+		{
+			scale = (float)s_maxRenderTargetSize / (float)largestSide;
+		}
+		if (scale > 1.0f)
+		{
+			physicalWidth = (int)((float)s_mainResolveWidth * scale + 0.5f);
+			physicalHeight = (int)((float)s_mainResolveHeight * scale + 0.5f);
+		}
+	}
+#endif
+
 	NativeRenderer_EnsureRenderTarget(&s_mainRenderTarget, physicalWidth, physicalHeight);
+#ifndef __vita__
+	NativeRenderer_EnsureMultisampleStorage(&s_mainRenderTarget, NativeRenderer_MultisampleCount(s_frameAntiAliasingMode));
+#endif
 	s_mainRenderTarget.logicalWidth = logicalWidth;
 	s_mainRenderTarget.logicalHeight = logicalHeight;
-	glBindFramebuffer(GL_FRAMEBUFFER, s_mainRenderTarget.framebuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, NativeRenderer_GetDrawFramebuffer(&s_mainRenderTarget));
 }
 
 internal void NativeRenderer_DrawVRAMRegion(int x, int y, int width, int height)
@@ -918,7 +1079,7 @@ internal void NativeRenderer_LoadRenderTargetFromVRAM(struct NativeRenderTarget 
 	const GLboolean previousStencilEnabled = glIsEnabled(GL_STENCIL_TEST);
 
 	NativeRenderer_UpdateVRAM();
-	glBindFramebuffer(GL_FRAMEBUFFER, target->framebuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, NativeRenderer_GetDrawFramebuffer(target));
 	NativeRenderer_SetDepthState(0, 1);
 	glDisable(GL_BLEND);
 	glDisable(GL_SCISSOR_TEST);
@@ -2028,6 +2189,47 @@ global_variable const char *ctr_present_rgba_shader = "#ifdef VERTEX\n"
                                                        "    gl_FragColor = (fxaaEnabled != 0) ? fxaaSample(uv) : texture2D(s_src, uv);\n"
                                                        "}\n"
                                                        "#endif\n";
+
+// SSAA resolve: an area-weighted box filter. Each destination pixel averages
+// the source texels its footprint covers, weighted by overlap, so non-integer
+// scales (SSAA 2X) resolve without the bias of a single bilinear tap.
+global_variable const char *ctr_downsample_shader = "#ifdef VERTEX\n"
+                                                    "attribute vec2 a_position;\n"
+                                                    "varying vec2 v_uv;\n"
+                                                    "void main() {\n"
+                                                    "    v_uv = a_position * 0.5 + 0.5;\n"
+                                                    "    gl_Position = vec4(a_position, 0.0, 1.0);\n"
+                                                    "}\n"
+                                                    "#endif\n"
+                                                    "#ifdef FRAGMENT\n"
+                                                    "varying vec2 v_uv;\n"
+                                                    "uniform sampler2D s_src;\n"
+                                                    "uniform vec2 srcSize;\n"
+                                                    "uniform vec2 dstSize;\n"
+                                                    "void main() {\n"
+                                                    "    vec2 scale = srcSize / dstSize;\n"
+                                                    "    vec2 lo = floor(v_uv * dstSize) * scale;\n"
+                                                    "    vec2 hi = lo + scale;\n"
+                                                    "    highp ivec2 first = ivec2(floor(lo));\n"
+                                                    "    highp ivec2 last = ivec2(srcSize) - 1;\n"
+                                                    "    vec4 sum = vec4(0.0);\n"
+                                                    "    float total = 0.0;\n"
+                                                    "    for (int y = 0; y < 4; y++) {\n"
+                                                    "        float y0 = float(first.y + y);\n"
+                                                    "        float wy = min(hi.y, y0 + 1.0) - max(lo.y, y0);\n"
+                                                    "        if (wy <= 0.0) continue;\n"
+                                                    "        for (int x = 0; x < 4; x++) {\n"
+                                                    "            float x0 = float(first.x + x);\n"
+                                                    "            float wx = min(hi.x, x0 + 1.0) - max(lo.x, x0);\n"
+                                                    "            if (wx <= 0.0) continue;\n"
+                                                    "            highp ivec2 tc = clamp(first + ivec2(x, y), ivec2(0), last);\n"
+                                                    "            sum += texelFetch(s_src, tc, 0) * (wx * wy);\n"
+                                                    "            total += wx * wy;\n"
+                                                    "        }\n"
+                                                    "    }\n"
+                                                    "    gl_FragColor = sum / max(total, 1e-6);\n"
+                                                    "}\n"
+                                                    "#endif\n";
 #endif
 
 internal void NativeRenderer_InitVRAMPipelines(void)
@@ -2048,6 +2250,13 @@ internal void NativeRenderer_InitVRAMPipelines(void)
 	s_pauseBackgroundFlipYLoc = glGetUniformLocation(s_pauseBackgroundShader, "flipY");
 	s_pauseBackgroundPaletteLoc = glGetUniformLocation(s_pauseBackgroundShader, "palette");
 	s_pauseBackgroundSmoothLoc = glGetUniformLocation(s_pauseBackgroundShader, "smoothMode");
+	glUseProgram(0);
+
+	s_downsampleShader = NativeRenderer_Shader_Compile(ctr_downsample_shader, false, NULL);
+	glUseProgram(s_downsampleShader);
+	glUniform1i(glGetUniformLocation(s_downsampleShader, "s_src"), 0);
+	s_downsampleSrcSizeLoc = glGetUniformLocation(s_downsampleShader, "srcSize");
+	s_downsampleDstSizeLoc = glGetUniformLocation(s_downsampleShader, "dstSize");
 	glUseProgram(0);
 #endif
 
@@ -2143,6 +2352,14 @@ int NativeRenderer_InitialisePSX(void)
 	glEnable(GL_STENCIL_TEST);
 #ifndef __vita__
 	glBlendColor(0.5f, 0.5f, 0.5f, 0.25f);
+
+	GLint maxTextureSize = 0;
+	GLint maxRenderbufferSize = 0;
+	glGetIntegerv(GL_MAX_SAMPLES, &s_maxSamples);
+	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTextureSize);
+	glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE, &maxRenderbufferSize);
+	s_maxRenderTargetSize = (maxTextureSize < maxRenderbufferSize) ? maxTextureSize : maxRenderbufferSize;
+	NATIVE_RENDERER_LOG("*Anti-aliasing limits: %d MSAA samples, %d max render target size\n", s_maxSamples, s_maxRenderTargetSize);
 #endif
 
 	// Main and offscreen draws share one explicit render-target contract. The
@@ -3328,37 +3545,42 @@ void NativeRenderer_SetProjection(const RECT16 *drawRect, const DISPENV *display
 	NativeRenderer_Ortho2D(0, displayW, displayH, 0, -1.0f, 1.0f);
 }
 
-// NOTE(aalhendi): Pack an RGBA render texture straight into the RG8 VRAM texture
-// on the GPU, no CPU round trip. Restore or invalidate the render-state caches
-// disturbed by this native bridge before the submit run continues.
-internal void NativeRenderer_GpuPackTextureToVRAM(TextureID sourceTexture, int x, int y, int w, int h, b32 flipY)
+// Render state cached across the PSX submit run. Native full-screen passes
+// (VRAM pack, pause backdrop, SSAA resolve) save it before drawing and restore
+// it afterwards so the submit run continues unaffected.
+struct NativeRendererPassState
 {
-	const ShaderID previousShader = s_previousShader;
-	const TextureID previousTexture = s_lastBoundTexture;
-	const BlendMode previousBlendMode = s_previousBlendMode;
-	const int previousMixedSTPBlend = s_previousMixedSTPBlend;
-	const int previousDepthMode = s_previousDepthMode;
-	const int previousDepthWrite = s_previousDepthWrite;
-	const int previousScissorState = s_previousScissorState;
-	const GLboolean previousStencilEnabled = glIsEnabled(GL_STENCIL_TEST);
+	ShaderID shader;
+	TextureID texture;
+	BlendMode blendMode;
+	int mixedSTPBlend;
+	int depthMode;
+	int depthWrite;
+	int scissorState;
+	GLboolean stencilEnabled;
+};
 
-	NativeRenderer_UpdateVRAM();
+internal void NativeRenderer_BeginUtilityPass(struct NativeRendererPassState *state, GLuint framebuffer, int x, int y, int width, int height)
+{
+	state->shader = s_previousShader;
+	state->texture = s_lastBoundTexture;
+	state->blendMode = s_previousBlendMode;
+	state->mixedSTPBlend = s_previousMixedSTPBlend;
+	state->depthMode = s_previousDepthMode;
+	state->depthWrite = s_previousDepthWrite;
+	state->scissorState = s_previousScissorState;
+	state->stencilEnabled = glIsEnabled(GL_STENCIL_TEST);
 
-	glBindFramebuffer(GL_FRAMEBUFFER, s_glVramFramebuffer);
-
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
 	NativeRenderer_SetDepthState(0, 0);
 	glDisable(GL_BLEND);
 	glDisable(GL_SCISSOR_TEST);
 	glDisable(GL_STENCIL_TEST);
-	glViewport(x, y, w, h);
+	glViewport(x, y, width, height);
+}
 
-	glUseProgram(s_packShader);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, sourceTexture);
-	glUniform1i(s_packFlipYLoc, flipY);
-
-	glBindVertexArray(s_vramQuadVAO);
-	NativeRenderer_DrawTriangles(0, 2);
+internal void NativeRenderer_EndUtilityPass(const struct NativeRendererPassState *state)
+{
 	if (s_boundVertexBuffer >= 0)
 	{
 		glBindVertexArray(s_glVertexArray[s_boundVertexBuffer]);
@@ -3378,31 +3600,114 @@ internal void NativeRenderer_GpuPackTextureToVRAM(TextureID sourceTexture, int x
 		NativeRenderer_BindMainRenderTarget();
 		glViewport(0, 0, s_mainRenderTarget.width, s_mainRenderTarget.height);
 	}
-	if (previousStencilEnabled)
+	if (state->stencilEnabled)
 	{
 		glEnable(GL_STENCIL_TEST);
 	}
 
-	glUseProgram(previousShader == (ShaderID)-1 ? 0 : previousShader);
+	glUseProgram(state->shader == (ShaderID)-1 ? 0 : state->shader);
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, previousTexture == (TextureID)-1 ? 0 : previousTexture);
-	s_previousShader = previousShader;
-	s_lastBoundTexture = previousTexture;
+	glBindTexture(GL_TEXTURE_2D, state->texture == (TextureID)-1 ? 0 : state->texture);
+	s_previousShader = state->shader;
+	s_lastBoundTexture = state->texture;
 	s_previousBlendMode = BM_NONE;
 	s_previousMixedSTPBlend = 0;
 	s_previousScissorState = 0;
-	if (previousMixedSTPBlend)
+	if (state->mixedSTPBlend)
 	{
-		NativeRenderer_SetMixedSTPBlendMode(previousBlendMode);
+		NativeRenderer_SetMixedSTPBlendMode(state->blendMode);
 	}
 	else
 	{
-		NativeRenderer_SetBlendMode(previousBlendMode);
+		NativeRenderer_SetBlendMode(state->blendMode);
 	}
-	NativeRenderer_SetDepthState(previousDepthMode, previousDepthWrite);
-	NativeRenderer_SetScissorState(previousScissorState);
+	NativeRenderer_SetDepthState(state->depthMode, state->depthWrite);
+	NativeRenderer_SetScissorState(state->scissorState);
+}
+
+// NOTE(aalhendi): Pack an RGBA render texture straight into the RG8 VRAM texture
+// on the GPU, no CPU round trip. Restore or invalidate the render-state caches
+// disturbed by this native bridge before the submit run continues.
+internal void NativeRenderer_GpuPackTextureToVRAM(TextureID sourceTexture, int x, int y, int w, int h, b32 flipY)
+{
+	struct NativeRendererPassState state;
+
+	NativeRenderer_UpdateVRAM();
+	NativeRenderer_BeginUtilityPass(&state, s_glVramFramebuffer, x, y, w, h);
+
+	glUseProgram(s_packShader);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, sourceTexture);
+	glUniform1i(s_packFlipYLoc, flipY);
+
+	glBindVertexArray(s_vramQuadVAO);
+	NativeRenderer_DrawTriangles(0, 2);
+
+	NativeRenderer_EndUtilityPass(&state);
 	NativeRenderer_MarkGpuVRAMNewer(x, y, w, h);
 }
+
+#ifndef __vita__
+// Blit the multisampled samples into the target's single-sample texture.
+internal void NativeRenderer_ResolveMultisample(const struct NativeRenderTarget *target)
+{
+	if (target->samples <= 1)
+	{
+		return;
+	}
+
+	GLint previousFramebuffer = 0;
+	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previousFramebuffer);
+	const GLboolean previousScissorEnabled = glIsEnabled(GL_SCISSOR_TEST);
+	glDisable(GL_SCISSOR_TEST);
+
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, target->msaaFramebuffer);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, target->framebuffer);
+	glBlitFramebuffer(0, 0, target->width, target->height, 0, 0, target->width, target->height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+	glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)previousFramebuffer);
+
+	if (previousScissorEnabled)
+	{
+		glEnable(GL_SCISSOR_TEST);
+	}
+}
+
+// Return the main target as a single-sample image at presentation resolution:
+// MSAA samples are resolved and SSAA is box-filtered down. Without either,
+// this is the main target itself.
+internal const struct NativeRenderTarget *NativeRenderer_ResolveMainRenderTarget(void)
+{
+	NativeRenderer_ResolveMultisample(&s_mainRenderTarget);
+
+	if ((s_mainResolveWidth <= 0) || (s_mainResolveHeight <= 0) ||
+	    ((s_mainRenderTarget.width == s_mainResolveWidth) && (s_mainRenderTarget.height == s_mainResolveHeight)))
+	{
+		return &s_mainRenderTarget;
+	}
+
+	if (!s_supersampleResolveTargetReady)
+	{
+		NativeRenderer_InitRenderTarget(&s_supersampleResolveTarget);
+		s_supersampleResolveTargetReady = true;
+	}
+	NativeRenderer_EnsureRenderTarget(&s_supersampleResolveTarget, s_mainResolveWidth, s_mainResolveHeight);
+
+	struct NativeRendererPassState state;
+	NativeRenderer_BeginUtilityPass(&state, s_supersampleResolveTarget.framebuffer, 0, 0, s_supersampleResolveTarget.width,
+	                                s_supersampleResolveTarget.height);
+
+	glUseProgram(s_downsampleShader);
+	glUniform2f(s_downsampleSrcSizeLoc, (float)s_mainRenderTarget.width, (float)s_mainRenderTarget.height);
+	glUniform2f(s_downsampleDstSizeLoc, (float)s_supersampleResolveTarget.width, (float)s_supersampleResolveTarget.height);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, s_mainRenderTarget.texture);
+	glBindVertexArray(s_vramQuadVAO);
+	NativeRenderer_DrawTriangles(0, 2);
+
+	NativeRenderer_EndUtilityPass(&state);
+	return &s_supersampleResolveTarget;
+}
+#endif
 
 // NOTE(aalhendi): PS1 draws into VRAM and can texture from that same VRAM. Native
 // mirrors that by flushing pending CPU VRAM writes, then packing the presented
@@ -3411,6 +3716,11 @@ internal void NativeRenderer_GpuPackTextureToVRAM(TextureID sourceTexture, int x
 void NativeRenderer_StoreFrameBuffer(int x, int y, int w, int h)
 {
 	NativePerf_BeginScope(NATIVE_PERF_BUCKET_FRAMEBUFFER_STORE);
+#ifndef __vita__
+	// The pack samples one texel per VRAM pixel, so an SSAA target is packed
+	// directly; only MSAA needs a resolve before it can be sampled.
+	NativeRenderer_ResolveMultisample(&s_mainRenderTarget);
+#endif
 	NativeRenderer_GpuPackTextureToVRAM(s_mainRenderTarget.texture, x, y, w, h, true);
 
 	NativePerf_EndScope(NATIVE_PERF_BUCKET_FRAMEBUFFER_STORE);
@@ -3427,21 +3737,15 @@ int NativeRenderer_CapturePauseBackground(const u16 *bgr555Palette16, int smooth
 		return 0;
 	}
 
-	const ShaderID previousShader = s_previousShader;
-	const TextureID previousTexture = s_lastBoundTexture;
-	const BlendMode previousBlendMode = s_previousBlendMode;
-	const int previousMixedSTPBlend = s_previousMixedSTPBlend;
-	const int previousDepthMode = s_previousDepthMode;
-	const int previousDepthWrite = s_previousDepthWrite;
-	const int previousScissorState = s_previousScissorState;
-	const GLboolean previousStencilEnabled = glIsEnabled(GL_STENCIL_TEST);
+	// Anti-aliased, presentation-resolution source image.
+	const struct NativeRenderTarget *source = NativeRenderer_ResolveMainRenderTarget();
 
 	if (!s_pauseBackgroundTargetReady)
 	{
 		NativeRenderer_InitRenderTarget(&s_pauseBackgroundTarget);
 		s_pauseBackgroundTargetReady = true;
 	}
-	NativeRenderer_EnsureRenderTarget(&s_pauseBackgroundTarget, s_mainRenderTarget.width, s_mainRenderTarget.height);
+	NativeRenderer_EnsureRenderTarget(&s_pauseBackgroundTarget, source->width, source->height);
 
 	// The backdrop is sampled as a streaming texture, so keep it smooth if the window is resized while paused.
 	glBindTexture(GL_TEXTURE_2D, s_pauseBackgroundTarget.texture);
@@ -3462,16 +3766,12 @@ int NativeRenderer_CapturePauseBackground(const u16 *bgr555Palette16, int smooth
 		palette[i * 3 + 2] = (float)((b5 << 3) | (b5 >> 2)) / 255.0f;
 	}
 
-	glBindFramebuffer(GL_FRAMEBUFFER, s_pauseBackgroundTarget.framebuffer);
-	NativeRenderer_SetDepthState(0, 0);
-	glDisable(GL_BLEND);
-	glDisable(GL_SCISSOR_TEST);
-	glDisable(GL_STENCIL_TEST);
-	glViewport(0, 0, s_pauseBackgroundTarget.width, s_pauseBackgroundTarget.height);
+	struct NativeRendererPassState state;
+	NativeRenderer_BeginUtilityPass(&state, s_pauseBackgroundTarget.framebuffer, 0, 0, s_pauseBackgroundTarget.width, s_pauseBackgroundTarget.height);
 
 	glUseProgram(s_pauseBackgroundShader);
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, s_mainRenderTarget.texture);
+	glBindTexture(GL_TEXTURE_2D, source->texture);
 	// Row 0 of the backdrop is the top of the screen, like a streaming texture.
 	// The main target stores the top of the screen at its last row, so flip,
 	// as StoreFrameBuffer does when packing it into VRAM.
@@ -3481,48 +3781,8 @@ int NativeRenderer_CapturePauseBackground(const u16 *bgr555Palette16, int smooth
 
 	glBindVertexArray(s_vramQuadVAO);
 	NativeRenderer_DrawTriangles(0, 2);
-	if (s_boundVertexBuffer >= 0)
-	{
-		glBindVertexArray(s_glVertexArray[s_boundVertexBuffer]);
-	}
-	else
-	{
-		glBindVertexArray(0);
-	}
 
-	if (s_previousOffscreenState)
-	{
-		glBindFramebuffer(GL_FRAMEBUFFER, s_offscreenRenderTarget.framebuffer);
-		glViewport(0, 0, s_offscreenRenderTarget.width, s_offscreenRenderTarget.height);
-	}
-	else
-	{
-		NativeRenderer_BindMainRenderTarget();
-		glViewport(0, 0, s_mainRenderTarget.width, s_mainRenderTarget.height);
-	}
-	if (previousStencilEnabled)
-	{
-		glEnable(GL_STENCIL_TEST);
-	}
-
-	glUseProgram(previousShader == (ShaderID)-1 ? 0 : previousShader);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, previousTexture == (TextureID)-1 ? 0 : previousTexture);
-	s_previousShader = previousShader;
-	s_lastBoundTexture = previousTexture;
-	s_previousBlendMode = BM_NONE;
-	s_previousMixedSTPBlend = 0;
-	s_previousScissorState = 0;
-	if (previousMixedSTPBlend)
-	{
-		NativeRenderer_SetMixedSTPBlendMode(previousBlendMode);
-	}
-	else
-	{
-		NativeRenderer_SetBlendMode(previousBlendMode);
-	}
-	NativeRenderer_SetDepthState(previousDepthMode, previousDepthWrite);
-	NativeRenderer_SetScissorState(previousScissorState);
+	NativeRenderer_EndUtilityPass(&state);
 	return 1;
 }
 
@@ -3707,6 +3967,12 @@ void NativeRenderer_PresentMainRenderTarget(void)
 		return;
 	}
 
+#ifndef __vita__
+	const struct NativeRenderTarget *source = NativeRenderer_ResolveMainRenderTarget();
+#else
+	const struct NativeRenderTarget *source = &s_mainRenderTarget;
+#endif
+
 	NativeRenderer_SetViewPort(s_presentViewport.x, s_presentViewport.y, s_presentViewport.w, s_presentViewport.h);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -3721,15 +3987,15 @@ void NativeRenderer_PresentMainRenderTarget(void)
 #ifndef __vita__
 	if (s_presentRgbaTexelSizeLoc >= 0)
 	{
-		glUniform2f(s_presentRgbaTexelSizeLoc, 1.0f / (float)s_mainRenderTarget.width, 1.0f / (float)s_mainRenderTarget.height);
+		glUniform2f(s_presentRgbaTexelSizeLoc, 1.0f / (float)source->width, 1.0f / (float)source->height);
 	}
 	if (s_presentRgbaFxaaLoc >= 0)
 	{
-		glUniform1i(s_presentRgbaFxaaLoc, gNativeAntiAliasingEnabled != 0);
+		glUniform1i(s_presentRgbaFxaaLoc, s_frameAntiAliasingMode == NATIVE_AA_FXAA);
 	}
 #endif
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, s_mainRenderTarget.texture);
+	glBindTexture(GL_TEXTURE_2D, source->texture);
 #ifndef __vita__
 	// FXAA uses subpixel samples from the final native-resolution render target.
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);

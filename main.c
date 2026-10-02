@@ -200,7 +200,7 @@ int gNativeDefaultHudSpeedometer = 0;
 int gNativeAIRacersMode = NATIVE_AI_RACERS_EXTENDED;
 u32 gNativeCheatConfigMask = 0;
 #ifndef __vita__
-int gNativeAntiAliasingEnabled = 1;
+int gNativeAntiAliasingMode = NATIVE_AA_FXAA;
 int gNativeDitheringEnabled = 1;
 int gNativeBorderlessEnabled = 0;
 int gNativeMaxLodEnabled = 1;
@@ -308,7 +308,11 @@ void load_config(void)
 #ifndef __vita__
 			else if (strcmp("anti_aliasing", buffer) == 0)
 			{
-				gNativeAntiAliasingEnabled = (value != 0);
+				// Older configs stored 0/1, which map to Off/FXAA.
+				if ((value >= NATIVE_AA_OFF) && (value < NATIVE_AA_MODE_COUNT))
+				{
+					gNativeAntiAliasingMode = value;
+				}
 			}
 			else if (strcmp("dithering", buffer) == 0)
 			{
@@ -384,7 +388,7 @@ void save_config(void)
 		fprintf(config, "%s=%d\n", "default_hud_speedometer", gNativeDefaultHudSpeedometer != 0);
 		fprintf(config, "%s=%d\n", "ai_racers", gNativeAIRacersMode);
 #ifndef __vita__
-		fprintf(config, "%s=%d\n", "anti_aliasing", gNativeAntiAliasingEnabled != 0);
+		fprintf(config, "%s=%d\n", "anti_aliasing", gNativeAntiAliasingMode);
 		fprintf(config, "%s=%d\n", "dithering", gNativeDitheringEnabled != 0);
 		fprintf(config, "%s=%d\n", "borderless", gNativeBorderlessEnabled != 0);
 		fprintf(config, "%s=%d\n", "pgxp", gNativePgxpMode);

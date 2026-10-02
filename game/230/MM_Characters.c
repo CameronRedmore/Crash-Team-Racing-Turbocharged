@@ -1298,6 +1298,8 @@ void MM_Characters_DrawWindows(b32 boolShowDrivers)
 		driverInst->matrix.t[1] = D230.characterSelectDriverModel.pos.y;
 		driverInst->matrix.t[2] = D230.characterSelectDriverModel.pos.z;
 
+		// slide length in rendered frames (retail is 4 frames per half)
+		const s32 moveFrames = FPS_DOUBLE(D230.characterSelectDriverModel.moveFrames);
 		s16 *moveTimer = &D230.characterSelectModelMoveTimer[playerIndex];
 		s16 nextMoveTimer = *moveTimer + -1;
 
@@ -1311,7 +1313,7 @@ void MM_Characters_DrawWindows(b32 boolShowDrivers)
 	#endif
 			)
 			{
-				*moveTimer = D230.characterSelectDriverModel.moveFrames << 1;
+				*moveTimer = moveFrames << 1;
 				D230.characterSelectPlayerState.desiredCharacterID[playerIndex] = data.characterIDs[playerIndex];
 	#if defined(CTR_NATIVE)
 				s_nativeCharacterSelectDesiredCustomPreview[playerIndex] = desiredCustomPreview;
@@ -1329,14 +1331,14 @@ void MM_Characters_DrawWindows(b32 boolShowDrivers)
 			s32 slideOffset;
 
 			// if timer is before midpoint
-			if ((int)nextMoveTimer < (int)D230.characterSelectDriverModel.moveFrames)
+			if ((int)nextMoveTimer < moveFrames)
 			{
 				// make driver fly off screen
 				*currCharacterID = D230.characterSelectPlayerState.desiredCharacterID[playerIndex];
 	#if defined(CTR_NATIVE)
 				s_nativeCharacterSelectCurrentCustomPreview[playerIndex] = s_nativeCharacterSelectDesiredCustomPreview[playerIndex];
 	#endif
-				s32 moveFrameScale = RaceFlag_MoveModels((int)nextMoveTimer, (int)D230.characterSelectDriverModel.moveFrames);
+				s32 moveFrameScale = RaceFlag_MoveModels((int)nextMoveTimer, moveFrames);
 
 				// direction moving
 				slideDirection = -D230.characterSelectPlayerState.modelMoveDir[playerIndex];
@@ -1348,7 +1350,7 @@ void MM_Characters_DrawWindows(b32 boolShowDrivers)
 			{
 				// make new driver fly on screen
 				s32 moveFrameScale =
-				    RaceFlag_MoveModels((int)nextMoveTimer - (int)D230.characterSelectDriverModel.moveFrames, (int)D230.characterSelectDriverModel.moveFrames);
+				    RaceFlag_MoveModels((int)nextMoveTimer - moveFrames, moveFrames);
 
 				// direction moving
 				slideDirection = D230.characterSelectPlayerState.modelMoveDir[playerIndex];

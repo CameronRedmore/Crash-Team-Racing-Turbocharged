@@ -123,7 +123,7 @@ static int VehFrame_InterpAnimFrame(struct Instance *inst, int speed, int desire
 		return inst->animFrame;
 	}
 
-	return VehFrame_InterpAnimFrame(inst, speed, desired);
+	return VehCalc_InterpBySpeed(inst->animFrame, speed, desired);
 }
 
 static u8 VehFrame_MatrixIndex(struct Instance *inst)

@@ -394,8 +394,18 @@ afterCameraAndSkipChecks:
 			int rotInterpStartFrame = opcodeMeta->arg0.i;
 			if (opcodeMeta->arg1.i != rotInterpStartFrame)
 			{
-				int rotInterpNumerator = (((((int)opcodeMeta->rotEnd - rotY) + (u32)ANG_PI) & (ANG_TWO_PI - 1)) - ANG_PI) * (animFrame - rotInterpStartFrame);
+				// Native: use the sub-frame position, otherwise the yaw only changes
+				// once per 30 FPS animation frame and visibly pops at higher frame rates.
+				int rotInterpProgress = animFrame - rotInterpStartFrame;
 				int rotInterpFrameRange = opcodeMeta->arg1.i - rotInterpStartFrame;
+#if defined(CTR_NATIVE)
+				if (CTR_NATIVE_60FPS_ACTIVE)
+				{
+					rotInterpProgress = animFrame32 - (rotInterpStartFrame << CS_FRAME32_SHIFT);
+					rotInterpFrameRange <<= CS_FRAME32_SHIFT;
+				}
+#endif
+				int rotInterpNumerator = (((((int)opcodeMeta->rotEnd - rotY) + (u32)ANG_PI) & (ANG_TWO_PI - 1)) - ANG_PI) * rotInterpProgress;
 				if (rotInterpFrameRange < 0)
 				{
 					rotInterpFrameRange = -rotInterpFrameRange;

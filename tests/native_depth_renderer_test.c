@@ -98,9 +98,13 @@ static void DepthTest_Pixel(int x, int y, int r, int g, int b)
 	u8 pixel[4];
 	// The render target is scaled to the host window. Sample using the same
 	// logical coordinates as the PS1 packets, away from triangle boundaries.
-	x = x * s_mainRenderTarget.width / 320;
-	y = (240 - y) * s_mainRenderTarget.height / 240;
+	// Read the resolved image so MSAA and SSAA targets are checked as presented.
+	const struct NativeRenderTarget *resolved = NativeRenderer_ResolveMainRenderTarget();
+	x = x * resolved->width / 320;
+	y = (240 - y) * resolved->height / 240;
+	glBindFramebuffer(GL_FRAMEBUFFER, resolved->framebuffer);
 	glReadPixels(x, y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+	NativeRenderer_BindMainRenderTarget();
 	if (abs(pixel[0] - r) > 10 || abs(pixel[1] - g) > 10 || abs(pixel[2] - b) > 10)
 	{
 		fprintf(stderr, "Unexpected pixel %d,%d: %u,%u,%u; expected %d,%d,%d\n", x, y, pixel[0], pixel[1], pixel[2], r, g, b);
@@ -109,10 +113,42 @@ static void DepthTest_Pixel(int x, int y, int r, int g, int b)
 	assert(glGetError() == GL_NO_ERROR);
 }
 
+// Count pixels along the slanted left edge of a red triangle that are neither
+// background nor fully covered. Anti-aliasing must produce some; Off none.
+static int DepthTest_PartialEdgePixels(void)
+{
+	DepthTest_Begin(0, NATIVE_PGXP_MODE_OFF);
+	DepthTest_Polygon(0, 0, NULL, 0, 0);
+	DepthTest_Draw(1);
+
+	// The edge crosses logical (90, 120); read a window around it.
+	const struct NativeRenderTarget *resolved = NativeRenderer_ResolveMainRenderTarget();
+	const int x = 70 * resolved->width / 320;
+	const int y = 110 * resolved->height / 240;
+	const int w = 40 * resolved->width / 320;
+	const int h = 20 * resolved->height / 240;
+	u8 *pixels = malloc((size_t)w * h * 4);
+	assert(pixels != NULL);
+	glBindFramebuffer(GL_FRAMEBUFFER, resolved->framebuffer);
+	glReadPixels(x, y, w, h, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+	NativeRenderer_BindMainRenderTarget();
+	assert(glGetError() == GL_NO_ERROR);
+
+	int partial = 0;
+	for (int i = 0; i < w * h; i++)
+	{
+		if (pixels[i * 4] > 16 && pixels[i * 4] < 232)
+		{
+			partial++;
+		}
+	}
+	free(pixels);
+	return partial;
+}
+
 int main(void)
 {
 	if (!SDL_Init(SDL_INIT_VIDEO)) return 77;
-	gNativeAntiAliasingEnabled = 0;
 	gNativeDitheringEnabled = 0;
 	gNativeBorderlessEnabled = 0;
 	if (!NativeRenderer_InitialiseRender("CTR depth test", 320, 240, 0)) return 77;
@@ -120,80 +156,96 @@ int main(void)
 	assert(NativeRenderer_InitialisePSX());
 	const float nearDepth[3] = {200, 200, 200};
 	const float farDepth[3] = {800, 800, 800};
-	for (int mode = 0; mode < NATIVE_PGXP_MODE_COUNT; mode++)
+	// FXAA only applies when presenting to the window, so it is not covered here.
+	const int aaModes[] = {NATIVE_AA_OFF, NATIVE_AA_MSAA_2X, NATIVE_AA_MSAA_4X, NATIVE_AA_MSAA_8X, NATIVE_AA_SSAA_2X, NATIVE_AA_SSAA_4X};
+	for (u32 aa = 0; aa < sizeof(aaModes) / sizeof(aaModes[0]); aa++)
 	{
-		// Inverted painter order: a distant polygon submitted last must not
-		// cover a nearer surface. Disabling the option restores retail order.
-		DepthTest_Begin(1, mode);
-		DepthTest_Polygon(0, 0, nearDepth, 1, 0);
-		DepthTest_Polygon(1, 2, farDepth, 1, 0);
-		DepthTest_Draw(2);
-		DepthTest_Pixel(160, 100, 248, 0, 0);
-		DepthTest_Begin(0, mode);
-		DepthTest_Polygon(0, 0, nearDepth, 1, 0);
-		DepthTest_Polygon(1, 2, farDepth, 1, 0);
-		DepthTest_Draw(2);
-		DepthTest_Pixel(160, 100, 0, 0, 248);
-
-		// Two intersecting triangles need different winners across the same
-		// overlap. A single polygon sorting key cannot satisfy both pixels.
-		const float sloped[3] = {100, 900, 100};
-		const float middle[3] = {350, 350, 350};
-		DepthTest_Begin(1, mode);
-		DepthTest_Polygon(0, 0, sloped, 1, 0);
-		DepthTest_Polygon(1, 2, middle, 1, 0);
-		DepthTest_Draw(2);
-		DepthTest_Pixel(60, 40, 248, 0, 0);
-		DepthTest_Pixel(270, 40, 0, 0, 248);
-
-		// Transparent foreground submitted before opaque background still
-		// blends over it, and does not block a later transparent surface.
-		DepthTest_Begin(1, mode);
-		DepthTest_Polygon(0, 1, nearDepth, 1, 1);
-		DepthTest_Polygon(1, 2, farDepth, 1, 0);
-		DepthTest_Draw(2);
-		DepthTest_Pixel(160, 100, 0, 124, 124);
-
-		// A nearer transparent surface must not write depth and reject the
-		// farther transparent polygon submitted after it in retail OT order.
-		DepthTest_Begin(1, mode);
-		DepthTest_Polygon(0, 0, nearDepth, 1, 1);
-		DepthTest_Polygon(1, 1, middle, 1, 1);
-		DepthTest_Polygon(2, 2, farDepth, 1, 0);
-		DepthTest_Draw(3);
-		DepthTest_Pixel(160, 100, 62, 124, 62);
-
-		const u16 texels[] = {0, 0x03e0, 0x83e0};
-		const int expected[][3] = {{0, 0, 248}, {0, 248, 0}, {0, 124, 124}};
-		for (int texel = 0; texel < 3; texel++)
+		gNativeAntiAliasingMode = aaModes[aa];
+		const int partial = DepthTest_PartialEdgePixels();
+		if ((aaModes[aa] == NATIVE_AA_OFF) != (partial == 0))
 		{
-			DepthTest_Begin(1, mode);
-			DepthTest_Polygon(0, 2, farDepth, 1, 0);
-			DepthTest_TexturedForeground(texels[texel]);
-			DepthTest_Pixel(160, 100, expected[texel][0], expected[texel][1], expected[texel][2]);
+			fprintf(stderr, "AA mode %d: %d partially covered edge pixels\n", aaModes[aa], partial);
+			abort();
 		}
+		if (aaModes[aa] == NATIVE_AA_MSAA_2X || aaModes[aa] == NATIVE_AA_MSAA_4X || aaModes[aa] == NATIVE_AA_MSAA_8X)
+		{
+			assert(s_mainRenderTarget.samples > 1);
+		}
+		for (int mode = 0; mode < NATIVE_PGXP_MODE_COUNT; mode++)
+		{
+			// Inverted painter order: a distant polygon submitted last must not
+			// cover a nearer surface. Disabling the option restores retail order.
+			DepthTest_Begin(1, mode);
+			DepthTest_Polygon(0, 0, nearDepth, 1, 0);
+			DepthTest_Polygon(1, 2, farDepth, 1, 0);
+			DepthTest_Draw(2);
+			DepthTest_Pixel(160, 100, 248, 0, 0);
+			DepthTest_Begin(0, mode);
+			DepthTest_Polygon(0, 0, nearDepth, 1, 0);
+			DepthTest_Polygon(1, 2, farDepth, 1, 0);
+			DepthTest_Draw(2);
+			DepthTest_Pixel(160, 100, 0, 0, 248);
 
-		// A HUD projection can carry PGXP precision without carrying world
-		// depth. It must remain on top, including when it shares draw state.
-		DepthTest_Begin(1, mode);
-		DepthTest_Polygon(0, 0, nearDepth, 1, 0);
-		DepthTest_Polygon(1, 1, farDepth, 0, 0);
-		DepthTest_Draw(2);
-		DepthTest_Pixel(160, 100, 0, 248, 0);
+			// Two intersecting triangles need different winners across the same
+			// overlap. A single polygon sorting key cannot satisfy both pixels.
+			const float sloped[3] = {100, 900, 100};
+			const float middle[3] = {350, 350, 350};
+			DepthTest_Begin(1, mode);
+			DepthTest_Polygon(0, 0, sloped, 1, 0);
+			DepthTest_Polygon(1, 2, middle, 1, 0);
+			DepthTest_Draw(2);
+			DepthTest_Pixel(60, 40, 248, 0, 0);
+			DepthTest_Pixel(270, 40, 0, 0, 248);
 
-		DepthTest_Begin(1, mode);
-		DepthTest_Polygon(0, 0, nearDepth, 1, 0);
-		DepthTest_Polygon(1, 1, farDepth, 1, 0);
-		NativePgxp_CopyXY(&depthTestPolys[1].x2, NULL, (u16)depthTestPolys[1].x2 | ((u32)(u16)depthTestPolys[1].y2 << 16));
-		DepthTest_Draw(2);
-		DepthTest_Pixel(160, 100, 0, 248, 0);
+			// Transparent foreground submitted before opaque background still
+			// blends over it, and does not block a later transparent surface.
+			DepthTest_Begin(1, mode);
+			DepthTest_Polygon(0, 1, nearDepth, 1, 1);
+			DepthTest_Polygon(1, 2, farDepth, 1, 0);
+			DepthTest_Draw(2);
+			DepthTest_Pixel(160, 100, 0, 124, 124);
 
-		// Unknown/partially recovered polygons safely retain painter order.
-		DepthTest_Begin(1, mode);
-		DepthTest_Polygon(0, 0, nearDepth, 1, 0);
-		DepthTest_Polygon(1, 1, NULL, 1, 0);
-		DepthTest_Draw(2);
-		DepthTest_Pixel(160, 100, 0, 248, 0);
+			// A nearer transparent surface must not write depth and reject the
+			// farther transparent polygon submitted after it in retail OT order.
+			DepthTest_Begin(1, mode);
+			DepthTest_Polygon(0, 0, nearDepth, 1, 1);
+			DepthTest_Polygon(1, 1, middle, 1, 1);
+			DepthTest_Polygon(2, 2, farDepth, 1, 0);
+			DepthTest_Draw(3);
+			DepthTest_Pixel(160, 100, 62, 124, 62);
+
+			const u16 texels[] = {0, 0x03e0, 0x83e0};
+			const int expected[][3] = {{0, 0, 248}, {0, 248, 0}, {0, 124, 124}};
+			for (int texel = 0; texel < 3; texel++)
+			{
+				DepthTest_Begin(1, mode);
+				DepthTest_Polygon(0, 2, farDepth, 1, 0);
+				DepthTest_TexturedForeground(texels[texel]);
+				DepthTest_Pixel(160, 100, expected[texel][0], expected[texel][1], expected[texel][2]);
+			}
+
+			// A HUD projection can carry PGXP precision without carrying world
+			// depth. It must remain on top, including when it shares draw state.
+			DepthTest_Begin(1, mode);
+			DepthTest_Polygon(0, 0, nearDepth, 1, 0);
+			DepthTest_Polygon(1, 1, farDepth, 0, 0);
+			DepthTest_Draw(2);
+			DepthTest_Pixel(160, 100, 0, 248, 0);
+
+			DepthTest_Begin(1, mode);
+			DepthTest_Polygon(0, 0, nearDepth, 1, 0);
+			DepthTest_Polygon(1, 1, farDepth, 1, 0);
+			NativePgxp_CopyXY(&depthTestPolys[1].x2, NULL, (u16)depthTestPolys[1].x2 | ((u32)(u16)depthTestPolys[1].y2 << 16));
+			DepthTest_Draw(2);
+			DepthTest_Pixel(160, 100, 0, 248, 0);
+
+			// Unknown/partially recovered polygons safely retain painter order.
+			DepthTest_Begin(1, mode);
+			DepthTest_Polygon(0, 0, nearDepth, 1, 0);
+			DepthTest_Polygon(1, 1, NULL, 1, 0);
+			DepthTest_Draw(2);
+			DepthTest_Pixel(160, 100, 0, 248, 0);
+		}
 	}
 	NativeRenderer_Shutdown();
 	SDL_DestroyWindow(g_window);

@@ -9,7 +9,6 @@ extern int gNativeDefaultHudSpeedometer;
 extern int gNativeAIRacersMode;
 extern u32 gNativeCheatConfigMask;
 #ifndef __vita__
-extern int gNativeAntiAliasingEnabled;
 extern int gNativeDitheringEnabled;
 extern int gNativeBorderlessEnabled;
 #endif
@@ -74,10 +73,15 @@ static char *RECTMENU_GetString(s16 stringIndex)
 		{"AI RACERS: RETAIL", "AI RACERS: EXTENDED", "AI RACERS: EXTENDED+CUSTOM"},
 	};
 #ifndef __vita__
-	static const char *antiAliasing[2] =
+	static const char *antiAliasing[NATIVE_AA_MODE_COUNT] =
 	{
 		"AA: OFF",
 		"AA: FXAA",
+		"AA: MSAA 2X",
+		"AA: MSAA 4X",
+		"AA: MSAA 8X",
+		"AA: SSAA 2X",
+		"AA: SSAA 4X",
 	};
 	static const char *dithering[6][2] =
 	{
@@ -389,7 +393,7 @@ static char *RECTMENU_GetString(s16 stringIndex)
 		return controlHeaderRow;
 #ifndef __vita__
 	case NATIVE_MENU_STRING_ANTI_ALIASING:
-		return (char *)antiAliasing[gNativeAntiAliasingEnabled != 0];
+		return (char *)antiAliasing[gNativeAntiAliasingMode];
 	case NATIVE_MENU_STRING_DITHERING:
 		return (char *)dithering[languageRow][gNativeDitheringEnabled != 0];
 	case NATIVE_MENU_STRING_BORDERLESS:

@@ -424,7 +424,6 @@ extern int gNativeDefaultHudSpeedometer;
 extern int gNativeAIRacersMode;
 extern u32 gNativeCheatConfigMask;
 #ifndef __vita__
-extern int gNativeAntiAliasingEnabled;
 extern int gNativeDitheringEnabled;
 extern int gNativeBorderlessEnabled;
 #endif
@@ -840,11 +839,6 @@ static b32 MM_NativeOptionsRowLockedInRace(s16 stringIndex)
 	case LNG_LANGUAGE:
 	case NATIVE_MENU_STRING_MIRROR_MODE:
 	case NATIVE_MENU_STRING_AI_RACERS:
-	case NATIVE_MENU_STRING_MAX_LOD:
-	case NATIVE_MENU_STRING_PHYSICS:
-	case NATIVE_MENU_STRING_AI_PHYSICS:
-	case NATIVE_MENU_STRING_COLLISION_PHYSICS:
-	case NATIVE_MENU_STRING_STEERING_PHYSICS:
 		return true;
 	default:
 		return false;
@@ -898,9 +892,6 @@ static void MM_NativeOptionsConfigureRows(b32 inGame)
 	}
 
 	MM_NativeOptionsApplyLocks(s_nativeOptionsRows, inGame);
-#ifndef __vita__
-	MM_NativeOptionsApplyLocks(s_nativeEnhancementsRows, inGame);
-#endif
 }
 
 // Opens the full options menu from the in-game pause menu.
@@ -1109,7 +1100,19 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 
 	if (choose == NATIVE_MENU_STRING_ANTI_ALIASING)
 	{
-		gNativeAntiAliasingEnabled ^= 1;
+		if (button & BTN_LEFT)
+		{
+			gNativeAntiAliasingMode = (gNativeAntiAliasingMode + NATIVE_AA_MODE_COUNT - 1) % NATIVE_AA_MODE_COUNT;
+			OtherFX_Play(0, 1);
+		}
+		else
+		{
+			gNativeAntiAliasingMode = (gNativeAntiAliasingMode + 1) % NATIVE_AA_MODE_COUNT;
+			if (button & BTN_RIGHT)
+			{
+				OtherFX_Play(0, 1);
+			}
+		}
 		save_config();
 		return;
 	}

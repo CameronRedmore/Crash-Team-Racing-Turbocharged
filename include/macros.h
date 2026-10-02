@@ -114,6 +114,23 @@ extern int gNativeHdPauseMode;
 #else
 #define CTR_NATIVE_HD_PAUSE_MODE 0
 #endif
+
+// Anti-aliasing option. FXAA filters at presentation; MSAA and SSAA change the
+// main render target and are resolved to presentation resolution.
+#if defined(CTR_NATIVE) && !defined(__vita__)
+enum NativeAntiAliasingMode
+{
+	NATIVE_AA_OFF,
+	NATIVE_AA_FXAA,
+	NATIVE_AA_MSAA_2X,
+	NATIVE_AA_MSAA_4X,
+	NATIVE_AA_MSAA_8X,
+	NATIVE_AA_SSAA_2X,
+	NATIVE_AA_SSAA_4X,
+	NATIVE_AA_MODE_COUNT,
+};
+extern int gNativeAntiAliasingMode;
+#endif
 #define CTR_SECONDS_TO_FRAMES(sec) ((s32)((sec) * FPS))
 
 #define SECONDS(x)                 ((s32)(((f32)(x)) * SECOND))
