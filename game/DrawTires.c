@@ -494,7 +494,7 @@ static void DrawTiresSolid_LinkPrimitive(struct DrawTiresScratch *scratch, POLY_
 		selectedOTSlot = otRangeEnd;
 	}
 
-	uint32_t *otSlot = (uint32_t *)(uintptr_t)selectedOTSlot;
+	uint32_t *otSlot = P32_DEC(uint32_t *, selectedOTSlot);
 	p->tag = CtrGpu_PackOTTag(*otSlot, 0x09000000);
 	*otSlot = (uint32_t)CtrGpu_PrimToOTLink24(p);
 }
@@ -567,7 +567,7 @@ static int DrawTires_SubmitNativeWheel(struct DrawTiresScratch *scratch, struct 
 	if (selectedOTSlot < scratch->otRangeStart) selectedOTSlot = scratch->otRangeStart;
 	if (selectedOTSlot > scratch->otRangeEnd) selectedOTSlot = scratch->otRangeEnd;
 	NativeDraw3D_SetMarker(marker, layer);
-	AddPrim((uint32_t *)(uintptr_t)selectedOTSlot, marker);
+	AddPrim(P32_DEC(uint32_t *, selectedOTSlot), marker);
 	P32_SET(primMem->cursor, marker + 1);
 	return 1;
 }
@@ -1194,7 +1194,7 @@ static void DrawTiresReflection_LinkPrimitive(struct DrawTiresScratch *scratch, 
 		selectedOTSlot = otRangeEnd;
 	}
 
-	uint32_t *otSlot = (uint32_t *)(uintptr_t)selectedOTSlot;
+	uint32_t *otSlot = P32_DEC(uint32_t *, selectedOTSlot);
 	p->tag = CtrGpu_PackOTTag(*otSlot, 0x09000000);
 	*otSlot = (uint32_t)CtrGpu_PrimToOTLink24(p);
 }

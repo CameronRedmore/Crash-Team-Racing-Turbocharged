@@ -493,7 +493,8 @@ static int DrawLevelOvr1P_IsNativeLevelTexturePointer(u32 value)
 #ifdef CTR_NATIVE
 	// NOTE(aalhendi): Native classifies host-rebased level texture pointers at
 	// the data boundary; renderer control flow still follows retail sign tests.
-	uintptr_t ptr = (uintptr_t)value;
+	// Level pointer words are retail pointer slots (handles on 64-bit builds).
+	uintptr_t ptr = (uintptr_t)P32_DEC(void *, value);
 
 	if (!DrawLevelOvr1P_IsNativeLevelSpan(ptr, sizeof(struct TextureLayout)))
 	{
@@ -534,7 +535,7 @@ static int DrawLevelOvr1P_TryConvertNativeMempackPointerToPsxWord(u32 hostWord, 
 {
 	const u32 psxRamBase = 0x80000000u;
 	const uintptr_t psxRamSize = 0x200000u;
-	uintptr_t hostPtr = (uintptr_t)hostWord;
+	uintptr_t hostPtr = (uintptr_t)P32_DEC(void *, hostWord);
 	const struct Mempack *pack = DrawLevelOvr1P_FindMempackContaining(hostPtr);
 	if (pack == NULL || P32_GET(void *const, pack->endOfMemory) == NULL)
 	{
@@ -572,12 +573,12 @@ static struct TextureLayout *DrawLevelOvr1P_ResolveTexturePointerChecked(uintptr
 	{
 		uintptr_t activePtrSlot = texturePtr - 1;
 
-		if (!DrawLevelOvr1P_IsNativeLevelSpan(activePtrSlot, sizeof(texture)))
+		if (!DrawLevelOvr1P_IsNativeLevelSpan(activePtrSlot, sizeof(u32)))
 		{
 			return NULL;
 		}
 
-		texture = *(struct TextureLayout **)activePtrSlot;
+		texture = P32_DEC(struct TextureLayout *, *(const u32 *)activePtrSlot);
 	}
 	else
 	{
@@ -631,7 +632,7 @@ static struct TextureLayout *DrawLevelOvr1P_ResolveProjectedMidTexture(const str
 
 	// NOTE(aalhendi): Retail selector bodies load raw `quad+0x1c+slot`.
 	// Native validates the host-rebased word before following it.
-	return DrawLevelOvr1P_ResolveTexturePointerChecked((uintptr_t)*(void *const *)((const u8 *)block + 0x1c + slotWord));
+	return DrawLevelOvr1P_ResolveTexturePointerChecked((uintptr_t)P32_DEC(void *, *(const u32 *)((const u8 *)block + 0x1c + slotWord)));
 }
 
 static struct TextureLayout *DrawLevelOvr1P_GetProjectedMidTexture(const struct QuadBlock *block, const struct DrawLevelOvr1PScratchVertex *projected,
@@ -904,7 +905,7 @@ static void DrawLevelOvr1P_PrepareDeepestMosaicUv(const struct DrawLevelOvr1PScr
 	}
 	sourceOffset += *CTR_SCRATCHPAD_PTR(u32, DRAW_LEVEL_OVR1P_MOSAIC_SOURCE_BIAS_OFFSET);
 
-	const u8 *source = (const u8 *)(uintptr_t)(mosaicBase + sourceOffset);
+	const u8 *source = P32_DEC(const u8 *, mosaicBase + sourceOffset);
 	u32 uv0 = DrawLevelOvr1P_ReadPackedWord(source + 0);
 	u32 uv1 = DrawLevelOvr1P_ReadPackedWord(source + 4);
 
@@ -969,12 +970,12 @@ static s32 DrawLevelOvr1P_GetDepthClipThreshold(void)
 
 static u8 *DrawLevelOvr1P_GetClipRecordCursor(void)
 {
-	return (u8 *)(uintptr_t)DrawLevelOvr1P_Scratch()->clipCursorPtr32;
+	return P32_DEC(u8 *, DrawLevelOvr1P_Scratch()->clipCursorPtr32);
 }
 
 static void DrawLevelOvr1P_SetClipRecordCursor(u8 *cursor)
 {
-	DrawLevelOvr1P_Scratch()->clipCursorPtr32 = (u32)(uintptr_t)cursor;
+	DrawLevelOvr1P_Scratch()->clipCursorPtr32 = P32_ENC(cursor);
 }
 
 static u8 *DrawLevelOvr1P_GetClipRecordStart(void)
@@ -1191,9 +1192,9 @@ static void Ovr226_800a0f78_ProjectFullDynamicLowQuad(struct LevVertex *vertices
 
 static void Ovr226_800a0d20_SeedEntryScratchPointers(struct DrawLevelOvr1PRenderList *renderList, struct PushBuffer *pb)
 {
-	DrawLevelOvr1P_Scratch()->clipCursorPtr32 = (u32)(uintptr_t)P32_GET(void *, data.PtrClipBuffer[0]);
-	DrawLevelOvr1P_Scratch()->pushBufferPtr32[0] = (u32)(uintptr_t)pb;
-	DrawLevelOvr1P_Scratch()->renderListPtr32 = (u32)(uintptr_t)renderList;
+	DrawLevelOvr1P_Scratch()->clipCursorPtr32 = P32_ENC(P32_GET(void *, data.PtrClipBuffer[0]));
+	DrawLevelOvr1P_Scratch()->pushBufferPtr32[0] = P32_ENC(pb);
+	DrawLevelOvr1P_Scratch()->renderListPtr32 = P32_ENC(renderList);
 }
 
 static void Ovr226_800a0dc4_ClearProjectedScratch(void)
@@ -2622,7 +2623,7 @@ static int DrawLevelOvr1P_WriteRenderedClippedRecordAtOt(struct PushBuffer *pb, 
 
 	record = (struct DrawLevelOvr1PClipRecord *)cursor;
 	record->header = DrawLevelOvr1P_GetRenderedClipRecordHeader(block, count);
-	record->otEntry = (u32)(uintptr_t)&P32_GET(uint32_t *, pb->ptrOT)[otIndex];
+	record->otEntry = P32_ENC(&P32_GET(uint32_t *, pb->ptrOT)[otIndex]);
 	// NOTE(aalhendi): Retail terminal near writers 0x800a89dc/0x800aa5fc
 	// store the freshly selected scratch UV metadata, not the caller texture.
 	record->tpage = DrawLevelOvr1P_GetNativeDecoratedTpage(block, DrawLevelOvr1P_Scratch()->uv.tpage);
@@ -2664,7 +2665,7 @@ static int DrawLevelOvr1P_WriteWaterRenderedClippedRecordAtOt(struct PushBuffer 
 	// NOTE(aalhendi): Retail water direct helpers 0x800a34d4/0x800a3578 set
 	// bit 31 on clipped-record headers so the consumer keeps the NCLIP result.
 	record->header = count == 4 ? 0x80000001u : 0x80000000u;
-	record->otEntry = (u32)(uintptr_t)&P32_GET(uint32_t *, pb->ptrOT)[otIndex];
+	record->otEntry = P32_ENC(&P32_GET(uint32_t *, pb->ptrOT)[otIndex]);
 	record->tpage = DrawLevelOvr1P_Scratch()->uv.tpage;
 	record->clut = DrawLevelOvr1P_Scratch()->uv.clut;
 
@@ -2700,7 +2701,7 @@ static int Ovr226_800a34d4_WriteWaterRenderedClippedRecordAtOtEntry(struct PushB
 	// NOTE(aalhendi): Retail water-rendered clipped-record writers
 	// 0x800a34d4/0x800a3578 store the inherited GP/OT pointer directly.
 	record->header = count == 4 ? 0x80000001u : 0x80000000u;
-	record->otEntry = (u32)(uintptr_t)otEntry;
+	record->otEntry = P32_ENC(otEntry);
 	record->tpage = DrawLevelOvr1P_Scratch()->uv.tpage;
 	record->clut = DrawLevelOvr1P_Scratch()->uv.clut;
 
@@ -3431,7 +3432,7 @@ static int DrawLevelOvr1P_EmitClipRecordGT4Table(struct PushBuffer *pb, struct P
 static int Ovr226_800aaed4_ProjectFourthClipRecordAndDispatchGT4(struct PushBuffer *pb, struct PrimMem *primMem, struct DrawLevelOvr1PScratchVertex *projected,
                                                                  const struct DrawLevelOvr1PClipRecord *record)
 {
-	uint32_t *otEntry = (uint32_t *)(uintptr_t)record->otEntry;
+	uint32_t *otEntry = P32_DEC(uint32_t *, record->otEntry);
 
 	Ovr226_800aa858_ProjectClipRecordRawVertex(&projected[3], &record->vertex[3]);
 	DrawLevelOvr1P_PrepareClipRecordDepthScratchRange(projected, 4);
@@ -3476,7 +3477,7 @@ static int Ovr226_800aa848_ProjectFirstThreeClipRecordsAndDispatch(struct PushBu
 	DrawLevelOvr1P_PrepareClipRecordDepthScratchRange(projected, 3);
 	// NOTE(aalhendi): Retail 0x800aa934..0x800aa968 dispatches through scratch
 	// 0x240; native keeps the handler bodies as C cases keyed by copied addresses.
-	return DrawLevelOvr1P_EmitClipRecordGT3Table(pb, primMem, (uint32_t *)(uintptr_t)record->otEntry, projected, record);
+	return DrawLevelOvr1P_EmitClipRecordGT3Table(pb, primMem, P32_DEC(uint32_t *, record->otEntry), projected, record);
 }
 
 static int Ovr226_800aa790_TerminalPreamble(struct PushBuffer *pb, const u8 *cursor, const u8 *end)
@@ -4848,7 +4849,7 @@ static void Ovr226_800a3f74_PrepareGround4x1DeepestUv(const struct DrawLevelOvr1
 	}
 	sourceOffset += *CTR_SCRATCHPAD_PTR(u32, DRAW_LEVEL_OVR1P_MOSAIC_SOURCE_BIAS_OFFSET);
 
-	const u8 *source = (const u8 *)(uintptr_t)(mosaicBase + sourceOffset);
+	const u8 *source = P32_DEC(const u8 *, mosaicBase + sourceOffset);
 	u32 uv0 = DrawLevelOvr1P_ReadPackedWord(source + 0);
 	u32 uv1 = DrawLevelOvr1P_ReadPackedWord(source + 4);
 
@@ -5050,7 +5051,7 @@ static int Ovr226_800a4dcc_WriteGround4x1RenderedClippedRecordAtOtEntry(struct P
 
 	struct DrawLevelOvr1PClipRecord *record = (struct DrawLevelOvr1PClipRecord *)cursor;
 	record->header = DrawLevelOvr1P_GetRenderedClipRecordHeader(block, count);
-	record->otEntry = (u32)(uintptr_t)otEntry;
+	record->otEntry = P32_ENC(otEntry);
 	record->tpage = DrawLevelOvr1P_GetNativeDecoratedTpage(block, DrawLevelOvr1P_Scratch()->uv.tpage);
 	record->clut = DrawLevelOvr1P_Scratch()->uv.clut;
 
@@ -5182,7 +5183,7 @@ static void Ovr226_800a4b54_PrepareGround4x1RenderedDeepestUv(const struct DrawL
 	}
 	sourceOffset += *CTR_SCRATCHPAD_PTR(u32, DRAW_LEVEL_OVR1P_MOSAIC_SOURCE_BIAS_OFFSET);
 
-	const u8 *source = (const u8 *)(uintptr_t)(mosaicBase + sourceOffset);
+	const u8 *source = P32_DEC(const u8 *, mosaicBase + sourceOffset);
 	u32 uv0 = DrawLevelOvr1P_ReadPackedWord(source + 0);
 	u32 uv1 = DrawLevelOvr1P_ReadPackedWord(source + 4);
 
@@ -6381,7 +6382,7 @@ static int Ovr226_800a6d6c_WriteGround4x2RenderedClippedRecordAtOtEntry(struct P
 
 	struct DrawLevelOvr1PClipRecord *record = (struct DrawLevelOvr1PClipRecord *)cursor;
 	record->header = DrawLevelOvr1P_GetRenderedClipRecordHeader(block, count);
-	record->otEntry = (u32)(uintptr_t)otEntry;
+	record->otEntry = P32_ENC(otEntry);
 	record->tpage = DrawLevelOvr1P_GetNativeDecoratedTpage(block, DrawLevelOvr1P_Scratch()->uv.tpage);
 	record->clut = DrawLevelOvr1P_Scratch()->uv.clut;
 
@@ -6848,7 +6849,7 @@ static int Ovr226_800a898c_WriteDynamicRenderedClippedRecordAtOtEntry(struct Pus
 
 	record = (struct DrawLevelOvr1PClipRecord *)cursor;
 	record->header = DrawLevelOvr1P_GetRenderedClipRecordHeader(block, count);
-	record->otEntry = (u32)(uintptr_t)otEntry;
+	record->otEntry = P32_ENC(otEntry);
 	record->tpage = DrawLevelOvr1P_GetNativeDecoratedTpage(block, DrawLevelOvr1P_Scratch()->uv.tpage);
 	record->clut = DrawLevelOvr1P_Scratch()->uv.clut;
 
@@ -7281,7 +7282,7 @@ static int Ovr226_800aa5ac_WriteQuad4x4RenderedClippedRecordAtOtEntry(struct Pus
 
 	struct DrawLevelOvr1PClipRecord *record = (struct DrawLevelOvr1PClipRecord *)cursor;
 	record->header = DrawLevelOvr1P_GetRenderedClipRecordHeader(block, count);
-	record->otEntry = (u32)(uintptr_t)otEntry;
+	record->otEntry = P32_ENC(otEntry);
 	record->tpage = DrawLevelOvr1P_GetNativeDecoratedTpage(block, DrawLevelOvr1P_Scratch()->uv.tpage);
 	record->clut = DrawLevelOvr1P_Scratch()->uv.clut;
 
@@ -7672,7 +7673,7 @@ static void DrawLevelOvr1P_SetViewportScratchContext(struct PushBuffer *pb, cons
 {
 	DrawLevelOvr1P_SetRenderedListCursor(renderedOverflowBase);
 	DrawLevelOvr1P_SetClipRecordCursor(clipCursor);
-	DrawLevelOvr1P_Scratch()->visFaceListPtr32 = (u32)(uintptr_t)visFaceList;
+	DrawLevelOvr1P_Scratch()->visFaceListPtr32 = P32_ENC(visFaceList);
 	DrawLevelOvr1P_SetClipRecordStart(clipStart);
 	DrawLevelOvr1P_SetRenderedOverflowBase(renderedOverflowBase);
 	Ovr226_800a0d34_SetEntryGteAndCameraScratch(pb);
@@ -8344,7 +8345,7 @@ static void Ovr226_800a0f0c_SeedFullDynamicVisibilityScratch(const int *visFaceL
 	u32 blockID = (u16)block->blockID;
 	const u32 *word = (const u32 *)((const u8 *)visFaceList + ((blockID >> 3) & 0x1fc));
 
-	DrawLevelOvr1P_Scratch()->visibilityWordPtr32 = (u32)(uintptr_t)word;
+	DrawLevelOvr1P_Scratch()->visibilityWordPtr32 = P32_ENC(word);
 	DrawLevelOvr1P_Scratch()->visibilityBitIndex = blockID & 0x1f;
 	DrawLevelOvr1P_Scratch()->visibilityWord = *word;
 }
@@ -8357,12 +8358,12 @@ static int Ovr226_800a0f34_ConsumeFullDynamicVisibilityBit(void)
 
 	if (bitIndex < 0)
 	{
-		u32 *wordPtr = (u32 *)(uintptr_t)DrawLevelOvr1P_Scratch()->visibilityWordPtr32;
+		u32 *wordPtr = P32_DEC(u32 *, DrawLevelOvr1P_Scratch()->visibilityWordPtr32);
 
 		bitIndex = 0x1f;
 		word = wordPtr[1];
 		wordPtr++;
-		DrawLevelOvr1P_Scratch()->visibilityWordPtr32 = (u32)(uintptr_t)wordPtr;
+		DrawLevelOvr1P_Scratch()->visibilityWordPtr32 = P32_ENC(wordPtr);
 		DrawLevelOvr1P_Scratch()->visibilityWord = word;
 	}
 
@@ -9380,7 +9381,7 @@ static int Ovr226_800a25d0_WaterListFaceGate(struct PushBuffer *pb, struct PrimM
 
 static void Ovr226_800a1e30_SeedWaterListState(void)
 {
-	const struct TextureLayout *waterEnvMap = (const struct TextureLayout *)(uintptr_t)DrawLevelOvr1P_Scratch()->waterEnvMapPtr32;
+	const struct TextureLayout *waterEnvMap = P32_DEC(const struct TextureLayout *, DrawLevelOvr1P_Scratch()->waterEnvMapPtr32);
 
 	// NOTE(aalhendi): Retail 0x800a1e30 uses the global 1P retry list, not the
 	// current render-list field, before walking the water BSP list.
@@ -10122,15 +10123,15 @@ static void DrawLevelOvr1P_WithContext(void *LevRenderList, struct PushBuffer *p
 	// scratch users see the same entry-owned word; the host ABI owns SP.
 	DrawLevelOvr1P_Scratch()->savedStackPtr32 = (u32)(uintptr_t)&hostStackAnchor;
 
-	DrawLevelOvr1P_Scratch()->primMemEndPtr32 = (u32)(uintptr_t)P32_GET(void *, primMem->end);
-	DrawLevelOvr1P_Scratch()->visFaceListPtr32 = (u32)(uintptr_t)visFaceList;
+	DrawLevelOvr1P_Scratch()->primMemEndPtr32 = P32_ENC(P32_GET(void *, primMem->end));
+	DrawLevelOvr1P_Scratch()->visFaceListPtr32 = P32_ENC(visFaceList);
 
 	if (visFaceList == NULL)
 	{
 		return;
 	}
 
-	DrawLevelOvr1P_Scratch()->waterEnvMapPtr32 = (u32)(uintptr_t)waterEnvMap;
+	DrawLevelOvr1P_Scratch()->waterEnvMapPtr32 = P32_ENC(waterEnvMap);
 
 	if (P32_GET(struct QuadBlock *, mesh->ptrQuadBlockArray) == NULL)
 	{

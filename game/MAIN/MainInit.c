@@ -363,8 +363,9 @@ void MainInit_JitPoolsNew(struct GameTracker *gGT)
 		int *pointer = (int *)P32_GET(struct Item *, pool->free.first);
 		while (pointer != (int *)0x0)
 		{
-			*(int **)(pointer + 2) = pointer + 2;
-			pointer = (int *)*pointer;
+			// Pointer slots in pool items are retail 4-byte slots.
+			*(u32 *)(pointer + 2) = P32_ENC(pointer + 2);
+			pointer = P32_DEC(int *, *pointer);
 		}
 	}
 

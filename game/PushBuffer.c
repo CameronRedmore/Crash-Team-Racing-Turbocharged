@@ -214,7 +214,7 @@ void PushBuffer_SetDrawEnv_DecalMP(void *ot, struct DB *backBuffer, RECT *viewpo
 	if (p <= P32_GET(void *, backBuffer->primMem.guardEnd))
 	{
 		// advance curr
-		P32_SET(backBuffer->primMem.cursor, (void *)((u32)P32_GET(void *, backBuffer->primMem.cursor) + 0x40));
+		P32_SET(backBuffer->primMem.cursor, P32_GET(char *, backBuffer->primMem.cursor) + 0x40);
 
 		prim = p;
 	}
@@ -274,7 +274,7 @@ void PushBuffer_SetDrawEnv_Normal(void *ot, struct PushBuffer *pb, struct DB *ba
 	void *p = P32_GET(void *, backBuffer->primMem.cursor);
 	if (p <= P32_GET(void *, backBuffer->primMem.guardEnd))
 	{
-		P32_SET(backBuffer->primMem.cursor, (void *)((u32)P32_GET(void *, backBuffer->primMem.cursor) + 0x40));
+		P32_SET(backBuffer->primMem.cursor, P32_GET(char *, backBuffer->primMem.cursor) + 0x40);
 
 		SetDrawEnv(p, &newDrawEnv);
 
@@ -360,11 +360,11 @@ void PushBuffer_SetMatrixVP(struct PushBuffer *pb)
 	viewC = (uVar4 & 0xffff) | (uVar5 & 0xffff0000);
 
 	// CameraTranspose, for lightning during Driver Warping effect
-	*(int *)((int)&pb->matrix_CameraTranspose + 0x0) = view0;
-	*(int *)((int)&pb->matrix_CameraTranspose + 0x4) = view4;
-	*(int *)((int)&pb->matrix_CameraTranspose + 0x8) = view8;
-	*(int *)((int)&pb->matrix_CameraTranspose + 0xC) = viewC;
-	*(s16 *)((int)&pb->matrix_CameraTranspose + 0x10) = sVar7;
+	CTR_WriteU32LE((char *)&pb->matrix_CameraTranspose + 0x0, (u32)view0);
+	CTR_WriteU32LE((char *)&pb->matrix_CameraTranspose + 0x4, (u32)view4);
+	CTR_WriteU32LE((char *)&pb->matrix_CameraTranspose + 0x8, (u32)view8);
+	CTR_WriteU32LE((char *)&pb->matrix_CameraTranspose + 0xC, (u32)viewC);
+	CTR_WriteU16LE((char *)&pb->matrix_CameraTranspose + 0x10, (u16)sVar7);
 
 	// load transpose camera matrix
 	// similar to gte_SetLightMatrix
@@ -386,11 +386,11 @@ void PushBuffer_SetMatrixVP(struct PushBuffer *pb)
 	CTR_GteStoreMAC(&pb->matrix_ViewProj.t[0]);
 
 	// start with transpose camera matrix
-	*(int *)((int)&pb->matrix_ViewProj + 0x0) = view0;
-	*(int *)((int)&pb->matrix_ViewProj + 0x4) = view4;
-	*(int *)((int)&pb->matrix_ViewProj + 0x8) = view8;
-	*(int *)((int)&pb->matrix_ViewProj + 0xC) = viewC;
-	*(s16 *)((int)&pb->matrix_ViewProj + 0x10) = sVar7;
+	CTR_WriteU32LE((char *)&pb->matrix_ViewProj + 0x0, (u32)view0);
+	CTR_WriteU32LE((char *)&pb->matrix_ViewProj + 0x4, (u32)view4);
+	CTR_WriteU32LE((char *)&pb->matrix_ViewProj + 0x8, (u32)view8);
+	CTR_WriteU32LE((char *)&pb->matrix_ViewProj + 0xC, (u32)viewC);
+	CTR_WriteU16LE((char *)&pb->matrix_ViewProj + 0x10, (u16)sVar7);
 
 	// NTSC:
 	// 0x360/0x600 = 9/16 aspect,

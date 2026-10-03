@@ -197,7 +197,7 @@ void SelectProfile_DrawAdvProfile(struct AdvProgress *adv, int posX, int posY, s
 		int profileTextColor = numberColor | 0x4000;
 		int characterID = adv->characterID;
 		int iconID = data.MetaDataCharacters[characterID].iconID;
-		struct SelectProfileLoadSaveObj *obj = (struct SelectProfileLoadSaveObj *)sdata->ptrLoadSaveObj;
+		struct SelectProfileLoadSaveObj *obj = P32_DEC(struct SelectProfileLoadSaveObj *, sdata->ptrLoadSaveObj);
 
 		RECTMENU_DrawPolyGT4(P32_GET(struct Icon *, gGT->ptrIcons[iconID]), posX + 10, posY + 6, &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), iconColor, iconColor, iconColor,
 		                     iconColor, 1, 0x1000);
@@ -283,7 +283,7 @@ void SelectProfile_Init(u16 flags)
 	struct Thread *t;
 	int i;
 
-	obj = (struct SelectProfileLoadSaveObj *)sdata->ptrLoadSaveObj;
+	obj = P32_DEC(struct SelectProfileLoadSaveObj *, sdata->ptrLoadSaveObj);
 
 	if (obj == NULL)
 	{
@@ -299,7 +299,7 @@ void SelectProfile_Init(u16 flags)
 		// through this allocation result before its later null check; keep
 		// unpatched until a valid menu repro proves the allocation can fail.
 		obj = (struct SelectProfileLoadSaveObj *)P32_GET(void *, t->object);
-		sdata->ptrLoadSaveObj = (int)obj;
+		sdata->ptrLoadSaveObj = (int)P32_ENC(obj);
 		P32_SET(obj->icons, &sdata->LoadSaveData[0]);
 		memset(P32_GET(struct SelectProfileLoadSaveIcon *, obj->icons), 0, sizeof(sdata->LoadSaveData));
 
@@ -391,7 +391,7 @@ void SelectProfile_Destroy(void)
 {
 	struct SelectProfileLoadSaveObj *obj;
 
-	obj = (struct SelectProfileLoadSaveObj *)sdata->ptrLoadSaveObj;
+	obj = P32_DEC(struct SelectProfileLoadSaveObj *, sdata->ptrLoadSaveObj);
 	if (obj != NULL)
 	{
 		int i;

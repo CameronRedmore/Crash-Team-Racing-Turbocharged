@@ -1112,7 +1112,7 @@ static void RenderAllLevelGeometry_NativeViewports(struct GameTracker *gGT, stru
 		RenderAllLevelGeometry_ApplyNativeMaxLod(scratch);
 
 		RenderLists_PreInit();
-		gGT->bspLeafsDrawn += RenderLists_Init1P2P(P32_GET(struct BSP *, ptr_mesh_info->bspRoot), P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visLeafList[i]), pushBuffer, (u32)&gGT->LevRenderLists[i],
+		gGT->bspLeafsDrawn += RenderLists_Init1P2P(P32_GET(struct BSP *, ptr_mesh_info->bspRoot), P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visLeafList[i]), pushBuffer, &gGT->LevRenderLists[i],
 		                                           P32_GET(struct VisMemBspListNode *, P32_GET(struct VisMem *, gGT->visMem1)->bspList[i]), 1);
 
 		DrawLevelOvr1P_WithContext(&gGT->LevRenderLists[i], pushBuffer, (struct BSP *)ptr_mesh_info, &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visFaceList[i]),
@@ -1190,7 +1190,7 @@ static void RenderAllLevelGeometry_Native(struct GameTracker *gGT, struct Level 
 		}
 		RenderAllLevelGeometry_ApplyNativeMaxLod(scratch);
 
-		gGT->bspLeafsDrawn += RenderLists_Init1P2P(P32_GET(struct BSP *, ptr_mesh_info->bspRoot), P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visLeafList[i]), pushBuffer, (u32)&gGT->LevRenderLists[i],
+		gGT->bspLeafsDrawn += RenderLists_Init1P2P(P32_GET(struct BSP *, ptr_mesh_info->bspRoot), P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visLeafList[i]), pushBuffer, &gGT->LevRenderLists[i],
 		                                           P32_GET(struct VisMemBspListNode *, P32_GET(struct VisMem *, gGT->visMem1)->bspList[i]), 1);
 		NativeDrawLevel_Viewport(pushBuffer, &P32_GET(struct DB *, gGT->backBuffer)->primMem, ptr_mesh_info, &gGT->LevRenderLists[i],
 		                         P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visFaceList[i]), P32_GET(struct TextureLayout *, level1->ptr_tex_waterEnvMap));
@@ -1287,7 +1287,7 @@ void RenderAllLevelGeometry(struct GameTracker *gGT, struct Level *level1, struc
 			ptr_mesh_info->bspRoot,
 			gGT->visMem1->visLeafList[renderSlot],
 			pushBuffer,
-			(u32)&gGT->LevRenderLists[renderSlot],
+			&gGT->LevRenderLists[renderSlot],
 			gGT->visMem1->bspList[renderSlot],
 			1);
 
@@ -1376,7 +1376,7 @@ void RenderAllLevelGeometry(struct GameTracker *gGT, struct Level *level1, struc
 		RenderLists_PreInit();
 		gGT->bspLeafsDrawn = 0;
 
-		gGT->bspLeafsDrawn += RenderLists_Init1P2P(P32_GET(struct BSP *, ptr_mesh_info->bspRoot), P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visLeafList[0]), pushBuffer, (u32)&gGT->LevRenderLists[0],
+		gGT->bspLeafsDrawn += RenderLists_Init1P2P(P32_GET(struct BSP *, ptr_mesh_info->bspRoot), P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visLeafList[0]), pushBuffer, &gGT->LevRenderLists[0],
 		                                           P32_GET(struct VisMemBspListNode *, P32_GET(struct VisMem *, gGT->visMem1)->bspList[0]), numPlyrCurrGame);
 
 		// 226-229
@@ -1414,7 +1414,7 @@ void RenderAllLevelGeometry(struct GameTracker *gGT, struct Level *level1, struc
 		RenderLists_PreInit();
 		for (i = 0; i < numPlyrCurrGame; i++)
 		{
-			gGT->bspLeafsDrawn += RenderLists_Init1P2P(ptr_mesh_info->bspRoot, gGT->visMem1->visLeafList[i], &gGT->pushBuffer[i], (u32)&gGT->LevRenderLists[i],
+			gGT->bspLeafsDrawn += RenderLists_Init1P2P(ptr_mesh_info->bspRoot, gGT->visMem1->visLeafList[i], &gGT->pushBuffer[i], &gGT->LevRenderLists[i],
 			                                           gGT->visMem1->bspList[i], numPlyrCurrGame);
 		}
 
@@ -1471,7 +1471,7 @@ void RenderAllLevelGeometry(struct GameTracker *gGT, struct Level *level1, struc
 
 	for (i = 0; i < numPlyrCurrGame; i++)
 	{
-		gGT->bspLeafsDrawn += RenderLists_Init3P4P(P32_GET(struct BSP *, ptr_mesh_info->bspRoot), P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visLeafList[i]), &gGT->pushBuffer[i], (u32)&gGT->LevRenderLists[i],
+		gGT->bspLeafsDrawn += RenderLists_Init3P4P(P32_GET(struct BSP *, ptr_mesh_info->bspRoot), P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visLeafList[i]), &gGT->pushBuffer[i], &gGT->LevRenderLists[i],
 		                                           P32_GET(struct VisMemBspListNode *, P32_GET(struct VisMem *, gGT->visMem1)->bspList[i]));
 	}
 

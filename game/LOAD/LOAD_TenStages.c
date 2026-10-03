@@ -364,7 +364,7 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 		// clear and reset
 		LibraryOfModels_Clear(gGT);
 
-		P32_SET(sdata->PLYROBJECTLIST, (int **)((u32)sdata->ptrMPK + 4));
+		P32_SET(sdata->PLYROBJECTLIST, (int **)(P32_DEC(char *, sdata->ptrMPK) + 4));
 		if (sdata->ptrMPK == 0)
 		{
 			P32_SET(sdata->PLYROBJECTLIST, 0);
@@ -376,11 +376,11 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 		gGT->mpkIcons = 0;
 		if (sdata->ptrMPK != 0)
 		{
-			gGT->mpkIcons = *(int *)sdata->ptrMPK;
+			gGT->mpkIcons = *P32_DEC(u32 *, sdata->ptrMPK);
 
 			if (gGT->mpkIcons != 0)
 			{
-				DecalGlobal_Store(gGT, (struct LevTexLookup *)gGT->mpkIcons);
+				DecalGlobal_Store(gGT, P32_DEC(struct LevTexLookup *, gGT->mpkIcons));
 			}
 		}
 
@@ -532,17 +532,17 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 		{
 			LibraryOfModels_Store(gGT, lev->numModels, P32_GET(P32(struct Model *) *, lev->ptrModelsPtrArray));
 
-			gGT->ptrCircle = (u32)DecalGlobal_FindInLEV(lev, rdata.s_circle);
-			gGT->ptrClod = (u32)DecalGlobal_FindInLEV(lev, rdata.s_clod);
-			gGT->ptrDustpuff = (u32)DecalGlobal_FindInLEV(lev, rdata.s_dustpuff);
-			gGT->ptrSmoking = (u32)DecalGlobal_FindInLEV(lev, rdata.s_smokering); // "Smoke Ring"
-			gGT->ptrSparkle = (u32)DecalGlobal_FindInLEV(lev, rdata.s_sparkle);
+			gGT->ptrCircle = P32_ENC(DecalGlobal_FindInLEV(lev, rdata.s_circle));
+			gGT->ptrClod = P32_ENC(DecalGlobal_FindInLEV(lev, rdata.s_clod));
+			gGT->ptrDustpuff = P32_ENC(DecalGlobal_FindInLEV(lev, rdata.s_dustpuff));
+			gGT->ptrSmoking = P32_ENC(DecalGlobal_FindInLEV(lev, rdata.s_smokering)); // "Smoke Ring"
+			gGT->ptrSparkle = P32_ENC(DecalGlobal_FindInLEV(lev, rdata.s_sparkle));
 		}
 
 		// if linked list of icons exists
 		if (gGT->mpkIcons != 0)
 		{
-			u32 *mpkIconList = (u32 *)*(u32 *)(gGT->mpkIcons + 4);
+			u32 *mpkIconList = P32_DEC(u32 *, *P32_DEC(u32 *, gGT->mpkIcons + 4));
 
 			P32_SET(gGT->trafficLightIcon[0], (struct Icon *)DecalGlobal_FindInMPK(mpkIconList, rdata.s_lightredoff));
 			P32_SET(gGT->trafficLightIcon[1], (struct Icon *)DecalGlobal_FindInMPK(mpkIconList, rdata.s_lightredon));

@@ -36,9 +36,16 @@ typedef struct CtrPtr32
 } CtrPtr32;
 
 #define CTR_P32_SENTINEL_MAX 16
-#define CTR_P32_ORIGIN       ((uintptr_t)&gCtrPtr32Anchor[32])
+#define CTR_P32_ORIGIN       ((uintptr_t)&gCtrPtr32Anchor.bytes[32])
 
-extern char gCtrPtr32Anchor[64];
+// 8-byte aligned, so handle low bits match pointer low bits (alignment tests
+// and low-bit tags work on handles).
+typedef union CtrPtr32Anchor
+{
+	char bytes[64];
+	uint64_t align[8];
+} CtrPtr32Anchor;
+extern CtrPtr32Anchor gCtrPtr32Anchor;
 void CtrPtr32_RangeError(uintptr_t p);
 
 static inline uint32_t ctr_p32_enc(uintptr_t p)
@@ -107,7 +114,7 @@ static inline uintptr_t ctr_p32_dec(uint32_t h)
 #else
 
 #define P32(T)         T
-#define P32_GET(T, lv) (lv)
+#define P32_GET(T, lv) ((T)(lv))
 #define P32_SET(lv, v) ((lv) = (v))
 #define P32_FNPTR(ret, name, args) ret (*name) args
 #define P32_DEFER(e)   (e)

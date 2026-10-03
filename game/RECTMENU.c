@@ -522,7 +522,7 @@ void RECTMENU_DrawRwdBlueRect_Subset(s16 *pos, int *color, uint32_t *ot, struct 
 {
 	POLY_G4 *p = (POLY_G4 *)P32_GET(void *, primMem->cursor);
 
-	if ((u32)p <= (u32)P32_GET(void *, primMem->guardEnd))
+	if ((char *)p <= P32_GET(char *, primMem->guardEnd))
 	{
 		P32_SET(primMem->cursor, p + 1);
 

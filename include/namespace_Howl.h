@@ -181,7 +181,7 @@ typedef struct
 struct ChannelAttr
 {
 	// 0x0
-	P32(void *) spuStartAddr;
+	u32 spuStartAddr; // SPU RAM address, not a host pointer
 
 	// as + dr = ASDR (envelope standard)
 

@@ -187,7 +187,7 @@ struct ChannelStats *Channel_SearchFX_EditAttr(int type, int soundID, int update
 			// change in spu addr
 			if ((updateFlags & HOWL_CHANNEL_UPDATE_SPU_ADDR) != 0)
 			{
-				P32_SET(editAttr->spuStartAddr, P32_GET(void *, attr->spuStartAddr));
+				editAttr->spuStartAddr = attr->spuStartAddr;
 			}
 
 			// change in ADSR
@@ -527,11 +527,11 @@ void Channel_UpdateChannels()
 		// start address needs to change
 		if ((updateFlags & HOWL_CHANNEL_UPDATE_SPU_ADDR) != 0)
 		{
-			void *startAddr = P32_GET(void *, new->spuStartAddr);
+			u32 startAddr = new->spuStartAddr;
 
-			if (startAddr != P32_GET(void *, cur->spuStartAddr))
+			if (startAddr != cur->spuStartAddr)
 			{
-				P32_SET(cur->spuStartAddr, startAddr);
+				cur->spuStartAddr = startAddr;
 
 				SpuSetVoiceStartAddr(vNum, (int)startAddr);
 			}

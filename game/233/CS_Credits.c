@@ -95,7 +95,7 @@ void CS_Credits_AnimateCreditGhost(struct Instance *dst, struct Instance *src, i
 	dst->scale.z = scale;
 
 	dst->flags &= ~HIDE_MODEL;
-	if ((int)P32_GET(struct Model *, dst->model) == 0)
+	if (P32_GET(struct Model *, dst->model) == NULL)
 	{
 		dst->flags |= HIDE_MODEL;
 	}

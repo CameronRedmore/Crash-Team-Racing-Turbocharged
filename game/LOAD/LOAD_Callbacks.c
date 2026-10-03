@@ -84,7 +84,7 @@ void LOAD_Callback_PatchMem(struct LoadQueueSlot *lqs)
 void LOAD_Callback_DriverModels(struct LoadQueueSlot *lqs)
 {
 	sdata->load_inProgress = 0;
-	sdata->ptrMPK = (int)P32_GET(void *, lqs->ptrDestination);
+	sdata->ptrMPK = (int)P32_ENC(P32_GET(void *, lqs->ptrDestination));
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80031b14-0x80031b50.

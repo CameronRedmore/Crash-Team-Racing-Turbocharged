@@ -182,7 +182,7 @@ struct Instance *INSTANCE_BirthWithThread_Stack(int *spArr)
 {
 	// spArr = array on $sp (stack pointer)
 
-	return INSTANCE_BirthWithThread(spArr[0], (char *)spArr[1], spArr[2], spArr[3], (void *)spArr[4], spArr[5], (struct Thread *)spArr[6]);
+	return INSTANCE_BirthWithThread(spArr[0], P32_DEC(char *, spArr[1]), spArr[2], spArr[3], P32_DEC(void *, spArr[4]), spArr[5], P32_DEC(struct Thread *, spArr[6]));
 }
 
 
@@ -228,10 +228,10 @@ void INSTANCE_LevInitAll(struct InstDef *levInstDef, int numInst)
 
 		// pointer to instance in pool,
 		// add 8 bytes to skip Prev and Next
-		dst = (int *)((int)inst + 8);
+		dst = (int *)((char *)inst + 8);
 
 		// copy InstDef data from LEV to instance pool
-		while (src != (int *)((int)levInstDef + 0x20))
+		while (src != (int *)((char *)levInstDef + 0x20))
 		{
 			dst[0] = src[0];
 			dst[1] = src[1];

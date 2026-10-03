@@ -107,7 +107,7 @@ void GhostTape_End(void)
 	gh->ySpeed = d->ySpeed;
 	gh->speedApprox = d->speedApprox;
 	gh->timeElapsedInRace = d->timeElapsedInRace;
-	gh->size = (u32)P32_GET(char *, sdata->GhostRecording.ptrCurrOffset) - (u32)P32_GET(char *, sdata->GhostRecording.ptrStartOffset);
+	gh->size = (u32)(P32_GET(char *, sdata->GhostRecording.ptrCurrOffset) - P32_GET(char *, sdata->GhostRecording.ptrStartOffset));
 	NativeGhostInput_StopRecording();
 }
 
@@ -299,7 +299,7 @@ void GhostTape_WriteMoves(s16 raceFinished)
 		    // if offset of ghost-recording buffer exceeds
 		    // the maximum size of a ghost that can be recorded
 		    // (if you're one frame away from max capacity)
-		    ((u32)P32_GET(char *, sdata->GhostRecording.ptrEndOffset) < (u32)writeCursor + GHOST_RECORD_BUFFER_END_GUARD) &&
+		    (P32_GET(char *, sdata->GhostRecording.ptrEndOffset) < (char *)writeCursor + GHOST_RECORD_BUFFER_END_GUARD) &&
 
 		    (sdata->boolCanSaveGhost = 0,
 

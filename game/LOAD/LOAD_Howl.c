@@ -60,8 +60,8 @@ int LOAD_HowlSectorChainStart(CdlFILE *cdlFileHWL, void *ptrDestination, int fir
 	}
 
 	// backup, so chain can use it later
-	sdata->howlChainParams[0] = (int)cdlFileHWL;
-	sdata->howlChainParams[1] = (int)ptrDestination;
+	sdata->howlChainParams[0] = (int)P32_ENC(cdlFileHWL);
+	sdata->howlChainParams[1] = (int)P32_ENC(ptrDestination);
 	sdata->howlChainParams[2] = (int)firstSector;
 	sdata->howlChainParams[3] = (int)numSector;
 
@@ -94,7 +94,7 @@ int LOAD_HowlSectorChainEnd()
 
 	if (howlChainState == -1)
 	{
-		LOAD_HowlSectorChainStart((CdlFILE *)howlChainParams[0], (void *)howlChainParams[1], howlChainParams[2], howlChainParams[3]);
+		LOAD_HowlSectorChainStart(P32_DEC(CdlFILE *, howlChainParams[0]), P32_DEC(void *, howlChainParams[1]), howlChainParams[2], howlChainParams[3]);
 
 		return 0;
 	}

@@ -27,9 +27,9 @@ void RB_Burst_ProcessBucket(struct Thread *thread)
 
 		for (int i = 0; i < gGT->numPlyrCurrGame; i++)
 		{
-			struct Instance *shockwaveInst = (struct Instance *)(uintptr_t)burst[0];
-			struct Instance *burstInst = (struct Instance *)(uintptr_t)burst[1];
-			struct Instance *warpedBurstInst = (struct Instance *)(uintptr_t)burst[2];
+			struct Instance *shockwaveInst = P32_DEC(struct Instance *, burst[0]);
+			struct Instance *burstInst = P32_DEC(struct Instance *, burst[1]);
+			struct Instance *warpedBurstInst = P32_DEC(struct Instance *, burst[2]);
 
 			if (burstInst == NULL)
 			{
@@ -54,7 +54,7 @@ static void RB_Burst_UpdateSlot(int *slot)
 	struct Instance *inst;
 	int nextFrame;
 
-	inst = (struct Instance *)*slot;
+	inst = P32_DEC(struct Instance *, *slot);
 	if (inst == NULL)
 	{
 		return;
@@ -268,7 +268,7 @@ void RB_Burst_Init(struct Instance *weaponInst)
 
 	// ====== First Instance =========
 
-	burst[1] = (int)currInst;
+	burst[1] = (int)P32_ENC(currInst);
 	currInst->depthBiasNormal += -2;
 
 	// set rotation to identity matrix
@@ -282,7 +282,7 @@ void RB_Burst_Init(struct Instance *weaponInst)
 
 	currInst = INSTANCE_Birth3D(P32_GET(struct Model *, gGT->modelPtr[STATIC_WARPEDBURST]), s_burst_explosion2, t);
 
-	burst[2] = (int)currInst;
+	burst[2] = (int)P32_ENC(currInst);
 	currInst->depthBiasNormal += -2;
 
 	currInst->flags |= VISIBLE_DURING_GAMEPLAY;
@@ -304,7 +304,7 @@ void RB_Burst_Init(struct Instance *weaponInst)
 
 	currInst = INSTANCE_Birth3D(P32_GET(struct Model *, gGT->modelPtr[STATIC_SHOCKWAVE_RED]), s_burst_shockwave1, t);
 
-	burst[0] = (int)currInst;
+	burst[0] = (int)P32_ENC(currInst);
 	currInst->depthBiasNormal += -2;
 
 	// instance flags
@@ -319,7 +319,7 @@ void RB_Burst_Init(struct Instance *weaponInst)
 
 	for (int i = 0; /*i < 3*/; i++)
 	{
-		currInst = (struct Instance *)burst[i];
+		currInst = P32_DEC(struct Instance *, burst[i]);
 
 		currInst->matrix.t[0] = weaponInst->matrix.t[0];
 		currInst->matrix.t[1] = weaponInst->matrix.t[1] + -0x30;
@@ -437,7 +437,7 @@ static void RB_Burst_DrawAll_SetPushBuffer(struct Instance *inst, int playerInde
 static struct Instance *RB_Burst_DrawAll_GetSlot(u32 *burst, int index)
 {
 	// NOTE(aalhendi): burst thread object is retail-width instance slots.
-	return (struct Instance *)(uintptr_t)burst[index];
+	return P32_DEC(struct Instance *, burst[index]);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b25b8-0x800b28c0.

@@ -531,7 +531,7 @@ static void MM_NativeLanguageLoad(s16 row)
 	}
 
 	cfg_language = s_nativeLanguageFileIndex[row];
-	LOAD_LangFile((int)P32_GET(struct BigHeader *, sdata->ptrBigfile1), cfg_language);
+	LOAD_LangFile(P32_GET(struct BigHeader *, sdata->ptrBigfile1), cfg_language);
 
 	s_nativeLanguageRow = row;
 	s_nativeLanguageChosen = 1;

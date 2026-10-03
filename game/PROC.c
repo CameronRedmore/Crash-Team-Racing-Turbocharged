@@ -222,7 +222,7 @@ struct Thread *PROC_BirthWithObject(int flags, void *funcThTick, const char *nam
 	{
 		if (stackObj != 0)
 		{
-			PROC_DestroyObject((void *)((u32)stackObj + 8), flags);
+			PROC_DestroyObject((void *)((char *)stackObj + 8), flags);
 		}
 		return 0;
 	}
@@ -232,7 +232,7 @@ struct Thread *PROC_BirthWithObject(int flags, void *funcThTick, const char *nam
 	{
 		if (stackObj != 0)
 		{
-			PROC_DestroyObject((void *)((u32)stackObj + 8), flags);
+			PROC_DestroyObject((void *)((char *)stackObj + 8), flags);
 		}
 		return 0;
 	}
@@ -249,7 +249,7 @@ struct Thread *PROC_BirthWithObject(int flags, void *funcThTick, const char *nam
 	// check thread allocated
 	if (th == 0)
 	{
-		PROC_DestroyObject((void *)((u32)stackObj + 8), flags);
+		PROC_DestroyObject((void *)((char *)stackObj + 8), flags);
 		return 0;
 	}
 
@@ -295,7 +295,7 @@ struct Thread *PROC_BirthWithObject(int flags, void *funcThTick, const char *nam
 	// set remaining fields AFTER linking (ASM order)
 	P32_SET(th->funcThTick, funcThTick);
 	P32_SET(th->name, name);
-	P32_SET(th->object, (void *)(((u32)stackObj) + 8));
+	P32_SET(th->object, (void *)((char *)stackObj + 8));
 
 	return th;
 }

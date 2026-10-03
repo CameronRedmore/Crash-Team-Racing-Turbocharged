@@ -1198,7 +1198,7 @@ int NativeCustomRacer_InitSampledVoiceChannelAttr(int racerIndex, int soundID, s
 	attr->pitch = pitch;
 	attr->ad = 0x80ff;
 	attr->sr = 0x1fc2;
-	P32_SET(attr->spuStartAddr, (void *)(uintptr_t)racer->sampledVoiceSpuAddr[sampleIndex]);
+	attr->spuStartAddr = (u32)racer->sampledVoiceSpuAddr[sampleIndex];
 	return 1;
 }
 

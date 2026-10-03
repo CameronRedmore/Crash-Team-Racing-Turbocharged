@@ -6,7 +6,7 @@
 
 // Holds the origin for CtrPtr32 handles (see ctr_ptr32.h). Nothing else may
 // ever be allocated inside it.
-char gCtrPtr32Anchor[64];
+CtrPtr32Anchor gCtrPtr32Anchor;
 
 void CtrPtr32_RangeError(uintptr_t p)
 {

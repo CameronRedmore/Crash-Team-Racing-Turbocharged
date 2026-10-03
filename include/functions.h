@@ -353,7 +353,7 @@ int INSTANCE_ScaleAnimFrames(struct Instance *inst, int animIndex, int frames);
 void INSTANCE_LevInitAll(struct InstDef *levInstDef, int numInst);
 
 // JitPool
-int JitPool_Add(struct JitPool *AP);
+void *JitPool_Add(struct JitPool *AP);
 void JitPool_Clear(struct JitPool *AP);
 void JitPool_Init(struct JitPool *AP, int maxItems, int itemSize, char *name);
 void JitPool_Remove(struct JitPool *AP, struct Item *item);
@@ -427,7 +427,7 @@ void MainLoadVLC_Callback(struct LoadQueueSlot *param_1);
 void LOAD_InitCD(void);
 int LOAD_InitCDvol(void);
 void LOAD_RunPtrMap(char *origin, int *patchArr, int numPtrs); // 1st param might be `struct Level*`, 2nd param might be `char*`
-void LOAD_LangFile(int bigfilePtr, int lang);
+void LOAD_LangFile(void *bigfilePtr, int lang);
 
 void LOAD_NextQueuedFile(void);
 
@@ -736,7 +736,7 @@ int UI_ConvertX_2(int posX, int scale);
 int UI_ConvertY_2(int posY, int scale);
 
 void UI_INSTANCE_InitAll(void);
-struct Instance *UI_INSTANCE_BirthWithThread(int modelID, int tickFunc, int hudSlot, int rotateToHud, int pushBuffer, int threadName);
+struct Instance *UI_INSTANCE_BirthWithThread(int modelID, void *tickFunc, int hudSlot, int rotateToHud, struct PushBuffer *pushBuffer, const char *threadName);
 
 void UI_DrawBattleScores(int posX, int posY, struct Driver *d);
 void UI_BattleDrawHeadArrows(struct Driver *player);
@@ -1406,8 +1406,8 @@ void AnimateWater3P(int timer, int numWaterVertices, struct WaterVert *waterVert
                     int *visOVertList1, int *visOVertList2);
 void AnimateWater4P(int timer, int numWaterVertices, struct WaterVert *waterVert, const struct TextureLayout *waterEnvMap, int *visOVertList0,
                     int *visOVertList1, int *visOVertList2, int *visOVertList3);
-int RenderLists_Init1P2P(struct BSP *bspRoot, int *visLeafList, struct PushBuffer *pb, u32 LevRenderList, void *bspList, u8 numPlyr);
-int RenderLists_Init3P4P(struct BSP *bspRoot, int *visLeafList, struct PushBuffer *pb, u32 LevRenderList, void *bspList);
+int RenderLists_Init1P2P(struct BSP *bspRoot, int *visLeafList, struct PushBuffer *pb, void *LevRenderList, void *bspList, u8 numPlyr);
+int RenderLists_Init3P4P(struct BSP *bspRoot, int *visLeafList, struct PushBuffer *pb, void *LevRenderList, void *bspList);
 // TODO:
 // CTR_Box_DrawWirePrims change void* ot to uint32_t* ot
 

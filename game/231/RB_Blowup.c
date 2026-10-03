@@ -27,8 +27,8 @@ void RB_Blowup_ProcessBucket(struct Thread *thread)
 
 		for (int i = 0; i < gGT->numPlyrCurrGame; i++)
 		{
-			struct Instance *shockwaveInst = (struct Instance *)(uintptr_t)blowup[0];
-			struct Instance *explosionInst = (struct Instance *)(uintptr_t)blowup[1];
+			struct Instance *shockwaveInst = P32_DEC(struct Instance *, blowup[0]);
+			struct Instance *explosionInst = P32_DEC(struct Instance *, blowup[1]);
 
 			if (shockwaveInst == NULL || explosionInst == NULL)
 			{
@@ -45,7 +45,7 @@ static void RB_Blowup_UpdateSlot(int *slot)
 	struct Instance *inst;
 	int nextFrame;
 
-	inst = (struct Instance *)*slot;
+	inst = P32_DEC(struct Instance *, *slot);
 	if (inst == NULL)
 	{
 		return;
@@ -99,7 +99,7 @@ void RB_Blowup_Init(struct Instance *weaponInst)
 	blowup = P32_GET(void *, explosionTh->object);
 
 	// set explosion instance
-	blowup[1] = (s32)(uintptr_t)explosionInst;
+	blowup[1] = (s32)P32_ENC(explosionInst);
 
 	// copy position and rotation from weapon to explosion
 	CTR_MatrixCopyRot(&explosionInst->matrix, &weaponInst->matrix);
@@ -134,7 +134,7 @@ void RB_Blowup_Init(struct Instance *weaponInst)
 	shockwaveInst = INSTANCE_Birth3D(P32_GET(struct Model *, gGT->modelPtr[modelID]), 0, explosionTh);
 
 	// set shockwave instance
-	blowup[0] = (s32)(uintptr_t)shockwaveInst;
+	blowup[0] = (s32)P32_ENC(shockwaveInst);
 
 	shockwaveInst->flags |= PIXEL_LOD;
 

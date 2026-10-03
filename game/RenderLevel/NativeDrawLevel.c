@@ -189,9 +189,9 @@ static const struct TextureLayout *NativeDrawLevel_SelectMidTexture(const struct
 		{
 			texture++;
 		}
-		else if ((ctx->mosaic != NULL) && DrawLevelOvr1P_IsNativeLevelSpan(mosaicWord, (uintptr_t)ctx->mosaic->rows * 4 * 2 * sizeof(struct TextureLayout)))
+		else if ((ctx->mosaic != NULL) && DrawLevelOvr1P_IsNativeLevelSpan((uintptr_t)P32_DEC(void *, mosaicWord), (uintptr_t)ctx->mosaic->rows * 4 * 2 * sizeof(struct TextureLayout)))
 		{
-			*mosaic = (const struct TextureLayout *)(uintptr_t)mosaicWord;
+			*mosaic = P32_DEC(const struct TextureLayout *, mosaicWord);
 		}
 	}
 	return texture;

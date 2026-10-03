@@ -671,7 +671,7 @@ int DecalFont_DrawMultiLineStrlen(char *str, s16 len, s16 posX, s16 posY, s16 ma
 					}
 				}
 
-				lineLen = DecalFont_GetLineWidthStrlen(str, (u32)currPointer - (u32)str, (int)fontType);
+				lineLen = DecalFont_GetLineWidthStrlen(str, (u32)(currPointer - str), (int)fontType);
 
 				if (
 				    // if parameter line length is longer than string line length
@@ -696,7 +696,7 @@ int DecalFont_DrawMultiLineStrlen(char *str, s16 len, s16 posX, s16 posY, s16 ma
 #if BUILD > UsaRetail
 		if (!(flags & 0x800))
 #endif
-			DecalFont_DrawLineStrlen(str, (u32)strPointer - (u32)str, (int)posX, posY + totalPassageHeight, (int)fontType, (int)flags);
+			DecalFont_DrawLineStrlen(str, (u32)(strPointer - str), (int)posX, posY + totalPassageHeight, (int)fontType, (int)flags);
 
 #if BUILD > SepReview
 

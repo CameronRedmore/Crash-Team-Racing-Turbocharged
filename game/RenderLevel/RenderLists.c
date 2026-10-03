@@ -360,16 +360,16 @@ void RenderLists_PreInit()
 	}
 }
 
-int RenderLists_Init1P2P(struct BSP *bspRoot, int *visLeafList, struct PushBuffer *pb, u32 LevRenderList, void *bspList, u8 numPlyr)
+int RenderLists_Init1P2P(struct BSP *bspRoot, int *visLeafList, struct PushBuffer *pb, void *LevRenderList, void *bspList, u8 numPlyr)
 {
 	// NOTE(aalhendi): ASM-verified NTSC-U 926 0x8006fe70-0x800702d4.
 	RenderLists_Load1P2PGteState(pb);
-	return RenderLists_Walk1P2P(bspRoot, visLeafList, pb, (void *)LevRenderList, bspList, numPlyr);
+	return RenderLists_Walk1P2P(bspRoot, visLeafList, pb, LevRenderList, bspList, numPlyr);
 }
 
-int RenderLists_Init3P4P(struct BSP *bspRoot, int *visLeafList, struct PushBuffer *pb, u32 LevRenderList, void *bspList)
+int RenderLists_Init3P4P(struct BSP *bspRoot, int *visLeafList, struct PushBuffer *pb, void *LevRenderList, void *bspList)
 {
 	// NOTE(aalhendi): ASM-verified NTSC-U 926 0x80070388-0x80070720.
 	RenderLists_Load1P2PGteState(pb);
-	return RenderLists_Walk3P4P(bspRoot, visLeafList, pb, (void *)LevRenderList, bspList);
+	return RenderLists_Walk3P4P(bspRoot, visLeafList, pb, LevRenderList, bspList);
 }

@@ -61,7 +61,7 @@ void Voiceline_PoolInit(void)
 
 		struct ChannelAttr *curr = &sdata->channelAttrCur[index];
 
-		P32_SET(curr->spuStartAddr, (void *)-1);
+		curr->spuStartAddr = (u32)-1;
 
 		curr->ad = 0x80ff;
 		curr->sr = 0x1fc2;

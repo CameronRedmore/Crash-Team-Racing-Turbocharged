@@ -623,7 +623,8 @@ struct Instance
 
 	// 0x5c
 	// between 8006c6f0 and 8006d5b8
-	P32(void *) funcPtr[4];
+	// Retail draw-function addresses, used as dispatch codes; not host pointers.
+	u32 funcPtr[4];
 
 	// 0x6c
 	// Thread and Instance are linked together

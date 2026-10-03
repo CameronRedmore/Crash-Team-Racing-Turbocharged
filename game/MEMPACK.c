@@ -5,25 +5,25 @@
 void MEMPACK_Init(int ramSize)
 {
 	(void)ramSize;
-	u32 startPtr;
 	s32 packSize;
 
 #if defined(CTR_NATIVE)
 
 	const struct PlatformMempackArena *arena = Platform_InitMempackArena();
+	char *start = (char *)arena->start;
 
-	startPtr = (u32)arena->start;
 	packSize = arena->size;
 
-	printf("[CTR] MEMPACK native backing: base=%08x\n", (u32)arena->base);
+	printf("[CTR] MEMPACK native backing: base=%p\n", arena->base);
 
-	MEMPACK_NewPack((void *)startPtr, packSize);
-	P32_SET(P32_GET(struct Mempack *, sdata->PtrMempack)->endOfAllocator, (void *)(startPtr + packSize));
+	MEMPACK_NewPack(start, packSize);
+	P32_SET(P32_GET(struct Mempack *, sdata->PtrMempack)->endOfAllocator, start + packSize);
 	P32_SET(P32_GET(struct Mempack *, sdata->PtrMempack)->endOfMemory, arena->endOfMemory);
 
-	printf("[CTR] MEMPACK native arena: start=%08x size=%08x end=%08x\n", startPtr, packSize, (u32)P32_GET(void *, P32_GET(struct Mempack *, sdata->PtrMempack)->endOfAllocator));
+	printf("[CTR] MEMPACK native arena: start=%p size=%08x end=%p\n", (void *)start, packSize, P32_GET(void *, P32_GET(struct Mempack *, sdata->PtrMempack)->endOfAllocator));
 
 #else
+	u32 startPtr;
 
 	maxOverlayEnd = (u32)AH_EndOfFile;
 	if (maxOverlayEnd < (u32)RB_EndOfFile)
@@ -59,7 +59,7 @@ void MEMPACK_SwapPacks(int index)
 void MEMPACK_NewPack(void *start, int size)
 {
 	struct Mempack *ptrMempack = P32_GET(struct Mempack *, sdata->PtrMempack);
-	void *end = (void *)((u32)start + size);
+	void *end = (void *)((char *)start + size);
 
 	ptrMempack->packSize = size;
 	P32_SET(ptrMempack->start, start);
@@ -75,7 +75,7 @@ int MEMPACK_GetFreeBytes()
 {
 	struct Mempack *ptrMempack = P32_GET(struct Mempack *, sdata->PtrMempack);
 
-	return (u32)P32_GET(void *, ptrMempack->lastFreeByte) - (u32)P32_GET(void *, ptrMempack->firstFreeByte);
+	return (u32)(P32_GET(char *, ptrMempack->lastFreeByte) - P32_GET(char *, ptrMempack->firstFreeByte));
 }
 
 
@@ -95,10 +95,10 @@ void *MEMPACK_AllocMem(int allocSize)
 	s32 newAllocSize = MEMPACK_ALIGN_SIZE(allocSize);
 	ptrMempack->sizeOfPrevAllocation = newAllocSize;
 
-	s32 firstFreeByte = (s32)P32_GET(void *, ptrMempack->firstFreeByte);
-	P32_SET(ptrMempack->firstFreeByte, (void *)(firstFreeByte + newAllocSize));
+	char *firstFreeByte = P32_GET(char *, ptrMempack->firstFreeByte);
+	P32_SET(ptrMempack->firstFreeByte, firstFreeByte + newAllocSize);
 
-	return (void *)firstFreeByte;
+	return firstFreeByte;
 }
 
 
@@ -112,10 +112,10 @@ void *MEMPACK_AllocHighMem(int allocSize)
 	allocSize = MEMPACK_ALIGN_SIZE(allocSize);
 	P32_GET(struct Mempack *, sdata->PtrMempack)->sizeOfPrevAllocation = allocSize;
 
-	s32 newLastFreeByte = (s32)P32_GET(void *, P32_GET(struct Mempack *, sdata->PtrMempack)->lastFreeByte) - allocSize;
-	P32_SET(P32_GET(struct Mempack *, sdata->PtrMempack)->lastFreeByte, (void *)newLastFreeByte);
+	char *newLastFreeByte = P32_GET(char *, P32_GET(struct Mempack *, sdata->PtrMempack)->lastFreeByte) - allocSize;
+	P32_SET(P32_GET(struct Mempack *, sdata->PtrMempack)->lastFreeByte, newLastFreeByte);
 
-	return (void *)newLastFreeByte;
+	return newLastFreeByte;
 }
 
 
@@ -132,7 +132,7 @@ void *MEMPACK_ReallocMem(int allocSize)
 	struct Mempack *ptrMempack = P32_GET(struct Mempack *, sdata->PtrMempack);
 
 	s32 newAllocSize = MEMPACK_ALIGN_SIZE(allocSize);
-	P32_SET(ptrMempack->firstFreeByte, (void *)((s32)P32_GET(void *, ptrMempack->firstFreeByte) - ptrMempack->sizeOfPrevAllocation + newAllocSize));
+	P32_SET(ptrMempack->firstFreeByte, P32_GET(char *, ptrMempack->firstFreeByte) - ptrMempack->sizeOfPrevAllocation + newAllocSize);
 	ptrMempack->sizeOfPrevAllocation = newAllocSize;
 
 	return P32_GET(void *, ptrMempack->firstFreeByte);

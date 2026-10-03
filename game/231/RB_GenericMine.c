@@ -210,7 +210,7 @@ void RB_GenericMine_ThTick(struct Thread *t)
 		}
 
 		// spin driver
-		coll = (struct Instance *)RB_Hazard_HurtDriver(d, 1, P32_GET(void *, P32_GET(struct Thread *, P32_GET(struct Instance *, mw->instParent)->thread)->object), param);
+		coll = (struct Instance *)(intptr_t)RB_Hazard_HurtDriver(d, 1, P32_GET(void *, P32_GET(struct Thread *, P32_GET(struct Instance *, mw->instParent)->thread)->object), param);
 
 		// if collision, and if this was a red potion
 		if ((coll != 0) && (mw->flags & MINE_WEAPON_FLAG_RED_BEAKER) != 0)
@@ -304,7 +304,7 @@ void RB_GenericMine_ThTick(struct Thread *t)
 		if (model == STATIC_CRATE_TNT)
 		{
 			// damageType 0 keeps driving unless the shield/mask path absorbs TNT.
-			crate = (struct Crate *)RB_Hazard_HurtDriver(d, 0, P32_GET(void *, P32_GET(struct Thread *, P32_GET(struct Instance *, mw->instParent)->thread)->object), 2);
+			crate = (struct Crate *)(intptr_t)RB_Hazard_HurtDriver(d, 0, P32_GET(void *, P32_GET(struct Thread *, P32_GET(struct Instance *, mw->instParent)->thread)->object), 2);
 
 			if (crate == 0)
 			{

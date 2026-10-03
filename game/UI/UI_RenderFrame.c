@@ -861,7 +861,7 @@ void UI_RenderFrame_Racing()
 				primMemCurr = P32_GET(void *, backBuffer->primMem.cursor);
 				TurboCounterBar = 0;
 
-				if ((int)primMemCurr <= (int)P32_GET(void *, backBuffer->primMem.guardEnd))
+				if ((char *)primMemCurr <= P32_GET(char *, backBuffer->primMem.guardEnd))
 				{
 					P32_SET(backBuffer->primMem.cursor, primMemCurr + 9);
 					TurboCounterBar = (POLY_G4 *)primMemCurr;
@@ -1307,7 +1307,7 @@ void UI_RenderFrame_Wumpa3D_2P3P4P(struct GameTracker *gGT)
 
 	// NOTE(aalhendi): Retail reads the gp slot populated by UI_INSTANCE_InitAll
 	// with ptrPushBufferUI, not the adjacent ptrFruitDisp instance slot.
-	wumpaPushBuffer = (struct PushBuffer *)(uintptr_t)sdata->ptrPushBufferUI;
+	wumpaPushBuffer = P32_DEC(struct PushBuffer *, sdata->ptrPushBufferUI);
 
 #if defined(CTR_NATIVE)
 	if ((gGT->numPlyrCurrGame >= 2) && (wumpaPushBuffer == NULL))

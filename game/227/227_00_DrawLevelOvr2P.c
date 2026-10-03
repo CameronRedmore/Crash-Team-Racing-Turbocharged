@@ -242,20 +242,20 @@ void DrawLevelOvr2P(void *LevRenderList, struct PushBuffer *pb, struct BSP *bspL
 	// 0x800a0cbc-0x800a1010. Native keeps explicit host pointers while
 	// preserving the retail scratch ownership and two-viewport ordering.
 	DrawLevelOvr1P_Scratch()->savedStackPtr32 = (u32)(uintptr_t)&hostStackAnchor;
-	DrawLevelOvr1P_Scratch()->primMemEndPtr32 = (u32)(uintptr_t)P32_GET(void *, primMem->end);
-	DrawLevelOvr1P_Scratch()->visFaceListArgPtr32[0] = (u32)(uintptr_t)visFaceList0;
-	DrawLevelOvr1P_Scratch()->visFaceListArgPtr32[1] = (u32)(uintptr_t)visFaceList1;
+	DrawLevelOvr1P_Scratch()->primMemEndPtr32 = P32_ENC(P32_GET(void *, primMem->end));
+	DrawLevelOvr1P_Scratch()->visFaceListArgPtr32[0] = P32_ENC(visFaceList0);
+	DrawLevelOvr1P_Scratch()->visFaceListArgPtr32[1] = P32_ENC(visFaceList1);
 
 	if ((visFaceList0 == NULL) || (visFaceList1 == NULL))
 	{
 		return;
 	}
 
-	DrawLevelOvr1P_Scratch()->waterEnvMapPtr32 = (u32)(uintptr_t)waterEnvMap;
-	DrawLevelOvr1P_Scratch()->pushBufferPtr32[0] = (u32)(uintptr_t)&pb[0];
-	DrawLevelOvr1P_Scratch()->pushBufferPtr32[1] = (u32)(uintptr_t)&pb[1];
-	DrawLevelOvr1P_Scratch()->playerClipCursorPtr32[0] = (u32)(uintptr_t)clipCursors[0];
-	DrawLevelOvr1P_Scratch()->playerClipCursorPtr32[1] = (u32)(uintptr_t)clipCursors[1];
+	DrawLevelOvr1P_Scratch()->waterEnvMapPtr32 = P32_ENC(waterEnvMap);
+	DrawLevelOvr1P_Scratch()->pushBufferPtr32[0] = P32_ENC(&pb[0]);
+	DrawLevelOvr1P_Scratch()->pushBufferPtr32[1] = P32_ENC(&pb[1]);
+	DrawLevelOvr1P_Scratch()->playerClipCursorPtr32[0] = P32_ENC(clipCursors[0]);
+	DrawLevelOvr1P_Scratch()->playerClipCursorPtr32[1] = P32_ENC(clipCursors[1]);
 
 	if (P32_GET(struct QuadBlock *, mesh->ptrQuadBlockArray) == NULL)
 	{
@@ -273,8 +273,8 @@ void DrawLevelOvr2P(void *LevRenderList, struct PushBuffer *pb, struct BSP *bspL
 		return;
 	}
 
-	DrawLevelOvr1P_Scratch()->playerClipCursorPtr32[0] = (u32)(uintptr_t)clipCursors[0];
-	DrawLevelOvr1P_Scratch()->playerClipCursorPtr32[1] = (u32)(uintptr_t)clipCursors[1];
+	DrawLevelOvr1P_Scratch()->playerClipCursorPtr32[0] = P32_ENC(clipCursors[0]);
+	DrawLevelOvr1P_Scratch()->playerClipCursorPtr32[1] = P32_ENC(clipCursors[1]);
 
 	if (!DrawLevelOvr2P_ConsumeClipRecordsForViewport(&pb[0], primMem, clipCursors[0], 0))
 	{

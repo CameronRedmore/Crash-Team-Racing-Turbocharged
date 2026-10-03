@@ -176,7 +176,7 @@ void GhostReplay_ThTick(struct Thread *t)
 			}
 		}
 
-		tape->numPacketsInArray = ((u32)packet - (u32)&tape->packets[0]) >> 4;
+		tape->numPacketsInArray = (u32)((char *)packet - (char *)&tape->packets[0]) >> 4;
 
 		tape->numPacketsInArray -= 1;
 

@@ -631,7 +631,7 @@ void Torch_Main(void *particleList_heatWarp, struct PushBuffer *pb, struct PrimM
 		int playerPassesLeft = (s32)(s8)numPlyr - 1;
 		int particlesLeft = 12;
 
-		scratch->firstParticlePtr32 = (u32)(uintptr_t)firstParticle;
+		scratch->firstParticlePtr32 = P32_ENC(firstParticle);
 		scratch->swapchainIndex = (u32)swapchainIndex;
 		scratch->uv0.clut = 0;
 

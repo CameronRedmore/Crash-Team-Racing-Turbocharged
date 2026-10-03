@@ -944,7 +944,7 @@ static void Particle_RenderList_LinkAndAdvance(u32 **primCursor, u32 **payloadCu
 			otIndex = (u16)idpp->depthOffset[1];
 		}
 
-		otBase = (uint32_t *)(uintptr_t)idpp->otRangeNormal;
+		otBase = P32_DEC(uint32_t *, idpp->otRangeNormal);
 	}
 	else
 	{

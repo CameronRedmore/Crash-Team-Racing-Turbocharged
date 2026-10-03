@@ -81,7 +81,7 @@ void MainFrame_ResetDB(struct GameTracker *gGT)
 	uint32_t *puVar3;
 	int iVar4;
 	struct DB *db;
-	int otSwapchainDB;
+	char *otSwapchainDB;
 
 	// check if new adv hub should be loaded,
 	// this was a random place for ND to put it
@@ -92,7 +92,7 @@ void MainFrame_ResetDB(struct GameTracker *gGT)
 	P32_SET(gGT->backBuffer, &gGT->db[gGT->swapchainIndex]);
 	gGT->frameTimer_MainFrame_ResetDB++;
 
-	otSwapchainDB = (int)P32_GET(void *, gGT->otSwapchainDB[gGT->swapchainIndex]);
+	otSwapchainDB = P32_GET(char *, gGT->otSwapchainDB[gGT->swapchainIndex]);
 
 	db = P32_GET(struct DB *, gGT->backBuffer);
 	db->blurCameraMask = 0;
@@ -114,23 +114,23 @@ void MainFrame_ResetDB(struct GameTracker *gGT)
 
 	for (iVar4 = 0; iVar4 < P32_GET(struct GameTracker *, sdata->gGT)->numPlyrCurrGame; iVar4++)
 	{
-		P32_SET(gGT->pushBuffer[iVar4].ptrOT, (uint32_t *)((int)otSwapchainDB + (P32_GET(struct GameTracker *, sdata->gGT)->numPlyrCurrGame - iVar4 - 1) * 0x1000 + 0x18));
+		P32_SET(gGT->pushBuffer[iVar4].ptrOT, (uint32_t *)(otSwapchainDB + (P32_GET(struct GameTracker *, sdata->gGT)->numPlyrCurrGame - iVar4 - 1) * 0x1000 + 0x18));
 	}
 
 	for (; iVar4 < 4; iVar4++)
 	{
 		// but why?
-		P32_SET(gGT->pushBuffer[iVar4].ptrOT, (uint32_t *)((int)otSwapchainDB + 3 * 0x1000 + 0x18));
+		P32_SET(gGT->pushBuffer[iVar4].ptrOT, (uint32_t *)(otSwapchainDB + 3 * 0x1000 + 0x18));
 	}
 
-	puVar3 = (uint32_t *)((int)otSwapchainDB + 4);
+	puVar3 = (uint32_t *)(otSwapchainDB + 4);
 	P32_SET(gGT->pushBuffer_UI.ptrOT, puVar3);
 	P32_SET(db->otMem.uiOT, puVar3);
 
 #if defined(CTR_NATIVE)
 	if (sdata->ptrPushBufferUI != 0)
 	{
-		struct PushBuffer *wumpaPushBuffer = (struct PushBuffer *)(uintptr_t)sdata->ptrPushBufferUI;
+		struct PushBuffer *wumpaPushBuffer = P32_DEC(struct PushBuffer *, sdata->ptrPushBufferUI);
 
 		// NOTE(aalhendi): Retail stores PS1 RAM OT addresses here. Native stores
 		// host pointers, so reset the fake UI pushbuffer to the current backbuffer
@@ -654,7 +654,7 @@ b32 MainFrame_HaveAllPads(s16 numPlyrNextGame)
 
 static void MainFrame_ReplacePackedVisList(int *dst, void *src, int byteCount)
 {
-	u32 srcWord = (u32)src;
+	uintptr_t srcWord = (uintptr_t)src;
 
 	if ((srcWord & 1) == 0)
 	{
@@ -662,12 +662,12 @@ static void MainFrame_ReplacePackedVisList(int *dst, void *src, int byteCount)
 		return;
 	}
 
-	CTR_unknownMaybeThunk1(dst, (void *)(srcWord & ~(u32)3));
+	CTR_unknownMaybeThunk1(dst, (void *)(srcWord & ~(uintptr_t)3));
 }
 
 static void MainFrame_OrPackedVisList(int *dst, void *src, int byteCount)
 {
-	u32 srcWord = (u32)src;
+	uintptr_t srcWord = (uintptr_t)src;
 
 	if ((srcWord & 1) == 0)
 	{
@@ -675,7 +675,7 @@ static void MainFrame_OrPackedVisList(int *dst, void *src, int byteCount)
 		return;
 	}
 
-	CTR_unknownMaybeThunk2(dst, (void *)(srcWord & ~(u32)3));
+	CTR_unknownMaybeThunk2(dst, (void *)(srcWord & ~(uintptr_t)3));
 }
 
 static int MainFrame_VisMemHasQuad(const int *visFaceList, const struct QuadBlock *quad, const struct mesh_info *mesh)

@@ -524,7 +524,7 @@ void CAM_StartOfRace(struct CameraDC *cDC)
 
 	if (hasFlyInCamera)
 	{
-		s32 flyInData = (s32)P32_GET(struct CheckpointNode *, level1->ptr_restart_points);
+		char *flyInData = P32_GET(char *, level1->ptr_restart_points);
 		cDC->trackPathProgress = 0;
 		cDC->transitionBlend = 0;
 
@@ -1598,7 +1598,7 @@ LAB_8001ab04:
 
 	if (cDC->BlastedLerp.boolLerpPending != 0)
 	{
-		cam->delta.y = cam->pos.y + (s32) * (s16 *)((s32)cDC + 0xc8);
+		cam->delta.y = cam->pos.y + (s32) * (s16 *)((char *)cDC + 0xc8);
 	}
 
 	if (d->kartState == KS_MASK_GRABBED)
@@ -2068,7 +2068,7 @@ void CAM_ThTick(struct Thread *t)
 			uVar16 = (u32)*psVar20;
 
 			// +2 to include respawnPoint and modeID
-			psVar20 = (s16 *)((s32)psVar19 + data.EndOfRace_Camera_Size[iVar7] + 2);
+			psVar20 = (s16 *)((char *)psVar19 + data.EndOfRace_Camera_Size[iVar7] + 2);
 
 			psVar15 = &P32_GET(struct CheckpointNode *, P32_GET(struct Level *, gGT->level1)->ptr_restart_points)[uVar16];
 

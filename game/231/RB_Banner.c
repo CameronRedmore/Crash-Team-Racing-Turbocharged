@@ -84,13 +84,13 @@ int RB_Banner_Animate_Init(struct ModelHeader *mh)
 	u8 *vertex;
 	int count = 0;
 
-	if ((s16)(*(u16 *)(void *)mh->ptrCommandList) < 0x40)
+	if ((s16)(*P32_DEC(u16 *, mh->ptrCommandList)) < 0x40)
 	{
 		return 0;
 	}
 
 	vertex = RB_Banner_FirstVertex(mh);
-	cmd = (u32 *)((u8 *)mh->ptrCommandList + 4);
+	cmd = (u32 *)(P32_DEC(u8 *, mh->ptrCommandList) + 4);
 
 	while (*cmd != 0xffffffffU)
 	{
