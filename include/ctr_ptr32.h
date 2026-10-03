@@ -23,6 +23,8 @@
 //   P32_GET(T, lv)     reads lv as a pointer of type T
 //   P32_SET(lv, v)     stores pointer v into lv
 //   P32_ENC / P32_DEC  convert a raw pointer to/from a handle stored in an int
+//   P32_TRY_ENC(v, out) like P32_ENC, but returns 0 instead of aborting when v
+//                      cannot be a handle
 //
 // T is the full pointer type, e.g. P32_GET(struct Model *, inst->model).
 
@@ -51,6 +53,22 @@ static inline uint32_t ctr_p32_enc(uintptr_t p)
 		CtrPtr32_RangeError(p);
 	}
 	return (uint32_t)(int32_t)d;
+}
+
+static inline int ctr_p32_try_enc(uintptr_t p, uint32_t *out)
+{
+	intptr_t d = (intptr_t)(p - CTR_P32_ORIGIN);
+	if (p + CTR_P32_SENTINEL_MAX <= 2 * CTR_P32_SENTINEL_MAX)
+	{
+		*out = (uint32_t)p;
+		return 1;
+	}
+	if (d != (intptr_t)(int32_t)d)
+	{
+		return 0;
+	}
+	*out = (uint32_t)(int32_t)d;
+	return 1;
 }
 
 static inline uintptr_t ctr_p32_dec(uint32_t h)
@@ -84,6 +102,7 @@ static inline uintptr_t ctr_p32_dec(uint32_t h)
 #endif
 #define P32_ENC(v)     ctr_p32_enc((uintptr_t)(v))
 #define P32_DEC(T, h)  ((T)ctr_p32_dec((uint32_t)(h)))
+#define P32_TRY_ENC(v, out) ctr_p32_try_enc((uintptr_t)(v), (out))
 
 #else
 
@@ -95,6 +114,7 @@ static inline uintptr_t ctr_p32_dec(uint32_t h)
 #define CTR_P32_MUTABLE const
 #define P32_ENC(v)     ((uint32_t)(uintptr_t)(v))
 #define P32_DEC(T, h)  ((T)(uintptr_t)(h))
+#define P32_TRY_ENC(v, out) (*(out) = (uint32_t)(uintptr_t)(v), 1)
 
 #endif
 

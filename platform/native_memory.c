@@ -38,16 +38,7 @@ union NativeScratchpadStorage
 
 CTR_STATIC_ASSERT(sizeof(union NativeScratchpadStorage) == CTR_SCRATCHPAD_SIZE);
 
-#if defined(CTR_NATIVE_64BIT)
-// Origin for CtrPtr32 handles. Nothing may ever be allocated at offset 0.
-char gCtrPtr32Anchor[64];
-
-void CtrPtr32_RangeError(uintptr_t p)
-{
-	fprintf(stderr, "CtrPtr32: pointer %p is outside +-2 GiB of the image\n", (void *)p);
-	abort();
-}
-#endif
+#include "native_ptr32.c"
 
 global_variable char s_mempackMemory[CTR_NATIVE_MEMPACK_BUFFER_SIZE];
 global_variable struct PlatformMempackArena s_mempackArena;
