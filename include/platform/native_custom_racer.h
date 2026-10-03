@@ -55,12 +55,12 @@ int NativeCustomRacer_InitSampledVoiceChannelAttr(int racerIndex, int soundID, s
 int NativeCustomRacer_UpdateSampledVoiceVolume(int racerIndex, int soundID, struct ChannelAttr *attr, int vol, int LR);
 void NativeCustomRacer_LoadSelectedSamplesToSpu(void);
 
-int NativeCustomRacer_QueueSelectedModel(int playerIndex, void **destination);
+int NativeCustomRacer_QueueSelectedModel(int playerIndex, P32(void *) *destination);
 struct Model *NativeCustomRacer_GetLoadedPlayerModel(int playerIndex);
-int NativeCustomRacer_QueueDriverModel(int driverIndex, void **destination);
-int NativeCustomRacer_LoadDriverModelNow(int driverIndex, void **destination);
+int NativeCustomRacer_QueueDriverModel(int driverIndex, P32(void *) *destination);
+int NativeCustomRacer_LoadDriverModelNow(int driverIndex, P32(void *) *destination);
 struct Model *NativeCustomRacer_GetLoadedDriverModel(int driverIndex);
-int NativeCustomRacer_LoadPodiumModelNow(int podiumRank, int danceModelID, void **destination);
+int NativeCustomRacer_LoadPodiumModelNow(int podiumRank, int danceModelID, P32(void *) *destination);
 void NativeCustomRacer_QueueSharedVramForSelections(struct BigHeader *retailBigfile);
 void NativeCustomRacer_ApplyDriverVramPatches(void);
 void NativeCustomRacer_ApplyPodiumVramPatches(void);

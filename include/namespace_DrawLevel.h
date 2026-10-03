@@ -8,7 +8,7 @@ enum DrawLevelOvr1PRenderListConstant
 
 struct DrawLevelOvr1PRenderListSlot
 {
-	P32(struct QuadBlock **) ptrQuadBlocksRendered;
+	P32(P32(struct QuadBlock *) *) ptrQuadBlocksRendered;
 	P32(struct VisMemBspListNode *) bspListStart;
 };
 
@@ -16,7 +16,7 @@ struct DrawLevelOvr1PRenderList
 {
 	struct DrawLevelOvr1PRenderListSlot list[DRAW_LEVEL_OVR1P_RENDER_LIST_SLOT_COUNT];
 	P32(struct VisMemBspListNode *) bspListStart_FullDynamic;
-	P32(struct QuadBlock **) ptrQuadBlocksRendered_FullDynamic;
+	P32(P32(struct QuadBlock *) *) ptrQuadBlocksRendered_FullDynamic;
 };
 
 #define DRAW_LEVEL_OVR1P_LIST_OFFSET(INDEX, MEMBER)                                                                                 \

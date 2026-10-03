@@ -13,6 +13,11 @@
 // string literals, functions, the mempack arena) so it is within +-2 GiB of the
 // anchor. Handle 0 is NULL.
 //
+// Small integers in [-CTR_P32_SENTINEL_MAX, CTR_P32_SENTINEL_MAX] are stored
+// as themselves, so sentinel "pointers" such as (void (*)(...))-2 survive a
+// round trip. The origin sits in the middle of gCtrPtr32Anchor, so no real
+// object is that close to it.
+//
 //   P32(T)             declares a pointer field of type T
 //   P32_FNPTR(ret, name, (args))  declares a function pointer field
 //   P32_GET(T, lv)     reads lv as a pointer of type T
@@ -28,16 +33,19 @@ typedef struct CtrPtr32
 	uint32_t h;
 } CtrPtr32;
 
+#define CTR_P32_SENTINEL_MAX 16
+#define CTR_P32_ORIGIN       ((uintptr_t)&gCtrPtr32Anchor[32])
+
 extern char gCtrPtr32Anchor[64];
 void CtrPtr32_RangeError(uintptr_t p);
 
 static inline uint32_t ctr_p32_enc(uintptr_t p)
 {
-	if (p == 0)
+	if (p + CTR_P32_SENTINEL_MAX <= 2 * CTR_P32_SENTINEL_MAX)
 	{
-		return 0;
+		return (uint32_t)p;
 	}
-	intptr_t d = (intptr_t)(p - (uintptr_t)&gCtrPtr32Anchor[0]);
+	intptr_t d = (intptr_t)(p - CTR_P32_ORIGIN);
 	if (d != (intptr_t)(int32_t)d)
 	{
 		CtrPtr32_RangeError(p);
@@ -47,7 +55,8 @@ static inline uint32_t ctr_p32_enc(uintptr_t p)
 
 static inline uintptr_t ctr_p32_dec(uint32_t h)
 {
-	return (h == 0) ? 0 : (uintptr_t)&gCtrPtr32Anchor[0] + (uintptr_t)(intptr_t)(int32_t)h;
+	uintptr_t v = (uintptr_t)(intptr_t)(int32_t)h;
+	return (h + CTR_P32_SENTINEL_MAX <= 2 * CTR_P32_SENTINEL_MAX) ? v : CTR_P32_ORIGIN + v;
 }
 
 #define P32(T)         CtrPtr32

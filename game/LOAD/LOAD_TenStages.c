@@ -573,10 +573,10 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 		// that does NOT overwrite the hub VRAM
 		int podiumFileVariant = LOAD_GetAdvPackIndex() - 1;
 
-		struct Model **podiumModels = &data.podiumModel_firstPlace;
+		P32(struct Model *) *podiumModels = &data.podiumModel_firstPlace;
 		for (int i = LOAD_PODIUM_LAST_MODEL_SLOT; i >= 0; i--)
 		{
-			podiumModels[i] = NULL;
+			P32_SET(podiumModels[i], NULL);
 		}
 
 		// NOTE(aalhendi): Retail gates stage advancement until
@@ -588,7 +588,7 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 
 		int fileIndex;
 		u8 *ptrIndexArr = &gGT->podium_modelIndex_First;
-		struct Model **ptrModelPtrArr = podiumModels;
+		P32(struct Model *) *ptrModelPtrArr = podiumModels;
 		void (*setPtrCb)(struct LoadQueueSlot *) = LOAD_QUEUE_CALLBACK_SET_POINTER;
 
 		// podium first place
@@ -610,7 +610,7 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 			}
 
 #if defined(CTR_NATIVE)
-			if (!NativeCustomRacer_LoadPodiumModelNow(0, ptrIndexArr[0], (void **)&ptrModelPtrArr[0]))
+			if (!NativeCustomRacer_LoadPodiumModelNow(0, ptrIndexArr[0], (P32(void *) *)&ptrModelPtrArr[0]))
 #endif
 				LOAD_AppendQueue(bigfile, LT_GETADDR, fileIndex, &ptrModelPtrArr[0], setPtrCb);
 		}
@@ -620,7 +620,7 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 		{
 			fileIndex = BI_DANCEMODELLOSE + podiumFileVariant + (ptrIndexArr[1] - STATIC_CRASHDANCE) * LOAD_PODIUM_MODEL_FILE_STRIDE;
 #if defined(CTR_NATIVE)
-			if (!NativeCustomRacer_LoadPodiumModelNow(1, ptrIndexArr[1], (void **)&ptrModelPtrArr[1]))
+			if (!NativeCustomRacer_LoadPodiumModelNow(1, ptrIndexArr[1], (P32(void *) *)&ptrModelPtrArr[1]))
 #endif
 				LOAD_AppendQueue(bigfile, LT_GETADDR, fileIndex, &ptrModelPtrArr[1], setPtrCb);
 		}
@@ -630,7 +630,7 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 		{
 			fileIndex = BI_DANCEMODELLOSE + podiumFileVariant + (ptrIndexArr[2] - STATIC_CRASHDANCE) * LOAD_PODIUM_MODEL_FILE_STRIDE;
 #if defined(CTR_NATIVE)
-			if (!NativeCustomRacer_LoadPodiumModelNow(2, ptrIndexArr[2], (void **)&ptrModelPtrArr[2]))
+			if (!NativeCustomRacer_LoadPodiumModelNow(2, ptrIndexArr[2], (P32(void *) *)&ptrModelPtrArr[2]))
 #endif
 				LOAD_AppendQueue(bigfile, LT_GETADDR, fileIndex, &ptrModelPtrArr[2], setPtrCb);
 		}
@@ -661,11 +661,11 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 		if (((gGT->gameMode1 & ADVENTURE_ARENA) != 0) && (gGT->podiumRewardID != NOFUNC) // 0
 		)
 		{
-			struct Model **modelPtrArr = &data.podiumModel_firstPlace;
+			P32(struct Model *) *modelPtrArr = &data.podiumModel_firstPlace;
 
 			for (int i = 0; i < LOAD_PODIUM_MODEL_SLOT_COUNT; i++)
 			{
-				struct Model *m = modelPtrArr[i];
+				struct Model *m = P32_GET(struct Model *, modelPtrArr[i]);
 
 				if (m == 0)
 				{
@@ -675,7 +675,7 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 				if (i < LOAD_PODIUM_MODELS_WITH_FILE_HEADER)
 				{
 					m = (struct Model *)((u8 *)m + LOAD_MODEL_FILE_HEADER_BYTES);
-					modelPtrArr[i] = m;
+					P32_SET(modelPtrArr[i], m);
 				}
 
 				if (m->id == -1)

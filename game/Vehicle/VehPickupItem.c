@@ -1095,11 +1095,11 @@ void VehPickupItem_ShootNow(struct Driver *d, s32 weaponID, s32 flags)
 			hurtVal = CLOCK_HURT_DURATION_JUICED;
 		}
 
-		struct Driver **dptr;
+		P32(struct Driver *) *dptr;
 
 		for (dptr = &gGT->drivers[0]; dptr < &gGT->drivers[CLOCK_DRIVER_COUNT]; dptr++)
 		{
-			struct Driver *victim = *dptr;
+			struct Driver *victim = P32_GET(struct Driver *, *dptr);
 
 			if (victim == 0)
 			{

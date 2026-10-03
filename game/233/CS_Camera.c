@@ -124,18 +124,18 @@ void CS_Camera_ThTick_Boss(struct Thread *t)
 			break;
 		}
 
-		struct Model **mArr = &D233.ptrModelBossHead;
+		P32(struct Model *) *mArr = &D233.ptrModelBossHead;
 
 		for (int i = 0; i < 2; i++)
 		{
-			if (mArr[i] != NULL)
+			if (P32_GET(struct Model *, mArr[i]) != NULL)
 			{
 				if (i != 0)
 				{
-					mArr[i] = (struct Model *)((char *)mArr[i] + 4);
+					P32_SET(mArr[i], (struct Model *)((char *)P32_GET(struct Model *, mArr[i]) + 4));
 				}
 
-				P32_SET(gGT->modelPtr[mArr[i]->id], mArr[i]);
+				P32_SET(gGT->modelPtr[P32_GET(struct Model *, mArr[i])->id], P32_GET(struct Model *, mArr[i]));
 			}
 		}
 
@@ -158,12 +158,12 @@ void CS_Camera_ThTick_Boss(struct Thread *t)
 		t = 0;
 		for (int i = 1; i >= 0; i--)
 		{
-			if (mArr[i] == NULL)
+			if (P32_GET(struct Model *, mArr[i]) == NULL)
 			{
 				continue;
 			}
 
-			t = CS_Thread_Init(mArr[i]->id, mArr[i]->name, &initData, 0, t);
+			t = CS_Thread_Init(P32_GET(struct Model *, mArr[i])->id, P32_GET(struct Model *, mArr[i])->name, &initData, 0, t);
 			if (t == NULL)
 			{
 				continue;

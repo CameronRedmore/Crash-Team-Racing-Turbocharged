@@ -22,7 +22,7 @@ struct OverlayDATA_233 D233;
 	            .unk1 = 0,                                 \
 	            .state = RECTMENU_STATE_CALLBACK_CENTERED, \
 	            .rows = 0,                                 \
-	            .funcPtr = CS_Garage_MenuProc,             \
+	            .funcPtr = P32_DEFER(CS_Garage_MenuProc),  \
 	            .drawStyle = 0,                            \
 	        },                                             \
 	    .numFramesMax_GarageMove = 0x1d,                   \
@@ -60,9 +60,16 @@ struct OverlayDATA_233 D233;
 	        },                                             \
 	}
 
-static const struct OVR233_Garage s_gGarageInitialState = OVR233_GARAGE_INITIALIZER;
+static CTR_P32_MUTABLE struct OVR233_Garage s_gGarageInitialState = OVR233_GARAGE_INITIALIZER;
 
 struct OVR233_Garage gGarage = OVR233_GARAGE_INITIALIZER;
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(gGarage)
+{
+	P32_SET(s_gGarageInitialState.menuGarage.funcPtr, CS_Garage_MenuProc);
+	P32_SET(gGarage.menuGarage.funcPtr, CS_Garage_MenuProc);
+}
+#endif
 
 // NOTE(aalhendi): Retail overlay data at 0x800b9488-0x800b9498.
 #define OVR233_CREDITS_BSS_INITIALIZER           \

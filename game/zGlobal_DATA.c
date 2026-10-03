@@ -3369,12 +3369,12 @@ struct Data
                                           {P32_DEFER(&data.voiceData[15].index[20]), 1},
                                       }}},
 
-            .voiceSetPtr = {(int)&data.voiceData[0].voiceSet[0], (int)&data.voiceData[1].voiceSet[0], (int)&data.voiceData[2].voiceSet[0],
-                            (int)&data.voiceData[3].voiceSet[0], (int)&data.voiceData[4].voiceSet[0], (int)&data.voiceData[5].voiceSet[0],
-                            (int)&data.voiceData[6].voiceSet[0], (int)&data.voiceData[7].voiceSet[0], (int)&data.voiceData[8].voiceSet[0],
-                            (int)&data.voiceData[9].voiceSet[0], (int)&data.voiceData[10].voiceSet[0], (int)&data.voiceData[11].voiceSet[0],
-                            (int)&data.voiceData[12].voiceSet[0], (int)&data.voiceData[13].voiceSet[0], (int)&data.voiceData[14].voiceSet[0],
-                            (int)&data.voiceData[15].voiceSet[0]},
+            .voiceSetPtr = {P32_DEFER(&data.voiceData[0].voiceSet[0]), P32_DEFER(&data.voiceData[1].voiceSet[0]), P32_DEFER(&data.voiceData[2].voiceSet[0]),
+                            P32_DEFER(&data.voiceData[3].voiceSet[0]), P32_DEFER(&data.voiceData[4].voiceSet[0]), P32_DEFER(&data.voiceData[5].voiceSet[0]),
+                            P32_DEFER(&data.voiceData[6].voiceSet[0]), P32_DEFER(&data.voiceData[7].voiceSet[0]), P32_DEFER(&data.voiceData[8].voiceSet[0]),
+                            P32_DEFER(&data.voiceData[9].voiceSet[0]), P32_DEFER(&data.voiceData[10].voiceSet[0]), P32_DEFER(&data.voiceData[11].voiceSet[0]),
+                            P32_DEFER(&data.voiceData[12].voiceSet[0]), P32_DEFER(&data.voiceData[13].voiceSet[0]), P32_DEFER(&data.voiceData[14].voiceSet[0]),
+                            P32_DEFER(&data.voiceData[15].voiceSet[0])},
 
             .voiceID = {4, 1, 5, 2, 1, 1, 1, 3, 6, 6, 7, 7, 7, 7, 7, 4, 0, 0, 0, 0, 0, 8, 8, 8},
 
@@ -9264,6 +9264,10 @@ CTR_P32_STATIC_FIXUP(data)
 	P32_SET(data.MetaDataTerrain[19].em_EvenFrame, &data.emSet_GrassR[0]);
 	P32_SET(data.MetaDataTerrain[20].em_OddFrame, &data.emSet_DirtLR[0]);
 	P32_SET(data.MetaDataTerrain[20].em_EvenFrame, &data.emSet_DirtLR[0]);
+	for (int i = 0; i < 0x10; i++)
+	{
+		P32_SET(data.voiceSetPtr[i], &data.voiceData[i].voiceSet[0]);
+	}
 }
 #endif
 

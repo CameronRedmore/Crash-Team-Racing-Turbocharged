@@ -85,8 +85,8 @@ struct VehGroundShadowEntry
 	SVec3 local[3];
 	s8 state;
 	s8 depthBias;
-	struct Driver *driver;
-	struct Instance *inst;
+	P32(struct Driver *) driver;
+	P32(struct Instance *) inst;
 	u8 idppFlags[VEH_GROUND_SHADOW_MAX_PLAYERS];
 	SVec3 pos;
 	u16 instFlags;
@@ -97,7 +97,7 @@ struct VehGroundShadowScratch
 	u8 pad_000[0xa4];
 	struct VehGroundShadowEntry entries[VEH_GROUND_SHADOW_MAX_DRIVERS];
 	u8 pad_1e4[0x14];
-	struct Driver *sentinelDriver;
+	P32(struct Driver *) sentinelDriver;
 	u8 pad_1fc[0x28];
 	struct TextureLayout shadowTex[VEH_GROUND_SHADOW_TEXTURE_COUNT];
 };
@@ -194,8 +194,8 @@ static void VehGroundShadow_BuildEntry(struct VehGroundShadowEntry *entry, struc
 {
 	struct Instance *inst = P32_GET(struct Instance *, driver->instSelf);
 
-	entry->driver = driver;
-	entry->inst = inst;
+	P32_SET(entry->driver, driver);
+	P32_SET(entry->inst, inst);
 	entry->instFlags = (u16)inst->flags;
 
 	for (int playerIndex = numPlayers - 1; playerIndex >= 0; playerIndex--)
@@ -212,7 +212,7 @@ static void VehGroundShadow_BuildEntry(struct VehGroundShadowEntry *entry, struc
 
 static void VehGroundShadow_TransformLocalAxes(struct VehGroundShadowEntry *entry)
 {
-	struct Driver *driver = entry->driver;
+	struct Driver *driver = P32_GET(struct Driver *, entry->driver);
 	MATRIX axisMatrix;
 	SVec3 local;
 	int height =
@@ -440,11 +440,11 @@ void VehGroundShadow_Main(void)
 		}
 		else
 		{
-			entry->driver = NULL;
+			P32_SET(entry->driver, NULL);
 			entry->state = VEH_GROUND_SHADOW_STATE_PENDING;
 		}
 	}
-	scratch->sentinelDriver = NULL;
+	P32_SET(scratch->sentinelDriver, NULL);
 
 #if defined(CTR_NATIVE)
 	// NOTE: The camera delta is always scaled by four, whatever the screen
@@ -500,7 +500,7 @@ void VehGroundShadow_Main(void)
 			u32 sxy[VEH_GROUND_SHADOW_NUM_POINTS];
 			s32 depth[VEH_GROUND_SHADOW_NUM_POINTS];
 
-			if (entry->driver == NULL)
+			if (P32_GET(struct Driver *, entry->driver) == NULL)
 			{
 				break;
 			}

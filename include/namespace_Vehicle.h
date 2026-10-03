@@ -2199,7 +2199,7 @@ CTR_STATIC_ASSERT(sizeof(RevEngineLockoutFlags) == 0x1);
 CTR_STATIC_ASSERT(sizeof(EngineSoundMode) == 0x1);
 
 CTR_STATIC_ASSERT(offsetof(struct Driver, ghostTape) == DRIVER_NTSC_RETAIL_SIZE);
-CTR_STATIC_ASSERT(sizeof(((struct Driver *)0)->funcPtrs) == DRIVER_FUNC_COUNT * sizeof(DriverFunc));
+CTR_STATIC_ASSERT(sizeof(((struct Driver *)0)->funcPtrs) == DRIVER_FUNC_COUNT * 4);
 #if BUILD < EurRetail
 CTR_STATIC_ASSERT(offsetof(struct Driver, funcPtrs) == 0x54);
 #else

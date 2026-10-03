@@ -153,6 +153,9 @@ global_variable struct NativeCustomRacerEntry s_nativeCustomRacers[NATIVE_CUSTOM
 global_variable int s_nativeCustomRacerCount;
 global_variable s16 s_nativeCustomRacerDriverSelection[LOAD_CHARACTER_ID_COUNT] = {-1, -1, -1, -1, -1, -1, -1, -1};
 global_variable void *s_nativeCustomRacerDriverModelStorage[LOAD_CHARACTER_ID_COUNT];
+// Load-queue set-pointer target used when a driver model has no retail slot.
+// Queue targets are retail 4-byte pointer slots; the storage above owns the buffer.
+global_variable P32(void *) s_nativeCustomRacerDriverModelSlot[LOAD_CHARACTER_ID_COUNT];
 global_variable s16 s_nativeCustomRacerPodiumSelection[NATIVE_CUSTOM_RACER_PODIUM_COUNT] = {-1, -1, -1};
 global_variable void *s_nativeCustomRacerPodiumModelStorage[NATIVE_CUSTOM_RACER_PODIUM_COUNT];
 global_variable s16 s_nativeCustomRacerSharedVram = -1;
@@ -167,7 +170,7 @@ internal int NativeCustomRacer_ReadAsset(struct NativeCustomRacerEntry *racer, i
 internal int NativeCustomRacer_ReadDiskAsset(struct NativeCustomRacerEntry *racer,
 	const struct NativeCustomRacerDiskAsset *asset, void *destination);
 
-internal int NativeCustomRacer_DriverIndexForModelTarget(void **target)
+internal int NativeCustomRacer_DriverIndexForModelTarget(P32(void *) *target)
 {
 	if (target == NULL)
 		return -1;
@@ -179,7 +182,7 @@ internal int NativeCustomRacer_DriverIndexForModelTarget(void **target)
 	}
 	for (int driverIndex = 0; driverIndex < LOAD_CHARACTER_ID_COUNT; driverIndex++)
 	{
-		if (target == &s_nativeCustomRacerDriverModelStorage[driverIndex])
+		if (target == &s_nativeCustomRacerDriverModelSlot[driverIndex])
 			return driverIndex;
 	}
 	return -1;
@@ -1483,11 +1486,11 @@ int NativeCustomRacer_LoadQueueSlot(struct LoadQueueSlot *slot)
 		return 0;
 	}
 
-	void **setPointerTarget = NULL;
+	P32(void *) *setPointerTarget = NULL;
 	void *destination = P32_GET(void *, slot->ptrDestination);
 	if ((slot->type_UNUSED == LT_DRAM) && (P32_GET(void (*)(struct LoadQueueSlot *), slot->callbackFuncPtr) == LOAD_QUEUE_CALLBACK_SET_POINTER))
 	{
-		setPointerTarget = (void **)P32_GET(void *, slot->ptrDestination);
+		setPointerTarget = P32_GET(P32(void *) *, slot->ptrDestination);
 		destination = NULL;
 	}
 	if (destination == NULL)
@@ -1532,7 +1535,7 @@ int NativeCustomRacer_LoadQueueSlot(struct LoadQueueSlot *slot)
 		}
 		LOAD_DramFileCallback(slot);
 		if (setPointerTarget != NULL)
-			*setPointerTarget = destination;
+			P32_SET(*setPointerTarget, destination);
 		return 1;
 	}
 	if (slot->type_UNUSED == LT_VRAM)
@@ -1562,7 +1565,7 @@ void NativeCustomRacer_FinishQueueSlot(struct LoadQueueSlot *slot)
 	}
 }
 
-int NativeCustomRacer_QueueDriverModel(int driverIndex, void **destination)
+int NativeCustomRacer_QueueDriverModel(int driverIndex, P32(void *) *destination)
 {
 	if (!NativeCustomRacer_IsRosterEnabled())
 		return 0;
@@ -1574,14 +1577,14 @@ int NativeCustomRacer_QueueDriverModel(int driverIndex, void **destination)
 		return 0;
 	}
 	if ((destination == NULL) && (driverIndex >= 0) && (driverIndex < LOAD_CHARACTER_ID_COUNT))
-		destination = &s_nativeCustomRacerDriverModelStorage[driverIndex];
+		destination = &s_nativeCustomRacerDriverModelSlot[driverIndex];
 
 	LOAD_AppendQueue(&s_nativeCustomRacers[racerIndex].bigfile.header, LT_GETADDR,
 	                 NATIVE_CUSTOM_RACER_ASSET_MODEL_HI, destination, LOAD_QUEUE_CALLBACK_SET_POINTER);
 	return 1;
 }
 
-internal int NativeCustomRacer_LoadModelNow(int racerIndex, void **storageSlot, void **destination, int modelIDOverride)
+internal int NativeCustomRacer_LoadModelNow(int racerIndex, void **storageSlot, P32(void *) *destination, int modelIDOverride)
 {
 	if (!NativeCustomRacer_IsRosterEnabled())
 		return 0;
@@ -1623,11 +1626,11 @@ internal int NativeCustomRacer_LoadModelNow(int racerIndex, void **storageSlot, 
 	free(*storageSlot);
 	*storageSlot = storage;
 	if (destination != NULL)
-		*destination = storage;
+		P32_SET(*destination, storage);
 	return 1;
 }
 
-int NativeCustomRacer_LoadDriverModelNow(int driverIndex, void **destination)
+int NativeCustomRacer_LoadDriverModelNow(int driverIndex, P32(void *) *destination)
 {
 	if ((driverIndex < 0) || (driverIndex >= LOAD_CHARACTER_ID_COUNT))
 		return 0;
@@ -1642,7 +1645,7 @@ int NativeCustomRacer_LoadDriverModelNow(int driverIndex, void **destination)
 	return 1;
 }
 
-int NativeCustomRacer_LoadPodiumModelNow(int podiumRank, int danceModelID, void **destination)
+int NativeCustomRacer_LoadPodiumModelNow(int podiumRank, int danceModelID, P32(void *) *destination)
 {
 	if ((podiumRank < 0) || (podiumRank >= NATIVE_CUSTOM_RACER_PODIUM_COUNT) || (danceModelID <= 0))
 		return 0;
@@ -1656,7 +1659,7 @@ int NativeCustomRacer_LoadPodiumModelNow(int podiumRank, int danceModelID, void 
 	return 1;
 }
 
-int NativeCustomRacer_QueueSelectedModel(int playerIndex, void **destination)
+int NativeCustomRacer_QueueSelectedModel(int playerIndex, P32(void *) *destination)
 {
 	if ((playerIndex < 0) || (playerIndex >= 4))
 		return 0;

@@ -137,7 +137,7 @@ static int DrawLevelOvr2P_DispatchBucketHandler(u32 handlerAddress, void *bucket
 
 	if (bucket->kind == DRAW_LEVEL_OVR1P_BUCKET_QUADBLOCKS_RENDERED)
 	{
-		return DrawLevelOvr1P_DrawRenderedQuadBlocks((struct QuadBlock **)bucketValue, pb, mesh, primMem, bucket->role);
+		return DrawLevelOvr1P_DrawRenderedQuadBlocks((P32(struct QuadBlock *) *)bucketValue, pb, mesh, primMem, bucket->role);
 	}
 
 	if (bucket->role == DRAW_LEVEL_OVR1P_BUCKET_FULL_DYNAMIC_LIST)
@@ -171,7 +171,7 @@ static int DrawLevelOvr2P_DrawViewportBucket(struct DrawLevelOvr1PRenderList *re
 	void *bucketValue = DrawLevelOvr1P_GetRenderListBucketValue(renderList, bucket);
 	u32 setupAddress = R227.bucketSetupAddresses[bucketIndex];
 	u32 handlerAddress = R227.bucketHandlerAddresses[bucketIndex];
-	struct QuadBlock **renderedOverflowBase = (struct QuadBlock **)P32_GET(void *, data.ptrRenderedQuadblockDestination_forEachPlayer[playerIndex]);
+	P32(struct QuadBlock *) *renderedOverflowBase = (P32(struct QuadBlock *) *)P32_GET(void *, data.ptrRenderedQuadblockDestination_forEachPlayer[playerIndex]);
 
 	if (bucketValue == NULL)
 	{

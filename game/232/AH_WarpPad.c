@@ -226,7 +226,7 @@ void AH_WarpPad_ThTick(struct Thread *t)
 	struct WarpPad *warppadObj = P32_GET(void *, t->object);
 	struct Instance *warppadInst = P32_GET(struct Instance *, t->inst);
 	struct Instance **visInstSrc = P32_GET(struct Instance **, gGT->cameraDC[0].visInstSrc);
-	struct Instance **instArr = &warppadObj->inst[0];
+	P32(struct Instance *) *instArr = &warppadObj->inst[0];
 	MATRIX *warppadMatrix = &warppadInst->matrix;
 
 	int modelID;
@@ -273,9 +273,9 @@ void AH_WarpPad_ThTick(struct Thread *t)
 	{
 		for (i = 0; i < WPIS_NUM_INSTANCES; i++)
 		{
-			if (instArr[i] != 0)
+			if (P32_GET(struct Instance *, instArr[i]) != 0)
 			{
-				instArr[i]->flags &= ~HIDE_MODEL;
+				P32_GET(struct Instance *, instArr[i])->flags &= ~HIDE_MODEL;
 			}
 		}
 	}
@@ -285,9 +285,9 @@ void AH_WarpPad_ThTick(struct Thread *t)
 	{
 		for (i = 0; i < WPIS_NUM_INSTANCES; i++)
 		{
-			if (instArr[i] != 0)
+			if (P32_GET(struct Instance *, instArr[i]) != 0)
 			{
-				instArr[i]->flags |= HIDE_MODEL;
+				P32_GET(struct Instance *, instArr[i])->flags |= HIDE_MODEL;
 			}
 		}
 	}
@@ -347,7 +347,7 @@ void AH_WarpPad_ThTick(struct Thread *t)
 			}
 
 			// if track is unlocked, ignore all other ELSE-IFs
-			if (instArr[WPIS_CLOSED_1S] == 0)
+			if (P32_GET(struct Instance *, instArr[WPIS_CLOSED_1S]) == 0)
 			{
 			}
 
@@ -374,7 +374,7 @@ void AH_WarpPad_ThTick(struct Thread *t)
 			    !CHECK_ADV_BIT(sdata->advProgress.rewards, ADV_REWARD_HINT_NEED_MORE_TROPHIES) &&
 
 			    // required item is not KEY
-			    (P32_GET(struct Model *, instArr[WPIS_CLOSED_ITEM]->model)->id != STATIC_KEY))
+			    (P32_GET(struct Model *, P32_GET(struct Instance *, instArr[WPIS_CLOSED_ITEM])->model)->id != STATIC_KEY))
 			{
 				// give hint for "need more trophies"
 				MainFrame_RequestMaskHint(ADV_MASK_HINT_ID_NEED_MORE_TROPHIES, 0);
@@ -401,7 +401,7 @@ void AH_WarpPad_ThTick(struct Thread *t)
 	}
 
 	// if warppad is locked
-	if (instArr[WPIS_CLOSED_1S] != 0)
+	if (P32_GET(struct Instance *, instArr[WPIS_CLOSED_1S]) != 0)
 	{
 		angleCamToWarppad = ratan2(warppadMatrix->t[0] - gGT->pushBuffer[0].pos.x, warppadMatrix->t[2] - gGT->pushBuffer[0].pos.z);
 
@@ -411,29 +411,29 @@ void AH_WarpPad_ThTick(struct Thread *t)
 		angleCos = MATH_Cos(angleCamToWarppad);
 
 		// no 10s digit
-		if (instArr[WPIS_CLOSED_10S] == 0)
+		if (P32_GET(struct Instance *, instArr[WPIS_CLOSED_10S]) == 0)
 		{
-			instArr[WPIS_CLOSED_1S]->matrix.t[0] = warppadMatrix->t[0] + (angleCos * AH_WP_CLOSED_SINGLE_DIGIT_OFFSET >> 0xC);
-			instArr[WPIS_CLOSED_1S]->matrix.t[2] = warppadMatrix->t[2] + (angleSin * AH_WP_CLOSED_SINGLE_DIGIT_OFFSET >> 0xC);
+			P32_GET(struct Instance *, instArr[WPIS_CLOSED_1S])->matrix.t[0] = warppadMatrix->t[0] + (angleCos * AH_WP_CLOSED_SINGLE_DIGIT_OFFSET >> 0xC);
+			P32_GET(struct Instance *, instArr[WPIS_CLOSED_1S])->matrix.t[2] = warppadMatrix->t[2] + (angleSin * AH_WP_CLOSED_SINGLE_DIGIT_OFFSET >> 0xC);
 
-			instArr[WPIS_CLOSED_ITEM]->matrix.t[0] = warppadMatrix->t[0] + (angleCos * AH_WP_CLOSED_SINGLE_ITEM_OFFSET >> 0xC);
-			instArr[WPIS_CLOSED_ITEM]->matrix.t[2] = warppadMatrix->t[2] + (angleSin * AH_WP_CLOSED_SINGLE_ITEM_OFFSET >> 0xC);
+			P32_GET(struct Instance *, instArr[WPIS_CLOSED_ITEM])->matrix.t[0] = warppadMatrix->t[0] + (angleCos * AH_WP_CLOSED_SINGLE_ITEM_OFFSET >> 0xC);
+			P32_GET(struct Instance *, instArr[WPIS_CLOSED_ITEM])->matrix.t[2] = warppadMatrix->t[2] + (angleSin * AH_WP_CLOSED_SINGLE_ITEM_OFFSET >> 0xC);
 		}
 
 		// 10s digit
 		else
 		{
-			instArr[WPIS_CLOSED_ITEM]->matrix.t[0] = warppadMatrix->t[0] + (angleCos * AH_WP_CLOSED_ITEM_WITH_TENS_OFFSET >> 0xC);
-			instArr[WPIS_CLOSED_ITEM]->matrix.t[2] = warppadMatrix->t[2] + (angleSin * AH_WP_CLOSED_ITEM_WITH_TENS_OFFSET >> 0xC);
+			P32_GET(struct Instance *, instArr[WPIS_CLOSED_ITEM])->matrix.t[0] = warppadMatrix->t[0] + (angleCos * AH_WP_CLOSED_ITEM_WITH_TENS_OFFSET >> 0xC);
+			P32_GET(struct Instance *, instArr[WPIS_CLOSED_ITEM])->matrix.t[2] = warppadMatrix->t[2] + (angleSin * AH_WP_CLOSED_ITEM_WITH_TENS_OFFSET >> 0xC);
 
-			instArr[WPIS_CLOSED_X]->matrix.t[0] = warppadMatrix->t[0] + (angleCos * AH_WP_CLOSED_X_WITH_TENS_OFFSET >> 0xC);
-			instArr[WPIS_CLOSED_X]->matrix.t[2] = warppadMatrix->t[2] + (angleSin * AH_WP_CLOSED_X_WITH_TENS_OFFSET >> 0xC);
+			P32_GET(struct Instance *, instArr[WPIS_CLOSED_X])->matrix.t[0] = warppadMatrix->t[0] + (angleCos * AH_WP_CLOSED_X_WITH_TENS_OFFSET >> 0xC);
+			P32_GET(struct Instance *, instArr[WPIS_CLOSED_X])->matrix.t[2] = warppadMatrix->t[2] + (angleSin * AH_WP_CLOSED_X_WITH_TENS_OFFSET >> 0xC);
 
-			instArr[WPIS_CLOSED_10S]->matrix.t[0] = warppadMatrix->t[0] + (angleCos * AH_WP_CLOSED_TENS_OFFSET >> 0xC);
-			instArr[WPIS_CLOSED_10S]->matrix.t[2] = warppadMatrix->t[2] + (angleSin * AH_WP_CLOSED_TENS_OFFSET >> 0xC);
+			P32_GET(struct Instance *, instArr[WPIS_CLOSED_10S])->matrix.t[0] = warppadMatrix->t[0] + (angleCos * AH_WP_CLOSED_TENS_OFFSET >> 0xC);
+			P32_GET(struct Instance *, instArr[WPIS_CLOSED_10S])->matrix.t[2] = warppadMatrix->t[2] + (angleSin * AH_WP_CLOSED_TENS_OFFSET >> 0xC);
 
-			instArr[WPIS_CLOSED_1S]->matrix.t[0] = warppadMatrix->t[0] + (angleCos * AH_WP_CLOSED_ONES_WITH_TENS_OFFSET >> 0xC);
-			instArr[WPIS_CLOSED_1S]->matrix.t[2] = warppadMatrix->t[2] + (angleSin * AH_WP_CLOSED_ONES_WITH_TENS_OFFSET >> 0xC);
+			P32_GET(struct Instance *, instArr[WPIS_CLOSED_1S])->matrix.t[0] = warppadMatrix->t[0] + (angleCos * AH_WP_CLOSED_ONES_WITH_TENS_OFFSET >> 0xC);
+			P32_GET(struct Instance *, instArr[WPIS_CLOSED_1S])->matrix.t[2] = warppadMatrix->t[2] + (angleSin * AH_WP_CLOSED_ONES_WITH_TENS_OFFSET >> 0xC);
 		}
 
 		warppadObj->spinRot_Prize.x = 0;
@@ -441,7 +441,7 @@ void AH_WarpPad_ThTick(struct Thread *t)
 
 		warppadObj->spinRot_Prize.y += CTR_FRAME_STEP(AH_WP_SPIN_PRIZE_STEP, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 
-		struct Instance *closedItemInst = instArr[WPIS_CLOSED_ITEM];
+		struct Instance *closedItemInst = P32_GET(struct Instance *, instArr[WPIS_CLOSED_ITEM]);
 
 		// converted to TEST in rebuildPS1
 		ConvertRotToMatrix(&closedItemInst->matrix, &warppadObj->spinRot_Prize);
@@ -738,7 +738,7 @@ WarpPad_TrophyAnimateOnly:
 
 WarpPad_AnimateOpen:
 
-	if ((instArr[WPIS_OPEN_BEAM] != 0) && CTR_RETAIL_FRAME_TICK(gGT->timer) && ((FPS_HALF(gGT->timer + 1) & 1) == 0))
+	if ((P32_GET(struct Instance *, instArr[WPIS_OPEN_BEAM]) != 0) && CTR_RETAIL_FRAME_TICK(gGT->timer) && ((FPS_HALF(gGT->timer + 1) & 1) == 0))
 	{
 		warppadObj->spinRot_Beam.x = 0;
 		warppadObj->spinRot_Beam.z = 0;
@@ -749,7 +749,7 @@ WarpPad_AnimateOpen:
 		warppadObj->spinRot_Beam.y += ((s16)(i >> 3) + (s16)((i >> 3) / 6) * -6 + 1) * AH_WP_SPIN_BEAM_STEP;
 
 		// converted to TEST in rebuildPS1
-		ConvertRotToMatrix(&instArr[WPIS_OPEN_BEAM]->matrix, &warppadObj->spinRot_Beam);
+		ConvertRotToMatrix(&P32_GET(struct Instance *, instArr[WPIS_OPEN_BEAM])->matrix, &warppadObj->spinRot_Beam);
 	}
 
 	wispRiseRate = FPS_HALF(AH_WP_WISP_RISE_RATE);
@@ -764,7 +764,7 @@ WarpPad_AnimateOpen:
 
 	for (i = 0; i < AH_WP_WISP_COUNT; i++)
 	{
-		if (instArr[WPIS_OPEN_RING1 + i] != 0)
+		if (P32_GET(struct Instance *, instArr[WPIS_OPEN_RING1 + i]) != 0)
 		{
 			warppadObj->spinRot_Wisp[i].x = 0;
 			warppadObj->spinRot_Wisp[i].z = 0;
@@ -772,26 +772,26 @@ WarpPad_AnimateOpen:
 			warppadObj->spinRot_Wisp[i].y += CTR_FRAME_STEP(AH_WP_SPIN_WISP_STEP, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 
 			// converted to TEST in rebuildPS1
-			ConvertRotToMatrix(&instArr[WPIS_OPEN_RING1 + i]->matrix, &warppadObj->spinRot_Wisp[i]);
+			ConvertRotToMatrix(&P32_GET(struct Instance *, instArr[WPIS_OPEN_RING1 + i])->matrix, &warppadObj->spinRot_Wisp[i]);
 
 			// if height hasn't reached max height
-			if (instArr[WPIS_OPEN_RING1 + i]->matrix.t[1] < (warppadInst->matrix.t[1] + wispMaxHeight))
+			if (P32_GET(struct Instance *, instArr[WPIS_OPEN_RING1 + i])->matrix.t[1] < (warppadInst->matrix.t[1] + wispMaxHeight))
 			{
-				instArr[WPIS_OPEN_RING1 + i]->matrix.t[1] += wispRiseRate;
+				P32_GET(struct Instance *, instArr[WPIS_OPEN_RING1 + i])->matrix.t[1] += wispRiseRate;
 
 				// if height hasn't reached 4x RiseRate,
 				// first 4 frames of rising
-				if (instArr[WPIS_OPEN_RING1 + i]->matrix.t[1] < (warppadInst->matrix.t[1] + wispRiseRate * FPS_DOUBLE(AH_WP_WISP_FIRST_FRAMES)))
+				if (P32_GET(struct Instance *, instArr[WPIS_OPEN_RING1 + i])->matrix.t[1] < (warppadInst->matrix.t[1] + wispRiseRate * FPS_DOUBLE(AH_WP_WISP_FIRST_FRAMES)))
 				{
 					// reduce transparency
-					instArr[WPIS_OPEN_RING1 + i]->alphaScale -= CTR_FRAME_STEP(AH_WP_WISP_FADE_IN_STEP, P32_GET(struct GameTracker *, sdata->gGT)->timer);
+					P32_GET(struct Instance *, instArr[WPIS_OPEN_RING1 + i])->alphaScale -= CTR_FRAME_STEP(AH_WP_WISP_FADE_IN_STEP, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 				}
 
 				// after first 4 frames
 				else
 				{
 					// add transparency as the wisp spirals upward (~0x60  per frame)
-					instArr[WPIS_OPEN_RING1 + i]->alphaScale += AH_WP_WISP_FADE_OUT_RANGE / (wispMaxHeight / wispRiseRate);
+					P32_GET(struct Instance *, instArr[WPIS_OPEN_RING1 + i])->alphaScale += AH_WP_WISP_FADE_OUT_RANGE / (wispMaxHeight / wispRiseRate);
 				}
 			}
 
@@ -799,10 +799,10 @@ WarpPad_AnimateOpen:
 			else
 			{
 				// reset height
-				instArr[WPIS_OPEN_RING1 + i]->matrix.t[1] = warppadInst->matrix.t[1];
+				P32_GET(struct Instance *, instArr[WPIS_OPEN_RING1 + i])->matrix.t[1] = warppadInst->matrix.t[1];
 
 				// full transparency
-				instArr[WPIS_OPEN_RING1 + i]->alphaScale = AH_WP_FULL_ALPHA;
+				P32_GET(struct Instance *, instArr[WPIS_OPEN_RING1 + i])->alphaScale = AH_WP_FULL_ALPHA;
 
 				rng1 = MixRNG_Scramble() >> 3;
 
@@ -838,22 +838,22 @@ WarpPad_AnimateOpen:
 	{
 		warppadObj->spinRot_Prize.z = AH_WP_PRIZE_TILT_Z;
 
-		if (instArr[WPIS_OPEN_PRIZE1 + i] != 0)
+		if (P32_GET(struct Instance *, instArr[WPIS_OPEN_PRIZE1 + i]) != 0)
 		{
-			AH_WarpPad_SpinRewards(instArr[WPIS_OPEN_PRIZE1 + i], warppadObj, i, warppadInst->matrix.t[0], warppadInst->matrix.t[1], warppadInst->matrix.t[2]);
+			AH_WarpPad_SpinRewards(P32_GET(struct Instance *, instArr[WPIS_OPEN_PRIZE1 + i]), warppadObj, i, warppadInst->matrix.t[0], warppadInst->matrix.t[1], warppadInst->matrix.t[2]);
 
-			modelID = P32_GET(struct Model *, instArr[WPIS_OPEN_PRIZE1 + i]->model)->id;
+			modelID = P32_GET(struct Model *, P32_GET(struct Instance *, instArr[WPIS_OPEN_PRIZE1 + i])->model)->id;
 
 			if (rewardScale == 0)
 			{
 				// invisible
-				instArr[WPIS_OPEN_PRIZE1 + i]->flags |= HIDE_MODEL;
+				P32_GET(struct Instance *, instArr[WPIS_OPEN_PRIZE1 + i])->flags |= HIDE_MODEL;
 			}
 
 			else
 			{
 				// visible
-				instArr[WPIS_OPEN_PRIZE1 + i]->flags &= ~HIDE_MODEL;
+				P32_GET(struct Instance *, instArr[WPIS_OPEN_PRIZE1 + i])->flags &= ~HIDE_MODEL;
 
 				// token
 				rewardScale2 = AH_WP_STANDARD_ITEM_SCALE;
@@ -872,7 +872,7 @@ WarpPad_AnimateOpen:
 				}
 
 				rewardScale2 = (u32)(rewardScale2 * rewardScale) >> 8;
-				CTR_SET_VEC3(instArr[WPIS_OPEN_PRIZE1 + i]->scale.v, (s16)rewardScale2, (s16)rewardScale2, (s16)rewardScale2);
+				CTR_SET_VEC3(P32_GET(struct Instance *, instArr[WPIS_OPEN_PRIZE1 + i])->scale.v, (s16)rewardScale2, (s16)rewardScale2, (s16)rewardScale2);
 			}
 		}
 
@@ -880,12 +880,12 @@ WarpPad_AnimateOpen:
 		warppadObj->spinRot_Rewards.y += CTR_FRAME_STEP(AH_WP_SPIN_REWARD_RING_STEP, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 	}
 
-	if (instArr[WPIS_CLOSED_1S] != 0)
+	if (P32_GET(struct Instance *, instArr[WPIS_CLOSED_1S]) != 0)
 	{
-		INSTANCE_Death(instArr[WPIS_CLOSED_1S]);
-		INSTANCE_Death(instArr[WPIS_CLOSED_10S]);
-		INSTANCE_Death(instArr[WPIS_CLOSED_X]);
-		INSTANCE_Death(instArr[WPIS_CLOSED_ITEM]);
+		INSTANCE_Death(P32_GET(struct Instance *, instArr[WPIS_CLOSED_1S]));
+		INSTANCE_Death(P32_GET(struct Instance *, instArr[WPIS_CLOSED_10S]));
+		INSTANCE_Death(P32_GET(struct Instance *, instArr[WPIS_CLOSED_X]));
+		INSTANCE_Death(P32_GET(struct Instance *, instArr[WPIS_CLOSED_ITEM]));
 	}
 }
 
@@ -895,53 +895,53 @@ void AH_WarpPad_ThDestroy(struct Thread *t)
 	struct WarpPad *warppadObj = P32_GET(void *, t->object);
 
 	// array of instances in warppad object
-	struct Instance **instArr = &warppadObj->inst[0];
+	P32(struct Instance *) *instArr = &warppadObj->inst[0];
 
-	if (instArr[WPIS_CLOSED_1S] != 0)
+	if (P32_GET(struct Instance *, instArr[WPIS_CLOSED_1S]) != 0)
 	{
-		INSTANCE_Death(instArr[WPIS_CLOSED_1S]);
-		instArr[WPIS_CLOSED_1S] = 0;
+		INSTANCE_Death(P32_GET(struct Instance *, instArr[WPIS_CLOSED_1S]));
+		P32_SET(instArr[WPIS_CLOSED_1S], 0);
 	}
 
-	if (instArr[WPIS_CLOSED_10S] != 0)
+	if (P32_GET(struct Instance *, instArr[WPIS_CLOSED_10S]) != 0)
 	{
-		INSTANCE_Death(instArr[WPIS_CLOSED_10S]);
-		instArr[WPIS_CLOSED_10S] = 0;
+		INSTANCE_Death(P32_GET(struct Instance *, instArr[WPIS_CLOSED_10S]));
+		P32_SET(instArr[WPIS_CLOSED_10S], 0);
 	}
 
-	if (instArr[WPIS_CLOSED_X] != 0)
+	if (P32_GET(struct Instance *, instArr[WPIS_CLOSED_X]) != 0)
 	{
-		INSTANCE_Death(instArr[WPIS_CLOSED_X]);
-		instArr[WPIS_CLOSED_X] = 0;
+		INSTANCE_Death(P32_GET(struct Instance *, instArr[WPIS_CLOSED_X]));
+		P32_SET(instArr[WPIS_CLOSED_X], 0);
 	}
 
-	if (instArr[WPIS_CLOSED_ITEM] != 0)
+	if (P32_GET(struct Instance *, instArr[WPIS_CLOSED_ITEM]) != 0)
 	{
-		INSTANCE_Death(instArr[WPIS_CLOSED_ITEM]);
-		instArr[WPIS_CLOSED_ITEM] = 0;
+		INSTANCE_Death(P32_GET(struct Instance *, instArr[WPIS_CLOSED_ITEM]));
+		P32_SET(instArr[WPIS_CLOSED_ITEM], 0);
 	}
 
-	if (instArr[WPIS_OPEN_BEAM] != 0)
+	if (P32_GET(struct Instance *, instArr[WPIS_OPEN_BEAM]) != 0)
 	{
-		INSTANCE_Death(instArr[WPIS_OPEN_BEAM]);
-		instArr[WPIS_OPEN_BEAM] = 0;
+		INSTANCE_Death(P32_GET(struct Instance *, instArr[WPIS_OPEN_BEAM]));
+		P32_SET(instArr[WPIS_OPEN_BEAM], 0);
 	}
 
 	for (int i = WPIS_OPEN_RING1; i < WPIS_OPEN_PRIZE1; i++)
 	{
-		if (instArr[i] != 0)
+		if (P32_GET(struct Instance *, instArr[i]) != 0)
 		{
-			INSTANCE_Death(instArr[i]);
-			instArr[i] = 0;
+			INSTANCE_Death(P32_GET(struct Instance *, instArr[i]));
+			P32_SET(instArr[i], 0);
 		}
 	}
 
 	for (int i = WPIS_OPEN_PRIZE1; i < WPIS_NUM_INSTANCES; i++)
 	{
-		if (instArr[i] != 0)
+		if (P32_GET(struct Instance *, instArr[i]) != 0)
 		{
-			INSTANCE_Death(instArr[i]);
-			instArr[i] = 0;
+			INSTANCE_Death(P32_GET(struct Instance *, instArr[i]));
+			P32_SET(instArr[i], 0);
 		}
 	}
 }

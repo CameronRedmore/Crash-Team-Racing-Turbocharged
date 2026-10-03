@@ -606,9 +606,9 @@ static void Particle_UpdateIconFrame(struct Particle *p, u16 flagsSetColor)
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8003eefc-0x8003f434
-void Particle_UpdateList(struct Particle **listHead, struct Particle *p)
+void Particle_UpdateList(P32(struct Particle *) *listHead, struct Particle *p)
 {
-	struct Particle **link = listHead;
+	P32(struct Particle *) *link = listHead;
 
 	while (p != NULL)
 	{
@@ -704,7 +704,7 @@ void Particle_UpdateList(struct Particle **listHead, struct Particle *p)
 		Particle_OnDestroy(p);
 		LIST_AddFront(&P32_GET(struct GameTracker *, sdata->gGT)->JitPools.particle.free, (struct Item *)p);
 		P32_GET(struct GameTracker *, sdata->gGT)->numParticles--;
-		*link = next;
+		P32_SET(*link, next);
 		p = next;
 	}
 }
@@ -844,7 +844,7 @@ struct ParticleRenderListScratch
 		};
 	};
 	u8 pad_14[0x0c];
-	uint32_t *ot;
+	P32(uint32_t *) ot;
 	s32 cameraOffset[3];
 	s32 depth;
 };
@@ -1428,7 +1428,7 @@ void Particle_RenderList(struct PushBuffer *pb, void *particleList)
 	CTC2(scratch->viewProjWords[3], 11);
 	CTC2(scratch->viewProjWords[4], 12);
 
-	scratch->ot = P32_GET(uint32_t *, pb->ptrOT);
+	P32_SET(scratch->ot, P32_GET(uint32_t *, pb->ptrOT));
 	cameraID = (s8)pb->cameraID;
 	scratch->cameraOffset[0] = CTR_MipsSll(pb->matrix_Camera.t[0], 2);
 	scratch->cameraOffset[1] = CTR_MipsSll(pb->matrix_Camera.t[1], 2);
@@ -1582,7 +1582,7 @@ void Particle_RenderList(struct PushBuffer *pb, void *particleList)
 #if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
 				nativeLayer = Particle_RenderList_SubmitNative(pb, particle, icon, prim, NULL, posX, posY, posZ);
 #endif
-				Particle_RenderList_LinkAndAdvance(&primCursor, &payloadCursor, particle, idpp, flagsSetColor, scratch->depth, scratch->ot, nativeLayer);
+				Particle_RenderList_LinkAndAdvance(&primCursor, &payloadCursor, particle, idpp, flagsSetColor, scratch->depth, P32_GET(uint32_t *, scratch->ot), nativeLayer);
 				prim = primCursor;
 				goto next_particle;
 			}
@@ -1593,7 +1593,7 @@ void Particle_RenderList(struct PushBuffer *pb, void *particleList)
 #if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
 			nativeLayer = Particle_RenderList_SubmitNative(pb, particle, icon, prim, &matrix, posX, posY, posZ);
 #endif
-			Particle_RenderList_LinkAndAdvance(&primCursor, &payloadCursor, particle, idpp, flagsSetColor, scratch->depth, scratch->ot, nativeLayer);
+			Particle_RenderList_LinkAndAdvance(&primCursor, &payloadCursor, particle, idpp, flagsSetColor, scratch->depth, P32_GET(uint32_t *, scratch->ot), nativeLayer);
 			prim = primCursor;
 
 		next_particle:
@@ -1762,7 +1762,7 @@ static void Particle_RandomizeOscillator(struct ParticleOscillator *localOsc[12]
 
 static void Particle_LinkOscillators(struct Particle *p, struct ParticleOscillator *localOsc[12], u32 flagsAxis)
 {
-	struct ParticleOscillator **link = &p->oscillator;
+	P32(struct ParticleOscillator *) *link = &p->oscillator;
 	u32 oscFlags = (s32)flagsAxis >> 16;
 	int axisIndex = 0;
 
@@ -1770,7 +1770,7 @@ static void Particle_LinkOscillators(struct Particle *p, struct ParticleOscillat
 	{
 		if ((oscFlags & 1) != 0)
 		{
-			*link = localOsc[axisIndex];
+			P32_SET(*link, localOsc[axisIndex]);
 			link = &localOsc[axisIndex]->next;
 		}
 
@@ -1778,7 +1778,7 @@ static void Particle_LinkOscillators(struct Particle *p, struct ParticleOscillat
 		axisIndex++;
 	}
 
-	*link = NULL;
+	P32_SET(*link, NULL);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80040308-0x80040850

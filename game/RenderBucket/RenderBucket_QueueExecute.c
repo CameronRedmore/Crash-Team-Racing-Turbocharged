@@ -25,9 +25,13 @@ struct RenderBucketQueueState
 	struct RenderBucketEntry *entryEnd;
 #endif
 };
+// Native entries live in s_nativeRenderBucketStorage, not retail memory, so
+// 64-bit builds keep real pointers and only the 32-bit layout is retail-shaped.
+#if !defined(CTR_NATIVE_64BIT)
 CTR_STATIC_ASSERT(sizeof(struct RenderBucketEntry) == 0x8);
 CTR_STATIC_ASSERT(offsetof(struct RenderBucketEntry, inst) == 0x0);
 CTR_STATIC_ASSERT(offsetof(struct RenderBucketEntry, instPlayerBase) == 0x4);
+#endif
 #if defined(CTR_NATIVE)
 enum
 {

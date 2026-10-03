@@ -528,13 +528,13 @@ void MainInit_Drivers(struct GameTracker *gGT)
 #if defined(CTR_NATIVE)
 		if (gNativeGhostReplayMode == 0)
 		{
-			struct Model **humanPlyrDriverModel = &P32_GET(struct Instance *, P32_GET(struct Thread *, gGT->threadBuckets[PLAYER].thread)->inst)->model;
+			P32(struct Model *) *humanPlyrDriverModel = &P32_GET(struct Instance *, P32_GET(struct Thread *, gGT->threadBuckets[PLAYER].thread)->inst)->model;
 
 			// that's characterIDs[1] from the MPK
 			// humanGhost = *humanPlyrDriverModel,
 
 			// then replace with intended P1 model
-			*humanPlyrDriverModel = P32_GET(struct Model *, data.driverModelExtras[0].model);
+			P32_SET(*humanPlyrDriverModel, P32_GET(struct Model *, data.driverModelExtras[0].model));
 		}
 #endif
 	}

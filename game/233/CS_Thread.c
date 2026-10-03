@@ -154,7 +154,7 @@ int CS_Thread_UseOpcode(struct Instance *instance, struct CutsceneObj *cs)
 	u16 cutsceneFlags;
 	u32 conditionMet;
 	int lodIndexState;
-	char *const *cutsceneOpcodes;
+	P32(char *) const *cutsceneOpcodes;
 	s16 levelToLoad;
 	int distanceToScreen;
 	struct Thread *dancerThread;
@@ -704,7 +704,7 @@ processOpcode:
 			cutsceneOpcodes = R233.creditsCutsceneOpcodes;
 			scriptIndex = gGT->levelID - CREDITS_CRASH;
 		}
-		CS_ScriptCmd_OpcodeAt(cs, cutsceneOpcodes[scriptIndex]);
+		CS_ScriptCmd_OpcodeAt(cs, P32_GET(char *, cutsceneOpcodes[scriptIndex]));
 		goto updateInstanceAndReturn;
 	}
 
@@ -1823,7 +1823,7 @@ struct Thread *CS_Thread_Init(s16 modelID, const char *name, struct CsThreadInit
 		}
 		else if ((u32)(modelID - STATIC_CRASHDANCE) < CS_DANCE_MODEL_SCRIPT_COUNT)
 		{
-			char *const *base;
+			P32(char *) const *base;
 			int off = (modelID - STATIC_CRASHDANCE);
 
 #if defined(CTR_NATIVE)
@@ -1839,7 +1839,7 @@ struct Thread *CS_Thread_Init(s16 modelID, const char *name, struct CsThreadInit
 				base = R233.danceOtherScripts;
 			}
 
-			scriptPtr = base[off];
+			scriptPtr = P32_GET(char *, base[off]);
 		}
 		else
 		{

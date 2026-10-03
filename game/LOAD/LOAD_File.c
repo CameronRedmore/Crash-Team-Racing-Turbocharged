@@ -184,7 +184,8 @@ void *LOAD_DramFile(void *bigfilePtr, int subfileIndex, void *ptrDestination, u3
 	{
 		loadedFile = LOAD_ReadFile_ex(bigfilePtr, LT_GETADDR, subfileIndex, NULL, sizePtr, LOAD_DramFileCallback);
 		P32_SET(data.currSlot.ptrDestination, loadedFile);
-		*(void **)ptrDestination = loadedFile;
+		// The destination is a retail 4-byte pointer slot.
+		P32_SET(*(P32(void *) *)ptrDestination, loadedFile);
 		return loadedFile;
 	}
 
@@ -277,7 +278,8 @@ void *LOAD_VramFile(void *bigfilePtr, int subfileIndex, void *ptrDestination, u3
 	{
 		loadedFile = LOAD_ReadFile_ex(bigfilePtr, LT_VRAM, subfileIndex, NULL, sizePtr, LOAD_VramFileCallback);
 		P32_SET(data.currSlot.ptrDestination, loadedFile);
-		*(void **)ptrDestination = loadedFile;
+		// The destination is a retail 4-byte pointer slot.
+		P32_SET(*(P32(void *) *)ptrDestination, loadedFile);
 		return loadedFile;
 	}
 

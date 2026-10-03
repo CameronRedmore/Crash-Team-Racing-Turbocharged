@@ -94,7 +94,7 @@ typedef union DriverModelExtraSlot
 	P32(struct Model *) model;
 } DriverModelExtraSlot;
 
-CTR_STATIC_ASSERT(sizeof(DriverModelExtraSlot) == sizeof(void *));
+CTR_STATIC_ASSERT(sizeof(DriverModelExtraSlot) == 4);
 CTR_STATIC_ASSERT(offsetof(DriverModelExtraSlot, fileBase) == 0x0);
 CTR_STATIC_ASSERT(offsetof(DriverModelExtraSlot, model) == 0x0);
 
@@ -1767,7 +1767,7 @@ struct Data
 	// 80082788 -- JpnTrial
 	// 80083b74 -- EurRetail
 	// 80086b1c -- JpnRetail
-	int voiceSetPtr[0x10];
+	P32(void *) voiceSetPtr[0x10];
 
 	// 800838dc -- UsaRetail
 	u8 voiceID[0x18];
@@ -2789,7 +2789,7 @@ struct Data
 };
 
 CTR_STATIC_ASSERT(offsetof(struct Data, podiumModel_firstPlace) == offsetof(struct Data, driverModelExtras) + sizeof(((struct Data *)0)->driverModelExtras));
-CTR_STATIC_ASSERT(offsetof(struct Data, currSlot) == offsetof(struct Data, driverModelExtras) + 11 * sizeof(void *));
+CTR_STATIC_ASSERT(offsetof(struct Data, currSlot) == offsetof(struct Data, driverModelExtras) + 11 * 4);
 CTR_STATIC_ASSERT(sizeof(((struct Data *)0)->characterIDs_2P_AIs) == 0x1c);
 CTR_STATIC_ASSERT(offsetof(struct Data, bakedGteMath) == 0x7554);
 CTR_STATIC_ASSERT(sizeof(((struct Data *)0)->bakedGteMath) == BAKED_GTE_MATRIX_COUNT * 8);

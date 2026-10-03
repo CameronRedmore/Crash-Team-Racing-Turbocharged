@@ -518,9 +518,9 @@ static void MM_NativeExtraDifficultyPrepare(void)
 	{
 		.stringIndexTitle = LNG_DIFFICULTY,
 		.state = CENTER_ON_X | USE_SMALL_FONT | BIG_TEXT_IN_TITLE,
-		.rows = s_nativeExtraDifficultyRows,
-		.funcPtr = MM_MenuProc_Difficulty,
 	};
+	P32_SET(s_nativeExtraDifficultyMenu.rows, s_nativeExtraDifficultyRows);
+	P32_SET(s_nativeExtraDifficultyMenu.funcPtr, MM_MenuProc_Difficulty);
 }
 
 static void MM_NativeLanguageLoad(s16 row)

@@ -7,7 +7,7 @@ struct DecalMPEntry
 	u8 kartState;
 	u8 pad3[3];
 	s16 boolUpdatedThisFrame;
-	struct Instance *inst;
+	P32(struct Instance *) inst;
 	u8 padC[4];
 	s16 renderW;
 	s16 renderH;
@@ -79,7 +79,7 @@ void DecalMP_01(struct GameTracker *gGT)
 
 			struct InstDrawPerPlayer *idpp = DecalMP_GetIdpp(inst, cameraID);
 			P32_SET(idpp->pushBuffer, &entry->pb);
-			entry->inst = inst;
+			P32_SET(entry->inst, inst);
 		}
 	}
 }
@@ -91,13 +91,13 @@ void DecalMP_02(struct GameTracker *gGT)
 	for (int index = 0; index < 12; index++)
 	{
 		struct DecalMPEntry *entry = DecalMP_GetEntry(gGT, index);
-		if (entry->inst == NULL)
+		if (P32_GET(struct Instance *, entry->inst) == NULL)
 		{
 			return;
 		}
 
 		int cameraID = entry->pb.cameraID;
-		struct InstDrawPerPlayer *idpp = DecalMP_GetIdpp(entry->inst, cameraID);
+		struct InstDrawPerPlayer *idpp = DecalMP_GetIdpp(P32_GET(struct Instance *, entry->inst), cameraID);
 		s16 timer = 1000;
 
 		if ((idpp->instFlags & 0x140) == 0x140)
@@ -161,13 +161,13 @@ void DecalMP_03(struct GameTracker *gGT)
 		}
 
 		struct DecalMPEntry *entry = DecalMP_GetEntry(gGT, index);
-		if (entry->inst == NULL)
+		if (P32_GET(struct Instance *, entry->inst) == NULL)
 		{
 			return;
 		}
 
 		int cameraID = entry->pb.cameraID;
-		struct InstDrawPerPlayer *idpp = DecalMP_GetIdpp(entry->inst, cameraID);
+		struct InstDrawPerPlayer *idpp = DecalMP_GetIdpp(P32_GET(struct Instance *, entry->inst), cameraID);
 
 		if ((idpp->instFlags & 0x140) != 0x140)
 		{

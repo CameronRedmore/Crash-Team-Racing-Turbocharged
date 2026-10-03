@@ -595,7 +595,7 @@ void AH_Door_LInB(struct Instance *inst)
 	struct Model *m;
 	struct ModelHeader *headers;
 	struct WoodDoor *woodDoor;
-	struct Instance **instPtrArr;
+	P32(struct Instance *) *instPtrArr;
 
 	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	levelID = gGT->levelID;
@@ -634,7 +634,7 @@ void AH_Door_LInB(struct Instance *inst)
 	instPtrArr = &woodDoor->keyInst[0];
 	for (int i = 0; i < AH_WOOD_DOOR_KEY_COUNT; i++)
 	{
-		instPtrArr[i] = NULL;
+		P32_SET(instPtrArr[i], NULL);
 	}
 
 	woodDoor->frameCount_unused = 0;

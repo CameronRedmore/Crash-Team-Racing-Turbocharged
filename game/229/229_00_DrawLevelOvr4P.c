@@ -187,7 +187,7 @@ static int DrawLevelOvr4P_DrawViewportBucket(struct DrawLevelOvr1PRenderList *re
 	void *bucketValue = DrawLevelOvr1P_GetRenderListBucketValue(renderList, bucket);
 	u32 setupAddress = R229.bucketSetupAddresses[bucketIndex];
 	u32 handlerAddress = R229.bucketHandlerAddresses[bucketIndex];
-	struct QuadBlock **renderedOverflowBase = (struct QuadBlock **)P32_GET(void *, data.ptrRenderedQuadblockDestination_forEachPlayer[playerIndex]);
+	P32(struct QuadBlock *) *renderedOverflowBase = (P32(struct QuadBlock *) *)P32_GET(void *, data.ptrRenderedQuadblockDestination_forEachPlayer[playerIndex]);
 
 	*didDispatch = 0;
 
@@ -267,7 +267,7 @@ static int DrawLevelOvr4P_DispatchBucketHandler(u32 handlerAddress, void *bucket
 	if (handlerAddress == OVR229_RETAIL_LABEL_WATER_RENDERED_HANDLER)
 	{
 		DrawLevelOvr1P_SetPrimReserveBias(OVR229_WATER_BSP_LIST_PRIM_RESERVE_BIAS);
-		return Ovr226_800a2904_DrawWaterRenderedListWithDefaultHandler((struct QuadBlock **)bucketValue, pb, mesh, primMem,
+		return Ovr226_800a2904_DrawWaterRenderedListWithDefaultHandler((P32(struct QuadBlock *) *)bucketValue, pb, mesh, primMem,
 		                                                               OVR229_RETAIL_LABEL_WATER_RENDERED_DEFAULT_WRAPPER);
 	}
 
@@ -281,7 +281,7 @@ static int DrawLevelOvr4P_DispatchBucketHandler(u32 handlerAddress, void *bucket
 	{
 		DrawLevelOvr1P_SetPrimReserveBias(OVR229_WATER_BSP_LIST_PRIM_RESERVE_BIAS);
 		DrawLevelOvr1P_SetSplitGroundThresholdScratch();
-		return DrawLevelOvr1P_DrawRenderedQuadBlocks((struct QuadBlock **)bucketValue, pb, mesh, primMem, DRAW_LEVEL_OVR1P_BUCKET_DYNAMIC_RENDERED);
+		return DrawLevelOvr1P_DrawRenderedQuadBlocks((P32(struct QuadBlock *) *)bucketValue, pb, mesh, primMem, DRAW_LEVEL_OVR1P_BUCKET_DYNAMIC_RENDERED);
 	}
 
 	if (handlerAddress == OVR229_RETAIL_LABEL_SPLIT_GROUND_LIST_B_HANDLER)
@@ -304,7 +304,7 @@ static int DrawLevelOvr4P_DispatchBucketHandler(u32 handlerAddress, void *bucket
 		DrawLevelOvr1P_SetPrimReserveBias(OVR229_SPLIT_GROUND_LIST_B_PRIM_RESERVE_BIAS);
 		DrawLevelOvr1P_SetSplitGroundThresholdScratch();
 		DrawLevelOvr1P_SetMosaicReloadSpanOverride(DRAW_LEVEL_OVR1P_SPLIT_GROUND_MOSAIC_RELOAD_SPAN);
-		result = DrawLevelOvr1P_DrawRenderedQuadBlocks((struct QuadBlock **)bucketValue, pb, mesh, primMem, DRAW_LEVEL_OVR1P_BUCKET_4X2_RENDERED);
+		result = DrawLevelOvr1P_DrawRenderedQuadBlocks((P32(struct QuadBlock *) *)bucketValue, pb, mesh, primMem, DRAW_LEVEL_OVR1P_BUCKET_4X2_RENDERED);
 		DrawLevelOvr1P_SetMosaicReloadSpanOverride(0);
 		return result;
 	}
@@ -320,7 +320,7 @@ static int DrawLevelOvr4P_DispatchBucketHandler(u32 handlerAddress, void *bucket
 	{
 		DrawLevelOvr1P_SetPrimReserveBias(OVR229_WATER_BSP_LIST_PRIM_RESERVE_BIAS);
 		DrawLevelOvr1P_SetSplitGroundThresholdScratch();
-		return DrawLevelOvr1P_DrawRenderedQuadBlocks((struct QuadBlock **)bucketValue, pb, mesh, primMem, DRAW_LEVEL_OVR1P_BUCKET_4X4_RENDERED);
+		return DrawLevelOvr1P_DrawRenderedQuadBlocks((P32(struct QuadBlock *) *)bucketValue, pb, mesh, primMem, DRAW_LEVEL_OVR1P_BUCKET_4X4_RENDERED);
 	}
 
 	// NOTE(aalhendi): Reject handler addresses that are not present in the

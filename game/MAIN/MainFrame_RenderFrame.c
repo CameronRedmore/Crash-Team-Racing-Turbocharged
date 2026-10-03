@@ -1117,7 +1117,7 @@ static void RenderAllLevelGeometry_NativeViewports(struct GameTracker *gGT, stru
 
 		DrawLevelOvr1P_WithContext(&gGT->LevRenderLists[i], pushBuffer, (struct BSP *)ptr_mesh_info, &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visFaceList[i]),
 		                           P32_GET(struct TextureLayout *, level1->ptr_tex_waterEnvMap), P32_GET(void *, data.PtrClipBuffer[i]),
-		                           (struct QuadBlock **)P32_GET(void *, data.ptrRenderedQuadblockDestination_forEachPlayer[i]));
+		                           (P32(struct QuadBlock *) *)P32_GET(void *, data.ptrRenderedQuadblockDestination_forEachPlayer[i]));
 	}
 }
 #endif
@@ -1130,7 +1130,7 @@ static void RenderAllLevelGeometry_Native(struct GameTracker *gGT, struct Level 
 {
 	struct MainRenderLevelGeometryScratch *scratch = CTR_SCRATCHPAD_PTR(struct MainRenderLevelGeometryScratch, 0);
 	const int numPlyrCurrGame = gGT->numPlyrCurrGame;
-	int *const *visOVert = P32_GET(struct VisMem *, gGT->visMem1)->visOVertList;
+	P32(int *) const *visOVert = P32_GET(struct VisMem *, gGT->visMem1)->visOVertList;
 
 	CTR_ClearRenderLists_1P2P(gGT, numPlyrCurrGame);
 
@@ -1139,18 +1139,18 @@ static void RenderAllLevelGeometry_Native(struct GameTracker *gGT, struct Level 
 		switch (numPlyrCurrGame)
 		{
 		case 1:
-			AnimateWater1P(FPS_HALF(gGT->timer), level1->numWaterVertices, P32_GET(struct WaterVert *, level1->ptr_water), P32_GET(struct TextureLayout *, level1->ptr_tex_waterEnvMap), visOVert[0]);
+			AnimateWater1P(FPS_HALF(gGT->timer), level1->numWaterVertices, P32_GET(struct WaterVert *, level1->ptr_water), P32_GET(struct TextureLayout *, level1->ptr_tex_waterEnvMap), P32_GET(int *, visOVert[0]));
 			break;
 		case 2:
-			AnimateWater2P(FPS_HALF(gGT->timer), level1->numWaterVertices, P32_GET(struct WaterVert *, level1->ptr_water), P32_GET(struct TextureLayout *, level1->ptr_tex_waterEnvMap), visOVert[0], visOVert[1]);
+			AnimateWater2P(FPS_HALF(gGT->timer), level1->numWaterVertices, P32_GET(struct WaterVert *, level1->ptr_water), P32_GET(struct TextureLayout *, level1->ptr_tex_waterEnvMap), P32_GET(int *, visOVert[0]), P32_GET(int *, visOVert[1]));
 			break;
 		case 3:
-			AnimateWater3P(FPS_HALF(gGT->timer), level1->numWaterVertices, P32_GET(struct WaterVert *, level1->ptr_water), P32_GET(struct TextureLayout *, level1->ptr_tex_waterEnvMap), visOVert[0], visOVert[1],
-			               visOVert[2]);
+			AnimateWater3P(FPS_HALF(gGT->timer), level1->numWaterVertices, P32_GET(struct WaterVert *, level1->ptr_water), P32_GET(struct TextureLayout *, level1->ptr_tex_waterEnvMap), P32_GET(int *, visOVert[0]), P32_GET(int *, visOVert[1]),
+			               P32_GET(int *, visOVert[2]));
 			break;
 		default:
-			AnimateWater4P(FPS_HALF(gGT->timer), level1->numWaterVertices, P32_GET(struct WaterVert *, level1->ptr_water), P32_GET(struct TextureLayout *, level1->ptr_tex_waterEnvMap), visOVert[0], visOVert[1],
-			               visOVert[2], visOVert[3]);
+			AnimateWater4P(FPS_HALF(gGT->timer), level1->numWaterVertices, P32_GET(struct WaterVert *, level1->ptr_water), P32_GET(struct TextureLayout *, level1->ptr_tex_waterEnvMap), P32_GET(int *, visOVert[0]), P32_GET(int *, visOVert[1]),
+			               P32_GET(int *, visOVert[2]), P32_GET(int *, visOVert[3]));
 			break;
 		}
 	}

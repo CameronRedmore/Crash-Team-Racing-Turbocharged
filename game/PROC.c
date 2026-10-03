@@ -116,7 +116,7 @@ void PROC_DestroyBloodline(struct Thread *t)
 
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80041f58-0x80041ff4.
-void PROC_CheckBloodlineForDead(struct Thread **replaceSelf, struct Thread *th)
+void PROC_CheckBloodlineForDead(P32(struct Thread *) *replaceSelf, struct Thread *th)
 {
 	while (th != 0)
 	{
@@ -153,7 +153,7 @@ void PROC_CheckBloodlineForDead(struct Thread **replaceSelf, struct Thread *th)
 			PROC_DestroySelf(th);
 
 			// replace thread with pointer to it's own sibling
-			*replaceSelf = siblingThread;
+			P32_SET(*replaceSelf, siblingThread);
 
 			// dont overwrite replaceSelf like in previous
 			// "if" block, cause the next dead sibling can

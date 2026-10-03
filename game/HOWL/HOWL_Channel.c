@@ -304,7 +304,7 @@ void Channel_ParseSongToChannels()
 {
 	struct Song *song;
 	struct SongSeq *seq;
-	struct SongSeq **seqEntry;
+	P32(struct SongSeq *) *seqEntry;
 	b32 boolVolumeChange;
 
 	if (sdata->boolAudioEnabled == 0)
@@ -380,7 +380,7 @@ void Channel_ParseSongToChannels()
 
 		for (seqEntry = &song->CseqSequences[0]; seqEntry < &song->CseqSequences[song->numSequences]; seqEntry++)
 		{
-			seq = seqEntry[0];
+			seq = P32_GET(struct SongSeq *, seqEntry[0]);
 
 			volCurr = seq->vol_Curr;
 			volNew = seq->vol_New;
