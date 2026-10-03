@@ -1,4 +1,5 @@
 #include <common.h>
+#include <platform/native_unlock.h>
 
 enum
 {
@@ -666,7 +667,7 @@ void UI_CupStandings_InputAndDraw(void)
 
 							// unlock Roo, Papu, Joe, Pinstripe, FCrash
 							bitIndex = GAME_UNLOCK_BIT_BOSS_CHARACTER_FIRST + i;
-							UNLOCK_ADV_BIT(sdata->gameProgress.unlocks, bitIndex);
+							NativeUnlock_GrantBit(bitIndex);
 
 							// Set podium reward model to Gem
 							gGT->podiumRewardID = STATIC_GEM;
@@ -720,7 +721,7 @@ void UI_CupStandings_InputAndDraw(void)
 							baseIndex = sdata->UnlockBitIndex.CupCompletion_curr[difficulty];
 
 							bitIndex = baseIndex + gGT->cup.cupID;
-							UNLOCK_ADV_BIT(rewardsSet, bitIndex);
+							NativeUnlock_GrantBit(bitIndex);
 
 							b32 boolUnlockMap = true;
 							for (i = 0; i < UI_CUP_STANDINGS_TRACKS_PER_CUP; i++)
@@ -739,7 +740,7 @@ void UI_CupStandings_InputAndDraw(void)
 							if (boolUnlockMap)
 							{
 								bitIndex = sdata->UnlockBitIndex.UnlockBattleMap[difficulty];
-								UNLOCK_ADV_BIT(rewardsSet, bitIndex);
+								NativeUnlock_GrantBit(bitIndex);
 
 								// battle map is now unlocked (233 overlay)
 								gGT->gameMode2 |= CUP_NEW_BATTLE;

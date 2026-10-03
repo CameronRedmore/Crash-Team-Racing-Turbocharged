@@ -1,4 +1,5 @@
 #include <common.h>
+#include <platform/native_unlock.h>
 
 #if defined(CTR_NATIVE)
 #include <platform/native_custom_racer.h>
@@ -8,7 +9,7 @@ extern u32 gNativeCheatConfigMask;
 static const u32 s_nativeCheatMenuBits[] =
 {
 	CHEAT_WUMPA, CHEAT_MASK, CHEAT_TURBO, CHEAT_BOMBS, CHEAT_INVISIBLE, CHEAT_ENGINE,
-	CHEAT_ICY, CHEAT_TURBOPAD, CHEAT_ADV, CHEAT_TURBOCOUNT,
+	CHEAT_ICY, CHEAT_TURBOPAD, CHEAT_ADV,
 };
 
 static const u32 s_nativeCharacterUnlockMask[GAME_PROGRESS_UNLOCK_WORD_COUNT] =
@@ -49,7 +50,8 @@ void NativeCheat_ToggleAllCharacters(void)
 		}
 		else
 		{
-			sdata->gameProgress.unlocks[word] |= s_nativeCharacterUnlockMask[word];
+			for (int bit = 0; bit < 32; bit++)
+				if (s_nativeCharacterUnlockMask[word] & (1u << bit)) NativeUnlock_GrantBit((int)word * 32 + bit);
 		}
 	}
 #endif
@@ -83,7 +85,7 @@ void NativeCheat_ApplyConfigured(void)
 	{
 		return;
 	}
-	sdata->gGT->gameMode2 = (sdata->gGT->gameMode2 & ~CHEAT_ALL) | (gNativeCheatConfigMask & CHEAT_ALL);
+	sdata->gGT->gameMode2 = (sdata->gGT->gameMode2 & ~(CHEAT_ALL | CHEAT_TURBOCOUNT)) | (gNativeCheatConfigMask & (CHEAT_ALL | CHEAT_TURBOCOUNT));
 #endif
 }
 
@@ -112,63 +114,63 @@ void MM_Cheat_MaxWumpa(void)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800aca34-0x800aca6c.
 void MM_Cheat_UnlockRoo(void)
 {
-	sdata->gameProgress.unlockFlags |= UNLOCK_ROO;
+	NativeUnlock_GrantMask(UNLOCK_ROO);
 	OtherFX_Play(MM_CHEAT_SUCCESS_SFX, 1);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800aca6c-0x800acaa4.
 void MM_Cheat_UnlockPapu(void)
 {
-	sdata->gameProgress.unlockFlags |= UNLOCK_PAPU;
+	NativeUnlock_GrantMask(UNLOCK_PAPU);
 	OtherFX_Play(MM_CHEAT_SUCCESS_SFX, 1);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800acaa4-0x800acadc.
 void MM_Cheat_UnlockJoe(void)
 {
-	sdata->gameProgress.unlockFlags |= UNLOCK_JOE;
+	NativeUnlock_GrantMask(UNLOCK_JOE);
 	OtherFX_Play(MM_CHEAT_SUCCESS_SFX, 1);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800acadc-0x800acb14.
 void MM_Cheat_UnlockPinstripe(void)
 {
-	sdata->gameProgress.unlockFlags |= UNLOCK_PINSTRIPE;
+	NativeUnlock_GrantMask(UNLOCK_PINSTRIPE);
 	OtherFX_Play(MM_CHEAT_SUCCESS_SFX, 1);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800acb14-0x800acb4c.
 void MM_Cheat_UnlockFakeCrash(void)
 {
-	sdata->gameProgress.unlockFlags |= UNLOCK_FAKE_CRASH;
+	NativeUnlock_GrantMask(UNLOCK_FAKE_CRASH);
 	OtherFX_Play(MM_CHEAT_SUCCESS_SFX, 1);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800acb4c-0x800acb84.
 void MM_Cheat_UnlockPenta(void)
 {
-	sdata->gameProgress.unlockFlags |= UNLOCK_PENTA;
+	NativeUnlock_GrantMask(UNLOCK_PENTA);
 	OtherFX_Play(MM_CHEAT_SUCCESS_SFX, 1);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800acb84-0x800acbbc.
 void MM_Cheat_UnlockTropy(void)
 {
-	sdata->gameProgress.unlockFlags |= UNLOCK_TROPY;
+	NativeUnlock_GrantMask(UNLOCK_TROPY);
 	OtherFX_Play(MM_CHEAT_SUCCESS_SFX, 1);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800acbbc-0x800acbf4.
 void MM_Cheat_UnlockScrapbook(void)
 {
-	UNLOCK_ADV_BIT(sdata->gameProgress.unlocks, GAME_UNLOCK_BIT_SCRAPBOOK);
+	NativeUnlock_GrantBit(GAME_UNLOCK_BIT_SCRAPBOOK);
 	OtherFX_Play(MM_CHEAT_SUCCESS_SFX, 1);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800acbf4-0x800acc2c.
 void MM_Cheat_UnlockTracks(void)
 {
-	sdata->gameProgress.unlockFlags |= GAME_UNLOCK_TRACKS_MASK;
+	NativeUnlock_GrantMask(GAME_UNLOCK_TRACKS_MASK);
 	OtherFX_Play(MM_CHEAT_SUCCESS_SFX, 1);
 }
 

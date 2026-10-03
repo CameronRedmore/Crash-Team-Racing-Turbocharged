@@ -1,0 +1,141 @@
+name: Build native PC builds
+
+# Builds the 32-bit Windows and Linux Turbocharged executables.
+# Packages contain no game assets: players must supply their own ctr-u.bin.
+
+on:
+  push:
+    branches:
+      - turbocharged
+      - native-renderer
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-native-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    name: Linux x86
+    runs-on: ubuntu-latest
+    # Build against Ubuntu 22.04's glibc so the binary runs on older distros too.
+    container: ubuntu:22.04
+    env:
+      DEBIAN_FRONTEND: noninteractive
+      PKG_CONFIG_LIBDIR: /usr/lib/i386-linux-gnu/pkgconfig:/usr/share/pkgconfig
+    steps:
+      - name: Install toolchain and 32-bit SDL dependencies
+        run: |
+          dpkg --add-architecture i386
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            git ca-certificates cmake ninja-build pkg-config gcc-multilib libwayland-bin \
+            libx11-dev:i386 libxext-dev:i386 libxcursor-dev:i386 libxi-dev:i386 \
+            libxrandr-dev:i386 libxfixes-dev:i386 libgl-dev:i386 libegl-dev:i386 \
+            libasound2-dev:i386 libpulse-dev:i386 libpipewire-0.3-dev:i386 \
+            libjack-jackd2-dev:i386 libudev-dev:i386 libdbus-1-dev:i386 \
+            libibus-1.0-dev:i386 libusb-1.0-0-dev:i386 libwayland-dev:i386 \
+            libxkbcommon-dev:i386 libdecor-0-dev:i386 libdrm-dev:i386 libgbm-dev:i386
+
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      # The container runs as root on a runner-owned checkout; without this the
+      # build ID that CMake reads from git becomes "unknown-dirty".
+      - name: Trust workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Configure
+        run: >
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DBUILD_TESTING=ON
+          -DCMAKE_C_FLAGS=-m32
+          -DCMAKE_EXE_LINKER_FLAGS=-m32
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Package
+        id: package
+        shell: bash
+        env:
+          REF_NAME: ${{ github.head_ref || github.ref_name }}
+        run: |
+          version="${REF_NAME//\//-}-${GITHUB_SHA::7}"
+          ./package.sh linux "$version"
+          archive="dist/ctr-turbocharged-${version}-linux-x86.tar.gz"
+          echo "archive=$archive" >> "$GITHUB_OUTPUT"
+          echo "- \`$(cat "$archive.sha256")\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload
+        uses: actions/upload-artifact@v7
+        with:
+          path: ${{ steps.package.outputs.archive }}
+          # Upload the tarball as-is: it keeps the executable bit, which zips drop.
+          archive: false
+          if-no-files-found: error
+
+  windows:
+    name: Windows x86
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      # Keep LF endings so package.sh runs under MSYS2 bash.
+      - name: Disable CRLF conversion
+        shell: pwsh
+        run: git config --global core.autocrlf false
+
+      - name: Install MSYS2 MinGW32 toolchain
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW32
+          update: true
+          install: >-
+            git
+            zip
+            mingw-w64-i686-gcc
+            mingw-w64-i686-cmake
+            mingw-w64-i686-ninja
+
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Configure
+        run: >
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DBUILD_TESTING=ON
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Package
+        id: package
+        env:
+          REF_NAME: ${{ github.head_ref || github.ref_name }}
+        run: |
+          version="${REF_NAME//\//-}-${GITHUB_SHA::7}"
+          ./package.sh windows "$version"
+          archive="dist/ctr-turbocharged-${version}-windows-x86.zip"
+          echo "archive=$archive" >> "$GITHUB_OUTPUT"
+          echo "- \`$(cat "$archive.sha256")\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload
+        uses: actions/upload-artifact@v7
+        with:
+          path: ${{ steps.package.outputs.archive }}
+          archive: false
+          if-no-files-found: error

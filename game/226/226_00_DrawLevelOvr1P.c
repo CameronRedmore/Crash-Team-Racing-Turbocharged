@@ -103,6 +103,25 @@ static u32 sDrawLevelOvr1P_PrimReserveBias;
 static u32 sDrawLevelOvr1P_MosaicReloadSpanOverride;
 static int sDrawLevelOvr1P_ListHandlersSeedRenderedCursor;
 
+#if defined(CTR_NATIVE)
+// Draw order of the face whose OT entry was resolved last. Children, inherited
+// entries and clip records link packets after it, so they reuse it. Deferred
+// clip records keep their own copy per viewport clip buffer (split screen
+// writes every viewport before consuming), indexed by GT3-sized offset.
+#define DRAW_LEVEL_OVR1P_NATIVE_CLIP_DRAW_ORDER_COUNT 2048
+static s8 sDrawLevelOvr1P_NativeDrawOrder;
+static s8 sDrawLevelOvr1P_NativeClipDrawOrder[4][DRAW_LEVEL_OVR1P_NATIVE_CLIP_DRAW_ORDER_COUNT];
+#endif
+
+static void DrawLevelOvr1P_NoteDrawOrder(s8 drawOrder)
+{
+#if defined(CTR_NATIVE)
+	sDrawLevelOvr1P_NativeDrawOrder = drawOrder;
+#else
+	(void)drawOrder;
+#endif
+}
+
 static u32 DrawLevelOvr1P_ReadPackedWord(const void *src)
 {
 	const u8 *bytes = (const u8 *)src;
@@ -975,6 +994,39 @@ static u8 *DrawLevelOvr1P_GetClipRecordCursor(void)
 static void DrawLevelOvr1P_SetClipRecordCursor(u8 *cursor)
 {
 	DrawLevelOvr1P_Scratch()->clipCursorPtr32 = (u32)(uintptr_t)cursor;
+}
+
+static u8 *DrawLevelOvr1P_GetClipRecordStart(void);
+
+#if defined(CTR_NATIVE)
+static s8 *DrawLevelOvr1P_GetNativeClipDrawOrder(const u8 *record)
+{
+	const u8 *start = DrawLevelOvr1P_GetClipRecordStart();
+	size_t index = (size_t)(record - start) / DRAW_LEVEL_OVR1P_CLIP_RECORD_GT3_SIZE;
+
+	for (int buffer = 0; buffer < 4; buffer++)
+	{
+		if ((start == data.PtrClipBuffer[buffer]) && (index < DRAW_LEVEL_OVR1P_NATIVE_CLIP_DRAW_ORDER_COUNT))
+		{
+			return &sDrawLevelOvr1P_NativeClipDrawOrder[buffer][index];
+		}
+	}
+
+	return NULL;
+}
+#endif
+
+// Advance past a record just written at `cursor`; its packets link at consume time.
+static void DrawLevelOvr1P_CommitClipRecord(u8 *cursor, size_t recordSize)
+{
+#if defined(CTR_NATIVE)
+	s8 *drawOrder = DrawLevelOvr1P_GetNativeClipDrawOrder(cursor);
+	if (drawOrder != NULL)
+	{
+		*drawOrder = sDrawLevelOvr1P_NativeDrawOrder;
+	}
+#endif
+	DrawLevelOvr1P_SetClipRecordCursor(cursor + recordSize);
 }
 
 static u8 *DrawLevelOvr1P_GetClipRecordStart(void)
@@ -2113,6 +2165,7 @@ static int DrawLevelOvr1P_GetProjectedOtIndex(const struct QuadBlock *block, con
 	if (faceIndex < 0)
 	{
 		otIndex = (s32)(maxDepth >> 6) + (s8)(block->draw_order_low & 0xff);
+		DrawLevelOvr1P_NoteDrawOrder((s8)(block->draw_order_low & 0xff));
 	}
 	else
 	{
@@ -2120,6 +2173,7 @@ static int DrawLevelOvr1P_GetProjectedOtIndex(const struct QuadBlock *block, con
 		s8 drawOrder = DrawLevelOvr1P_ReadRetailQuadBlockByte(block, 0x18 + (slotWord >> 2));
 
 		otIndex = (s32)(maxDepth >> 6) + drawOrder;
+		DrawLevelOvr1P_NoteDrawOrder(drawOrder);
 	}
 
 	if (otIndex < 0)
@@ -2213,9 +2267,43 @@ static uint32_t *Ovr226_800a2690_ResolveWaterListInheritedOtEntry(struct PushBuf
 	slotWord = DrawLevelOvr1P_GetProjectedOtSlotWord(projected, faceIndex);
 	drawOrder = DrawLevelOvr1P_ReadRetailQuadBlockByte(block, 0x18 + (slotWord >> 2));
 	otIndex = (s32)(selectedDepth >> 6) + drawOrder;
+	DrawLevelOvr1P_NoteDrawOrder(drawOrder);
 
 	return &pb->ptrOT[otIndex];
 }
+
+#if defined(CTR_NATIVE)
+static void DrawLevelOvr1P_PushNativeXYDepth(const VERTTYPE *xy, float offset)
+{
+	NativePgxp_PushDepth(xy, (u16)xy[0] | ((u32)(u16)xy[1] << 16), offset);
+}
+
+// Retail sorts the face drawOrder OT slots behind its depth. A depth buffer
+// would lose that, so positive values move the packet's depth back (see
+// NativeDraw3D_GetDrawOrderSlotDepth and NativeDrawLevel_SetDrawOrder).
+static void DrawLevelOvr1P_PushNativePrimDepth(void *packet, u32 wordCount)
+{
+	if (sDrawLevelOvr1P_NativeDrawOrder <= 0 || !NATIVE_DEPTH_BUFFER_ACTIVE())
+	{
+		return;
+	}
+
+	const float offset = (float)sDrawLevelOvr1P_NativeDrawOrder * NativeDraw3D_GetDrawOrderSlotDepth();
+	if (offset <= 0.0f)
+	{
+		return;
+	}
+	POLY_GT4 *poly = packet;
+
+	DrawLevelOvr1P_PushNativeXYDepth(&poly->x0, offset);
+	DrawLevelOvr1P_PushNativeXYDepth(&poly->x1, offset);
+	DrawLevelOvr1P_PushNativeXYDepth(&poly->x2, offset);
+	if (wordCount == 12)
+	{
+		DrawLevelOvr1P_PushNativeXYDepth(&poly->x3, offset);
+	}
+}
+#endif
 
 static void DrawLevelOvr1P_AddRawPrimToOt(struct PrimMem *primMem, void *packet, u32 wordCount, uint32_t *otEntry)
 {
@@ -2223,6 +2311,9 @@ static void DrawLevelOvr1P_AddRawPrimToOt(struct PrimMem *primMem, void *packet,
 
 	*packetTag = CtrGpu_PackOTTag(*otEntry, wordCount << 24);
 	*otEntry = CtrGpu_PrimToOTLink24(packet);
+#if defined(CTR_NATIVE)
+	DrawLevelOvr1P_PushNativePrimDepth(packet, wordCount);
+#endif
 	// NOTE(aalhendi): Retail keeps the overlay primitive count in `sp`, seeded
 	// from PrimMem+0x14 and stored back at the epilogue.
 	primMem->primitiveCount++;
@@ -2633,7 +2724,7 @@ static int DrawLevelOvr1P_WriteRenderedClippedRecordAtOt(struct PushBuffer *pb, 
 		DrawLevelOvr1P_CopyClipRecordVertex(&record->vertex[vertexIndex], &projected[indices[vertexIndex]]);
 	}
 
-	DrawLevelOvr1P_SetClipRecordCursor(cursor + recordSize);
+	DrawLevelOvr1P_CommitClipRecord(cursor, recordSize);
 	return 1;
 }
 
@@ -2673,7 +2764,7 @@ static int DrawLevelOvr1P_WriteWaterRenderedClippedRecordAtOt(struct PushBuffer 
 		DrawLevelOvr1P_CopyClipRecordVertex(&record->vertex[vertexIndex], &projected[indices[vertexIndex]]);
 	}
 
-	DrawLevelOvr1P_SetClipRecordCursor(cursor + recordSize);
+	DrawLevelOvr1P_CommitClipRecord(cursor, recordSize);
 	return 1;
 }
 
@@ -2709,7 +2800,7 @@ static int Ovr226_800a34d4_WriteWaterRenderedClippedRecordAtOtEntry(struct PushB
 		DrawLevelOvr1P_CopyClipRecordVertex(&record->vertex[vertexIndex], &projected[indices[vertexIndex]]);
 	}
 
-	DrawLevelOvr1P_SetClipRecordCursor(cursor + recordSize);
+	DrawLevelOvr1P_CommitClipRecord(cursor, recordSize);
 	return 1;
 }
 
@@ -3586,6 +3677,10 @@ static int DrawLevelOvr1P_ConsumeClipRecords(struct PushBuffer *pb, struct PrimM
 			break;
 		}
 
+#if defined(CTR_NATIVE)
+		const s8 *drawOrder = DrawLevelOvr1P_GetNativeClipDrawOrder(cursor);
+		DrawLevelOvr1P_NoteDrawOrder(drawOrder != NULL ? *drawOrder : 0);
+#endif
 		if (!Ovr226_800aa848_ProjectFirstThreeClipRecordsAndDispatch(pb, primMem, record))
 		{
 			return 0;
@@ -4748,6 +4843,7 @@ static int Ovr226_800a3d98_ResolveGround4x1SelectorOtIndex(const struct QuadBloc
 	u32 slotWord = DrawLevelOvr1P_GetProjectedOtSlotWord(projected, faceIndex);
 	s8 drawOrder = DrawLevelOvr1P_ReadRetailQuadBlockByte(block, 0x18 + (slotWord >> 2));
 	s32 otIndex = (s32)(maxDepth >> 6) + drawOrder;
+	DrawLevelOvr1P_NoteDrawOrder(drawOrder);
 
 	// NOTE(aalhendi): Retail 0x800a3df4 clamps only negative GP/OT offsets
 	// back to the OT base. There is no upper clamp in this selector span.
@@ -5059,7 +5155,7 @@ static int Ovr226_800a4dcc_WriteGround4x1RenderedClippedRecordAtOtEntry(struct P
 		DrawLevelOvr1P_CopyClipRecordVertex(&record->vertex[vertexIndex], &projected[indices[vertexIndex]]);
 	}
 
-	DrawLevelOvr1P_SetClipRecordCursor(cursor + recordSize);
+	DrawLevelOvr1P_CommitClipRecord(cursor, recordSize);
 	return 1;
 }
 
@@ -6390,7 +6486,7 @@ static int Ovr226_800a6d6c_WriteGround4x2RenderedClippedRecordAtOtEntry(struct P
 		DrawLevelOvr1P_CopyClipRecordVertex(&record->vertex[vertexIndex], &projected[indices[vertexIndex]]);
 	}
 
-	DrawLevelOvr1P_SetClipRecordCursor(cursor + recordSize);
+	DrawLevelOvr1P_CommitClipRecord(cursor, recordSize);
 	return 1;
 }
 
@@ -6857,7 +6953,7 @@ static int Ovr226_800a898c_WriteDynamicRenderedClippedRecordAtOtEntry(struct Pus
 		DrawLevelOvr1P_CopyClipRecordVertex(&record->vertex[vertexIndex], &projected[indices[vertexIndex]]);
 	}
 
-	DrawLevelOvr1P_SetClipRecordCursor(cursor + recordSize);
+	DrawLevelOvr1P_CommitClipRecord(cursor, recordSize);
 	return 1;
 }
 
@@ -7290,7 +7386,7 @@ static int Ovr226_800aa5ac_WriteQuad4x4RenderedClippedRecordAtOtEntry(struct Pus
 		DrawLevelOvr1P_CopyClipRecordVertex(&record->vertex[vertexIndex], &projected[indices[vertexIndex]]);
 	}
 
-	DrawLevelOvr1P_SetClipRecordCursor(cursor + recordSize);
+	DrawLevelOvr1P_CommitClipRecord(cursor, recordSize);
 	return 1;
 }
 
@@ -9742,6 +9838,7 @@ static uint32_t *Ovr226_800a31f0_ResolveWaterRenderedInheritedOtEntry(struct Pus
 	u32 slotWord = DrawLevelOvr1P_GetProjectedOtSlotWord(projected, faceIndex);
 	s8 drawOrder = DrawLevelOvr1P_ReadRetailQuadBlockByte(block, 0x18 + (slotWord >> 2));
 	s32 otIndex = (s32)(selectedDepth >> 6) + drawOrder;
+	DrawLevelOvr1P_NoteDrawOrder(drawOrder);
 
 	return &pb->ptrOT[otIndex];
 }

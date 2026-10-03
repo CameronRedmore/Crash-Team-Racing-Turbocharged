@@ -788,6 +788,9 @@ void UI_NativeRaceClock_GetTwoColumnLayout(int centerX, int *leftAnchorX, int *r
 #endif
 
 void UI_Map_GetIconPos(struct UIMap *map, int *posX, int *posY);
+#if defined(CTR_NATIVE)
+void UI_Map_GetIconPosPrecise(const struct UIMap *map, const s32 worldPos[3], float *posX, float *posY);
+#endif
 void UI_Map_DrawMap(struct Icon *mapTop, struct Icon *mapBottom, s16 posX, s16 posY, struct PrimMem *primMem, uint32_t *otMem, u32 colorID);
 
 void UI_Lerp2D_Angular(SVec2 *pos, s16 drawnPosition, s16 absolutePosition, s16 frameCounter);
@@ -1144,7 +1147,11 @@ void AH_Map_LoadSave_Full(int posX, int posY, const SVec2 *vertPos, char *vertCo
 
 void AH_Map_HubArrow(int posX, int posY, const SVec2 *vertPos, char *vertCol, int scale, int angle);
 #if defined(CTR_NATIVE)
-void AH_Map_HubArrowPrecise(float posX, float posY, const SVec2 *vertPos, char *vertCol, int scale, int angle);
+void AH_Map_HubArrowPrecise(float posX, float posY, const SVec2 *vertPos, char *vertCol, int scale, int angle, float sizeScale);
+void AH_Map_LoadSavePrecise(float posX, float posY, const SVec2 *vertPos, char *vertCol, int scale, int angle);
+void AH_Map_MarkerShape(float centreX, float centreY, float radius, b32 star, const u32 colors[4]);
+void AH_Map_MarkerOutline(float centreX, float centreY, float radius, float halfWidth, b32 star, u32 color);
+void AH_Map_MarkerFlash(u32 colors[4], int colorA, int colorB, float periodFrames);
 #endif
 
 void AH_Map_HubArrowOuter(struct UIMap *map, int arrowIndex, int posX, int posY, int inputAngle, int type);

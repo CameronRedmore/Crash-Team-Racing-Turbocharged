@@ -1,11 +1,15 @@
 #include <common.h>
 #include <platform/native_input.h>
+#include <platform/native_font.h>
+#include <platform/native_kart_color.h>
+#include <platform/native_engine.h>
 
 extern int cfg_language;
 extern int gNativeMirrorModeEnabled;
 extern int gNative60FpsEnabled;
 extern int gNativeDefaultCameraFar;
 extern int gNativeDefaultHudSpeedometer;
+extern int gNativeSkipMaskHints;
 extern int gNativeAIRacersMode;
 extern u32 gNativeCheatConfigMask;
 #ifndef __vita__
@@ -16,6 +20,368 @@ extern int g_cfg_bilinearFiltering;
 extern int gNativeControlsSelectedColumn;
 extern int gNativeControlsSelectedAction;
 extern int gNativeControlsCaptureActive;
+
+// Translations for the native menu rows. Language order matches the retail menus: EN, FR, DE, IT, ES, NL.
+static const char *const s_txtOn[6] =
+{
+	"ON",
+	"OUI",
+	"EIN",
+	"SI",
+	"SI",
+	"AAN",
+};
+static const char *const s_txtOff[6] =
+{
+	"OFF",
+	"NON",
+	"AUS",
+	"NO",
+	"NO",
+	"UIT",
+};
+static const char *const s_txtOriginal[6] =
+{
+	"ORIGINAL",
+	"ORIGINE",
+	"ORIGINAL",
+	"ORIGINALE",
+	"ORIGINAL",
+	"ORIGINEEL",
+};
+static const char *const s_txtSmoothed[6] =
+{
+	"SMOOTHED",
+	"LISSE",
+	"GEGLAETTET",
+	"FLUIDO",
+	"SUAVIZADO",
+	"GEGLAD",
+};
+static const char *const s_txtDisplay[6] =
+{
+	"DISPLAY",
+	"AFFICHAGE",
+	"ANZEIGE",
+	"SCHERMO",
+	"PANTALLA",
+	"WEERGAVE",
+};
+static const char *const s_txtWindowed[6] =
+{
+	"WINDOWED",
+	"FENETRE",
+	"FENSTER",
+	"FINESTRA",
+	"VENTANA",
+	"VENSTER",
+};
+static const char *const s_txtBorderless[6] =
+{
+	"BORDERLESS",
+	"SANS BORDURE",
+	"RAHMENLOS",
+	"SENZA BORDI",
+	"SIN BORDES",
+	"RANDLOOS",
+};
+static const char *const s_txtAudio[6] =
+{
+	"AUDIO",
+	"AUDIO",
+	"AUDIO",
+	"AUDIO",
+	"AUDIO",
+	"AUDIO",
+};
+static const char *const s_txtCredits[6] =
+{
+	"CREDITS",
+	"CREDITS",
+	"MITWIRKENDE",
+	"CREDITI",
+	"CREDITOS",
+	"CREDITS",
+};
+static const char *const s_txtGameplay[6] =
+{
+	"GAMEPLAY",
+	"JEU",
+	"SPIELWEISE",
+	"GIOCO",
+	"JUEGO",
+	"GAMEPLAY",
+};
+static const char *const s_txtExperimental[6] =
+{
+	"EXPERIMENTAL",
+	"EXPERIMENTAL",
+	"EXPERIMENTELL",
+	"SPERIMENTALE",
+	"EXPERIMENTAL",
+	"EXPERIMENTEEL",
+};
+static const char *const s_txtInterface[6] =
+{
+	"INTERFACE",
+	"INTERFACE",
+	"OBERFLAECHE",
+	"INTERFACCIA",
+	"INTERFAZ",
+	"INTERFACE",
+};
+static const char *const s_txtContinue[6] =
+{
+	"CONTINUE",
+	"CONTINUER",
+	"WEITER",
+	"CONTINUA",
+	"CONTINUAR",
+	"DOORGAAN",
+};
+static const char *const s_txtGamepad[6] =
+{
+	"GAMEPAD / VIBRATION",
+	"MANETTE / VIBRATION",
+	"GAMEPAD / VIBRATION",
+	"GAMEPAD / VIBRAZIONE",
+	"MANDO / VIBRACION",
+	"GAMEPAD / TRILLING",
+};
+static const char *const s_txtPreset[6] =
+{
+	"SETTINGS PRESET",
+	"PROFIL DE REGLAGES",
+	"EINSTELLUNGSPROFIL",
+	"PROFILO IMPOSTAZIONI",
+	"PERFIL DE AJUSTES",
+	"INSTELLINGENPROFIEL",
+};
+static const char *const s_txtCustom[6] =
+{
+	"CUSTOM",
+	"PERSONNALISE",
+	"BENUTZERDEF.",
+	"PERSONALIZZATO",
+	"PERSONALIZADO",
+	"AANGEPAST",
+};
+static const char *const s_txtSkipMaskHints[6] =
+{
+	"SKIP MASK HINTS",
+	"IGNORER CONSEILS MASQUE",
+	"MASKENTIPPS UEBERSPR.",
+	"SALTA SUGGERIMENTI MASCHERA",
+	"SALTAR CONSEJOS MASCARA",
+	"MASKERTIPS OVERSLAAN",
+};
+static const char *const s_txtDepthBuffer[6] =
+{
+	"DEPTH BUFFER",
+	"TAMPON PROFONDEUR",
+	"TIEFENPUFFER",
+	"BUFFER DI PROFONDITA",
+	"BUFFER DE PROFUNDIDAD",
+	"DIEPTEBUFFER",
+};
+static const char *const s_txtRenderer[6] =
+{
+	"RENDERER",
+	"MOTEUR DE RENDU",
+	"RENDERER",
+	"RENDERER",
+	"RENDERIZADO",
+	"RENDERER",
+};
+static const char *const s_txtRendererNative[6] =
+{
+	"NATIVE 3D",
+	"3D NATIVE",
+	"NATIVES 3D",
+	"3D NATIVO",
+	"3D NATIVO",
+	"NATIEF 3D",
+};
+static const char *const s_txtRendererClassic[6] =
+{
+	"CLASSIC",
+	"CLASSIQUE",
+	"KLASSISCH",
+	"CLASSICO",
+	"CLASICO",
+	"KLASSIEK",
+};
+static const char *const s_txtColourDepth[6] =
+{
+	"COLOUR DEPTH",
+	"PROFONDEUR COULEUR",
+	"FARBTIEFE",
+	"PROFONDITA COLORE",
+	"PROFUNDIDAD COLOR",
+	"KLEURDIEPTE",
+};
+static const char *const s_txtTextures[6] =
+{
+	"TEXTURES",
+	"TEXTURES",
+	"TEXTUREN",
+	"TEXTURE",
+	"TEXTURAS",
+	"TEXTUREN",
+};
+static const char *const s_txtBilinear[6] =
+{
+	"BILINEAR",
+	"BILINEAIRE",
+	"BILINEAR",
+	"BILINEARE",
+	"BILINEAL",
+	"BILINEAIR",
+};
+static const char *const s_txtNearest[6] =
+{
+	"NEAREST",
+	"PLUS PROCHE",
+	"NAECHSTER NACHBAR",
+	"PIU VICINO",
+	"MAS CERCANO",
+	"DICHTSTBIJZIJNDE",
+};
+static const char *const s_txtPauseScreen[6] =
+{
+	"PAUSE SCREEN",
+	"ECRAN DE PAUSE",
+	"PAUSENBILDSCHIRM",
+	"SCHERMATA PAUSA",
+	"PANTALLA DE PAUSA",
+	"PAUZESCHERM",
+};
+static const char *const s_txtHdSmooth[6] =
+{
+	"HD SMOOTH",
+	"HD FLUIDE",
+	"HD GEGLAETTET",
+	"HD FLUIDO",
+	"HD SUAVE",
+	"HD GEGLAD",
+};
+static const char *const s_txtPreciseMinimap[6] =
+{
+	"PRECISE MINIMAP",
+	"MINI-CARTE PRECISE",
+	"GENAUE MINIKARTE",
+	"MINIMAPPA PRECISA",
+	"MINIMAPA PRECISO",
+	"PRECIEZE MINIKAART",
+};
+static const char *const s_txtModernMinimap[6] =
+{
+	"MODERN MINIMAP",
+	"MINI-CARTE MODERNE",
+	"MODERNE MINIKARTE",
+	"MINIMAPPA MODERNA",
+	"MINIMAPA MODERNO",
+	"MODERNE MINIKAART",
+};
+static const char *const s_txtModernHudIcons[6] =
+{
+	"MODERN HUD ICONS",
+	"ICONES HUD MODERNES",
+	"MODERNE HUD-SYMBOLE",
+	"ICONE HUD MODERNE",
+	"ICONOS HUD MODERNOS",
+	"MODERNE HUD-ICONEN",
+};
+static const char *const s_txtAdditionalUnlocks[6] =
+{
+	"ADDITIONAL UNLOCKS",
+	"DEBLOCAGES SUPPL.",
+	"ZUSAETZL. FREISCHALTUNGEN",
+	"SBLOCCHI EXTRA",
+	"DESBLOQUEOS EXTRA",
+	"EXTRA UNLOCKS",
+};
+static const char *const s_txtEngineSelection[6] =
+{
+	"ENGINE SELECTION",
+	"CHOIX DU MOTEUR",
+	"MOTORWAHL",
+	"SCELTA MOTORE",
+	"ELECCION DE MOTOR",
+	"MOTORKEUZE",
+};
+static const char *const s_txtKartHue[6] =
+{
+	"KART HUE",
+	"TEINTE DU KART",
+	"KART-FARBTON",
+	"TONALITA KART",
+	"TONO DEL KART",
+	"KARTKLEUR",
+};
+static const char *const s_txtFont[6] =
+{
+	"FONT",
+	"POLICE",
+	"SCHRIFTART",
+	"FONT",
+	"FUENTE",
+	"LETTERTYPE",
+};
+static const char *const s_txtAi[6] =
+{
+	"AI",
+	"IA",
+	"KI",
+	"IA",
+	"IA",
+	"AI",
+};
+static const char *const s_txtCollisions[6] =
+{
+	"COLLISIONS",
+	"COLLISIONS",
+	"KOLLISIONEN",
+	"COLLISIONI",
+	"COLISIONES",
+	"BOTSINGEN",
+};
+static const char *const s_txtSteering[6] =
+{
+	"STEERING",
+	"DIRECTION",
+	"LENKUNG",
+	"STERZO",
+	"DIRECCION",
+	"STUREN",
+};
+static const char *const s_txtPlayerPhysics[6] =
+{
+	"PLAYER PHYSICS",
+	"PHYSIQUE JOUEUR",
+	"SPIELERPHYSIK",
+	"FISICA GIOCATORE",
+	"FISICA JUGADOR",
+	"SPELERFYSICA",
+};
+static const char *const s_txtCreditsLines[6][8] =
+{
+	{"CRASH TEAM RACING BY NAUGHTY DOG", "PUBLISHED BY SONY COMPUTER ENT.", "CTR-MODSDK DEVELOPERS", "CTR-NATIVE DEVELOPERS", "CTR: HIGH OCTANE DEVELOPERS", "MASSIVE THANKS TO ALL OF YOU -", "WITHOUT YOU THIS PROJECT", "WOULD NOT EXIST."},
+	{"CRASH TEAM RACING PAR NAUGHTY DOG", "PUBLIE PAR SONY COMPUTER ENT.", "DEVELOPPEURS DE CTR-MODSDK", "DEVELOPPEURS DE CTR-NATIVE", "DEVELOPPEURS DE CTR: HIGH OCTANE", "UN IMMENSE MERCI A TOUS -", "SANS VOUS, CE PROJET", "N'EXISTERAIT PAS."},
+	{"CRASH TEAM RACING VON NAUGHTY DOG", "VERTRIEBEN VON SONY COMPUTER ENT.", "CTR-MODSDK-ENTWICKLER", "CTR-NATIVE-ENTWICKLER", "CTR: HIGH OCTANE-ENTWICKLER", "RIESIGEN DANK AN EUCH ALLE -", "OHNE EUCH GAEBE ES DIESES", "PROJEKT NICHT."},
+	{"CRASH TEAM RACING DI NAUGHTY DOG", "PUBBLICATO DA SONY COMPUTER ENT.", "SVILUPPATORI DI CTR-MODSDK", "SVILUPPATORI DI CTR-NATIVE", "SVILUPPATORI DI CTR: HIGH OCTANE", "GRAZIE MILLE A TUTTI VOI -", "SENZA DI VOI QUESTO PROGETTO", "NON ESISTEREBBE."},
+	{"CRASH TEAM RACING DE NAUGHTY DOG", "PUBLICADO POR SONY COMPUTER ENT.", "DESARROLLADORES DE CTR-MODSDK", "DESARROLLADORES DE CTR-NATIVE", "DESARROLLADORES DE CTR: HIGH OCTANE", "MUCHISIMAS GRACIAS A TODOS -", "SIN VOSOTROS ESTE PROYECTO", "NO EXISTIRIA."},
+	{"CRASH TEAM RACING VAN NAUGHTY DOG", "UITGEGEVEN DOOR SONY COMPUTER ENT.", "CTR-MODSDK ONTWIKKELAARS", "CTR-NATIVE ONTWIKKELAARS", "CTR: HIGH OCTANE ONTWIKKELAARS", "HARTELIJK DANK AAN JULLIE ALLEMAAL -", "ZONDER JULLIE ZOU DIT PROJECT", "NIET BESTAAN."},
+};
+
+static char *NativeRow(const char *label, const char *value)
+{
+	static char rows[32][96];
+	static int next;
+	char *row = rows[next++ & 31];
+	snprintf(row, 96, "%s: %s", label, value);
+	return row;
+}
 
 static char *RECTMENU_GetString(s16 stringIndex)
 {
@@ -92,11 +458,6 @@ static char *RECTMENU_GetString(s16 stringIndex)
 		{"DITHER: NO", "DITHER: SI"},
 		{"DITHER: NO", "DITHER: SI"},
 		{"DITHER: UIT", "DITHER: AAN"},
-	};
-	static const char *displayMode[2] =
-	{
-		"DISPLAY: WINDOWED",
-		"DISPLAY: BORDERLESS",
 	};
 	static const char *pgxp[6][NATIVE_PGXP_MODE_COUNT] =
 	{
@@ -242,15 +603,16 @@ static char *RECTMENU_GetString(s16 stringIndex)
 	{
 		{"OFF", "ON"}, {"NON", "OUI"}, {"AUS", "EIN"}, {"NO", "SI"}, {"NO", "SI"}, {"UIT", "AAN"},
 	};
-	static const char *cheatName[6][11] =
+	static const char *cheatName[6][10] =
 	{
-		{"INFINITE WUMPA", "INFINITE MASK", "INFINITE TURBOS", "INFINITE BOMBS", "INVISIBILITY", "SUPER ENGINE", "ICY TRACKS", "SUPER TURBO PADS", "ADV DIFFICULTY", "BOOST COUNTER", "ALL CHARACTERS"},
-		{"WUMPA INFINIS", "MASQUE INFINI", "TURBOS INFINIS", "BOMBES INFINIES", "INVISIBILITE", "SUPER MOTEUR", "PISTES GLACEES", "SUPER TURBO PADS", "DIFFICULTE ADV", "COMPTEUR TURBO", "TOUS PERSONNAGES"},
-		{"WUMPA UNENDLICH", "MASKE UNENDLICH", "TURBOS UNENDLICH", "BOMBEN UNENDLICH", "UNSICHTBAR", "SUPER MOTOR", "EISIGE STRECKEN", "SUPER TURBO-PADS", "ADV-SCHWIERIG", "TURBO-ZAEHLER", "ALLE CHARAKTERE"},
-		{"WUMPA INFINITI", "MASCHERA INFINITA", "TURBO INFINITI", "BOMBE INFINITE", "INVISIBILITA", "SUPER MOTORE", "PISTE GHIACCIATE", "SUPER TURBO PAD", "DIFFICOLTA ADV", "CONTATORE TURBO", "TUTTI I PERSONAGGI"},
-		{"WUMPA INFINITA", "MASCARA INFINITA", "TURBOS INFINITOS", "BOMBAS INFINITAS", "INVISIBILIDAD", "SUPER MOTOR", "PISTAS HELADAS", "SUPER TURBO PADS", "DIFICULTAD ADV", "CONTADOR TURBO", "TODOS LOS PERSONAJES"},
-		{"ONEINDIG WUMPA", "ONEINDIG MASKER", "ONEINDIGE TURBOS", "ONEINDIGE BOMMEN", "ONZICHTBAAR", "SUPER MOTOR", "IJZIGE BANEN", "SUPER TURBO PADS", "ADV MOEILIJK", "TURBO TELLER", "ALLE PERSONAGES"},
+		{"INFINITE WUMPA", "INFINITE MASK", "INFINITE TURBOS", "INFINITE BOMBS", "INVISIBILITY", "SUPER ENGINE", "ICY TRACKS", "SUPER TURBO PADS", "ADV DIFFICULTY", "ALL CHARACTERS"},
+		{"WUMPA INFINIS", "MASQUE INFINI", "TURBOS INFINIS", "BOMBES INFINIES", "INVISIBILITE", "SUPER MOTEUR", "PISTES GLACEES", "SUPER TURBO PADS", "DIFFICULTE ADV", "TOUS PERSONNAGES"},
+		{"WUMPA UNENDLICH", "MASKE UNENDLICH", "TURBOS UNENDLICH", "BOMBEN UNENDLICH", "UNSICHTBAR", "SUPER MOTOR", "EISIGE STRECKEN", "SUPER TURBO-PADS", "ADV-SCHWIERIG", "ALLE CHARAKTERE"},
+		{"WUMPA INFINITI", "MASCHERA INFINITA", "TURBO INFINITI", "BOMBE INFINITE", "INVISIBILITA", "SUPER MOTORE", "PISTE GHIACCIATE", "SUPER TURBO PAD", "DIFFICOLTA ADV", "TUTTI I PERSONAGGI"},
+		{"WUMPA INFINITA", "MASCARA INFINITA", "TURBOS INFINITOS", "BOMBAS INFINITAS", "INVISIBILIDAD", "SUPER MOTOR", "PISTAS HELADAS", "SUPER TURBO PADS", "DIFICULTAD ADV", "TODOS LOS PERSONAJES"},
+		{"ONEINDIG WUMPA", "ONEINDIG MASKER", "ONEINDIGE TURBOS", "ONEINDIGE BOMMEN", "ONZICHTBAAR", "SUPER MOTOR", "IJZIGE BANEN", "SUPER TURBO PADS", "ADV MOEILIJK", "ALLE PERSONAGES"},
 	};
+	static const char *boostCounter[6] = {"BOOST COUNTER", "COMPTEUR TURBO", "TURBO-ZAEHLER", "CONTATORE TURBO", "CONTADOR TURBO", "TURBO TELLER"};
 	static char cheatRow[64];
 	static const char *lapSingular[6] = {"LAP", "TOUR", "RUNDE", "GIRO", "VUELTA", "RONDE"};
 	static const char *lapPlural[6] = {"LAPS", "TOURS", "RUNDEN", "GIRI", "VUELTAS", "RONDEN"};
@@ -375,12 +737,49 @@ static char *RECTMENU_GetString(s16 stringIndex)
 		return (char *)defaultHud[languageRow][gNativeDefaultHudSpeedometer != 0];
 	case NATIVE_MENU_STRING_AI_RACERS:
 		return (char *)aiRacers[languageRow][gNativeAIRacersMode];
+	case NATIVE_MENU_STRING_SKIP_MASK_HINTS:
+		return NativeRow(s_txtSkipMaskHints[languageRow], gNativeSkipMaskHints ? s_txtOn[languageRow] : s_txtOff[languageRow]);
+	case NATIVE_MENU_STRING_DISPLAY:
+		return (char *)s_txtDisplay[languageRow];
+	case NATIVE_MENU_STRING_AUDIO:
+		return (char *)s_txtAudio[languageRow];
+	case NATIVE_MENU_STRING_UNLOCKS:
+	{
+		static const char *const titles[6] = {"UNLOCKS", "A DEBLOQUER", "FREISCHALTUNGEN", "SBLOCCABILI", "DESBLOQUEOS", "VRIJSPELEN"};
+		return (char *)titles[languageRow];
+	}
+	case NATIVE_MENU_STRING_CREDITS:
+		return (char *)s_txtCredits[languageRow];
+	case NATIVE_MENU_STRING_CREDITS_LINE_0:
+		return (char *)s_txtCreditsLines[languageRow][0];
+	case NATIVE_MENU_STRING_CREDITS_LINE_1:
+		return (char *)s_txtCreditsLines[languageRow][1];
+	case NATIVE_MENU_STRING_CREDITS_LINE_2:
+		return (char *)s_txtCreditsLines[languageRow][2];
+	case NATIVE_MENU_STRING_CREDITS_LINE_3:
+		return (char *)s_txtCreditsLines[languageRow][3];
+	case NATIVE_MENU_STRING_CREDITS_LINE_4:
+		return (char *)s_txtCreditsLines[languageRow][4];
+	case NATIVE_MENU_STRING_CREDITS_LINE_5:
+		return (char *)s_txtCreditsLines[languageRow][5];
+	case NATIVE_MENU_STRING_CREDITS_LINE_6:
+		return (char *)s_txtCreditsLines[languageRow][6];
+	case NATIVE_MENU_STRING_CREDITS_LINE_7:
+		return (char *)s_txtCreditsLines[languageRow][7];
+	case NATIVE_MENU_STRING_CREDITS_LINE_8:
+		return "- CAMERON, TURBOCHARGED";
+	case NATIVE_MENU_STRING_GAMEPLAY:
+		return (char *)s_txtGameplay[languageRow];
+	case NATIVE_MENU_STRING_EXPERIMENTAL:
+		return (char *)s_txtExperimental[languageRow];
+	case NATIVE_MENU_STRING_UI:
+		return (char *)s_txtInterface[languageRow];
 	case NATIVE_MENU_STRING_CONTROLS:
 		return (char *)controlsTitle[languageRow];
 	case NATIVE_MENU_STRING_QUICK_LOAD:
-		return "CONTINUE";
+		return (char *)s_txtContinue[languageRow];
 	case NATIVE_MENU_STRING_GAMEPAD:
-		return "GAMEPAD / VIBRATION";
+		return (char *)s_txtGamepad[languageRow];
 	case NATIVE_MENU_STRING_CHEATS:
 		return (char *)cheatsTitle[languageRow];
 	case NATIVE_MENU_STRING_CONTROL_HEADER:
@@ -398,33 +797,74 @@ static char *RECTMENU_GetString(s16 stringIndex)
 	case NATIVE_MENU_STRING_DITHERING:
 		return (char *)dithering[languageRow][gNativeDitheringEnabled != 0];
 	case NATIVE_MENU_STRING_BORDERLESS:
-		return (char *)displayMode[gNativeBorderlessEnabled != 0];
+		return NativeRow(s_txtDisplay[languageRow], gNativeBorderlessEnabled ? s_txtBorderless[languageRow] : s_txtWindowed[languageRow]);
 	case NATIVE_MENU_STRING_PGXP:
+		if (NATIVE_DRAW3D_ACTIVE()) return "PGXP: N/A";
 		return (char *)pgxp[languageRow][gNativePgxpMode];
 	case NATIVE_MENU_STRING_DEPTH_BUFFER:
 		// The native renderer always depth tests; the option applies to Classic.
-		if (NATIVE_DRAW3D_ACTIVE()) return "DEPTH BUFFER: ALWAYS ON";
-		return gNativeDepthBufferEnabled ? "DEPTH BUFFER: ON" : "DEPTH BUFFER: OFF";
+		if (NATIVE_DRAW3D_ACTIVE()) return NativeRow(s_txtDepthBuffer[languageRow], "N/A");
+		return NativeRow(s_txtDepthBuffer[languageRow], gNativeDepthBufferEnabled ? s_txtOn[languageRow] : s_txtOff[languageRow]);
 	case NATIVE_MENU_STRING_RENDERER:
-		return gNativeRendererMode == NATIVE_RENDERER_NATIVE ? "RENDERER: NATIVE 3D" : "RENDERER: CLASSIC";
+		return NativeRow(s_txtRenderer[languageRow], gNativeRendererMode == NATIVE_RENDERER_NATIVE ? s_txtRendererNative[languageRow] : s_txtRendererClassic[languageRow]);
 	case NATIVE_MENU_STRING_COLOR_DEPTH:
-		return gNativeColorDepth == NATIVE_COLOR_DEPTH_15BIT ? "COLOUR DEPTH: 15-BIT PS1" : "COLOUR DEPTH: 24-BIT";
+		return NativeRow(s_txtColourDepth[languageRow], gNativeColorDepth == NATIVE_COLOR_DEPTH_15BIT ? "15-BIT PS1" : "24-BIT");
 	case NATIVE_MENU_STRING_TEXTURE_FILTER:
-		return g_cfg_bilinearFiltering ? "TEXTURES: BILINEAR" : "TEXTURES: NEAREST";
+		return NativeRow(s_txtTextures[languageRow], g_cfg_bilinearFiltering ? s_txtBilinear[languageRow] : s_txtNearest[languageRow]);
 	case NATIVE_MENU_STRING_HD_PAUSE:
-		return gNativeHdPauseMode == 0 ? "PAUSE SCREEN: ORIGINAL" : (gNativeHdPauseMode == 1 ? "PAUSE SCREEN: HD" : "PAUSE SCREEN: HD SMOOTH");
+		return NativeRow(s_txtPauseScreen[languageRow], gNativeHdPauseMode == 0 ? s_txtOriginal[languageRow] : (gNativeHdPauseMode == 1 ? "HD" : s_txtHdSmooth[languageRow]));
 	case NATIVE_MENU_STRING_PRECISE_MINIMAP:
-		return gNativePreciseMinimapEnabled ? "PRECISE MINIMAP: ON" : "PRECISE MINIMAP: OFF";
-	case NATIVE_MENU_STRING_ENHANCEMENTS:
-		return "ENHANCEMENTS";
+		return NativeRow(s_txtPreciseMinimap[languageRow], gNativePreciseMinimapEnabled ? s_txtOn[languageRow] : s_txtOff[languageRow]);
+	case NATIVE_MENU_STRING_MODERN_MAP:
+		return NativeRow(s_txtModernMinimap[languageRow], gNativeModernMapEnabled ? s_txtOn[languageRow] : s_txtOff[languageRow]);
+	case NATIVE_MENU_STRING_MODERN_HUD_ICONS:
+		return NativeRow(s_txtModernHudIcons[languageRow], gNativeModernHudIconsEnabled ? s_txtOn[languageRow] : s_txtOff[languageRow]);
+	case NATIVE_MENU_STRING_PRESET:
+		return (char *)s_txtPreset[languageRow];
+	case NATIVE_MENU_STRING_PRESET_PS1:
+		return "PS1";
+	case NATIVE_MENU_STRING_PRESET_VANILLA_PLUS:
+		return "VANILLA+";
+	case NATIVE_MENU_STRING_PRESET_TURBOCHARGED:
+		return "TURBOCHARGED";
+	case NATIVE_MENU_STRING_PRESET_CUSTOM:
+		return (char *)s_txtCustom[languageRow];
+	case NATIVE_MENU_STRING_BOOST_COUNTER:
+	{
+		snprintf(cheatRow, sizeof(cheatRow), "%s: %s", boostCounter[languageRow], cheatToggle[languageRow][(gNativeCheatConfigMask & CHEAT_TURBOCOUNT) != 0]);
+		return cheatRow;
+	}
+	case NATIVE_MENU_STRING_ADDITIONAL_UNLOCKS:
+		return NativeRow(s_txtAdditionalUnlocks[languageRow], gNativeAdditionalUnlocksEnabled ? s_txtOn[languageRow] : s_txtOff[languageRow]);
+	case NATIVE_MENU_STRING_ENGINE_SELECTION:
+		return NativeRow(s_txtEngineSelection[languageRow], gNativeEngineSelectionEnabled ? s_txtOn[languageRow] : s_txtOff[languageRow]);
+	case NATIVE_MENU_STRING_KART_HUE:
+	{
+		static char kartHueRow[96];
+		if (gNativeKartHue == 0)
+		{
+			snprintf(kartHueRow, sizeof(kartHueRow), "%s (%s): %s", s_txtKartHue[languageRow], s_txtExperimental[languageRow], s_txtOriginal[languageRow]);
+		}
+		else
+		{
+			snprintf(kartHueRow, sizeof(kartHueRow), "%s (%s): +%d", s_txtKartHue[languageRow], s_txtExperimental[languageRow], gNativeKartHue * NATIVE_KART_HUE_STEP_DEGREES);
+		}
+		return kartHueRow;
+	}
+	case NATIVE_MENU_STRING_FONT:
+	{
+		static char fontRow[48];
+		snprintf(fontRow, sizeof(fontRow), "%s: %s", s_txtFont[languageRow], (gNativeFont == NATIVE_FONT_ORIGINAL) ? s_txtOriginal[languageRow] : NativeFont_GetName(gNativeFont));
+		return fontRow;
+	}
 	case NATIVE_MENU_STRING_AI_PHYSICS:
-		return gNativeSmoothedAIEnabled ? "AI: SMOOTHED" : "AI: ORIGINAL";
+		return NativeRow(s_txtAi[languageRow], gNativeSmoothedAIEnabled ? s_txtSmoothed[languageRow] : s_txtOriginal[languageRow]);
 	case NATIVE_MENU_STRING_COLLISION_PHYSICS:
-		return gNativeSmoothedCollisionEnabled ? "COLLISIONS: SMOOTHED" : "COLLISIONS: ORIGINAL";
+		return NativeRow(s_txtCollisions[languageRow], gNativeSmoothedCollisionEnabled ? s_txtSmoothed[languageRow] : s_txtOriginal[languageRow]);
 	case NATIVE_MENU_STRING_STEERING_PHYSICS:
-		return gNativeSmoothedSteeringEnabled ? "STEERING: SMOOTHED" : "STEERING: ORIGINAL";
+		return NativeRow(s_txtSteering[languageRow], gNativeSmoothedSteeringEnabled ? s_txtSmoothed[languageRow] : s_txtOriginal[languageRow]);
 	case NATIVE_MENU_STRING_PHYSICS:
-		return gNativeSmoothedPhysicsEnabled ? "PLAYER PHYSICS: SMOOTHED" : "PLAYER PHYSICS: ORIGINAL";
+		return NativeRow(s_txtPlayerPhysics[languageRow], gNativeSmoothedPhysicsEnabled ? s_txtSmoothed[languageRow] : s_txtOriginal[languageRow]);
 	case NATIVE_MENU_STRING_MAX_LOD:
 		return (char *)maxLod[languageRow][CTR_NATIVE_MAX_LOD_ACTIVE];
 #endif
@@ -814,7 +1254,7 @@ enum RectMenuNativeOptionsLayout
 
 static b32 RECTMENU_NativeOptionsSeparatorBeforeRow(struct RectMenu *menu, struct MenuRow *row)
 {
-	if ((menu->drawStyle & RECTMENU_DRAW_STYLE_NATIVE_OPTIONS) == 0)
+	if ((menu->drawStyle & RECTMENU_DRAW_STYLE_NATIVE_OPTIONS) == 0 || row == menu->rows)
 	{
 		return false;
 	}
@@ -835,6 +1275,13 @@ static b32 RECTMENU_NativeOptionsHorizontalInput(struct RectMenu *menu)
 	s16 stringIndex = menu->rows[menu->rowSelected].stringIndex & MENU_ROW_LNG_MASK;
 	return ((stringIndex >= NATIVE_MENU_STRING_AUDIO_FX) &&
 	        (stringIndex <= NATIVE_MENU_STRING_AUDIO_MODE)) ||
+	       (stringIndex == NATIVE_MENU_STRING_FRAME_RATE) ||
+	       (stringIndex == NATIVE_MENU_STRING_BORDERLESS) ||
+	       (stringIndex == NATIVE_MENU_STRING_ANTI_ALIASING) ||
+	       (stringIndex == NATIVE_MENU_STRING_DITHERING) ||
+	       (stringIndex == NATIVE_MENU_STRING_DEFAULT_CAMERA) ||
+	       (stringIndex == NATIVE_MENU_STRING_DEFAULT_HUD) ||
+	       (stringIndex == NATIVE_MENU_STRING_MIRROR_MODE) ||
 	       (stringIndex == NATIVE_MENU_STRING_AI_RACERS) ||
 	       (stringIndex == NATIVE_MENU_STRING_PGXP) ||
 	       (stringIndex == NATIVE_MENU_STRING_RENDERER) ||
@@ -847,7 +1294,15 @@ static b32 RECTMENU_NativeOptionsHorizontalInput(struct RectMenu *menu)
 	       (stringIndex == NATIVE_MENU_STRING_AI_PHYSICS) ||
 	       (stringIndex == NATIVE_MENU_STRING_COLLISION_PHYSICS) ||
 	       (stringIndex == NATIVE_MENU_STRING_STEERING_PHYSICS) ||
-	       (stringIndex == NATIVE_MENU_STRING_PRECISE_MINIMAP);
+	       (stringIndex == NATIVE_MENU_STRING_PRECISE_MINIMAP) ||
+	       (stringIndex == NATIVE_MENU_STRING_SKIP_MASK_HINTS) ||
+	       (stringIndex == NATIVE_MENU_STRING_MODERN_MAP) ||
+	       (stringIndex == NATIVE_MENU_STRING_FONT) ||
+	       (stringIndex == NATIVE_MENU_STRING_KART_HUE) ||
+	       (stringIndex == NATIVE_MENU_STRING_MODERN_HUD_ICONS) ||
+	       (stringIndex == NATIVE_MENU_STRING_ADDITIONAL_UNLOCKS) ||
+	       (stringIndex == NATIVE_MENU_STRING_BOOST_COUNTER) ||
+	       (stringIndex == NATIVE_MENU_STRING_ENGINE_SELECTION);
 }
 #endif
 
@@ -1033,7 +1488,11 @@ void RECTMENU_DrawSelf(struct RectMenu *menu, int posX, s16 posY, s16 menuWidth)
 		uVar8 = 0x1d;
 	}
 	offsetY = posY;
-	if ((menu->state & RECTMENU_DRAW_CALLBACK_FLAGS) == RECTMENU_DRAW_CALLBACK_FLAGS)
+	if (((menu->state & RECTMENU_DRAW_CALLBACK_FLAGS) == RECTMENU_DRAW_CALLBACK_FLAGS)
+#if defined(CTR_NATIVE)
+	    || ((menu->state & RECTMENU_NATIVE_DRAW_CALLBACK) != 0)
+#endif
+	   )
 	{
 		menu->funcState = RECTMENU_FUNC_STATE_DRAW;
 		if (menu->funcPtr != NULL)
@@ -1390,6 +1849,7 @@ int RECTMENU_ProcessInput(struct RectMenu *m)
 #if defined(CTR_NATIVE)
 		if (((button & (BTN_LEFT | BTN_RIGHT)) != 0) &&
 		    RECTMENU_NativeOptionsHorizontalInput(m) &&
+		    ((m->rows[m->rowSelected].stringIndex & MENU_ROW_LOCKED) == 0) &&
 		    (m->funcPtr != 0))
 		{
 			m->funcState = RECTMENU_FUNC_STATE_INPUT;

@@ -178,6 +178,16 @@ else()
             "$<TARGET_FILE_DIR:ctr_native>/assets/dualshock.png"
         VERBATIM
     )
+    # Optional TrueType fonts for Enhancements > Font; a missing font keeps
+    # the retail glyphs.
+    if(EXISTS "${CMAKE_SOURCE_DIR}/assets/fonts")
+        add_custom_command(TARGET ctr_native POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+                "${CMAKE_SOURCE_DIR}/assets/fonts"
+                "$<TARGET_FILE_DIR:ctr_native>/assets/fonts"
+            VERBATIM
+        )
+    endif()
 endif()
 if(WIN32)
     target_sources(ctr_native PRIVATE platform/native_http_win32.c)
@@ -193,6 +203,17 @@ endif()
 include(CTest)
 option(CTR_NATIVE_RENDERER_TESTS "Build OpenGL renderer integration tests (requires a display)" OFF)
 if(BUILD_TESTING AND NOT EMSCRIPTEN)
+    add_executable(ctr_native_unlock_test tests/native_unlock_test.c)
+    target_include_directories(ctr_native_unlock_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
+    target_compile_definitions(ctr_native_unlock_test PRIVATE CTR_NATIVE BUILD=926)
+    add_test(NAME ctr_native_unlock COMMAND ctr_native_unlock_test)
+    add_executable(ctr_native_engine_test tests/native_engine_test.c)
+    target_include_directories(ctr_native_engine_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
+    target_compile_definitions(ctr_native_engine_test PRIVATE CTR_NATIVE BUILD=926)
+    add_test(NAME ctr_native_engine COMMAND ctr_native_engine_test)
+    add_executable(ctr_native_engine_metadata_test tests/native_engine_metadata_test.c)
+    target_include_directories(ctr_native_engine_metadata_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
+    add_test(NAME ctr_native_engine_metadata COMMAND ctr_native_engine_metadata_test)
     add_executable(ctr_native_framerate_test tests/native_framerate_test.c)
     target_include_directories(ctr_native_framerate_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
     target_compile_definitions(ctr_native_framerate_test PRIVATE CTR_NATIVE BUILD=926)
@@ -241,6 +262,13 @@ if(BUILD_TESTING AND NOT EMSCRIPTEN)
             target_sources(ctr_native_depth_renderer_test PRIVATE platform/native_http_win32.c)
         endif()
         add_test(NAME ctr_native_depth_renderer COMMAND ctr_native_depth_renderer_test)
+        add_test(NAME ctr_native_oxide_unlock COMMAND ctr_native_depth_renderer_test --oxide-unlock-only)
+        add_test(NAME ctr_native_engine_physics COMMAND ctr_native_depth_renderer_test --engine-physics-only)
+        add_test(NAME ctr_native_unlock_menu COMMAND ctr_native_depth_renderer_test --unlock-menu-only)
+        add_test(NAME ctr_native_preset_input COMMAND ctr_native_depth_renderer_test --preset-input-only)
+        add_test(NAME ctr_native_engine_lifecycle COMMAND ctr_native_depth_renderer_test --engine-lifecycle-only)
+        add_test(NAME ctr_native_hud_icons COMMAND ctr_native_depth_renderer_test --hud-icons-only)
+        set_tests_properties(ctr_native_hud_icons PROPERTIES SKIP_RETURN_CODE 77)
         add_test(NAME ctr_native_minimap COMMAND ctr_native_depth_renderer_test --minimap-only)
         add_test(NAME ctr_native_level_sky_order COMMAND ctr_native_depth_renderer_test --sky-order-only)
         add_test(NAME ctr_native_model_submission COMMAND ctr_native_depth_renderer_test --model-submission-only)

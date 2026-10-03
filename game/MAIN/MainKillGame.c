@@ -1,4 +1,5 @@
 #include <common.h>
+#include <platform/native_unlock.h>
 
 // NOTE(aalhendi): PSX path ASM-verified NTSC-U 926 0x8003c41c-0x8003c480.
 void MainKillGame_StopCTR(void)
@@ -25,7 +26,7 @@ void MainKillGame_StopCTR(void)
 void MainKillGame_LaunchSpyro2(void)
 {
 #if defined(CTR_NATIVE)
-	UNLOCK_ADV_BIT(sdata->gameProgress.unlocks, GAME_UNLOCK_BIT_OXIDE);
+	NativeUnlock_GrantBit(GAME_UNLOCK_BIT_OXIDE);
 	OtherFX_Play(MM_CHEAT_SUCCESS_SFX, 1);
 	return;
 #endif

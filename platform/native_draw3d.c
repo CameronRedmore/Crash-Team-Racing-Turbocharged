@@ -3,6 +3,7 @@
 
 #include <psx/libgte.h>
 #include <psx/libgpu.h>
+#include <stdlib.h>
 #include <string.h>
 #include <math.h>
 #include <time.h>
@@ -11,6 +12,25 @@
 
 int gNativeRendererMode = NATIVE_RENDERER_CLASSIC;
 int gNativeColorDepth = NATIVE_COLOR_DEPTH_TRUE;
+
+float NativeDraw3D_GetDrawOrderSlotDepth(void)
+{
+	static float slotDepth = -1.0f;
+	if (slotDepth < 0.0f)
+	{
+		slotDepth = NATIVE_DRAW3D_DRAW_ORDER_SLOT_DEPTH;
+#if defined(CTR_INTERNAL)
+		const char *env = getenv("CTR_DRAW_ORDER_SLOT_DEPTH");
+		if ((env != NULL) && (env[0] != '\0'))
+		{
+			const float value = strtof(env, NULL);
+			slotDepth = value > 0.0f ? value : 0.0f;
+			Platform_Log("[CTR Draw3D] draw-order slot depth: %.1f\n", slotDepth);
+		}
+#endif
+	}
+	return slotDepth;
+}
 
 #if NATIVE_DRAW3D_SUPPORTED
 
@@ -38,9 +58,10 @@ static double s_draw3dReportTime;
 static void NativeDraw3D_ReportDiagnostics(void)
 {
 	if (!NATIVE_DRAW3D_ACTIVE() && s_draw3dLayerCount == 0) return;
-	struct timespec now;
-	if (timespec_get(&now, TIME_UTC) != TIME_UTC) return;
-	const double seconds = (double)now.tv_sec + now.tv_nsec / 1000000000.0;
+	// time() rather than timespec_get(): the i686 MinGW (msvcrt) runtime lacks TIME_UTC.
+	const time_t now = time(NULL);
+	if (now == (time_t)-1) return;
+	const double seconds = (double)now;
 	if (s_draw3dReportTime == 0.0 || seconds < s_draw3dReportTime)
 	{
 		s_draw3dReportTime = seconds;
@@ -217,7 +238,7 @@ int NativeDraw3D_AddTriangle(int layerIndex, const NativeDraw3DVertex *v0, const
 		}
 	}
 	triangle->material = *material;
-	triangle->sortDepth = sortDepth;
+	triangle->sortDepth = sortDepth + (float)material->depthSlots * NativeDraw3D_GetDrawOrderSlotDepth();
 
 	s_draw3dTriangleCount++;
 	layer->triangleCount++;

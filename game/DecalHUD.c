@@ -1,5 +1,9 @@
 #include <common.h>
 
+#ifdef CTR_NATIVE
+#include "platform/native_hud_icons.h"
+#endif
+
 enum
 {
 	DECAL_HUD_COLOR_MASK = 0xffffff,
@@ -320,6 +324,19 @@ LAB_800232d8:
 	CtrGpu_WriteColorCode(&p->r1, color2);
 	CtrGpu_WriteColorCode(&p->r2, color3);
 	CtrGpu_WriteColorCode(&p->r3, color4);
+
+#if defined(CTR_NATIVE) && !defined(__vita__)
+	// Group 4, icon 0x38 is the shared menu navigation arrow. Keep font
+	// diacritics and other rotated decals on their original rendering path.
+	struct IconGroup *group = sdata && sdata->gGT ? sdata->gGT->iconGroup[4] : NULL;
+	if (!transparency && group && group->numIcons > 0x38 && (ICONGROUP_GETICONS(group))[0x38] == icon)
+	{
+		const float x[4] = {p->x0, p->x1, p->x2, p->x3};
+		const float y[4] = {p->y0, p->y1, p->y2, p->y3};
+		const u32 colors[4] = {color1, color2, color3, color4};
+		if (NativeHudIcons_DrawMenuArrow(x, y, colors, primMem, otMemPtr)) return;
+	}
+#endif
 
 	p->tag = CtrGpu_PackOTTag(*otMemPtr, DECAL_HUD_GPU_TAG_LENGTH_POLY_GT4);
 	*otMemPtr = CtrGpu_PrimToOTLink24(p);

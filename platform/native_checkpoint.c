@@ -7,6 +7,7 @@
 #include "ctr_scratchpad.h"
 #include "platform/native_memory.h"
 #include "platform/native_state.h"
+#include "platform/native_minimap.h"
 
 #include <string.h>
 
@@ -2255,6 +2256,7 @@ internal int NativeCheckpoint_RestoreMode(const void *src, int srcSize, b32 incl
 		return 0;
 	}
 
+	NativeMinimap_InvalidateLive();
 	return 1;
 }
 

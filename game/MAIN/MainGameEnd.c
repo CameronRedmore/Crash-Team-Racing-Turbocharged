@@ -1,4 +1,5 @@
 #include <common.h>
+#include <platform/native_unlock.h>
 
 #if defined(CTR_NATIVE)
 #include "platform/native_leaderboard.h"
@@ -131,7 +132,13 @@ void MainGameEnd_SoloRaceGetReward(int subtractTimeCrateBonus)
 CheckOxideAllTracks:
 	if (GAMEPROG_CheckGhostsBeaten(2))
 	{
-		UNLOCK_ADV_BIT(sdata->gameProgress.unlocks, GAME_UNLOCK_BIT_SCRAPBOOK);
+		NativeUnlock_GrantBit(GAME_UNLOCK_BIT_SCRAPBOOK);
+#if defined(CTR_NATIVE)
+		if (gNativeAdditionalUnlocksEnabled)
+		{
+			NativeUnlock_GrantBit(GAME_UNLOCK_BIT_OXIDE);
+		}
+#endif
 	}
 }
 

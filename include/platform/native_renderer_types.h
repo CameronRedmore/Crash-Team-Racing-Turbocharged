@@ -77,7 +77,9 @@ typedef enum
 	BM_AVERAGE,
 	BM_ADD,
 	BM_SUBTRACT,
-	BM_ADD_QUATER_SOURCE
+	BM_ADD_QUATER_SOURCE,
+	// Not a PS1 mode: source-alpha coverage for anti-aliased font glyphs.
+	BM_STRAIGHT_ALPHA
 } BlendMode;
 
 typedef enum
@@ -86,7 +88,9 @@ typedef enum
 	TF_8_BIT,
 	TF_16_BIT,
 
-	TF_32_BIT_RGBA
+	TF_32_BIT_RGBA,
+	// Single-channel signed distance field font atlas (native_font.h).
+	TF_TEXT_SDF
 } TexFormat;
 
 typedef u32 TextureID;

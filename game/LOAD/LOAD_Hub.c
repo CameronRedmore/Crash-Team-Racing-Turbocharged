@@ -1,4 +1,7 @@
 #include <common.h>
+#if defined(CTR_NATIVE)
+#include "platform/native_minimap.h"
+#endif
 
 // NOTE(aalhendi): ASM-audited NTSC-U 926 0x80032ffc-0x80033108.
 // packID will always be 3-gGT->activeMempackIndex
@@ -103,6 +106,9 @@ void LOAD_Hub_SwapNow()
 
 	MEMPACK_SwapPacks(gGT->activeMempackIndex);
 	MainInit_VisMem(gGT);
+#if defined(CTR_NATIVE)
+	NativeMinimap_PrepareLive();
+#endif
 
 	cDC = &gGT->cameraDC[0];
 	cDC->ptrQuadBlock = 0;

@@ -20,6 +20,8 @@
 #include "platform/native_perf.h"
 #include "platform/native_debug_font.h"
 #include "platform/native_renderer.h"
+#include "platform/native_font.h"
+#include "platform/native_minimap.h"
 
 #include <assert.h>
 #include <string.h>
@@ -575,6 +577,8 @@ int NativeRenderer_InitialiseRender(char *windowName, int width, int height, int
 
 void NativeRenderer_Shutdown(void)
 {
+	NativeFont_ReleaseGpu();
+	NativeMinimap_ReleaseGpu();
 	glDeleteVertexArrays(MAX_NUM_VERTEX_BUFFERS, s_glVertexArray);
 	glDeleteBuffers(MAX_NUM_VERTEX_BUFFERS, s_glVertexBuffer);
 
@@ -1262,6 +1266,7 @@ global_variable GTEShader s_gteShader4SuperTurbo;
 global_variable GTEShader s_gteShader8SuperTurbo;
 global_variable GTEShader s_gteShader16SuperTurbo;
 global_variable GTEShader s_gteShader32Rgba;
+global_variable GTEShader s_gteShaderTextSdf;
 #endif
 
 GLint u_projectionLoc;
@@ -1314,6 +1319,7 @@ internal void NativeRenderer_DestroyPSXShaders(void)
 	glDeleteProgram(s_gteShader8SuperTurbo.shader);
 	glDeleteProgram(s_gteShader16SuperTurbo.shader);
 	glDeleteProgram(s_gteShader32Rgba.shader);
+	glDeleteProgram(s_gteShaderTextSdf.shader);
 #endif
 }
 
@@ -1632,6 +1638,14 @@ const char *gte_shader_32_rgba = "	uniform sampler2D s_texture;\n"
                                  "	void main() {\n"
                                  "		vec2 tc = v_texcoord.xy * texelSize + texelSize * 0.5;\n"
                                  "		vec4 color = texture2D(s_texture, tc);\n"
+#ifndef __vita__
+                                 // Pass 4 resolves native HUD coverage with edge UVs.
+                                 "\t\tif (psxSemiTransPass == 4) {\n"
+                                 "\t\t\tcolor = texture2D(s_texture, v_texcoord.xy * texelSize);\n"
+                                 "\t\t\tgl_FragColor = vec4(color.rgb * psxShade().rgb, color.a);\n"
+                                 "\t\t\treturn;\n"
+                                 "\t\t}\n"
+#endif
 #ifdef __vita__
                                  "#if defined(PSX_PASS_NON_STP) || defined(PSX_PASS_STP)\n"
                                  "		if (color.a < 0.25) { discard; }\n"
@@ -1654,6 +1668,25 @@ const char *gte_shader_32_rgba = "	uniform sampler2D s_texture;\n"
                                  GPU_RGBA_FRAGMENT_OUTPUT
                                  GPU_PSX_BLEND_APPLY
                                  "	}\n";
+
+#ifndef __vita__
+// Enhancements > Font (native_font.h). The distance field is resolved per
+// screen pixel, so glyph edges stay sharp and anti-aliased at any resolution.
+// Retail font texels are mid grey under a 2x shade, so half the shade gives
+// the retail fill colour; the outline is black like the retail glyphs.
+// Blending only writes colour, which keeps the PS1 mask bit in alpha intact.
+const char *gte_shader_text_sdf = "	uniform sampler2D s_texture;\n"
+                                  "	uniform vec2 texelSize;\n"
+                                  "	uniform vec2 sdfEdges; // glyph edge, outline edge\n"
+                                  "	void main() {\n"
+                                  "		float dist = texture2D(s_texture, v_texcoord.xy * texelSize).r;\n"
+                                  "		float aa = max(fwidth(dist) * 0.7, 1.0 / 255.0);\n"
+                                  "		float shape = smoothstep(sdfEdges.y - aa, sdfEdges.y + aa, dist);\n"
+                                  "		if (shape <= 0.0) { discard; }\n"
+                                  "		float body = smoothstep(sdfEdges.x - aa, sdfEdges.x + aa, dist);\n"
+                                  "		gl_FragColor = vec4(clamp(psxShade().rgb * 0.5, 0.0, 1.0) * body, shape);\n"
+                                  "	}\n";
+#endif
 
 #ifdef __vita__
 #define GTE_ORDER_DEPTH_ATTRIBUTE   "\tattribute float a_orderDepth;\n"
@@ -2054,6 +2087,10 @@ internal void NativeRenderer_InitialisePSXShaders(void)
 	NativeRenderer_CompilePSXShader(&s_gteShader8SuperTurbo, gte_shader_8, "#define SUPER_TURBO_TINT\n");
 	NativeRenderer_CompilePSXShader(&s_gteShader16SuperTurbo, gte_shader_16, "#define SUPER_TURBO_TINT\n");
 	NativeRenderer_CompilePSXShader(&s_gteShader32Rgba, gte_shader_32_rgba, NULL);
+	NativeRenderer_CompilePSXShader(&s_gteShaderTextSdf, gte_shader_text_sdf, NULL);
+	glUseProgram(s_gteShaderTextSdf.shader);
+	glUniform2f(glGetUniformLocation(s_gteShaderTextSdf.shader, "sdfEdges"), NATIVE_FONT_SDF_EDGE, NATIVE_FONT_SDF_OUTLINE);
+	glUseProgram(0);
 #endif
 }
 
@@ -2598,6 +2635,9 @@ internal void NativeRenderer_SetShader(const ShaderID shader)
 void NativeRenderer_SetTexture(TextureID texture, TexFormat texFormat, int semiTransPass, BlendMode blendMode, int textured, int superTurboTint,
                                int textureFullyOpaque, int cachedP4)
 {
+#ifndef __vita__
+	if (texFormat == TF_32_BIT_RGBA && blendMode == BM_STRAIGHT_ALPHA) semiTransPass = 4;
+#endif
 #ifdef __vita__
 	(void)superTurboTint;
 	int variant;
@@ -2667,6 +2707,9 @@ void NativeRenderer_SetTexture(TextureID texture, TexFormat texFormat, int semiT
 	case TF_32_BIT_RGBA:
 		shader = &s_gteShader32Rgba;
 		break;
+	case TF_TEXT_SDF:
+		shader = &s_gteShaderTextSdf;
+		break;
 	}
 	if (shader == NULL)
 	{
@@ -2677,7 +2720,7 @@ void NativeRenderer_SetTexture(TextureID texture, TexFormat texFormat, int semiT
 	NativeRenderer_SetShader(shader->shader);
 	u_bilinearFilterLoc = shader->bilinearFilterLoc;
 	u_projectionLoc = shader->projectionLoc;
-	u_texelSizeLoc = texFormat == TF_32_BIT_RGBA ? shader->texelSizeLoc : -1;
+	u_texelSizeLoc = (texFormat == TF_32_BIT_RGBA || texFormat == TF_TEXT_SDF) ? shader->texelSizeLoc : -1;
 #ifndef __vita__
 	u_psxSemiTransPassLoc = shader->psxSemiTransPassLoc;
 	u_psxDitherEnabledLoc = shader->psxDitherEnabledLoc;
@@ -4092,6 +4135,43 @@ internal TextureID NativeRenderer_CreateGhostReplayTexture(int width, int height
 	return texture;
 }
 
+#ifndef __vita__
+// Collision maps retain their coverage when scaled down in the track menu.
+u32 NativeRenderer_CreateMinimapTexture(int width, int height, const u8 *pixels)
+{
+	TextureID texture = NativeRenderer_CreateGhostReplayTexture(width, height, pixels);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glGenerateMipmap(GL_TEXTURE_2D);
+	return texture;
+}
+
+// Signed distance field atlas for Enhancements > Font (native_font.c).
+u32 NativeRenderer_CreateFontAtlasTexture(int width, int height, const u8 *pixels)
+{
+	TextureID texture = 0;
+	glGenTextures(1, &texture);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, pixels);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+	glGenerateMipmap(GL_TEXTURE_2D);
+	s_lastBoundTexture = (TextureID)-1;
+	return texture;
+}
+
+void NativeRenderer_DestroyFontAtlasTexture(u32 texture)
+{
+	TextureID id = texture;
+	glDeleteTextures(1, &id);
+	s_lastBoundTexture = (TextureID)-1;
+}
+#endif
+
 internal b32 NativeRenderer_LoadGhostReplayOverlay(void)
 {
 	u8 *pixels = NULL;
@@ -4328,7 +4408,8 @@ internal int NativeRenderer_BuildDebugOverlayLines(char lines[][NATIVE_DEBUG_OVE
 	DBG_LINE("Wire %s  Untextured %s", NativeRenderer_DebugOnOff(g_dbg_wireframeMode), NativeRenderer_DebugOnOff(g_dbg_texturelessMode));
 #endif
 	DBG_LINE("-- Enhancements --");
-	DBG_LINE("Precise minimap %s", NativeRenderer_DebugOnOff(gNativePreciseMinimapEnabled));
+	DBG_LINE("Modern minimap %s", NativeRenderer_DebugOnOff(gNativeModernMapEnabled));
+	DBG_LINE("Modern HUD icons %s", NativeRenderer_DebugOnOff(gNativeModernHudIconsEnabled));
 	DBG_LINE("Frame rate %d (sel %d)%s", CTR_FRAMES_PER_SECOND, CTR_NATIVE_60FPS_SELECTED, gNativeForce30Fps ? " forced30" : "");
 	DBG_LINE("Phys %s AI %s Coll %s Steer %s", NativeRenderer_DebugOnOff(gNativeSmoothedPhysicsEnabled),
 	         NativeRenderer_DebugOnOff(gNativeSmoothedAIEnabled), NativeRenderer_DebugOnOff(gNativeSmoothedCollisionEnabled),
@@ -4871,6 +4952,10 @@ void NativeRenderer_SetBlendMode(BlendMode blendMode)
 #else
 		glBlendFuncSeparate(GL_CONSTANT_COLOR, GL_ONE, GL_ONE, GL_ZERO);
 #endif
+		break;
+	case BM_STRAIGHT_ALPHA:
+		glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
+		glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE);
 		break;
 	}
 

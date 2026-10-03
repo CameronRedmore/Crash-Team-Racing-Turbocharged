@@ -1,4 +1,8 @@
 #include <common.h>
+#if defined(CTR_NATIVE)
+#include <platform/native_engine.h>
+#include <platform/native_engine_metadata.h>
+#endif
 
 static void GhostTape_StartInternal(b32 startNativeInputRecording)
 {
@@ -11,6 +15,11 @@ static void GhostTape_StartInternal(b32 startNativeInputRecording)
 	gh->version = GHOST_TAPE_VERSION_RETAIL;
 	gh->levelID = gGT->levelID;
 	gh->characterID = data.characterIDs[d->driverID];
+#if defined(CTR_NATIVE)
+	NativeEngineMetadata_StoreRetail(gh->emptyPadding, NativeEngine_GetEffectiveProfile(d->driverID));
+#else
+	memset(gh->emptyPadding, 0, sizeof(gh->emptyPadding));
+#endif
 
 	sdata->GhostRecording.VelX = 0;
 	sdata->GhostRecording.VelY = 0;
@@ -382,6 +391,9 @@ void GhostTape_WriteBoosts(int addReserve, u8 type, int speedCap)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80028410-0x8002843c.
 void GhostTape_Destroy()
 {
+#if defined(CTR_NATIVE)
+	NativeEngine_ClearReplayOverrides();
+#endif
 	if (sdata->ptrGhostTapePlaying != 0)
 	{
 		MEMPACK_ClearHighMem();

@@ -3,7 +3,9 @@
 #if defined(CTR_NATIVE)
 #include "platform/native_adhoc.h"
 #include "platform/native_pgxp.h"
-
+#include "platform/native_minimap.h"
+#include <math.h>
+#include <string.h>
 #endif
 
 enum UIMapConstants
@@ -30,6 +32,8 @@ enum UIMapConstants
 	UI_MAP_ARROW_ROT_FLAG = 0x1000,
 	UI_MAP_ICON_SCALE = 0x1000,
 	UI_MAP_ADV_ARROW_SCALE = 0x800,
+	UI_MAP_ADV_ARROW_PIVOT_X = 6,
+	UI_MAP_ADV_ARROW_PIVOT_Y = 4,
 };
 
 CTR_STATIC_ASSERT(UI_MAP_NEUTRAL_COLOR == 0x808080);
@@ -67,6 +71,9 @@ void UI_Map_DrawMap(struct Icon *mapTop, struct Icon *mapBottom, s16 posX, s16 p
 	u32 transparency;
 	struct GameTracker *gGT;
 
+#if defined(CTR_NATIVE)
+	if (NativeMinimap_DrawLive(primMem, otMem, colorID)) return;
+#endif
 	gGT = sdata->gGT;
 
 	mapMetadata = NULL;
@@ -265,28 +272,10 @@ void UI_Map_GetIconPos(struct UIMap *map, int *posX, int *posY)
 
 #if defined(CTR_NATIVE)
 // Keep the division and widescreen conversion fractional until rasterization.
-static void UI_Map_GetIconPosPrecise(const struct UIMap *map, const s32 worldPos[3], float *posX, float *posY)
+void UI_Map_GetIconPosPrecise(const struct UIMap *map, const s32 worldPos[3], float *posX, float *posY)
 {
-	const double x = (double)worldPos[0] * map->iconSizeX / (map->worldEndX - map->worldStartX);
-	const double y = (double)worldPos[2] * map->iconSizeY * 2 / (map->worldEndY - map->worldStartY);
 	double addX, addY;
-	if (map->mode == UI_MAP_MODE_0_DEGREES)
-	{
-		addX = x;
-		addY = y;
-	}
-	else if (map->mode == UI_MAP_MODE_180_DEGREES)
-	{
-		addX = -x;
-		addY = -y;
-	}
-	else
-	{
-		addX = (double)worldPos[2] * map->iconSizeX / (map->worldEndY - map->worldStartY);
-		addY = (double)worldPos[0] * map->iconSizeY * 2 / (map->worldEndX - map->worldStartX);
-		if (map->mode == UI_MAP_MODE_90_DEGREES) addX = -addX;
-		else addY = -addY;
-	}
+	NativeMinimap_Project(map, worldPos[0], worldPos[2], &addX, &addY);
 #if CTR_NATIVE_WIDESCREEN
 	addX *= 34.0 / 45.0;
 #endif
@@ -322,11 +311,17 @@ void UI_Map_DrawAdvPlayer(struct UIMap *map, const s32 worldPos[3], int unused1,
 	}
 
 #if defined(CTR_NATIVE)
-	if (gNativePreciseMinimapEnabled && NATIVE_PGXP_SUPPORTED)
+	if ((gNativePreciseMinimapEnabled && NATIVE_PGXP_SUPPORTED) || gNativeModernMapEnabled)
 	{
 		float preciseX, preciseY;
 		UI_Map_GetIconPosPrecise(map, worldPos, &preciseX, &preciseY);
-		AH_Map_HubArrowPrecise(preciseX, preciseY, &data.playerIconAdvMap.pos[0], (char *)arrowColor, scale, rot);
+		if (gNativeModernMapEnabled)
+		{
+			// The arrow pivots 6,4 past the position it is given.
+			preciseX -= UI_MAP_ADV_ARROW_PIVOT_X;
+			preciseY -= UI_MAP_ADV_ARROW_PIVOT_Y;
+		}
+		AH_Map_HubArrowPrecise(preciseX, preciseY, &data.playerIconAdvMap.pos[0], (char *)arrowColor, scale, rot, 0.6f);
 		return;
 	}
 #endif
@@ -379,6 +374,23 @@ void UI_Map_DrawRawIcon(struct UIMap *map, const s32 worldPos[3], int iconID, in
 
 	return;
 }
+
+#if defined(CTR_NATIVE)
+// Radii in HUD pixel rows, before the one-pixel outline.
+#define UI_MAP_MARKER_RACER_RADIUS    1.8f
+#define UI_MAP_MARKER_PLAYER_RADIUS   2.8f
+#define UI_MAP_MARKER_WARPBALL_RADIUS 2.2f
+#define UI_MAP_MARKER_TARGET_RADIUS   4.6f
+
+// Modern Map: race markers become vector circles centred on the
+// world position, instead of sprites hung from their top-left corner.
+static void UI_Map_DrawMarker(struct UIMap *map, const s32 worldPos[3], float radius, const u32 colors[4])
+{
+	float posX, posY;
+	UI_Map_GetIconPosPrecise(map, worldPos, &posX, &posY);
+	AH_Map_MarkerShape(posX, posY, radius, false, colors);
+}
+#endif
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8004dd5c-0x8004dee8.
 void UI_Map_DrawDrivers(struct UIMap *map, struct Thread *bucket, s16 *driverIconCounter)
@@ -438,6 +450,24 @@ void UI_Map_DrawDrivers(struct UIMap *map, struct Thread *bucket, s16 *driverIco
 			iconID = UI_MAP_PLAYER_ICON_HUMAN;
 		}
 
+#if defined(CTR_NATIVE)
+		if (gNativeModernMapEnabled)
+		{
+			u32 colors[4];
+			if (iconID == UI_MAP_PLAYER_ICON_HUMAN)
+			{
+				// Retail flicks the player's dot to white every other two frames.
+				AH_Map_MarkerFlash(colors, WHITE, data.characterIDs[d->driverID] + 5, 4.0f);
+			}
+			else
+			{
+				memcpy(colors, data.ptrColor[kartColor], sizeof(colors));
+			}
+			UI_Map_DrawMarker(map, &bucket->inst->matrix.t[0], (iconID == UI_MAP_PLAYER_ICON_HUMAN) ? UI_MAP_MARKER_PLAYER_RADIUS : UI_MAP_MARKER_RACER_RADIUS,
+			                  colors);
+			continue;
+		}
+#endif
 		UI_Map_DrawRawIcon(map, &bucket->inst->matrix.t[0], iconID, (s16)kartColor, 0, UI_MAP_ICON_SCALE);
 	}
 	return;
@@ -491,6 +521,26 @@ void UI_Map_DrawGhosts(struct UIMap *map, struct Thread *bucket)
 			}
 		}
 
+#if defined(CTR_NATIVE)
+		if (gNativeModernMapEnabled)
+		{
+			u32 colors[4];
+			if (d->ghostID == 0)
+			{
+				AH_Map_MarkerFlash(colors, CORTEX_RED, CRASH_BLUE, 2.0f);
+			}
+			else if (color == TROPY_LIGHT_BLUE)
+			{
+				memcpy(colors, data.ptrColor[color], sizeof(colors));
+			}
+			else
+			{
+				AH_Map_MarkerFlash(colors, RED, WHITE, 2.0f);
+			}
+			UI_Map_DrawMarker(map, &bucket->inst->matrix.t[0], UI_MAP_MARKER_RACER_RADIUS, colors);
+			continue;
+		}
+#endif
 		UI_Map_DrawRawIcon(map, &bucket->inst->matrix.t[0], UI_MAP_PLAYER_ICON_AI, color, 0, UI_MAP_ICON_SCALE);
 	}
 	return;
@@ -518,7 +568,16 @@ void UI_Map_DrawTracking(struct UIMap *map, struct Thread *bucket)
 		// == only draw warpball ==
 
 		// draw warpball
-		UI_Map_DrawRawIcon(map, &inst->matrix.t[0], UI_MAP_WARPBALL_ICON, 0, 0, UI_MAP_ICON_SCALE);
+#if defined(CTR_NATIVE)
+		if (gNativeModernMapEnabled)
+		{
+			UI_Map_DrawMarker(map, &inst->matrix.t[0], UI_MAP_MARKER_WARPBALL_RADIUS, data.ptrColor[0]);
+		}
+		else
+#endif
+		{
+			UI_Map_DrawRawIcon(map, &inst->matrix.t[0], UI_MAP_WARPBALL_ICON, 0, 0, UI_MAP_ICON_SCALE);
+		}
 
 		// driver target
 		tw = (struct TrackerWeapon *)inst->thread->object;
@@ -539,6 +598,19 @@ void UI_Map_DrawTracking(struct UIMap *map, struct Thread *bucket)
 			targetColor = CORTEX_RED;
 		}
 
+#if defined(CTR_NATIVE)
+		if (gNativeModernMapEnabled)
+		{
+			// A ring around the target's dot, with a black edge behind it.
+			u32 colors[4];
+			AH_Map_MarkerFlash(colors, CRASH_BLUE, CORTEX_RED, 2.0f);
+			float posX, posY;
+			UI_Map_GetIconPosPrecise(map, &d->instSelf->matrix.t[0], &posX, &posY);
+			AH_Map_MarkerOutline(posX, posY, UI_MAP_MARKER_TARGET_RADIUS, 0.5f, false, colors[0]);
+			AH_Map_MarkerOutline(posX, posY, UI_MAP_MARKER_TARGET_RADIUS, 1.0f, false, 0);
+			continue;
+		}
+#endif
 		UI_Map_DrawRawIcon(map, &d->instSelf->matrix.t[0], UI_MAP_WARPBALL_TARGET_ICON, targetColor, 0, UI_MAP_ICON_SCALE);
 	}
 	return;

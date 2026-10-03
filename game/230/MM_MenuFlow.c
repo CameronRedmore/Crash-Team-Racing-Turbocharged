@@ -1,8 +1,12 @@
 #include <common.h>
 #include <platform/native_input.h>
+#include <platform/native_font.h>
+#include <platform/native_kart_color.h>
+#include <platform/native_engine.h>
 
 #if defined(CTR_NATIVE)
 #include "platform/native_leaderboard.h"
+#include "platform/native_minimap.h"
 #if defined(__vita__)
 #include "platform/native_adhoc.h"
 #endif
@@ -97,12 +101,12 @@ static struct RectMenu s_nativeExtraDifficultyMenu =
 
 static struct MenuRow s_nativeLanguageRows[MM_NATIVE_LANGUAGE_COUNT + 1] =
 {
-	{LNG_ENGLISH, 0, 1, 0, 0},
+	{LNG_ENGLISH, 5, 1, 0, 0},
 	{LNG_FRENCH, 0, 2, 1, 1},
 	{LNG_GERMAN, 1, 3, 2, 2},
 	{LNG_ITALIAN, 2, 4, 3, 3},
 	{LNG_SPANISH, 3, 5, 4, 4},
-	{LNG_DUTCH, 4, 5, 5, 5},
+	{LNG_DUTCH, 4, 0, 5, 5},
 	{.stringIndex = RECTMENU_STRING_NONE},
 };
 
@@ -167,10 +171,14 @@ static struct MenuRow s_nativeMainMenuBasic[] =
 #if defined(__vita__)
 	{NATIVE_MENU_STRING_ADHOC, 5, 7, 6, 6},
 	{LNG_OPTIONS, 6, 8, 7, 7},
-	{NATIVE_MENU_STRING_EXIT_GAME, 7, 8, 8, 8},
+	{NATIVE_MENU_STRING_UNLOCKS, 7, 9, 8, 8},
+	{NATIVE_MENU_STRING_CREDITS, 8, 10, 9, 9},
+	{NATIVE_MENU_STRING_EXIT_GAME, 9, 10, 10, 10},
 #else
 	{LNG_OPTIONS, 5, 7, 6, 6},
-	{NATIVE_MENU_STRING_EXIT_GAME, 6, 7, 7, 7},
+	{NATIVE_MENU_STRING_UNLOCKS, 6, 8, 7, 7},
+	{NATIVE_MENU_STRING_CREDITS, 7, 9, 8, 8},
+	{NATIVE_MENU_STRING_EXIT_GAME, 8, 9, 9, 9},
 #endif
 	{.stringIndex = RECTMENU_STRING_NONE},
 };
@@ -187,14 +195,160 @@ static struct MenuRow s_nativeMainMenuWithScrapbook[] =
 	{NATIVE_MENU_STRING_ADHOC, 5, 7, 6, 6},
 	{LNG_OPTIONS, 6, 8, 7, 7},
 	{LNG_SCRAPBOOK, 7, 9, 8, 8},
-	{NATIVE_MENU_STRING_EXIT_GAME, 8, 9, 9, 9},
+	{NATIVE_MENU_STRING_UNLOCKS, 8, 10, 9, 9},
+	{NATIVE_MENU_STRING_CREDITS, 9, 11, 10, 10},
+	{NATIVE_MENU_STRING_EXIT_GAME, 10, 11, 11, 11},
 #else
 	{LNG_OPTIONS, 5, 7, 6, 6},
 	{LNG_SCRAPBOOK, 6, 8, 7, 7},
-	{NATIVE_MENU_STRING_EXIT_GAME, 7, 8, 8, 8},
+	{NATIVE_MENU_STRING_UNLOCKS, 7, 9, 8, 8},
+	{NATIVE_MENU_STRING_CREDITS, 8, 10, 9, 9},
+	{NATIVE_MENU_STRING_EXIT_GAME, 9, 10, 10, 10},
 #endif
 	{.stringIndex = RECTMENU_STRING_NONE},
 };
+
+// The base rewards are always visible; Oxide requires Additional Unlocks.
+struct MMNativeUnlockEntry
+{
+	s16 name;
+	s16 unlockBit; // -1: Slide Coliseum Adventure access, counted from the active profile.
+	const char *requirement[2];
+};
+
+static const struct MMNativeUnlockEntry s_nativeUnlockEntries[] =
+{
+	{LNG_RIPPER_ROO, 7, {"WIN THE RED GEM CUP", "IN ADVENTURE MODE"}},
+	{LNG_PAPU_PAPU, 8, {"WIN THE GREEN GEM CUP", "IN ADVENTURE MODE"}},
+	{LNG_KOMODO_JOE, 9, {"WIN THE BLUE GEM CUP", "IN ADVENTURE MODE"}},
+	{LNG_PINSTRIPE, 10, {"WIN THE YELLOW GEM CUP", "IN ADVENTURE MODE"}},
+	{LNG_FAKE_CRASH, 11, {"WIN THE PURPLE GEM CUP", "IN ADVENTURE MODE"}},
+	{LNG_DR_N_TROPY, 5, {"BEAT EVERY N. TROPY GHOST", "ON THE ORIGINAL TIME TRIAL TRACKS"}},
+	{LNG_N_OXIDE_FULL, GAME_UNLOCK_BIT_OXIDE, {"BEAT EVERY N. OXIDE GHOST", "ON THE ORIGINAL TIME TRIAL TRACKS"}},
+	{LNG_PENTA_PENGUIN, 6, {"EARN GOLD OR PLATINUM RELICS", "ON ALL 18 ADVENTURE TRACKS"}},
+	{LNG_SLIDE_COLISEUM, -1, {"COLLECT 10 RELICS TO ENTER IN ADVENTURE", "ALREADY AVAILABLE OUTSIDE ADVENTURE"}},
+	{LNG_TURBO_TRACK, GAME_UNLOCK_BIT_TURBO_TRACK, {"COLLECT ALL 5 GEMS, THEN EARN", "A RELIC ON TURBO TRACK IN ADVENTURE"}},
+	{LNG_PARKING_LOT, GAME_UNLOCK_BIT_PARKING_LOT, {"WIN ALL 4 ARCADE CUPS ON EASY", "IN SINGLE PLAYER"}},
+	{LNG_THE_NORTH_BOWL, GAME_UNLOCK_BIT_NORTH_BOWL, {"WIN ALL 4 ARCADE CUPS ON MEDIUM", "IN SINGLE PLAYER"}},
+	{LNG_LAB_BASEMENT, GAME_UNLOCK_BIT_LAB_BASEMENT, {"WIN ALL 4 ARCADE CUPS ON HARD", "IN SINGLE PLAYER"}},
+	{LNG_SCRAPBOOK, GAME_UNLOCK_BIT_SCRAPBOOK, {"BEAT EVERY N. OXIDE GHOST", "ON THE ORIGINAL TIME TRIAL TRACKS"}},
+};
+
+// Title menus render on a 512 x 216 canvas, including in widescreen.
+enum { MM_NATIVE_UNLOCK_VISIBLE_ROWS = 7, MM_NATIVE_BASE_UNLOCK_COUNT = 13 };
+static int s_nativeUnlockFirst;
+static void MM_NativeUnlocksMenuProc(struct RectMenu *menu);
+static struct RectMenu s_nativeUnlocksMenu =
+{
+	.stringIndexTitle = NATIVE_MENU_STRING_UNLOCKS,
+	.state = RECTMENU_STATE_INVISIBLE_CALLBACK,
+	.funcPtr = MM_NativeUnlocksMenuProc,
+};
+
+static int MM_NativeUnlockCount(void)
+{
+	return gNativeAdditionalUnlocksEnabled
+		? (int)(sizeof(s_nativeUnlockEntries) / sizeof(s_nativeUnlockEntries[0]))
+		: MM_NATIVE_BASE_UNLOCK_COUNT;
+}
+
+static const struct MMNativeUnlockEntry *MM_NativeUnlockEntryAt(int index)
+{
+	// Oxide sits between N. Tropy and Penta when available; omit that row
+	// while Additional Unlocks is disabled.
+	if (!gNativeAdditionalUnlocksEnabled && index >= 6) index++;
+	return &s_nativeUnlockEntries[index];
+}
+
+static b32 MM_NativeUnlockIsUnlocked(const struct MMNativeUnlockEntry *entry)
+{
+	if (entry->unlockBit >= 0)
+		return CHECK_ADV_BIT(sdata->gameProgress.unlocks, entry->unlockBit) != 0;
+	int relics = 0;
+	for (int i = 0; i < ADV_REWARD_RELIC_TRACK_COUNT; i++)
+		relics += CHECK_ADV_BIT(sdata->advProgress.rewards, ADV_REWARD_FIRST_SAPPHIRE_RELIC + i) != 0;
+	return relics >= 10;
+}
+
+static void MM_NativeUnlocksInput(struct RectMenu *menu, u32 tap)
+{
+	int count = MM_NativeUnlockCount();
+	if (menu->rowSelected < 0) menu->rowSelected = 0;
+	if (menu->rowSelected >= count) menu->rowSelected = count - 1;
+	if (tap & (BTN_TRIANGLE | BTN_SQUARE_one))
+	{
+		sdata->ptrDesiredMenu = &D230.menuMainMenu;
+		OtherFX_Play(2, 1);
+		return;
+	}
+	if (tap & (BTN_UP | BTN_DOWN | BTN_LEFT | BTN_RIGHT))
+	{
+		int step = (tap & (BTN_UP | BTN_LEFT)) ? -1 : 1;
+		menu->rowSelected = (menu->rowSelected + step + count) % count;
+		OtherFX_Play(0, 1);
+	}
+	// Keep the selection visible without moving between discrete pages.
+	if (s_nativeUnlockFirst > menu->rowSelected) s_nativeUnlockFirst = menu->rowSelected;
+	if (s_nativeUnlockFirst < menu->rowSelected - MM_NATIVE_UNLOCK_VISIBLE_ROWS + 1)
+		s_nativeUnlockFirst = menu->rowSelected - MM_NATIVE_UNLOCK_VISIBLE_ROWS + 1;
+	if (s_nativeUnlockFirst > count - MM_NATIVE_UNLOCK_VISIBLE_ROWS)
+		s_nativeUnlockFirst = count - MM_NATIVE_UNLOCK_VISIBLE_ROWS;
+}
+
+static void MM_NativeUnlocksPanel(RECT box)
+{
+	struct GameTracker *gGT = sdata->gGT;
+	RECTMENU_DrawInnerRect(&box, 0, gGT->backBuffer->otMem.uiOT);
+}
+
+static void MM_NativeUnlocksMenuProc(struct RectMenu *menu)
+{
+	if (menu->funcState != RECTMENU_FUNC_STATE_UPDATE) return;
+	MM_NativeUnlocksInput(menu, sdata->buttonTapPerPlayer[0]);
+	RECTMENU_ClearInput();
+	if (sdata->ptrDesiredMenu == &D230.menuMainMenu) return;
+
+	int count = MM_NativeUnlockCount();
+	DecalFont_DrawLine(RECTMENU_GetString(NATIVE_MENU_STRING_UNLOCKS), 256, 12, FONT_BIG, JUSTIFY_CENTER | ORANGE);
+	DecalFont_DrawLine("REWARDS", 28, 36, FONT_SMALL, PERIWINKLE);
+	char position[32];
+	snprintf(position, sizeof(position), "%d / %d", menu->rowSelected + 1, count);
+	DecalFont_DrawLine(position, 218, 36, FONT_SMALL, JUSTIFY_RIGHT | WHITE);
+	for (int i = 0; i < MM_NATIVE_UNLOCK_VISIBLE_ROWS; i++)
+	{
+		int index = s_nativeUnlockFirst + i;
+		const struct MMNativeUnlockEntry *item = MM_NativeUnlockEntryAt(index);
+		int y = 54 + i * 16;
+		b32 selected = index == menu->rowSelected;
+		DecalFont_DrawMultiLine(RECTMENU_GetString(item->name), 28, y, 190, FONT_SMALL, selected ? ORANGE : WHITE);
+		if (selected)
+		{
+			RECT highlight = {24, (s16)(y - 3), 198, 14};
+			CTR_Box_DrawClearBox(&highlight, &sdata->menuRowHighlight_Normal, 1, sdata->gGT->backBuffer->otMem.uiOT);
+		}
+	}
+	DecalFont_DrawLine(s_nativeUnlockFirst > 0 ? "ABOVE" : "", 28, 170, FONT_SMALL, PERIWINKLE);
+	DecalFont_DrawLine(s_nativeUnlockFirst + MM_NATIVE_UNLOCK_VISIBLE_ROWS < count ? "BELOW" : "", 218, 170, FONT_SMALL, JUSTIFY_RIGHT | PERIWINKLE);
+
+	const struct MMNativeUnlockEntry *entry = MM_NativeUnlockEntryAt(menu->rowSelected);
+	b32 unlocked = MM_NativeUnlockIsUnlocked(entry);
+	DecalFont_DrawMultiLine(RECTMENU_GetString(entry->name), 250, 36, 234, FONT_SMALL, ORANGE);
+	DecalFont_DrawLine(unlocked ? "UNLOCKED" : "LOCKED", 250, 54, FONT_SMALL, unlocked ? ORANGE : WHITE);
+	DecalFont_DrawLine((entry->name == LNG_PENTA_PENGUIN || entry->name == LNG_N_OXIDE_FULL || menu->rowSelected >= MM_NATIVE_BASE_UNLOCK_COUNT) ? "ADDITIONAL UNLOCK" : "HOW TO UNLOCK", 250, 78, FONT_SMALL, PERIWINKLE);
+	if (!gNativeAdditionalUnlocksEnabled &&
+		(entry->name == LNG_PENTA_PENGUIN || entry->name == LNG_N_OXIDE_FULL))
+		DecalFont_DrawMultiLine("CHEAT ONLY OR ENABLE ADDITIONAL UNLOCKS", 250, 94, 234, FONT_SMALL, WHITE);
+	else
+	{
+		char requirement[160];
+		snprintf(requirement, sizeof(requirement), "%s %s", entry->requirement[0], entry->requirement[1]);
+		DecalFont_DrawMultiLine(requirement, 250, 94, 234, FONT_SMALL, WHITE);
+	}
+	MM_NativeUnlocksPanel((RECT){16, 30, 214, 154});
+	MM_NativeUnlocksPanel((RECT){238, 30, 258, 154});
+	DecalFont_DrawLine("UP / DOWN: BROWSE", 28, 196, FONT_SMALL, WHITE);
+	DecalFont_DrawLine("^ / [: BACK", 484, 196, FONT_SMALL, JUSTIFY_RIGHT | WHITE);
+}
 
 static struct MenuRow s_nativeTimeTrialRows[] =
 {
@@ -215,76 +369,90 @@ static struct MenuRow s_nativeTimeTrialRows[] =
 
 static struct MenuRow s_nativeOptionsRows[] =
 {
-#ifdef __vita__
-	{LNG_LANGUAGE, 11, 1, 0, 0},
-	{NATIVE_MENU_STRING_CONTROLS, 0, 2, 1, 1},
-	{NATIVE_MENU_STRING_CHEATS, 1, 3, 2, 2},
-	{NATIVE_MENU_STRING_AUDIO_FX, 2, 4, 3, 3},
-	{NATIVE_MENU_STRING_AUDIO_MUSIC, 3, 5, 4, 4},
-	{NATIVE_MENU_STRING_AUDIO_VOICE, 4, 6, 5, 5},
-	{NATIVE_MENU_STRING_AUDIO_MODE, 5, 7, 6, 6},
-	{NATIVE_MENU_STRING_FRAME_RATE, 6, 8, 7, 7},
-	{NATIVE_MENU_STRING_DEFAULT_CAMERA, 7, 9, 8, 8},
-	{NATIVE_MENU_STRING_DEFAULT_HUD, 8, 10, 9, 9},
-	{NATIVE_MENU_STRING_AI_RACERS, 9, 11, 10, 10},
-	{NATIVE_MENU_STRING_MIRROR_MODE, 10, 0, 11, 11},
-#else
-	{LNG_LANGUAGE, 15, 1, 0, 0},
-	{NATIVE_MENU_STRING_CONTROLS, 0, 2, 1, 1},
-	{NATIVE_MENU_STRING_CHEATS, 1, 3, 2, 2},
-	{NATIVE_MENU_STRING_AUDIO_FX, 2, 4, 3, 3},
-	{NATIVE_MENU_STRING_AUDIO_MUSIC, 3, 5, 4, 4},
-	{NATIVE_MENU_STRING_AUDIO_VOICE, 4, 6, 5, 5},
-	{NATIVE_MENU_STRING_AUDIO_MODE, 5, 7, 6, 6},
-	{NATIVE_MENU_STRING_FRAME_RATE, 6, 8, 7, 7},
-	{NATIVE_MENU_STRING_ANTI_ALIASING, 7, 9, 8, 8},
-	{NATIVE_MENU_STRING_DITHERING, 8, 10, 9, 9},
-	{NATIVE_MENU_STRING_ENHANCEMENTS, 9, 11, 10, 10},
-	{NATIVE_MENU_STRING_BORDERLESS, 10, 12, 11, 11},
-	{NATIVE_MENU_STRING_DEFAULT_CAMERA, 11, 13, 12, 12},
-	{NATIVE_MENU_STRING_DEFAULT_HUD, 12, 14, 13, 13},
-	{NATIVE_MENU_STRING_AI_RACERS, 13, 15, 14, 14},
-	{NATIVE_MENU_STRING_MIRROR_MODE, 14, 0, 15, 15},
+	{NATIVE_MENU_STRING_DISPLAY, 7, 1, 0, 0},
+	{NATIVE_MENU_STRING_AUDIO, 0, 2, 1, 1},
+	{NATIVE_MENU_STRING_GAMEPLAY, 1, 3, 2, 2},
+	{NATIVE_MENU_STRING_UI, 2, 4, 3, 3},
+	{NATIVE_MENU_STRING_CONTROLS, 3, 5, 4, 4},
+	{LNG_LANGUAGE, 4, 6, 5, 5},
+	{NATIVE_MENU_STRING_CHEATS, 5, 7, 6, 6},
+	{NATIVE_MENU_STRING_PRESET, 6, 0, 7, 7},
+#ifndef __vita__
+	{NATIVE_MENU_STRING_EXPERIMENTAL, 7, 0, 8, 8},
 #endif
-	{.stringIndex = RECTMENU_STRING_NONE},	{.stringIndex = RECTMENU_STRING_NONE}, // spare slot, the in-game pause menu appends a row here
+	{.stringIndex = RECTMENU_STRING_NONE},
+	{.stringIndex = RECTMENU_STRING_NONE}, // pause-only Gamepad / Vibration category
+};
+
+static struct MenuRow s_nativeAudioRows[] =
+{
+	{NATIVE_MENU_STRING_AUDIO_FX, 3, 1, 0, 0},
+	{NATIVE_MENU_STRING_AUDIO_MUSIC, 0, 2, 1, 1},
+	{NATIVE_MENU_STRING_AUDIO_VOICE, 1, 3, 2, 2},
+	{NATIVE_MENU_STRING_AUDIO_MODE, 2, 0, 3, 3},
+	{.stringIndex = RECTMENU_STRING_NONE},
+};
+
+static struct MenuRow s_nativeDisplayRows[] =
+{
+	{.stringIndex = NATIVE_MENU_STRING_FRAME_RATE},
+#ifndef __vita__
+	{.stringIndex = NATIVE_MENU_STRING_BORDERLESS},
+	{.stringIndex = NATIVE_MENU_STRING_ANTI_ALIASING},
+	{.stringIndex = NATIVE_MENU_STRING_DITHERING},
+#if NATIVE_DRAW3D_SUPPORTED
+	{.stringIndex = NATIVE_MENU_STRING_RENDERER},
+#endif
+	{.stringIndex = NATIVE_MENU_STRING_DEPTH_BUFFER},
+	{.stringIndex = NATIVE_MENU_STRING_TEXTURE_FILTER},
+	{.stringIndex = NATIVE_MENU_STRING_MAX_LOD},
+	{.stringIndex = NATIVE_MENU_STRING_PGXP},
+	{.stringIndex = NATIVE_MENU_STRING_COLOR_DEPTH},
+#endif
+	{.stringIndex = RECTMENU_STRING_NONE},
+};
+
+static struct MenuRow s_nativeGameplayRows[] =
+{
+	{.stringIndex = NATIVE_MENU_STRING_AI_RACERS},
+	{.stringIndex = NATIVE_MENU_STRING_MIRROR_MODE},
+#ifndef __vita__
+	{.stringIndex = NATIVE_MENU_STRING_ENGINE_SELECTION},
+	{.stringIndex = NATIVE_MENU_STRING_ADDITIONAL_UNLOCKS},
+	{.stringIndex = NATIVE_MENU_STRING_PHYSICS},
+	{.stringIndex = NATIVE_MENU_STRING_AI_PHYSICS},
+	{.stringIndex = NATIVE_MENU_STRING_COLLISION_PHYSICS},
+	{.stringIndex = NATIVE_MENU_STRING_STEERING_PHYSICS},
+#endif
+	{.stringIndex = RECTMENU_STRING_NONE},
 };
 
 #ifndef __vita__
-static struct MenuRow s_nativeEnhancementsRows[] =
+static struct MenuRow s_nativeExperimentalRows[] =
 {
-#if NATIVE_DRAW3D_SUPPORTED
-	{NATIVE_MENU_STRING_RENDERER, 11, 1, 0, 0},
-	{NATIVE_MENU_STRING_PGXP, 0, 2, 1, 1},
-	{NATIVE_MENU_STRING_COLOR_DEPTH, 1, 3, 2, 2},
-	{NATIVE_MENU_STRING_TEXTURE_FILTER, 2, 4, 3, 3},
-	{NATIVE_MENU_STRING_MAX_LOD, 3, 5, 4, 4},
-	{NATIVE_MENU_STRING_PHYSICS, 4, 6, 5, 5},
-	{NATIVE_MENU_STRING_AI_PHYSICS, 5, 7, 6, 6},
-	{NATIVE_MENU_STRING_COLLISION_PHYSICS, 6, 8, 7, 7},
-	{NATIVE_MENU_STRING_STEERING_PHYSICS, 7, 9, 8, 8},
-	{NATIVE_MENU_STRING_DEPTH_BUFFER, 8, 10, 9, 9},
-	{NATIVE_MENU_STRING_HD_PAUSE, 9, 11, 10, 10},
-	{NATIVE_MENU_STRING_PRECISE_MINIMAP, 10, 0, 11, 11},
-#else
-	{NATIVE_MENU_STRING_PGXP, 10, 1, 0, 0},
-	{NATIVE_MENU_STRING_COLOR_DEPTH, 0, 2, 1, 1},
-	{NATIVE_MENU_STRING_TEXTURE_FILTER, 1, 3, 2, 2},
-	{NATIVE_MENU_STRING_MAX_LOD, 2, 4, 3, 3},
-	{NATIVE_MENU_STRING_PHYSICS, 3, 5, 4, 4},
-	{NATIVE_MENU_STRING_AI_PHYSICS, 4, 6, 5, 5},
-	{NATIVE_MENU_STRING_COLLISION_PHYSICS, 5, 7, 6, 6},
-	{NATIVE_MENU_STRING_STEERING_PHYSICS, 6, 8, 7, 7},
-	{NATIVE_MENU_STRING_DEPTH_BUFFER, 7, 9, 8, 8},
-	{NATIVE_MENU_STRING_HD_PAUSE, 8, 10, 9, 9},
-	{NATIVE_MENU_STRING_PRECISE_MINIMAP, 9, 0, 10, 10},
-#endif
+	{.stringIndex = NATIVE_MENU_STRING_KART_HUE},
 	{.stringIndex = RECTMENU_STRING_NONE},
 };
 #endif
 
+static struct MenuRow s_nativeUiRows[] =
+{
+	{.stringIndex = NATIVE_MENU_STRING_DEFAULT_CAMERA},
+	{.stringIndex = NATIVE_MENU_STRING_DEFAULT_HUD},
+	{.stringIndex = NATIVE_MENU_STRING_SKIP_MASK_HINTS},
+#ifndef __vita__
+	{.stringIndex = NATIVE_MENU_STRING_HD_PAUSE},
+	{.stringIndex = NATIVE_MENU_STRING_MODERN_MAP},
+	{.stringIndex = NATIVE_MENU_STRING_FONT},
+	{.stringIndex = NATIVE_MENU_STRING_MODERN_HUD_ICONS},
+#endif
+	{.stringIndex = NATIVE_MENU_STRING_BOOST_COUNTER},
+	{.stringIndex = RECTMENU_STRING_NONE},
+};
+
 static struct MenuRow s_nativeCheatsRows[] =
 {
-	{NATIVE_MENU_STRING_CHEAT_WUMPA, 0, 1, 0, 0},
+	{NATIVE_MENU_STRING_CHEAT_WUMPA, 9, 1, 0, 0},
 	{NATIVE_MENU_STRING_CHEAT_MASK, 0, 2, 1, 1},
 	{NATIVE_MENU_STRING_CHEAT_TURBO, 1, 3, 2, 2},
 	{NATIVE_MENU_STRING_CHEAT_BOMBS, 2, 4, 3, 3},
@@ -293,8 +461,7 @@ static struct MenuRow s_nativeCheatsRows[] =
 	{NATIVE_MENU_STRING_CHEAT_ICY, 5, 7, 6, 6},
 	{NATIVE_MENU_STRING_CHEAT_TURBOPAD, 6, 8, 7, 7},
 	{NATIVE_MENU_STRING_CHEAT_ADV, 7, 9, 8, 8},
-	{NATIVE_MENU_STRING_CHEAT_TURBOCOUNT, 8, 10, 9, 9},
-	{NATIVE_MENU_STRING_CHEAT_CHARACTERS, 9, 10, 10, 10},
+	{NATIVE_MENU_STRING_CHEAT_CHARACTERS, 8, 0, 9, 9},
 	{.stringIndex = RECTMENU_STRING_NONE},
 };
 
@@ -317,6 +484,20 @@ static struct MenuRow s_nativeControlsRows[] =
 	{.stringIndex = RECTMENU_STRING_NONE},
 };
 
+static struct MenuRow s_nativeCreditsRows[] =
+{
+	{NATIVE_MENU_STRING_CREDITS_LINE_0, 0, 1, 0, 0},
+	{NATIVE_MENU_STRING_CREDITS_LINE_1, 0, 2, 1, 1},
+	{NATIVE_MENU_STRING_CREDITS_LINE_2, 1, 3, 2, 2},
+	{NATIVE_MENU_STRING_CREDITS_LINE_3, 2, 4, 3, 3},
+	{NATIVE_MENU_STRING_CREDITS_LINE_4, 3, 5, 4, 4},
+	{NATIVE_MENU_STRING_CREDITS_LINE_5, 4, 6, 5, 5},
+	{NATIVE_MENU_STRING_CREDITS_LINE_6, 5, 7, 6, 6},
+	{NATIVE_MENU_STRING_CREDITS_LINE_7, 6, 8, 7, 7},
+	{NATIVE_MENU_STRING_CREDITS_LINE_8, 7, 8, 8, 8},
+	{.stringIndex = RECTMENU_STRING_NONE},
+};
+
 static struct MenuRow s_nativeBossFightRows[] =
 {
 	{LNG_RIPPER_ROO, 0, 1, 0, 0},
@@ -335,6 +516,15 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu);
 static void MM_NativeCheatsMenuProc(struct RectMenu *menu);
 static void MM_NativeControlsMenuProc(struct RectMenu *menu);
 static void MM_NativeBossFightMenuProc(struct RectMenu *menu);
+static void MM_NativeCreditsMenuProc(struct RectMenu *menu);
+
+static struct RectMenu s_nativeCreditsMenu =
+{
+	.stringIndexTitle = RECTMENU_STRING_NONE,
+	.state = CENTER_ON_X | USE_SMALL_FONT,
+	.rows = s_nativeCreditsRows,
+	.funcPtr = MM_NativeCreditsMenuProc,
+};
 
 static struct RectMenu s_nativeLanguageBootMenu =
 {
@@ -357,6 +547,44 @@ static struct RectMenu s_nativeLanguageMainMenu =
 	.funcPtr = MM_NativeLanguageMainMenuProc,
 };
 
+static void MM_NativePresetMenuProc(struct RectMenu *menu);
+
+static struct MenuRow s_nativePresetRows[] =
+{
+	{NATIVE_MENU_STRING_PRESET_PS1, 3, 1, 0, 0},
+	{NATIVE_MENU_STRING_PRESET_VANILLA_PLUS, 0, 2, 1, 1},
+	{NATIVE_MENU_STRING_PRESET_TURBOCHARGED, 1, 3, 2, 2},
+	{NATIVE_MENU_STRING_PRESET_CUSTOM, 2, 0, 3, 3},
+	{.stringIndex = RECTMENU_STRING_NONE},
+};
+
+static struct RectMenu s_nativePresetMenu =
+{
+	.stringIndexTitle = RECTMENU_STRING_NONE,
+	.posX_curr = 256,
+	.posY_curr = 100,
+	.state = RECTMENU_STATE_EXEC_CENTERED | RECTMENU_NATIVE_DRAW_CALLBACK,
+	.rows = s_nativePresetRows,
+	.funcPtr = MM_NativePresetMenuProc,
+#if CTR_NATIVE_WIDESCREEN
+	.drawStyle = MM_NATIVE_LANGUAGE_DRAWSTYLE_WIDESCREEN,
+#endif
+};
+
+// Same popup, reopened from Options > Settings Preset.
+static struct RectMenu s_nativePresetOptionsMenu =
+{
+	.stringIndexTitle = RECTMENU_STRING_NONE,
+	.posX_curr = 256,
+	.posY_curr = 100,
+	.state = RECTMENU_STATE_EXEC_CENTERED | RECTMENU_NATIVE_DRAW_CALLBACK,
+	.rows = s_nativePresetRows,
+	.funcPtr = MM_NativePresetMenuProc,
+#if CTR_NATIVE_WIDESCREEN
+	.drawStyle = MM_NATIVE_LANGUAGE_DRAWSTYLE_WIDESCREEN,
+#endif
+};
+
 static void MM_NativeTimeTrialRefreshOnlineRow(void)
 {
 #if CTR_NATIVE_HAS_LEADERBOARD
@@ -370,7 +598,7 @@ static void MM_NativeTimeTrialRefreshOnlineRow(void)
 }
 static struct RectMenu s_nativeTimeTrialMenu =
 {
-	.stringIndexTitle = LNG_TIME_TRIAL,
+	.stringIndexTitle = RECTMENU_STRING_NONE,
 	.state = CENTER_ON_X,
 	.rows = s_nativeTimeTrialRows,
 	.funcPtr = MM_NativeTimeTrialMenuProc,
@@ -385,21 +613,57 @@ static struct RectMenu s_nativeOptionsMenu =
 	.drawStyle = RECTMENU_DRAW_STYLE_NATIVE_OPTIONS,
 };
 
-#ifndef __vita__
-static struct RectMenu s_nativeEnhancementsMenu =
+static struct RectMenu s_nativeDisplayMenu =
 {
-	.stringIndexTitle = NATIVE_MENU_STRING_ENHANCEMENTS,
-	.state = CENTER_ON_X | USE_SMALL_FONT | BIG_TEXT_IN_TITLE,
-	.rows = s_nativeEnhancementsRows,
+	.stringIndexTitle = RECTMENU_STRING_NONE,
+	.state = CENTER_ON_X | USE_SMALL_FONT,
+	.rows = s_nativeDisplayRows,
+	.funcPtr = MM_NativeOptionsMenuProc,
+	.drawStyle = RECTMENU_DRAW_STYLE_NATIVE_OPTIONS,
+};
+
+static struct RectMenu s_nativeAudioMenu =
+{
+	.stringIndexTitle = RECTMENU_STRING_NONE,
+	.state = CENTER_ON_X | USE_SMALL_FONT,
+	.rows = s_nativeAudioRows,
+	.funcPtr = MM_NativeOptionsMenuProc,
+	.drawStyle = RECTMENU_DRAW_STYLE_NATIVE_OPTIONS,
+};
+
+static struct RectMenu s_nativeGameplayMenu =
+{
+	.stringIndexTitle = RECTMENU_STRING_NONE,
+	.state = CENTER_ON_X | USE_SMALL_FONT,
+	.rows = s_nativeGameplayRows,
+	.funcPtr = MM_NativeOptionsMenuProc,
+	.drawStyle = RECTMENU_DRAW_STYLE_NATIVE_OPTIONS,
+};
+
+#ifndef __vita__
+static struct RectMenu s_nativeExperimentalMenu =
+{
+	.stringIndexTitle = RECTMENU_STRING_NONE,
+	.state = CENTER_ON_X | USE_SMALL_FONT,
+	.rows = s_nativeExperimentalRows,
 	.funcPtr = MM_NativeOptionsMenuProc,
 	.drawStyle = RECTMENU_DRAW_STYLE_NATIVE_OPTIONS,
 };
 #endif
 
+static struct RectMenu s_nativeUiMenu =
+{
+	.stringIndexTitle = RECTMENU_STRING_NONE,
+	.state = CENTER_ON_X | USE_SMALL_FONT,
+	.rows = s_nativeUiRows,
+	.funcPtr = MM_NativeOptionsMenuProc,
+	.drawStyle = RECTMENU_DRAW_STYLE_NATIVE_OPTIONS,
+};
+
 static struct RectMenu s_nativeCheatsMenu =
 {
-	.stringIndexTitle = NATIVE_MENU_STRING_CHEATS,
-	.state = CENTER_ON_X | USE_SMALL_FONT | BIG_TEXT_IN_TITLE,
+	.stringIndexTitle = RECTMENU_STRING_NONE,
+	.state = CENTER_ON_X | USE_SMALL_FONT,
 	.rows = s_nativeCheatsRows,
 	.funcPtr = MM_NativeCheatsMenuProc,
 };
@@ -439,6 +703,7 @@ extern int gNativeMirrorModeEnabled;
 extern int gNative60FpsEnabled;
 extern int gNativeDefaultCameraFar;
 extern int gNativeDefaultHudSpeedometer;
+extern int gNativeSkipMaskHints;
 extern int gNativeAIRacersMode;
 extern u32 gNativeCheatConfigMask;
 #ifndef __vita__
@@ -448,6 +713,183 @@ extern int g_cfg_bilinearFiltering;
 #endif
 extern int gNativeGhostReplayMode;
 extern void save_config();
+
+int gNativePresetPending = 0;
+static int s_nativePresetOptionsActive;
+static void MM_NativeOptionsOpenFromPreset(void);
+
+enum NativePreset
+{
+	NATIVE_PRESET_PS1,
+	NATIVE_PRESET_VANILLA_PLUS,
+	NATIVE_PRESET_TURBOCHARGED,
+	NATIVE_PRESET_CUSTOM,
+};
+
+// Applies a preset to every graphics / gameplay / interface toggle. Language, controls,
+// audio, cheats, borderless and kart hue are left alone.
+static void MM_NativeApplyPreset(int preset)
+{
+	int vanillaPlus = (preset != NATIVE_PRESET_PS1);
+	int turbo = (preset == NATIVE_PRESET_TURBOCHARGED);
+
+	gNativeMirrorModeEnabled = 0;
+	gNativeDefaultCameraFar = 0;
+	gNativeDefaultHudSpeedometer = 0;
+	gNativeSkipMaskHints = 0;
+	gNativeAIRacersMode = turbo ? NATIVE_AI_RACERS_EXTENDED : NATIVE_AI_RACERS_RETAIL;
+	gNativeEngineSelectionEnabled = vanillaPlus;
+	gNativeAdditionalUnlocksEnabled = vanillaPlus;
+	gNative60FpsEnabled = vanillaPlus ? NativeFrameRate_Index(60) : 0;
+
+	NativePhysics_SetEnabled(0);
+	NativePhysics_SetDomain(NATIVE_PHYSICS_AI, 0);
+	NativePhysics_SetDomain(NATIVE_PHYSICS_STEERING, 0);
+	NativePhysics_SetDomain(NATIVE_PHYSICS_COLLISION, vanillaPlus);
+
+#ifndef __vita__
+	gNativeColorDepth = vanillaPlus ? NATIVE_COLOR_DEPTH_TRUE : NATIVE_COLOR_DEPTH_15BIT;
+	gNativeAntiAliasingMode = vanillaPlus ? NATIVE_AA_FXAA : NATIVE_AA_OFF;
+	gNativeDitheringEnabled = !vanillaPlus;
+	gNativeMaxLodEnabled = vanillaPlus;
+	gNativeDepthBufferEnabled = vanillaPlus;
+	g_cfg_bilinearFiltering = 0;
+	gNativePgxpMode = NATIVE_PGXP_MODE_OFF;
+#if NATIVE_PGXP_SUPPORTED
+	if (vanillaPlus) gNativePgxpMode = NATIVE_PGXP_MODE_PERSPECTIVE;
+#endif
+	gNativePgxpIntegerNclipEnabled = 0;
+	gNativeHdPauseMode = turbo ? 2 : 0;
+	// Modern Minimap controls both the map and the markers, so it covers Precise Minimap too.
+	gNativeModernMapEnabled = turbo;
+	gNativePreciseMinimapEnabled = 0;
+	gNativeFont = turbo ? NATIVE_FONT_CRASH_A_LIKE : NATIVE_FONT_ORIGINAL;
+	gNativeModernHudIconsEnabled = turbo;
+#if NATIVE_DRAW3D_SUPPORTED
+	gNativeRendererMode = turbo ? NATIVE_RENDERER_NATIVE : NATIVE_RENDERER_CLASSIC;
+#endif
+	if (gNativeModernMapEnabled) NativeMinimap_Prepare();
+#endif
+}
+
+static const char *const s_nativePresetBlurb[6][4][4] =
+{
+	{
+		{"THE ORIGINAL PS1 EXPERIENCE", "30 FPS, 15-BIT COLOUR, DITHERING", "RETAIL AI, ENGINES AND UNLOCKS", "NO ENHANCEMENTS"},
+		{"THE ORIGINAL LOOK, MODERNISED", "24-BIT COLOUR, PGXP, 60 FPS, FXAA", "MAX LOD, DEPTH BUFFER, NO DITHERING", "ENGINE SELECTION, EXTRA UNLOCKS, SMOOTH COLLISIONS"},
+		{"EVERYTHING VANILLA+ HAS, AND MORE", "NATIVE 3D RENDERER, HD SMOOTH PAUSE SCREEN", "MODERN MINIMAP, CUSTOM FONT, MODERN HUD ICONS", "EXTENDED AI RACERS"},
+		{"CONFIGURE EVERYTHING YOURSELF", "STARTS FROM THE VANILLA+ SETTINGS", "OPENS THE OPTIONS MENU", ""},
+	},
+	{
+		{"L'EXPERIENCE PS1 D'ORIGINE", "30 IPS, COULEURS 15 BITS, TRAMAGE", "IA, MOTEURS ET DEBLOCAGES D'ORIGINE", "AUCUNE AMELIORATION"},
+		{"LE LOOK D'ORIGINE, MODERNISE", "COULEURS 24 BITS, PGXP, 60 IPS, FXAA", "DETAIL MAX, PROFONDEUR, SANS TRAMAGE", "CHOIX DU MOTEUR, DEBLOCAGES, COLLISIONS LISSEES"},
+		{"TOUT VANILLA+, ET BIEN PLUS", "MOTEUR 3D NATIF, PAUSE HD FLUIDE", "MINI-CARTE MODERNE, POLICE, ICONES HUD", "IA ETENDUE"},
+		{"CONFIGUREZ TOUT VOUS-MEME", "PART DES REGLAGES VANILLA+", "OUVRE LE MENU OPTIONS", ""},
+	},
+	{
+		{"DAS ORIGINALE PS1-ERLEBNIS", "30 FPS, 15-BIT-FARBEN, DITHERING", "ORIGINAL-KI, MOTOREN, FREISCHALTUNGEN", "KEINE VERBESSERUNGEN"},
+		{"ORIGINAL-LOOK, MODERNISIERT", "24-BIT, PGXP, 60 FPS, FXAA", "MAX. DETAILS, TIEFENPUFFER, KEIN DITHERING", "MOTORWAHL, EXTRA-FREISCHALTUNGEN, GLATTE KOLLISIONEN"},
+		{"ALLES AUS VANILLA+ UND MEHR", "NATIVER 3D-RENDERER, HD-PAUSENBILDSCHIRM", "MODERNE MINIKARTE, EIGENE SCHRIFT, HUD-SYMBOLE", "ERWEITERTE KI-RENNFAHRER"},
+		{"ALLES SELBST EINSTELLEN", "BASIERT AUF VANILLA+", "OEFFNET DAS OPTIONSMENUE", ""},
+	},
+	{
+		{"L'ESPERIENZA PS1 ORIGINALE", "30 FPS, COLORI A 15 BIT, DITHERING", "IA, MOTORI E SBLOCCHI ORIGINALI", "NESSUN MIGLIORAMENTO"},
+		{"L'ASPETTO ORIGINALE, MODERNIZZATO", "24 BIT, PGXP, 60 FPS, FXAA", "DETTAGLI MAX, PROFONDITA, NIENTE DITHERING", "SCELTA MOTORE, SBLOCCHI EXTRA, COLLISIONI FLUIDE"},
+		{"TUTTO DI VANILLA+ E ALTRO", "RENDERER 3D NATIVO, PAUSA HD FLUIDA", "MINIMAPPA MODERNA, FONT, ICONE HUD", "IA ESTESA"},
+		{"CONFIGURA TUTTO TU", "PARTE DALLE IMPOSTAZIONI VANILLA+", "APRE IL MENU OPZIONI", ""},
+	},
+	{
+		{"LA EXPERIENCIA ORIGINAL DE PS1", "30 FPS, COLOR DE 15 BITS, DITHERING", "IA, MOTORES Y DESBLOQUEOS ORIGINALES", "SIN MEJORAS"},
+		{"EL ASPECTO ORIGINAL, MODERNIZADO", "24 BITS, PGXP, 60 FPS, FXAA", "DETALLE MAX, PROFUNDIDAD, SIN DITHERING", "ELECCION DE MOTOR, DESBLOQUEOS, COLISIONES SUAVES"},
+		{"TODO DE VANILLA+ Y MAS", "RENDERIZADO 3D NATIVO, PAUSA HD SUAVE", "MINIMAPA MODERNO, FUENTE, ICONOS HUD", "IA EXTENDIDA"},
+		{"CONFIGURA TODO TU MISMO", "PARTE DE LOS AJUSTES VANILLA+", "ABRE EL MENU DE OPCIONES", ""},
+	},
+	{
+		{"DE ORIGINELE PS1-BELEVING", "30 FPS, 15-BITS KLEUR, DITHERING", "ORIGINELE AI, MOTOREN EN UNLOCKS", "GEEN VERBETERINGEN"},
+		{"DE ORIGINELE LOOK, GEMODERNISEERD", "24-BITS, PGXP, 60 FPS, FXAA", "MAX. DETAILS, DIEPTEBUFFER, GEEN DITHERING", "MOTORKEUZE, EXTRA UNLOCKS, SOEPELE BOTSINGEN"},
+		{"ALLES VAN VANILLA+ EN MEER", "NATIEVE 3D-RENDERER, HD-PAUZESCHERM", "MODERNE MINIKAART, EIGEN FONT, HUD-ICONEN", "UITGEBREIDE AI-RACERS"},
+		{"STEL ALLES ZELF IN", "BEGINT MET DE VANILLA+-INSTELLINGEN", "OPENT HET OPTIESMENU", ""},
+	},
+};
+
+static const char *const s_nativePresetHeader[6] =
+{
+	"CHOOSE YOUR EXPERIENCE",
+	"CHOISISSEZ VOTRE EXPERIENCE",
+	"WAEHLE DEIN ERLEBNIS",
+	"SCEGLI LA TUA ESPERIENZA",
+	"ELIGE TU EXPERIENCIA",
+	"KIES JE BELEVING",
+};
+
+static const char *const s_nativePresetFooter[6][4] =
+{
+	{"EVERY FEATURE CAN BE TOGGLED INDIVIDUALLY", "FROM THE OPTIONS MENU AT ANY TIME", "I RECOMMEND TRYING THEM ALL TO FIND", "A COMBO THAT SUITS YOU"},
+	{"CHAQUE FONCTION PEUT ETRE ACTIVEE", "INDIVIDUELLEMENT DANS LES OPTIONS", "JE VOUS RECOMMANDE DE TOUT ESSAYER POUR", "TROUVER LA COMBINAISON QUI VOUS CONVIENT"},
+	{"JEDE FUNKTION LAESST SICH JEDERZEIT EINZELN", "IM OPTIONSMENUE UMSCHALTEN", "ICH EMPFEHLE, ALLES AUSZUPROBIEREN,", "UM DIE PASSENDE KOMBINATION ZU FINDEN"},
+	{"OGNI FUNZIONE PUO ESSERE ATTIVATA SINGOLARMENTE", "DAL MENU OPZIONI IN QUALSIASI MOMENTO", "TI CONSIGLIO DI PROVARLE TUTTE PER TROVARE", "LA COMBINAZIONE GIUSTA PER TE"},
+	{"CADA FUNCION SE PUEDE ACTIVAR POR SEPARADO", "DESDE EL MENU DE OPCIONES EN CUALQUIER MOMENTO", "TE RECOMIENDO PROBARLAS TODAS PARA ENCONTRAR", "LA COMBINACION QUE MEJOR TE VAYA"},
+	{"ELKE FUNCTIE KAN OP ELK MOMENT APART", "IN HET OPTIESMENU WORDEN AAN- OF UITGEZET", "IK RAAD AAN ALLES UIT TE PROBEREN OM", "DE COMBINATIE TE VINDEN DIE BIJ JE PAST"},
+};
+
+static void MM_NativePresetMenuProc(struct RectMenu *menu)
+{
+	if (menu->funcState == RECTMENU_FUNC_STATE_DRAW)
+	{
+		int row = (menu->rowSelected >= 0) && (menu->rowSelected < 4) ? menu->rowSelected : 0;
+		int lang = ((cfg_language >= 2) && (cfg_language <= 7)) ? cfg_language - 2 : 0;
+		DecalFont_DrawLine((char *)s_nativePresetHeader[lang], 0x100, 24, FONT_BIG, JUSTIFY_CENTER | ORANGE);
+		DecalFont_DrawLine((char *)s_nativePresetBlurb[lang][row][0], 0x100, 150, FONT_SMALL, JUSTIFY_CENTER | ORANGE);
+		for (int i = 1; i < 4; i++)
+		{
+			DecalFont_DrawLine((char *)s_nativePresetBlurb[lang][row][i], 0x100, 150 + i * 14, FONT_SMALL, JUSTIFY_CENTER | PERIWINKLE);
+		}
+		DecalFont_DrawLine((char *)s_nativePresetFooter[lang][0], 0x100, 208, FONT_SMALL, JUSTIFY_CENTER | WHITE);
+		DecalFont_DrawLine((char *)s_nativePresetFooter[lang][1], 0x100, 220, FONT_SMALL, JUSTIFY_CENTER | WHITE);
+		DecalFont_DrawLine((char *)s_nativePresetFooter[lang][2], 0x100, 236, FONT_SMALL, JUSTIFY_CENTER | ORANGE);
+		DecalFont_DrawLine((char *)s_nativePresetFooter[lang][3], 0x100, 248, FONT_SMALL, JUSTIFY_CENTER | ORANGE);
+		return;
+	}
+
+	if (menu->funcState != RECTMENU_FUNC_STATE_INPUT)
+	{
+		return;
+	}
+
+	if (menu == &s_nativePresetOptionsMenu)
+	{
+		// Reopened from Options: Custom keeps the current settings, back changes nothing.
+		struct RectMenu *parent = menu->ptrPrevBox_InHierarchy;
+		if ((menu->rowSelected >= 0) && (menu->rowSelected != NATIVE_PRESET_CUSTOM))
+		{
+			MM_NativeApplyPreset(menu->rowSelected);
+			save_config();
+		}
+		if (parent != NULL)
+		{
+			parent->state &= ~(ONLY_DRAW_TITLE | DRAW_NEXT_MENU_IN_HIERARCHY);
+		}
+		return;
+	}
+
+	if (menu->rowSelected < 0)
+	{
+		return;
+	}
+
+	int preset = menu->rowSelected;
+	MM_NativeApplyPreset(preset == NATIVE_PRESET_CUSTOM ? NATIVE_PRESET_VANILLA_PLUS : preset);
+	gNativePresetPending = 0;
+	save_config();
+
+	if (preset == NATIVE_PRESET_CUSTOM)
+	{
+		// Open Options on its own; backing out returns to the main menu.
+		MM_NativeOptionsOpenFromPreset();
+		return;
+	}
+	sdata->ptrDesiredMenu = &D230.menuMainMenu;
+}
 
 static void MM_NativeExtraDifficultyPrepare(void)
 {
@@ -475,6 +917,23 @@ static void MM_NativeLanguageLoad(s16 row)
 	save_config();
 }
 
+// Fresh installs pick a settings preset right after the language.
+static void MM_NativeLanguageBootDone(void)
+{
+	if (gNativePresetPending)
+	{
+		s_nativePresetMenu.state = RECTMENU_STATE_EXEC_CENTERED | RECTMENU_NATIVE_DRAW_CALLBACK;
+		s_nativePresetMenu.rowSelected = 1;
+		s_nativePresetMenu.ptrNextBox_InHierarchy = 0;
+		s_nativePresetMenu.ptrPrevBox_InHierarchy = 0;
+		sdata->ptrDesiredMenu = &s_nativePresetMenu;
+	}
+	else
+	{
+		sdata->ptrDesiredMenu = &D230.menuMainMenu;
+	}
+}
+
 static void MM_NativeLanguageBootMenuProc(struct RectMenu *menu)
 {
 	if (menu->funcState == RECTMENU_FUNC_STATE_UPDATE)
@@ -491,7 +950,7 @@ static void MM_NativeLanguageBootMenuProc(struct RectMenu *menu)
 		if (s_nativeLanguageTimer == 0)
 		{
 			MM_NativeLanguageLoad(menu->rowSelected);
-			sdata->ptrDesiredMenu = &D230.menuMainMenu;
+			MM_NativeLanguageBootDone();
 		}
 		return;
 	}
@@ -502,7 +961,7 @@ static void MM_NativeLanguageBootMenuProc(struct RectMenu *menu)
 	}
 
 	MM_NativeLanguageLoad(menu->rowSelected);
-	sdata->ptrDesiredMenu = &D230.menuMainMenu;
+	MM_NativeLanguageBootDone();
 }
 
 static void MM_NativeLanguageMainMenuProc(struct RectMenu *menu)
@@ -858,6 +1317,7 @@ static b32 MM_NativeOptionsRowLockedInRace(s16 stringIndex)
 	case LNG_LANGUAGE:
 	case NATIVE_MENU_STRING_MIRROR_MODE:
 	case NATIVE_MENU_STRING_AI_RACERS:
+	case NATIVE_MENU_STRING_PRESET:
 		return true;
 	default:
 		return false;
@@ -868,7 +1328,16 @@ static void MM_NativeOptionsApplyLocks(struct MenuRow *rows, b32 inGame)
 {
 	for (struct MenuRow *row = rows; row->stringIndex != RECTMENU_STRING_NONE; row++)
 	{
-		if (inGame && MM_NativeOptionsRowLockedInRace(row->stringIndex))
+		b32 locked = inGame && MM_NativeOptionsRowLockedInRace(row->stringIndex);
+#ifndef __vita__
+		s16 setting = row->stringIndex & MENU_ROW_LNG_MASK;
+		if (NATIVE_DRAW3D_ACTIVE() &&
+		    ((setting == NATIVE_MENU_STRING_DEPTH_BUFFER) || (setting == NATIVE_MENU_STRING_PGXP)))
+		{
+			locked = true;
+		}
+#endif
+		if (locked)
 		{
 			row->stringIndex |= MENU_ROW_LOCKED;
 		}
@@ -879,9 +1348,8 @@ static void MM_NativeOptionsApplyLocks(struct MenuRow *rows, b32 inGame)
 	}
 }
 
-// Rebuilds the options rows for the current context:
-// in a race, settings that are unsafe to change are locked and the
-// original gamepad/vibration screen is appended as an extra row.
+// Configure categories and lock settings that cannot change during a race.
+// Gamepad / Vibration is an additional category available from pause.
 static void MM_NativeOptionsConfigureRows(b32 inGame)
 {
 	static int baseCount = 0;
@@ -895,6 +1363,7 @@ static void MM_NativeOptionsConfigureRows(b32 inGame)
 
 	struct MenuRow *rows = s_nativeOptionsRows;
 	int last = baseCount - 1;
+	rows[last - 1].rowOnPressDown = (char)last;
 
 	if (inGame)
 	{
@@ -910,6 +1379,26 @@ static void MM_NativeOptionsConfigureRows(b32 inGame)
 		rows[0].rowOnPressUp = (char)last;
 	}
 
+	struct MenuRow *categories[] = {
+		s_nativeDisplayRows, s_nativeAudioRows, s_nativeGameplayRows, s_nativeUiRows,
+#ifndef __vita__
+		s_nativeExperimentalRows,
+#endif
+	};
+	for (unsigned int category = 0; category < sizeof(categories) / sizeof(categories[0]); category++)
+	{
+		struct MenuRow *settings = categories[category];
+		int count = 0;
+		while (settings[count].stringIndex != RECTMENU_STRING_NONE) count++;
+		for (int i = 0; i < count; i++)
+		{
+			settings[i].rowOnPressUp = (char)((i + count - 1) % count);
+			settings[i].rowOnPressDown = (char)((i + 1) % count);
+			settings[i].rowOnPressLeft = (char)i;
+			settings[i].rowOnPressRight = (char)i;
+		}
+		MM_NativeOptionsApplyLocks(settings, inGame);
+	}
 	MM_NativeOptionsApplyLocks(s_nativeOptionsRows, inGame);
 }
 
@@ -926,10 +1415,24 @@ void MM_NativeOptions_OpenFromPause(void)
 	sdata->ptrDesiredMenu = &s_nativeOptionsMenu;
 }
 
+static void MM_NativeOptionsOpenFromPreset(void)
+{
+	s_nativePresetOptionsActive = 1;
+	MM_NativeOptionsConfigureRows(0);
+	s_nativeOptionsMenu.rowSelected = 0;
+	s_nativeOptionsMenu.posX_curr = 256;
+	s_nativeOptionsMenu.posY_curr = 120;
+	s_nativeOptionsMenu.state = CENTER_ON_COORDS | USE_SMALL_FONT | BIG_TEXT_IN_TITLE;
+	s_nativeOptionsMenu.ptrNextBox_InHierarchy = NULL;
+	s_nativeOptionsMenu.ptrPrevBox_InHierarchy = NULL;
+	sdata->ptrDesiredMenu = &s_nativeOptionsMenu;
+}
+
 static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 {
 	if (menu->funcState == RECTMENU_FUNC_STATE_UPDATE)
 	{
+		MM_NativeOptionsApplyLocks(menu->rows, MM_NativeOptionsInGame());
 		return;
 	}
 
@@ -945,6 +1448,12 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 		{
 			parent->state &= ~(ONLY_DRAW_TITLE | DRAW_NEXT_MENU_IN_HIERARCHY);
 		}
+		else if (s_nativePresetOptionsActive)
+		{
+			// opened from the first-launch preset menu, continue to the main menu
+			s_nativePresetOptionsActive = 0;
+			sdata->ptrDesiredMenu = &D230.menuMainMenu;
+		}
 		else if (MM_NativeOptionsInGame())
 		{
 			// opened from the pause menu, go back to it
@@ -952,6 +1461,8 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 		}
 		return;
 	}
+
+	MM_NativeOptionsApplyLocks(menu->rows, MM_NativeOptionsInGame());
 
 	// left/right bypass the row lock check done for confirm
 	if ((menu->rows[menu->rowSelected].stringIndex & MENU_ROW_LOCKED) != 0)
@@ -961,6 +1472,16 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 
 	s16 choose = menu->rows[menu->rowSelected].stringIndex & MENU_ROW_LNG_MASK;
 	u32 button = sdata->buttonTapPerPlayer[0];
+
+	if (choose == NATIVE_MENU_STRING_PRESET)
+	{
+		s_nativePresetOptionsMenu.rowSelected = 1;
+		s_nativePresetOptionsMenu.ptrNextBox_InHierarchy = NULL;
+		s_nativePresetOptionsMenu.ptrPrevBox_InHierarchy = menu;
+		menu->ptrNextBox_InHierarchy = &s_nativePresetOptionsMenu;
+		menu->state |= ONLY_DRAW_TITLE | DRAW_NEXT_MENU_IN_HIERARCHY;
+		return;
+	}
 
 	if (choose == NATIVE_MENU_STRING_GAMEPAD)
 	{
@@ -1032,7 +1553,7 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 	if (choose == NATIVE_MENU_STRING_CHEATS)
 	{
 		s_nativeCheatsMenu.rowSelected = 0;
-		s_nativeCheatsMenu.state = CENTER_ON_X | USE_SMALL_FONT | BIG_TEXT_IN_TITLE;
+		s_nativeCheatsMenu.state = CENTER_ON_X | USE_SMALL_FONT;
 		s_nativeCheatsMenu.ptrNextBox_InHierarchy = NULL;
 		s_nativeCheatsMenu.ptrPrevBox_InHierarchy = menu;
 		menu->ptrNextBox_InHierarchy = &s_nativeCheatsMenu;
@@ -1068,6 +1589,13 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 		return;
 	}
 
+	if (choose == NATIVE_MENU_STRING_SKIP_MASK_HINTS)
+	{
+		gNativeSkipMaskHints ^= 1;
+		save_config();
+		return;
+	}
+
 	if (choose == NATIVE_MENU_STRING_AI_RACERS)
 	{
 		if (button & BTN_LEFT)
@@ -1094,21 +1622,102 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 		save_config();
 		return;
 	}
+	if ((choose == NATIVE_MENU_STRING_DISPLAY) ||
+	    (choose == NATIVE_MENU_STRING_AUDIO) ||
+	    (choose == NATIVE_MENU_STRING_GAMEPLAY) ||
 #ifndef __vita__
-	if (choose == NATIVE_MENU_STRING_ENHANCEMENTS)
+	    (choose == NATIVE_MENU_STRING_EXPERIMENTAL) ||
+#endif
+	    (choose == NATIVE_MENU_STRING_UI))
 	{
-		s_nativeEnhancementsMenu.rowSelected = 0;
-		s_nativeEnhancementsMenu.state = CENTER_ON_X | USE_SMALL_FONT | BIG_TEXT_IN_TITLE;
-		s_nativeEnhancementsMenu.ptrNextBox_InHierarchy = NULL;
-		s_nativeEnhancementsMenu.ptrPrevBox_InHierarchy = menu;
-		menu->ptrNextBox_InHierarchy = &s_nativeEnhancementsMenu;
+		struct RectMenu *submenu = choose == NATIVE_MENU_STRING_DISPLAY ? &s_nativeDisplayMenu :
+		                           choose == NATIVE_MENU_STRING_AUDIO ? &s_nativeAudioMenu :
+#ifndef __vita__
+		                           choose == NATIVE_MENU_STRING_EXPERIMENTAL ? &s_nativeExperimentalMenu :
+#endif
+		                           choose == NATIVE_MENU_STRING_GAMEPLAY ? &s_nativeGameplayMenu : &s_nativeUiMenu;
+		submenu->rowSelected = 0;
+		submenu->posY_curr = 0;
+		submenu->state = CENTER_ON_X | USE_SMALL_FONT;
+		submenu->ptrNextBox_InHierarchy = NULL;
+		submenu->ptrPrevBox_InHierarchy = menu;
+		menu->ptrNextBox_InHierarchy = submenu;
 		menu->state |= ONLY_DRAW_TITLE | DRAW_NEXT_MENU_IN_HIERARCHY;
 		return;
 	}
-
-	if (choose == NATIVE_MENU_STRING_PRECISE_MINIMAP)
+#ifndef __vita__
+	if (choose == NATIVE_MENU_STRING_MODERN_MAP)
 	{
-		gNativePreciseMinimapEnabled ^= 1;
+		gNativeModernMapEnabled ^= 1;
+		gNativePreciseMinimapEnabled = 0; // Modern Minimap controls both maps and markers.
+		if (gNativeModernMapEnabled) NativeMinimap_Prepare();
+		save_config();
+		return;
+	}
+
+	if (choose == NATIVE_MENU_STRING_MODERN_HUD_ICONS)
+	{
+		gNativeModernHudIconsEnabled ^= 1;
+		save_config();
+		return;
+	}
+
+	if (choose == NATIVE_MENU_STRING_ADDITIONAL_UNLOCKS)
+	{
+		gNativeAdditionalUnlocksEnabled ^= 1;
+		save_config();
+		return;
+	}
+
+	if (choose == NATIVE_MENU_STRING_BOOST_COUNTER)
+	{
+		gNativeCheatConfigMask ^= CHEAT_TURBOCOUNT;
+		NativeCheat_ApplyConfigured();
+		save_config();
+		return;
+	}
+
+	if (choose == NATIVE_MENU_STRING_ENGINE_SELECTION)
+	{
+		gNativeEngineSelectionEnabled ^= 1;
+		save_config();
+		return;
+	}
+
+	if (choose == NATIVE_MENU_STRING_KART_HUE)
+	{
+		if (button & BTN_LEFT)
+		{
+			gNativeKartHue = (gNativeKartHue + NATIVE_KART_HUE_STEPS - 1) % NATIVE_KART_HUE_STEPS;
+			OtherFX_Play(0, 1);
+		}
+		else
+		{
+			gNativeKartHue = (gNativeKartHue + 1) % NATIVE_KART_HUE_STEPS;
+			if (button & BTN_RIGHT)
+			{
+				OtherFX_Play(0, 1);
+			}
+		}
+		save_config();
+		return;
+	}
+
+	if (choose == NATIVE_MENU_STRING_FONT)
+	{
+		if (button & BTN_LEFT)
+		{
+			gNativeFont = (gNativeFont + NATIVE_FONT_COUNT - 1) % NATIVE_FONT_COUNT;
+			OtherFX_Play(0, 1);
+		}
+		else
+		{
+			gNativeFont = (gNativeFont + 1) % NATIVE_FONT_COUNT;
+			if (button & BTN_RIGHT)
+			{
+				OtherFX_Play(0, 1);
+			}
+		}
 		save_config();
 		return;
 	}
@@ -1165,6 +1774,7 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 	{
 #if NATIVE_DRAW3D_SUPPORTED
 		gNativeRendererMode = (gNativeRendererMode + 1) % NATIVE_RENDERER_MODE_COUNT;
+		MM_NativeOptionsApplyLocks(menu->rows, MM_NativeOptionsInGame());
 		if (button & (BTN_LEFT | BTN_RIGHT))
 		{
 			OtherFX_Play(0, 1);
@@ -1269,7 +1879,7 @@ static void MM_NativeCheatsMenuProc(struct RectMenu *menu)
 	}
 
 	u32 cheatBit = NativeCheat_GetMenuBit(menu->rowSelected);
-	if (menu->rowSelected == 10)
+	if (menu->rowSelected == 9)
 	{
 		NativeCheat_ToggleAllCharacters();
 		return;
@@ -1279,6 +1889,15 @@ static void MM_NativeCheatsMenuProc(struct RectMenu *menu)
 	gNativeCheatConfigMask ^= cheatBit;
 	NativeCheat_ApplyConfigured();
 	save_config();
+}
+
+static void MM_NativeCreditsMenuProc(struct RectMenu *menu)
+{
+	if (menu->funcState != RECTMENU_FUNC_STATE_INPUT) return;
+
+	// text only: any confirm or back returns to the main menu
+	struct RectMenu *parent = menu->ptrPrevBox_InHierarchy;
+	if (parent != NULL) parent->state &= ~(ONLY_DRAW_TITLE | DRAW_NEXT_MENU_IN_HIERARCHY);
 }
 
 static void MM_NativeControlsMenuProc(struct RectMenu *menu)
@@ -1813,6 +2432,27 @@ void MM_MenuProc_Main(struct RectMenu *mainMenu)
 		return;
 	}
 
+	if (choose == NATIVE_MENU_STRING_UNLOCKS)
+	{
+		s_nativeUnlockFirst = 0;
+		s_nativeUnlocksMenu.rowSelected = 0;
+		mainMenu->state &= ~(ONLY_DRAW_TITLE | DRAW_NEXT_MENU_IN_HIERARCHY);
+		sdata->ptrDesiredMenu = &s_nativeUnlocksMenu;
+		RECTMENU_ClearInput();
+		return;
+	}
+
+	if (choose == NATIVE_MENU_STRING_CREDITS)
+	{
+		s_nativeCreditsMenu.rowSelected = 0;
+		s_nativeCreditsMenu.ptrNextBox_InHierarchy = NULL;
+		s_nativeCreditsMenu.ptrPrevBox_InHierarchy = mainMenu;
+
+		mainMenu->ptrNextBox_InHierarchy = &s_nativeCreditsMenu;
+		mainMenu->state |= DRAW_NEXT_MENU_IN_HIERARCHY;
+		return;
+	}
+
 	if (choose == NATIVE_MENU_STRING_EXIT_GAME)
 	{
 		sdata->mainGameState = 5;
@@ -2232,6 +2872,14 @@ void MM_JumpTo_Title_FirstTime(void)
 		s_nativeLanguageBootMenu.ptrPrevBox_InHierarchy = 0;
 		s_nativeLanguageTimer = FPS_DOUBLE(MM_NATIVE_LANGUAGE_TIMEOUT_FRAMES);
 		sdata->ptrActiveMenu = &s_nativeLanguageBootMenu;
+	}
+	else if (gNativePresetPending)
+	{
+		s_nativePresetMenu.state = RECTMENU_STATE_EXEC_CENTERED | RECTMENU_NATIVE_DRAW_CALLBACK;
+		s_nativePresetMenu.rowSelected = 1;
+		s_nativePresetMenu.ptrNextBox_InHierarchy = 0;
+		s_nativePresetMenu.ptrPrevBox_InHierarchy = 0;
+		sdata->ptrActiveMenu = &s_nativePresetMenu;
 	}
 	else
 	{

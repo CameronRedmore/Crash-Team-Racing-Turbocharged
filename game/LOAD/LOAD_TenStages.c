@@ -5,6 +5,7 @@
 #endif
 
 #if defined(CTR_NATIVE)
+#include "platform/native_minimap.h"
 void (*mainMenuInit[])() = {MM_JumpTo_Title_FirstTime, MM_JumpTo_Characters, MM_JumpTo_TrackSelect, MM_JumpTo_BattleSetup, CS_Garage_Init, MM_JumpTo_Scrapbook, MM_NativeBossFight_JumpToBossSelect};
 #else
 void (*mainMenuInit[])() = {MM_JumpTo_Title_FirstTime, MM_JumpTo_Characters, MM_JumpTo_TrackSelect, MM_JumpTo_BattleSetup, CS_Garage_Init, MM_JumpTo_Scrapbook};
@@ -796,6 +797,10 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 
 		ElimBG_Deactivate(gGT);
 
+		// New or modified live geometry is cached during loading, never drawing.
+#if defined(CTR_NATIVE)
+		NativeMinimap_PrepareLive();
+#endif
 		// signify end of load
 		return -2;
 	}

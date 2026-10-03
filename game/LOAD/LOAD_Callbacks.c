@@ -1,4 +1,7 @@
 #include <common.h>
+#if defined(CTR_NATIVE)
+#include "platform/native_minimap.h"
+#endif
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800319e8-0x800319f4.
 void LOAD_Callback_Overlay_Generic(struct LoadQueueSlot *lqs)
@@ -58,6 +61,9 @@ void LOAD_Callback_LEV(struct LoadQueueSlot *lqs)
 	}
 
 	sdata->ptrLevelFile = (struct Level *)lqs->ptrDestination;
+#if defined(CTR_NATIVE)
+	NativeMinimap_InvalidateLive();
+#endif
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80031aa4-0x80031b00.

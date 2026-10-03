@@ -51,6 +51,9 @@ extern int gNativePgxpMode;
 extern int gNativePgxpIntegerNclipEnabled;
 extern int gNativeDepthBufferEnabled;
 extern int gNativePreciseMinimapEnabled;
+// Centre Adventure map markers on their world positions (see UI_Map.c).
+extern int gNativeModernMapEnabled;
+extern int gNativeModernHudIconsEnabled;
 // Explicit HUD coordinates are independent of the 3D PGXP mode.
 #define NATIVE_PGXP_SCREEN_W (-1.0f)
 
@@ -61,7 +64,7 @@ extern int gNativePreciseMinimapEnabled;
 #if NATIVE_PGXP_SUPPORTED
 
 #define NATIVE_PGXP_ACTIVE() (gNativePgxpMode != NATIVE_PGXP_MODE_OFF)
-#define NATIVE_VERTEX_TRACKING_ACTIVE() (NATIVE_PGXP_ACTIVE() || NATIVE_DEPTH_BUFFER_ACTIVE() || gNativePreciseMinimapEnabled)
+#define NATIVE_VERTEX_TRACKING_ACTIVE() (NATIVE_PGXP_ACTIVE() || NATIVE_DEPTH_BUFFER_ACTIVE() || gNativePreciseMinimapEnabled || gNativeModernMapEnabled || gNativeModernHudIconsEnabled)
 
 // Host range holding the double-buffered primitive memory. Lookups inside it
 // use a collision-free direct map; everything else goes through a small cache.
@@ -131,6 +134,10 @@ void NativePgxp_LoadTransform(const void *key, const s16 *rotation, const s32 *t
 void NativePgxp_InvalidateTransform(int reg);
 void NativePgxp_Transform(int mx, int cv, const double *rotation, const double *translation, const double *input, double *result);
 
+// Move the world depth shadowed at a packet SXY word back by `offset`. Level
+// faces use it for retail draw-order slots the depth test would otherwise lose.
+void NativePgxp_PushDepth(const void *addr, u32 value, float offset);
+
 // GPU side.
 int NativePgxp_Lookup(const void *addr, u32 value, NativePgxpVertex *out);
 void NativePgxp_EndFrame(void);
@@ -195,6 +202,12 @@ static inline void NativePgxp_BindWrittenXY(const void *dst, u32 value)
 {
 	(void)dst;
 	(void)value;
+}
+static inline void NativePgxp_PushDepth(const void *addr, u32 value, float offset)
+{
+	(void)addr;
+	(void)value;
+	(void)offset;
 }
 static inline void NativePgxp_SetScreenXY(const s16 *dst, float x, float y)
 {

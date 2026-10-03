@@ -1,4 +1,19 @@
 #include <common.h>
+#if defined(CTR_NATIVE)
+#include <platform/native_engine.h>
+#include <platform/native_engine_metadata.h>
+
+static int GhostReplay_GetEngineProfile(const struct GhostHeader *gh)
+{
+	int profile = NativeEngineMetadata_LoadRetail(gh->emptyPadding);
+	if (profile >= 0)
+	{
+		return profile;
+	}
+
+	return NativeEngine_GetDefaultProfile((u16)gh->characterID);
+}
+#endif
 
 internal s16 Ghost_LerpRot12(s16 curr, s16 next, u16 t)
 {
@@ -326,6 +341,9 @@ void GhostReplay_ThTick(struct Thread *t)
 void GhostReplay_Init1(void)
 {
 	struct GameTracker *gGT = sdata->gGT;
+#if defined(CTR_NATIVE)
+	NativeEngine_ClearReplayOverrides();
+#endif
 
 	sdata->boolCanSaveGhost = 0;
 	sdata->boolGhostsDrawing = 0;
@@ -424,6 +442,9 @@ void GhostReplay_Init1(void)
 		inst->flags |= OWNER_PUSHBUFFER_GATE;
 		ghostDriver->instSelf = inst;
 		VehBirth_TireSprites(t);
+#if defined(CTR_NATIVE)
+		NativeEngine_SetReplayOverride(ghostDriver->driverID, GhostReplay_GetEngineProfile(ghostDriver->ghostTape->gh));
+#endif
 		VehBirth_SetConsts(ghostDriver);
 
 		ghostDriver->actionsFlagSet |= ACTION_BOT; // AI driver

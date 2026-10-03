@@ -1,4 +1,5 @@
 #include <common.h>
+#include <platform/native_unlock.h>
 
 #if defined(CTR_NATIVE)
 extern struct RectMenu menu224NoSave;
@@ -99,6 +100,16 @@ void RR_EndEvent_UnlockAward(void)
 		// == beat relic, and unlocked relic ==
 
 		// unlock
+#if defined(CTR_NATIVE)
+		// Slide Coliseum opens in Adventure when the tenth distinct relic is earned.
+		if (relicIndex == RR_SAPPHIRE_RELIC_INDEX)
+		{
+			int relics = 0;
+			for (int track = 0; track < ADV_REWARD_RELIC_TRACK_COUNT; track++)
+				relics += CHECK_ADV_BIT(adv->rewards, ADV_REWARD_FIRST_SAPPHIRE_RELIC + track) != 0;
+			if (relics == 9) NativeUnlock_NotifySlideColiseum();
+		}
+#endif
 		UNLOCK_ADV_BIT(adv->rewards, rewardBit);
 
 		// relic model
@@ -114,7 +125,7 @@ void RR_EndEvent_UnlockAward(void)
 			if (gGT->levelID == TURBO_TRACK)
 			{
 				// unlock turbo track
-				sdata->gameProgress.unlockFlags |= GAME_UNLOCK_TURBO_TRACK_MASK;
+				NativeUnlock_GrantMask(GAME_UNLOCK_TURBO_TRACK_MASK);
 			}
 
 			continue;

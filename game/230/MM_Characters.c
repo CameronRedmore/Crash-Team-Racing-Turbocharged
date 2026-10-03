@@ -3,6 +3,7 @@
 #if defined(CTR_NATIVE)
 #include "OxideMenuModel.h"
 #include <platform/native_custom_racer.h>
+#include <platform/native_engine.h>
 #endif
 
 enum
@@ -116,12 +117,13 @@ enum
 	MM_CHARACTER_SELECT_PAGE_COUNT_Y = 0xc8,
 };
 
-static const s16 s_nativeCharacterSelectStatTargets[NUM_CLASSES][3] =
+static const s16 s_nativeCharacterSelectStatTargets[NUM_CLASSES + 1][3] =
 {
 	{0x37, 0x37, 0x37},
 	{0x30, 0x50, 0x20},
 	{0x50, 0x20, 0x0a},
 	{0x1c, 0x30, 0x50},
+	{0x50, 0x50, 0x50},
 };
 
 static const u32 s_nativeCharacterSelectStatColors[7] =
@@ -155,6 +157,17 @@ static s16 s_nativeCharacterSelectIconBackup[MM_CHARACTER_SELECT_MAX_PLAYERS] = 
 static s16 s_nativeCharacterSelectCustomBackup[MM_CHARACTER_SELECT_MAX_PLAYERS] = {-1, -1, -1, -1};
 static s16 s_nativeCharacterSelectCurrentCustomPreview[MM_CHARACTER_SELECT_MAX_PLAYERS] = {-1, -1, -1, -1};
 static s16 s_nativeCharacterSelectDesiredCustomPreview[MM_CHARACTER_SELECT_MAX_PLAYERS] = {-1, -1, -1, -1};
+enum NativeEngineSelectStage
+{
+	NATIVE_ENGINE_SELECT_CHARACTER = 0,
+	NATIVE_ENGINE_SELECT_ENGINE,
+	NATIVE_ENGINE_SELECT_READY,
+};
+static s8 s_nativeEngineSelectStage[MM_CHARACTER_SELECT_MAX_PLAYERS];
+static s8 s_nativeEngineSelectProfile[MM_CHARACTER_SELECT_MAX_PLAYERS] =
+	{NATIVE_ENGINE_DEFAULT, NATIVE_ENGINE_DEFAULT, NATIVE_ENGINE_DEFAULT, NATIVE_ENGINE_DEFAULT};
+static s8 s_nativeEngineSelectProfileBackup[MM_CHARACTER_SELECT_MAX_PLAYERS] =
+	{NATIVE_ENGINE_DEFAULT, NATIVE_ENGINE_DEFAULT, NATIVE_ENGINE_DEFAULT, NATIVE_ENGINE_DEFAULT};
 static struct CharacterSelectMeta s_nativeCharacterSelectPagedMeta[MM_CHARACTER_SELECT_PAGED_ICON_COUNT];
 static struct TransitionMeta s_nativeCharacterSelectPagedTransitions[MM_CHARACTER_SELECT_PAGED_TRANSITION_META_COUNT];
 static b32 MM_Characters_NativeCustomRosterEnabled(void);
@@ -193,8 +206,35 @@ static void MM_Characters_NativeDrawStats(void)
 			engineID = customEngineClass;
 		statCharacterID = 0x100 + customRacerIndex;
 	}
+	if (gNativeEngineSelectionEnabled)
+	{
+		const int selectedProfile = (s_nativeEngineSelectStage[0] >= NATIVE_ENGINE_SELECT_ENGINE)
+			? s_nativeEngineSelectProfile[0]
+			: NativeEngine_GetSelectedProfile(0);
+		if (selectedProfile >= NATIVE_ENGINE_BALANCED && selectedProfile < NATIVE_ENGINE_COUNT &&
+		    NativeEngine_IsProfileUnlocked(selectedProfile))
+			engineID = selectedProfile;
+		else if (customRacerIndex >= 0)
+		{
+			const int customEngineClass = NativeCustomRacer_GetEngineClass(customRacerIndex);
+			engineID = (customEngineClass >= NATIVE_ENGINE_BALANCED && customEngineClass < NATIVE_ENGINE_COUNT &&
+				    NativeEngine_IsProfileUnlocked(customEngineClass))
+				? customEngineClass
+				: NativeEngine_GetDefaultProfile(characterID);
+		}
+		else
+			engineID = NativeEngine_GetDefaultProfile(characterID);
+		if ((u32)engineID >= NATIVE_ENGINE_COUNT || !NativeEngine_IsProfileUnlocked(engineID))
+			engineID = BALANCED;
+		statCharacterID = (s16)(statCharacterID ^ (engineID << 8));
+	}
+	else if (characterID == PENTA_PENGUIN)
+		engineID = NATIVE_ENGINE_PENTA;
+#else
+	if (characterID == PENTA_PENGUIN)
+		engineID = NUM_CLASSES;
 #endif
-	if ((u32)engineID >= NUM_CLASSES)
+	if ((u32)engineID >= (NUM_CLASSES + 1))
 	{
 		engineID = BALANCED;
 	}
@@ -210,7 +250,7 @@ static void MM_Characters_NativeDrawStats(void)
 
 	for (s32 i = 0; i < 3; i++)
 	{
-		s16 target = (characterID == PENTA_PENGUIN) ? 0x50 : s_nativeCharacterSelectStatTargets[engineID][i];
+		s16 target = s_nativeCharacterSelectStatTargets[engineID][i];
 		s16 *length = &s_nativeCharacterSelectStatLengths[i];
 		if (*length < target)
 		{
@@ -239,7 +279,11 @@ static void MM_Characters_NativeDrawStats(void)
 	s16 barX = MM_CHARACTER_SELECT_STATS_BAR_X + transitionX;
 
 	s32 classIndex = 0;
+#if defined(CTR_NATIVE)
+	if ((engineID == NATIVE_ENGINE_PENTA) || (engineID == NATIVE_ENGINE_SPEED))
+#else
 	if ((characterID == PENTA_PENGUIN) || (engineID == SPEED))
+#endif
 	{
 		classIndex = 2;
 	}
@@ -284,6 +328,29 @@ static void MM_Characters_NativeDrawStats(void)
 	{
 		contentRight = classRight;
 	}
+	char engineSelectText[48];
+	b32 showEngineSelector = false;
+#if defined(CTR_NATIVE)
+	showEngineSelector = gNativeEngineSelectionEnabled &&
+		(s_nativeEngineSelectStage[0] >= NATIVE_ENGINE_SELECT_ENGINE);
+	if (showEngineSelector)
+	{
+		snprintf(engineSelectText, sizeof(engineSelectText), "ENGINE: %s",
+		         NativeEngine_GetProfileName(s_nativeEngineSelectProfile[0]));
+		const s32 engineWidth = DecalFont_GetLineWidth(engineSelectText, FONT_SMALL);
+		const s32 engineLeft = classX - (engineWidth >> 1);
+		const s32 engineRight = engineLeft + engineWidth;
+		// Keep the selector arrows inside the stats panel too. The menu arrow
+		// sprite extends about 10 px from its center, with a 12 px text gap.
+		const s32 arrowExtent = 10;
+		const s32 selectorLeft = engineLeft - 12 - arrowExtent;
+		const s32 selectorRight = engineRight + 12 + arrowExtent;
+		if (selectorLeft < contentLeft)
+			contentLeft = selectorLeft;
+		if (selectorRight > contentRight)
+			contentRight = selectorRight;
+	}
+#endif
 
 	DecalFont_DrawLine(classText,
 	                   classX, MM_CHARACTER_SELECT_STATS_CLASS_Y, FONT_BIG, JUSTIFY_CENTER | ORANGE);
@@ -305,16 +372,21 @@ static void MM_Characters_NativeDrawStats(void)
 	{
 		s16 statLength = s_nativeCharacterSelectStatLengths[statIndex];
 		s16 drawLength = (s16)CTR_WIDESCREEN_SCALE_X(statLength);
+		s16 frameLength = drawLength;
+#if defined(CTR_NATIVE)
+		if (gNativeEngineSelectionEnabled)
+			frameLength = (s16)CTR_WIDESCREEN_SCALE_X(0x50);
+#endif
 		RECT r;
 		r.x = barX;
 		r.y = barStartY;
-		r.w = drawLength;
+		r.w = frameLength;
 		r.h = MM_CHARACTER_SELECT_STATS_BAR_HEIGHT;
 		CTR_Box_DrawWireBox(&r, &white, gGT->pushBuffer_UI.ptrOT, primMem);
 
 		r.x = barX + 1;
 		r.y = shadowY;
-		r.w = drawLength - 2;
+		r.w = frameLength - 2;
 		r.h = MM_CHARACTER_SELECT_STATS_BAR_SHADOW_HEIGHT;
 		if (r.w > 0)
 		{
@@ -327,7 +399,9 @@ static void MM_Characters_NativeDrawStats(void)
 		     segmentIndex < MM_CHARACTER_SELECT_STATS_BAR_SEGMENT_COUNT;
 		     segmentIndex++)
 		{
-			s16 currSegmentLen = MM_CHARACTER_SELECT_STATS_BAR_SEGMENT_WIDTH;
+			if (segmentIndex == MM_CHARACTER_SELECT_STATS_BAR_SEGMENT_COUNT - 1)
+				segmentEnd = 0x50;
+			s16 currSegmentLen = segmentEnd - segmentStart;
 			if (statLength <= segmentEnd)
 			{
 				currSegmentLen = statLength - segmentStart;
@@ -375,11 +449,51 @@ static void MM_Characters_NativeDrawStats(void)
 		shadowY += MM_CHARACTER_SELECT_STATS_BAR_ROW_STEP;
 	}
 
+	// Show the full 80 px capacity behind the animated fill so a 55 px
+	// Balanced stat visibly stops short of the maxed Penta profile.
+#if defined(CTR_NATIVE)
+	s16 statTrackY = MM_CHARACTER_SELECT_STATS_BAR_START_Y;
+	for (s32 statIndex = 0; gNativeEngineSelectionEnabled && statIndex < 3; statIndex++)
+	{
+		RECT track;
+		track.x = barX;
+		track.y = statTrackY;
+		track.w = CTR_WIDESCREEN_SCALE_X(0x50);
+		track.h = MM_CHARACTER_SELECT_STATS_BAR_HEIGHT;
+		CTR_Box_DrawSolidBox(&track, MakeColor(32, 32, 32), gGT->pushBuffer_UI.ptrOT);
+		statTrackY += MM_CHARACTER_SELECT_STATS_BAR_ROW_STEP;
+	}
+#endif
+
+	#if defined(CTR_NATIVE)
+	if (showEngineSelector)
+	{
+		const s32 selectorY = MM_CHARACTER_SELECT_STATS_BOX_Y + MM_CHARACTER_SELECT_STATS_BOX_H + 3;
+		DecalFont_DrawLine(engineSelectText, classX, selectorY, FONT_SMALL, JUSTIFY_CENTER | ORANGE);
+		if (gGT->iconGroup[4] != NULL)
+		{
+			struct Icon **icons = ICONGROUP_GETICONS(gGT->iconGroup[4]);
+			u32 *colors = data.ptrColor[ORANGE];
+			const s32 halfWidth = DecalFont_GetLineWidth(engineSelectText, FONT_SMALL) >> 1;
+			// FONT_SMALL's cap starts 1.25 px below posY and is 5.5 px
+			// tall, so its visual center is posY + 4 px.
+			const s32 selectorCenterY = selectorY + 4;
+			for (s32 side = 0; side < 2; side++)
+				DecalHUD_Arrow2D(icons[MM_CHARACTER_SELECT_PAGE_HINT_ARROW_ICON],
+					classX + (side ? halfWidth + 12 : -halfWidth - 12), selectorCenterY,
+					&gGT->backBuffer->primMem, gGT->pushBuffer_UI.ptrOT,
+					colors[0], colors[1], colors[2], colors[3], 0,
+					MM_CHARACTER_SELECT_PAGE_HINT_ARROW_SCALE,
+					side ? 0 : MM_CHARACTER_SELECT_PAGE_HINT_ARROW_LEFT_ROTATION);
+		}
+	}
+	#endif
+
 	RECT box;
 	box.x = contentLeft - 6;
 	box.y = MM_CHARACTER_SELECT_STATS_BOX_Y;
 	box.w = (contentRight - contentLeft) + 12;
-	box.h = MM_CHARACTER_SELECT_STATS_BOX_H;
+	box.h = MM_CHARACTER_SELECT_STATS_BOX_H + (showEngineSelector ? 18 : 0);
 	RECTMENU_DrawInnerRect(&box, 0, gGT->backBuffer->otMem.uiOT);
 }
 
@@ -656,6 +770,104 @@ static s32 MM_Characters_NativeTitleTransitionIndex(void)
 static s32 MM_Characters_NativeDriverWindowTransitionFirst(void)
 {
 	return MM_Characters_NativeCustomRosterEnabled() ? MM_CHARACTER_SELECT_PAGED_DRIVER_WINDOW_TRANSITION_FIRST : MM_CHARACTER_SELECT_DRIVER_WINDOW_TRANSITION_FIRST;
+}
+
+static s32 MM_Characters_NativeFirstUnlockedEngineProfile(void)
+{
+	for (s32 profile = NATIVE_ENGINE_BALANCED; profile < NATIVE_ENGINE_COUNT; profile++)
+	{
+		if (NativeEngine_IsProfileUnlocked(profile))
+			return profile;
+	}
+	return NATIVE_ENGINE_BALANCED;
+}
+
+static s32 MM_Characters_NativeDefaultProfileForPlayer(s32 playerIndex)
+{
+	const int customRacerIndex = NativeCustomRacer_GetPlayerSelection(playerIndex);
+	if (customRacerIndex >= 0)
+	{
+		const int customClass = NativeCustomRacer_GetEngineClass(customRacerIndex);
+		if (customClass >= NATIVE_ENGINE_BALANCED && customClass < NATIVE_ENGINE_COUNT &&
+		    NativeEngine_IsProfileUnlocked(customClass))
+			return customClass;
+	}
+	const int profile = NativeEngine_GetDefaultProfile(data.characterIDs[playerIndex]);
+	return (profile >= NATIVE_ENGINE_BALANCED && profile < NATIVE_ENGINE_COUNT && NativeEngine_IsProfileUnlocked(profile))
+		? profile
+		: MM_Characters_NativeFirstUnlockedEngineProfile();
+}
+
+static s32 MM_Characters_NativeInitialProfileForPlayer(s32 playerIndex)
+{
+	const int selectedProfile = NativeEngine_GetSelectedProfile(playerIndex);
+	if (selectedProfile >= NATIVE_ENGINE_BALANCED && selectedProfile < NATIVE_ENGINE_COUNT &&
+	    NativeEngine_IsProfileUnlocked(selectedProfile))
+		return selectedProfile;
+	return MM_Characters_NativeDefaultProfileForPlayer(playerIndex);
+}
+
+static s32 MM_Characters_NativeStepEngineProfile(s32 profile, s32 direction)
+{
+	for (s32 attempts = 0; attempts < NATIVE_ENGINE_COUNT; attempts++)
+	{
+		profile += direction;
+		if (profile < NATIVE_ENGINE_BALANCED)
+			profile = NATIVE_ENGINE_COUNT - 1;
+		else if (profile >= NATIVE_ENGINE_COUNT)
+			profile = NATIVE_ENGINE_BALANCED;
+		if (NativeEngine_IsProfileUnlocked(profile))
+			return profile;
+	}
+	return MM_Characters_NativeFirstUnlockedEngineProfile();
+}
+
+static void MM_Characters_NativeCommitEngineProfiles(s32 numPlayers)
+{
+	for (s32 playerIndex = 0; playerIndex < numPlayers; playerIndex++)
+		NativeEngine_SetSelectedProfile(playerIndex, s_nativeEngineSelectProfile[playerIndex]);
+}
+
+static void MM_Characters_NativeEngineInput(s32 playerIndex, u32 button)
+{
+	struct GameTracker *gGT = sdata->gGT;
+	const u16 playerSelectFlag = (u16)(1 << playerIndex);
+	const s8 stage = s_nativeEngineSelectStage[playerIndex];
+	if (stage == NATIVE_ENGINE_SELECT_ENGINE)
+	{
+		if ((button & (BTN_LEFT | BTN_RIGHT)) != 0)
+		{
+			s_nativeEngineSelectProfile[playerIndex] = (s8)MM_Characters_NativeStepEngineProfile(
+				s_nativeEngineSelectProfile[playerIndex], (button & BTN_LEFT) ? -1 : 1);
+			OtherFX_Play(0, 1);
+			MM_Characters_NativeResetStats();
+		}
+		if ((button & MM_CHARACTER_SELECT_INPUT_CONFIRM) != 0)
+		{
+			s_nativeEngineSelectStage[playerIndex] = NATIVE_ENGINE_SELECT_READY;
+			OtherFX_Play(1, 1);
+			b32 allReady = true;
+			for (s32 checkPlayer = 0; checkPlayer < gGT->numPlyrNextGame; checkPlayer++)
+				allReady &= (s_nativeEngineSelectStage[checkPlayer] == NATIVE_ENGINE_SELECT_READY);
+			if (allReady)
+			{
+				MM_Characters_NativeCommitEngineProfiles(gGT->numPlyrNextGame);
+				D230.characterSelectExitsForward = 1;
+				D230.characterSelectMenuState = EXITING_MENU;
+			}
+		}
+		else if ((button & MM_CHARACTER_SELECT_INPUT_BACK) != 0)
+		{
+			s_nativeEngineSelectStage[playerIndex] = NATIVE_ENGINE_SELECT_CHARACTER;
+			sdata->characterSelectFlags &= ~playerSelectFlag;
+			OtherFX_Play(2, 1);
+		}
+	}
+	else if ((button & MM_CHARACTER_SELECT_INPUT_BACK) != 0)
+	{
+		s_nativeEngineSelectStage[playerIndex] = NATIVE_ENGINE_SELECT_ENGINE;
+		OtherFX_Play(2, 1);
+	}
 }
 
 static int MM_Characters_NativeCustomIndexForPageAndSlot(int page, int slot)
@@ -1482,6 +1694,7 @@ void MM_Characters_BackupIDs(void)
 		s_nativeCharacterSelectPagePerPlayerBackup[playerIndex] = s_nativeCharacterSelectPagePerPlayer[playerIndex];
 		s_nativeCharacterSelectIconBackup[playerIndex] = s_nativeCharacterSelectIconPerPlayer[playerIndex];
 		s_nativeCharacterSelectCustomBackup[playerIndex] = (s16)NativeCustomRacer_GetPlayerSelection(playerIndex);
+		s_nativeEngineSelectProfileBackup[playerIndex] = (s8)NativeEngine_GetSelectedProfile(playerIndex);
 	}
 #endif
 	return;
@@ -1564,6 +1777,12 @@ void MM_Characters_RestoreIDs(void)
 #if defined(CTR_NATIVE)
 	s_nativeCharacterSelectPage = s_nativeCharacterSelectPageBackup;
 	NativeCustomRacer_ClearPlayerSelections();
+	for (s32 playerIndex = 0; playerIndex < MM_CHARACTER_SELECT_MAX_PLAYERS; playerIndex++)
+	{
+		s_nativeEngineSelectStage[playerIndex] = NATIVE_ENGINE_SELECT_CHARACTER;
+		s_nativeEngineSelectProfile[playerIndex] = NATIVE_ENGINE_DEFAULT;
+		NativeEngine_SetSelectedProfile(playerIndex, s_nativeEngineSelectProfileBackup[playerIndex]);
+	}
 	if (NativeCustomRacer_IsRosterEnabled())
 	{
 		for (s32 playerIndex = 0; playerIndex < gGT->numPlyrNextGame; playerIndex++)
@@ -1714,6 +1933,17 @@ void MM_Characters_MenuProc(struct RectMenu *menu)
 	{
 		MM_TransitionInOut(D230.characterSelectTransitionMeta, (int)D230.characterSelectTransitionFrame, FPS_DOUBLE(MM_CHARACTER_SELECT_TRANSITION_STEP));
 	}
+	#if defined(CTR_NATIVE)
+	if ((D230.characterSelectMenuState == ENTERING_MENU) &&
+	    (D230.characterSelectTransitionFrame == FPS_DOUBLE(MM_CHARACTER_SELECT_TRANSITION_FRAMES)))
+	{
+		for (s32 playerIndex = 0; playerIndex < MM_CHARACTER_SELECT_MAX_PLAYERS; playerIndex++)
+		{
+			s_nativeEngineSelectStage[playerIndex] = NATIVE_ENGINE_SELECT_CHARACTER;
+			s_nativeEngineSelectProfile[playerIndex] = NATIVE_ENGINE_DEFAULT;
+		}
+	}
+	#endif
 
 	MM_Characters_SetMenuLayout();
 
@@ -1881,6 +2111,11 @@ void MM_Characters_MenuProc(struct RectMenu *menu)
 	default:
 		goto dontDrawSelectCharacter;
 	}
+	#if defined(CTR_NATIVE)
+	if (gNativeEngineSelectionEnabled && (gGT->numPlyrNextGame == 1) &&
+	    (s_nativeEngineSelectStage[0] == NATIVE_ENGINE_SELECT_ENGINE))
+		characterSelectString = "SELECT ENGINE";
+	#endif
 
 	// Draw String
 	DecalFont_DrawLine(characterSelectString, posX, posY, characterSelectType, (JUSTIFY_CENTER | ORANGE));
@@ -1894,6 +2129,17 @@ dontDrawSelectCharacter:
 		s16 candidateIcon = currentIcon;
 		b32 playerSelectedBeforeInput = (((int)(s16)sdata->characterSelectFlags >> playerIndex) & 1U) != 0;
 		u32 button = sdata->buttonTapPerPlayer[playerIndex];
+		#if defined(CTR_NATIVE)
+		if (gNativeEngineSelectionEnabled &&
+		    (D230.characterSelectMenuState == IN_MENU) &&
+		    (s_nativeEngineSelectStage[playerIndex] != NATIVE_ENGINE_SELECT_CHARACTER))
+		{
+			MM_Characters_NativeEngineInput(playerIndex, button);
+			button = 0;
+			sdata->buttonTapPerPlayer[playerIndex] = 0;
+			playerSelectedBeforeInput = true;
+		}
+		#endif
 
 #if defined(CTR_NATIVE)
 		if (MM_Characters_NativeCustomRosterEnabled() && (currentIcon < 0))
@@ -2075,6 +2321,14 @@ dontDrawSelectCharacter:
 				{
 					// this player has now selected a character
 					sdata->characterSelectFlags = sdata->characterSelectFlags | (u16)(1 << playerIndex);
+					#if defined(CTR_NATIVE)
+					if (gNativeEngineSelectionEnabled)
+					{
+						s_nativeEngineSelectProfile[playerIndex] = (s8)MM_Characters_NativeInitialProfileForPlayer(playerIndex);
+						s_nativeEngineSelectStage[playerIndex] = NATIVE_ENGINE_SELECT_ENGINE;
+						MM_Characters_NativeResetStats();
+					}
+					#endif
 
 					u8 numPlyrNextGame = gGT->numPlyrNextGame;
 
@@ -2083,7 +2337,11 @@ dontDrawSelectCharacter:
 					OtherFX_Play(1, 1);
 
 					// if all players have selected their characters
-					if ((int)(s16)sdata->characterSelectFlags == (1 << numPlyrNextGame) - 1)
+					if ((int)(s16)sdata->characterSelectFlags == (1 << numPlyrNextGame) - 1
+					#if defined(CTR_NATIVE)
+					    && !gNativeEngineSelectionEnabled
+					#endif
+					)
 					{
 						// exit toward cup or track selection
 						D230.characterSelectExitsForward = 1;
@@ -2335,6 +2593,21 @@ dontDrawSelectCharacter:
 			DecalFont_DrawLine((char *)characterName,
 			                   (int)driverWindowTransition->currX + windowPos->x + (int)((u32)D230.characterSelectWindowWidth >> 1), (int)nameY, fontType,
 			                   (JUSTIFY_CENTER | ORANGE));
+#if defined(CTR_NATIVE)
+			if (gNativeEngineSelectionEnabled && (gGT->numPlyrNextGame > 1) &&
+			    (s_nativeEngineSelectStage[playerIndex] != NATIVE_ENGINE_SELECT_CHARACTER))
+			{
+				char stageText[48];
+				if (s_nativeEngineSelectStage[playerIndex] == NATIVE_ENGINE_SELECT_READY)
+					snprintf(stageText, sizeof(stageText), "READY");
+				else
+					snprintf(stageText, sizeof(stageText), "ENGINE: %s",
+					         NativeEngine_GetProfileName(s_nativeEngineSelectProfile[playerIndex]));
+				DecalFont_DrawLine(stageText,
+				                   (int)driverWindowTransition->currX + windowPos->x + (int)((u32)D230.characterSelectWindowWidth >> 1),
+				                   (int)nameBaseY + 3, FONT_SMALL, (JUSTIFY_CENTER | ORANGE));
+			}
+#endif
 		}
 
 		// spin the character

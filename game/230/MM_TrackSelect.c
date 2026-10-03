@@ -1,6 +1,7 @@
 #include <common.h>
 
 #if defined(CTR_NATIVE)
+#include "platform/native_minimap.h"
 extern int gNativeGhostReplayMode;
 #endif
 
@@ -1147,6 +1148,16 @@ void MM_TrackSelect_MenuProc(struct RectMenu *menu)
 				s32 mapWidth = (s32)iconMap0->texLayout.u1 - (s32)iconMap0->texLayout.u0;
 				s32 mapHeight = ((s32)mapTopV2 - (s32)mapTopV0) + (s32)mapBottomV2 - (s32)mapBottomV0;
 
+				b32 nativeMapDrawn = false;
+#if defined(CTR_NATIVE)
+				const int mapRight = previewRect.x + D230.trackSelect_lapMenuTransition.currX -
+				    D230.trackSelect_previewTransition.currX + (MM_TRACK_VIDEO_WIDTH >> 1) + (mapWidth >> 1);
+				const int mapBottom = previewRect.y + D230.trackSelect_lapMenuTransition.currY -
+				    D230.trackSelect_previewTransition.currY + MM_TRACK_SELECT_MAP_CENTER_Y_OFFSET +
+				    (MM_TRACK_SELECT_MAP_BOX_H >> 1) + (mapHeight >> 1);
+				nativeMapDrawn = NativeMinimap_DrawPreview(selectMenu[menu->rowSelected].levID, mapRight, mapBottom,
+				    mapWidth, mapHeight, &gGT->backBuffer->primMem, gGT->pushBuffer_UI.ptrOT, 1);
+#endif
 				// draw six track minimaps on menu
 				// map 1 is the regular color, which is white
 				// map 2 is blue and shifted 2px to the left
@@ -1154,7 +1165,7 @@ void MM_TrackSelect_MenuProc(struct RectMenu *menu)
 				// map 4 is blue and shifted 1px downwards
 				// map 5 is blue and shifted 1px upwards
 				// map 6 is black and shifted 6px downwards and 12px to the right
-				for (s32 mapLayer = 0; mapLayer < MM_TRACK_SELECT_MAP_LAYER_COUNT; mapLayer++)
+				for (s32 mapLayer = 0; !nativeMapDrawn && mapLayer < MM_TRACK_SELECT_MAP_LAYER_COUNT; mapLayer++)
 				{
 					UI_Map_DrawMap(
 					    // top half

@@ -1,8 +1,24 @@
 #include <common.h>
 
-static void DecalFont_DrawGlyph(struct Icon *icon, s16 posX, s16 posY, struct PrimMem *primMem, u32 *ot, u32 color0, u32 color1, u32 color2, u32 color3,
+#ifdef CTR_NATIVE
+#include <platform/native_font.h>
+#include <platform/native_hud_icons.h>
+#define DECAL_FONT_TTF NATIVE_FONT_SUPPORTED
+#else
+#define DECAL_FONT_TTF 0
+#endif
+
+static void DecalFont_DrawGlyph(u8 character, struct Icon *icon, s16 posX, s16 posY, struct PrimMem *primMem, u32 *ot, u32 color0, u32 color1, u32 color2, u32 color3,
                                 char transparency, s16 scale)
 {
+
+#ifdef CTR_NATIVE
+	if (NativeHudIcons_DrawButton(character, icon, posX, posY, scale, primMem, ot)) return;
+
+#else
+	(void)character;
+
+#endif
 	POLY_GT4 *p = primMem->cursor;
 	DecalHUD_DrawPolyGT4(icon, posX, posY, primMem, ot, color0, color1, color2, color3, transparency, scale);
 
@@ -23,6 +39,264 @@ static void DecalFont_DrawGlyph(struct Icon *icon, s16 posX, s16 posY, struct Pr
 #endif
 }
 
+#if DECAL_FONT_TTF
+// Enhancements > Font: lines are laid out with TrueType advances at subpixel
+// precision and drawn from the font's distance field atlas. PS1 button glyphs,
+// and characters the font lacks, keep their retail icons at the pen position.
+
+// Cap height, and the gap from posY to the cap line, in PS1 pixels per font.
+static const float sDecalFont_TtfCapHeight[FONT_NUM] = {0.0f, 12.0f, 5.5f, 12.0f};
+static const float sDecalFont_TtfCapTop[FONT_NUM] = {0.0f, 1.5f, 1.25f, 1.5f};
+
+#if CTR_NATIVE_WIDESCREEN
+// HUD x is squeezed by 34/45 (CTR_WIDESCREEN_SCALE_X), so a square em spans
+// that many more PS1 pixels across than down.
+#define DECAL_FONT_TTF_ASPECT (45.0f / 34.0f)
+#else
+// 512x216 shown at 4:3.
+#define DECAL_FONT_TTF_ASPECT (512.0f / 216.0f * 3.0f / 4.0f)
+#endif
+
+// Set while a retail icon stands in for one character of a TrueType line.
+static b32 sDecalFont_TtfRetailCharacter;
+
+static b32 DecalFont_TtfActive(void)
+{
+	return !sDecalFont_TtfRetailCharacter && NativeFont_IsActive();
+}
+
+static float DecalFont_TtfEmY(int fontType)
+{
+	return sDecalFont_TtfCapHeight[fontType] / NativeFont_GetCapHeight();
+}
+
+static b32 DecalFont_IsButton(u8 c)
+{
+	return (c == '@') || (c == '[') || (c == '^') || (c == '*');
+}
+
+// Advance in PS1 pixels. Sets glyph when the TrueType font draws the
+// character, or leaves it NULL for a space or a retail icon.
+static float DecalFont_TtfCharacter(u8 c, int fontType, const struct NativeFontGlyph **glyph)
+{
+	const float emX = DecalFont_TtfEmY(fontType) * DECAL_FONT_TTF_ASPECT;
+
+	*glyph = NULL;
+	if (c == ' ')
+	{
+		return NativeFont_GetSpaceAdvance() * emX;
+	}
+	if (!DecalFont_IsButton(c) && (c > ' ') && (c < 0x7f))
+	{
+		*glyph = NativeFont_GetGlyph(c);
+	}
+	if (*glyph != NULL)
+	{
+		return (((c >= '0') && (c <= '9')) ? NativeFont_GetDigitAdvance() : (*glyph)->advance) * emX;
+	}
+
+	char retail[2] = {(char)c, 0};
+	sDecalFont_TtfRetailCharacter = true;
+	const int width = DecalFont_GetLineWidthStrlen(retail, 1, fontType);
+	sDecalFont_TtfRetailCharacter = false;
+	return (float)width;
+}
+
+static int DecalFont_TtfLineWidth(char *str, int len, int fontType)
+{
+	const struct NativeFontGlyph *glyph;
+	float width = 0.0f;
+
+	for (; (*str != 0) && (len != 0); str++, len--)
+	{
+#if BUILD > UsaRetail
+		if (*str == '~')
+		{
+			str += 2;
+			len -= 2;
+			continue;
+		}
+#endif
+		width += DecalFont_TtfCharacter((u8)*str, fontType, &glyph);
+	}
+
+	return (int)(width + 0.5f);
+}
+
+// Retail colours belong to the corners of the glyph's cap box; the quad also
+// covers the outline and padding, so extend the gradient out to its corners.
+static u32 DecalFont_TtfCornerColor(const u32 *color, float fx, float fy)
+{
+	u32 out = 0;
+
+	for (int shift = 0; shift < 24; shift += 8)
+	{
+		const float tl = (float)((color[0] >> shift) & 0xff);
+		const float tr = (float)((color[1] >> shift) & 0xff);
+		const float bl = (float)((color[2] >> shift) & 0xff);
+		const float br = (float)((color[3] >> shift) & 0xff);
+		const float top = tl + (tr - tl) * fx;
+		const float bottom = bl + (br - bl) * fx;
+		int value = (int)(top + (bottom - top) * fy + 0.5f);
+		value = value < 0 ? 0 : (value > 0xff ? 0xff : value);
+		out |= (u32)value << shift;
+	}
+
+	return out;
+}
+
+// Links packets after the atlas texture packet, in draw order.
+struct DecalFontTtfChain
+{
+	DR_PSYX_TEX *head;
+	u32 *tailTag;
+	u32 tailLength;
+};
+
+static void DecalFont_TtfChainAppend(struct DecalFontTtfChain *chain, void *packet, u32 *tag, u32 length)
+{
+	*chain->tailTag = CtrGpu_PackOTTag(CtrGpu_PrimToOTLink24(packet), chain->tailLength << 24);
+	chain->tailTag = tag;
+	chain->tailLength = length;
+}
+
+static void DecalFont_TtfDrawLine(char *str, s16 len, int posX, s16 posY, s16 fontType, int flags)
+{
+	struct GameTracker *gGT = sdata->gGT;
+	struct PrimMem *primMem = &gGT->backBuffer->primMem;
+	struct IconGroup *iconGroup = gGT->iconGroup[data.font_IconGroupID[fontType]];
+
+	// Glyph quads borrow the retail font page for their draw mode, so a
+	// line drawn before the font icons load stays empty, as in retail.
+	if ((iconGroup == NULL) || (iconGroup->numIcons == 0))
+	{
+		return;
+	}
+	struct Icon **icons = ICONGROUP_GETICONS(iconGroup);
+	if (icons[0] == NULL)
+	{
+		return;
+	}
+	const u16 tpage = icons[0]->texLayout.tpage;
+
+	if (flags & (JUSTIFY_CENTER | JUSTIFY_RIGHT))
+	{
+		int alignX = DecalFont_GetLineWidthStrlen(str, len, fontType);
+
+		if (flags & JUSTIFY_CENTER)
+		{
+			alignX /= 2;
+		}
+
+		posX -= alignX;
+	}
+
+#if BUILD >= JpnTrial
+	flags &= 0x7ff;
+#else
+	flags &= 0xfff;
+#endif
+
+	const float emY = DecalFont_TtfEmY(fontType);
+	const float emX = emY * DECAL_FONT_TTF_ASPECT;
+	const struct NativeFontCellBox *cell = NativeFont_GetCellBox();
+	const float capTop = (float)posY + sDecalFont_TtfCapTop[fontType];
+	const float baseline = capTop + sDecalFont_TtfCapHeight[fontType];
+	const float quadTop = baseline - cell->top * emY;
+	const float quadBottom = baseline - cell->bottom * emY;
+	const float fy0 = (quadTop - capTop) / (baseline - capTop);
+	const float fy1 = (quadBottom - capTop) / (baseline - capTop);
+	float penX = (float)posX;
+
+	struct DecalFontTtfChain chain = {0};
+
+	for (; (*str != 0) && (len != 0); str++, len--)
+	{
+		const u8 c = (u8)*str;
+
+#if BUILD >= JpnTrial
+		if (c == '~')
+		{
+			flags = (str[2] + (str[1] - 0x30) * 10) - 0x30;
+			str += 2;
+			len -= 2;
+			continue;
+		}
+#endif
+
+		const struct NativeFontGlyph *glyph;
+		const float advance = DecalFont_TtfCharacter(c, fontType, &glyph);
+
+		if (glyph == NULL)
+		{
+			if (c != ' ')
+			{
+				sDecalFont_TtfRetailCharacter = true;
+				DecalFont_DrawLineStrlen(str, 1, (int)(penX + 0.5f), posY, fontType, flags);
+				sDecalFont_TtfRetailCharacter = false;
+			}
+			penX += advance;
+			continue;
+		}
+
+		// Room for this glyph, plus the atlas packet and the closing reset.
+		const size_t needed = sizeof(POLY_GT4) + 2 * sizeof(DR_PSYX_TEX);
+		if ((size_t)((u8 *)primMem->end - (u8 *)primMem->cursor) < needed)
+		{
+			break;
+		}
+
+		if (chain.head == NULL)
+		{
+			chain.head = (DR_PSYX_TEX *)primMem->cursor;
+			SetPsyXTexture(chain.head, NativeFont_GetAtlasTexture(), NATIVE_FONT_ATLAS_UNITS, NATIVE_FONT_ATLAS_UNITS);
+			chain.head->code[1] |= PSYX_TEX_FLAG_TEXT_SDF;
+			chain.tailTag = &chain.head->tag;
+			chain.tailLength = 2;
+			primMem->cursor = chain.head + 1;
+		}
+
+		// Tabular digits sit centred in the shared digit advance.
+		const float glyphX = penX + (advance - glyph->advance * emX) * 0.5f;
+		const float quadLeft = glyphX + cell->left * emX;
+		const float quadRight = glyphX + cell->right * emX;
+		const float boxWidth = advance > 0.0f ? advance : 1.0f;
+		const float fx0 = (quadLeft - penX) / boxWidth;
+		const float fx1 = (quadRight - penX) / boxWidth;
+		const u32 *color = data.ptrColor[flags];
+
+		POLY_GT4 *p = (POLY_GT4 *)primMem->cursor;
+		setInt32RGB4(p, DecalFont_TtfCornerColor(color, fx0, fy0), DecalFont_TtfCornerColor(color, fx1, fy0),
+		             DecalFont_TtfCornerColor(color, fx0, fy1), DecalFont_TtfCornerColor(color, fx1, fy1));
+		setPolyGT4(p);
+		setXY4(p, (s16)(quadLeft + 0.5f), (s16)(quadTop + 0.5f), (s16)(quadRight + 0.5f), (s16)(quadTop + 0.5f),
+		       (s16)(quadLeft + 0.5f), (s16)(quadBottom + 0.5f), (s16)(quadRight + 0.5f), (s16)(quadBottom + 0.5f));
+		NativePgxp_SetScreenXY(&p->x0, quadLeft, quadTop);
+		NativePgxp_SetScreenXY(&p->x1, quadRight, quadTop);
+		NativePgxp_SetScreenXY(&p->x2, quadLeft, quadBottom);
+		NativePgxp_SetScreenXY(&p->x3, quadRight, quadBottom);
+		setUV4(p, glyph->u0, glyph->v0, glyph->u1, glyph->v0, glyph->u0, glyph->v1, glyph->u1, glyph->v1);
+		p->tpage = tpage;
+		p->clut = 0;
+		DecalFont_TtfChainAppend(&chain, p, &p->tag, 12);
+		primMem->cursor = p + 1;
+
+		penX += advance;
+	}
+
+	if (chain.head != NULL)
+	{
+		u32 *ot = gGT->pushBuffer_UI.ptrOT;
+		DR_PSYX_TEX *resetTexture = (DR_PSYX_TEX *)primMem->cursor;
+		SetPsyXTexture(resetTexture, 0, 0, 0);
+		DecalFont_TtfChainAppend(&chain, resetTexture, &resetTexture->tag, 2);
+		resetTexture->tag = CtrGpu_PackOTTag(*ot, 2 << 24);
+		*ot = CtrGpu_PrimToOTLink24(chain.head);
+		primMem->cursor = resetTexture + 1;
+	}
+}
+#endif
+
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800223f4-0x800224d0.
 int DecalFont_GetLineWidthStrlen(char *character, int len, int fontType)
 {
@@ -33,6 +307,13 @@ int DecalFont_GetLineWidthStrlen(char *character, int len, int fontType)
 	u8 c;
 #if BUILD == JpnRetail
 	u32 isRacingWheel;
+#endif
+
+#if DECAL_FONT_TTF
+	if (DecalFont_TtfActive())
+	{
+		return DecalFont_TtfLineWidth(character, len, fontType);
+	}
 #endif
 
 	font_charPixWidth = data.font_charPixWidth[fontType];
@@ -120,6 +401,14 @@ int DecalFont_GetLineWidth(char *str, s16 fontType)
 void DecalFont_DrawLineStrlen(char *str, s16 len, int posX, s16 posY, s16 fontType, int flags)
 {
 	struct GameTracker *gGT = sdata->gGT;
+
+#if DECAL_FONT_TTF
+	if (DecalFont_TtfActive())
+	{
+		DecalFont_TtfDrawLine(str, len, posX, posY, fontType, flags);
+		return;
+	}
+#endif
 
 	// text is justified left by default
 	if (flags & (JUSTIFY_CENTER | JUSTIFY_RIGHT))
@@ -485,7 +774,7 @@ void DecalFont_DrawLineStrlen(char *str, s16 len, int posX, s16 posY, s16 fontTy
 				{
 					struct Icon **iconPtrArray = ICONGROUP_GETICONS(gGT->iconGroup[iconGroupID]);
 
-					DecalFont_DrawGlyph(iconPtrArray[iconID],
+					DecalFont_DrawGlyph(*strcopy, iconPtrArray[iconID],
 
 					                     DECAL_FONT_DRAW_X(pixWidthExtra), posY + pixHeightExtra,
 
@@ -507,7 +796,7 @@ void DecalFont_DrawLineStrlen(char *str, s16 len, int posX, s16 posY, s16 fontTy
 			}
 			if (iconStruct != 0)
 			{
-				DecalFont_DrawGlyph(iconStruct,
+				DecalFont_DrawGlyph(*strcopy, iconStruct,
 
 				                     DECAL_FONT_DRAW_X(pixWidthExtra), posY + pixHeightExtra,
 
@@ -538,7 +827,7 @@ void DecalFont_DrawLineStrlen(char *str, s16 len, int posX, s16 posY, s16 fontTy
 				}
 				else
 				{
-					DecalFont_DrawGlyph(iconPtrArray[iconID],
+					DecalFont_DrawGlyph(*strcopy, iconPtrArray[iconID],
 
 					                     DECAL_FONT_DRAW_X(pixWidthExtra), posY + pixHeightExtra,
 

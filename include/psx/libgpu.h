@@ -604,6 +604,10 @@ typedef struct
 } DR_PSYX_TEX;
 
 #define PSYX_TEX_FLAG_PSX_STP 0x80000000u
+// Native font atlas (native_font.h): distance field shader, alpha blended.
+#define PSYX_TEX_FLAG_TEXT_SDF 0x40000000u
+// Native RGBA HUD coverage, independent of PS1 texture STP blending.
+#define PSYX_TEX_FLAG_STRAIGHT_ALPHA 0x20000000u
 
 typedef struct
 {

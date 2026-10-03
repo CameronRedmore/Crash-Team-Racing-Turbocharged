@@ -141,6 +141,16 @@ static void NativeDrawLevel_SetUv(NativeDraw3DVertex *vertex, u16 uv)
 	vertex->v = (u8)(uv >> 8);
 }
 
+// Retail sorts a face drawOrder OT slots behind its depth. Positive values hide
+// faces behind walls they poke through (hub tunnel mouths), so those move back
+// (NativeDraw3D_GetDrawOrderSlotDepth). A forward pull would cut through karts
+// beside the face, so negative values keep the small coplanar bias.
+static void NativeDrawLevel_SetDrawOrder(NativeDraw3DMaterial *material, s8 drawOrder)
+{
+	material->depthBias = drawOrder;
+	material->depthSlots = drawOrder > 0 ? (u8)drawOrder : 0;
+}
+
 static u8 NativeDrawLevel_BaseFlags(const struct QuadBlock *block, const struct TextureLayout *texture)
 {
 	u8 flags = NATIVE_DRAW3D_TEXTURED;
@@ -363,7 +373,7 @@ static void NativeDrawLevel_EmitFace(const struct NativeDrawLevelContext *ctx, c
 	{
 		material.flags |= NATIVE_DRAW3D_REVERSE_WINDING;
 	}
-	material.depthBias = (s8)(block->draw_order_high >> (faceIndex * 8));
+	NativeDrawLevel_SetDrawOrder(&material, (s8)(block->draw_order_high >> (faceIndex * 8)));
 
 	if (mosaic != NULL)
 	{
@@ -501,7 +511,7 @@ static void NativeDrawLevel_EmitFullDynamic(const struct NativeDrawLevelContext 
 	material.tpage = texture->tpage;
 	material.clut = texture->clut;
 	material.flags = NativeDrawLevel_BaseFlags(block, texture);
-	material.depthBias = (s8)(block->draw_order_low & 0xff);
+	NativeDrawLevel_SetDrawOrder(&material, (s8)(block->draw_order_low & 0xff));
 
 	if (nearSet == 0)
 	{
@@ -588,7 +598,7 @@ static void NativeDrawLevel_EmitWater(const struct NativeDrawLevelContext *ctx, 
 	for (int face = 0; face < 4; face++)
 	{
 		const u8 *f = sNativeDrawLevelGridFaces[face];
-		material.depthBias = (s8)(block->draw_order_high >> (face * 8));
+		NativeDrawLevel_SetDrawOrder(&material, (s8)(block->draw_order_high >> (face * 8)));
 		// Retail skips triangles whose corners have all faded out.
 		if (lit[f[0]] || lit[f[1]] || lit[f[2]])
 		{

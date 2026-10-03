@@ -91,3 +91,17 @@ freely, subject to the following restrictions:
 2. Altered source versions must be plainly marked as such, and must not be
    misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
+
+## stb_truetype
+
+Path: `externals/stb/stb_truetype.h`
+
+stb_truetype rasterises the optional TrueType HUD/menu fonts (Enhancements >
+Font) into a signed-distance-field atlas.
+
+Vendored version: 1.26
+
+Copyright (c) 2017 Sean Barrett
+
+Dual licensed: public domain (Unlicense) or the MIT License, at your choice.
+The full license text is retained at the end of the vendored header.

@@ -1,4 +1,56 @@
 #include <common.h>
+#ifdef CTR_NATIVE
+#include <platform/native_engine.h>
+#endif
+
+#ifdef CTR_NATIVE
+enum NativeGarageEngineStage
+{
+	NATIVE_GARAGE_ENGINE_CHARACTER = 0,
+	NATIVE_GARAGE_ENGINE_SELECT,
+};
+
+static s32 s_nativeGarageEngineStage = NATIVE_GARAGE_ENGINE_CHARACTER;
+static s32 s_nativeGarageEngineProfile = NATIVE_ENGINE_DEFAULT;
+
+static s32 CS_Garage_NativeFirstUnlockedProfile(void)
+{
+	for (s32 profile = NATIVE_ENGINE_BALANCED; profile < NATIVE_ENGINE_COUNT; profile++)
+	{
+		if (NativeEngine_IsProfileUnlocked(profile))
+			return profile;
+	}
+	return NATIVE_ENGINE_BALANCED;
+}
+
+static s32 CS_Garage_NativeProfileForCharacter(s32 characterID)
+{
+	const s32 selected = NativeEngine_GetSelectedProfile(0);
+	if ((selected >= NATIVE_ENGINE_BALANCED) && (selected < NATIVE_ENGINE_COUNT) &&
+	    NativeEngine_IsProfileUnlocked(selected))
+		return selected;
+	const s32 defaultProfile = NativeEngine_GetDefaultProfile(characterID);
+	return ((defaultProfile >= NATIVE_ENGINE_BALANCED) && (defaultProfile < NATIVE_ENGINE_COUNT) &&
+	        NativeEngine_IsProfileUnlocked(defaultProfile))
+		? defaultProfile
+		: CS_Garage_NativeFirstUnlockedProfile();
+}
+
+static s32 CS_Garage_NativeStepProfile(s32 profile, s32 direction)
+{
+	for (s32 attempts = 0; attempts < NATIVE_ENGINE_COUNT; attempts++)
+	{
+		profile += direction;
+		if (profile < NATIVE_ENGINE_BALANCED)
+			profile = NATIVE_ENGINE_COUNT - 1;
+		else if (profile >= NATIVE_ENGINE_COUNT)
+			profile = NATIVE_ENGINE_BALANCED;
+		if (NativeEngine_IsProfileUnlocked(profile))
+			return profile;
+	}
+	return CS_Garage_NativeFirstUnlockedProfile();
+}
+#endif
 
 enum GarageInputMask
 {
@@ -71,9 +123,25 @@ void CS_Garage_ZoomOut(s16 zoomState)
 	{
 		Garage_Init();
 		Garage_Enter(sdata->advCharSelectIndex_curr);
+		#ifdef CTR_NATIVE
+		s_nativeGarageEngineStage = NATIVE_GARAGE_ENGINE_CHARACTER;
+		s_nativeGarageEngineProfile = NATIVE_ENGINE_DEFAULT;
+		#endif
 
 		Audio_SetState_Safe(AUDIO_GARAGE);
 	}
+	#ifdef CTR_NATIVE
+	else if (gNativeEngineSelectionEnabled)
+	{
+		s_nativeGarageEngineStage = NATIVE_GARAGE_ENGINE_SELECT;
+		s_nativeGarageEngineProfile = (s32)NativeEngine_GetSelectedProfile(0);
+		if ((s_nativeGarageEngineProfile < NATIVE_ENGINE_BALANCED) ||
+		    (s_nativeGarageEngineProfile >= NATIVE_ENGINE_COUNT) ||
+		    !NativeEngine_IsProfileUnlocked(s_nativeGarageEngineProfile))
+			s_nativeGarageEngineProfile = CS_Garage_NativeProfileForCharacter(
+				gGarage.garageCharacterIDs[sdata->advCharSelectIndex_curr]);
+	}
+	#endif
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b7834-0x800b854c
@@ -114,12 +182,31 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 
 	// count frames in garage?
 	gGarage.unusedFrameCount++;
+	int statEngineID = MDC->engineID;
+#ifdef CTR_NATIVE
+	if (gNativeEngineSelectionEnabled)
+	{
+		statEngineID = (s_nativeGarageEngineStage == NATIVE_GARAGE_ENGINE_SELECT)
+			? s_nativeGarageEngineProfile
+			: CS_Garage_NativeProfileForCharacter(currCharacterID);
+		if ((statEngineID < NATIVE_ENGINE_BALANCED) || (statEngineID >= NATIVE_ENGINE_COUNT) ||
+		    !NativeEngine_IsProfileUnlocked(statEngineID))
+			statEngineID = MDC->engineID;
+	}
+#endif
 
 	// animate growth of all three stat bars
 	for (int i = 0; i < 3; i++)
 	{
 		statBarLength = &gGarage.statBarLengths[i];
-		s16 stat = gGarage.statBarTargetLengths[MDC->engineID * 3 + i];
+		s16 stat;
+#ifdef CTR_NATIVE
+		stat = (statEngineID == NATIVE_ENGINE_PENTA)
+			? 0x50
+			: gGarage.statBarTargetLengths[statEngineID * 3 + i];
+#else
+		stat = gGarage.statBarTargetLengths[statEngineID * 3 + i];
+#endif
 
 		if (*statBarLength < stat)
 		{
@@ -151,7 +238,7 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 	DecalFont_DrawLine(sdata->lngStrings[LNG_ACCEL], statNamePosX, GARAGE_STAT_NAME_ACCEL_Y, FONT_BIG, JUSTIFY_RIGHT | LIME_GREEN);
 	DecalFont_DrawLine(sdata->lngStrings[LNG_TURN], statNamePosX, GARAGE_STAT_NAME_TURN_Y, FONT_BIG, JUSTIFY_RIGHT | BLUE);
 
-	int engineID = MDC->engineID;
+	int engineID = statEngineID;
 
 	// 0x248 - Beginner
 	// EngineID == 3
@@ -162,6 +249,12 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 	{
 		classStringIndex = 2;
 	}
+#ifdef CTR_NATIVE
+	else if ((engineID == NATIVE_ENGINE_PENTA) && gNativeEngineSelectionEnabled)
+	{
+		classStringIndex = 2;
+	}
+#endif
 
 	// 0x249 - Intermediate
 	if (engineID < SPEED)
@@ -185,11 +278,16 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 		statBarLength = &gGarage.statBarLengths[i];
 
 		const s16 statBarDrawLength = (s16)CTR_WIDESCREEN_SCALE_X(*statBarLength);
+		s16 statBarFrameLength = statBarDrawLength;
+#ifdef CTR_NATIVE
+		if (gNativeEngineSelectionEnabled)
+			statBarFrameLength = (s16)CTR_WIDESCREEN_SCALE_X(0x50);
+#endif
 
 		// bar outline
 		r.x = statBarPosX;
 		r.y = statBarStart_Y;
-		r.w = statBarDrawLength;
+		r.w = statBarFrameLength;
 		r.h = GARAGE_STAT_BAR_HEIGHT;
 
 		// outline color white at 0x800b7780
@@ -198,7 +296,7 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 		// bar shadows
 		r.x = statBarPosX + 1;
 		r.y = statBarShadows_Y;
-		r.w = statBarDrawLength - 2;
+		r.w = statBarFrameLength - 2;
 		r.h = GARAGE_STAT_BAR_SHADOW_HEIGHT;
 
 		// outline color black (shadows)
@@ -212,7 +310,9 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 		{
 			// color data of bars (blue green yellow red)
 			u32 *barColor = &gGarage.statBarSegmentColors[segmentIndex];
-			s16 currSegmentLen = (s16)segmentLen;
+			if (segmentIndex == GARAGE_STAT_BAR_SEGMENT_COUNT - 1)
+				segmentEnd = 0x50;
+			s16 currSegmentLen = (s16)(segmentEnd - segmentStart);
 
 			if (*statBarLength <= segmentEnd)
 			{
@@ -274,6 +374,25 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 		statBarShadows_Y += GARAGE_STAT_BAR_ROW_STEP;
 	}
 
+#ifdef CTR_NATIVE
+	for (int i = 0; gNativeEngineSelectionEnabled && i < 3; i++)
+	{
+		RECT track = {(s16)statBarPosX, GARAGE_STAT_BAR_START_Y + i * GARAGE_STAT_BAR_ROW_STEP,
+		              CTR_WIDESCREEN_SCALE_X(0x50), GARAGE_STAT_BAR_HEIGHT};
+		CTR_Box_DrawSolidBox(&track, MakeColor(32, 32, 32), gGT->pushBuffer_UI.ptrOT);
+	}
+#endif
+	char engineLabel[48];
+	b32 showEngineSelector = false;
+	const int engineLabelY = GARAGE_STAT_BOX_Y + GARAGE_STAT_BOX_HEIGHT + 3;
+#ifdef CTR_NATIVE
+	showEngineSelector = gNativeEngineSelectionEnabled &&
+		(s_nativeGarageEngineStage == NATIVE_GARAGE_ENGINE_SELECT);
+	if (showEngineSelector)
+		snprintf(engineLabel, sizeof(engineLabel), "ENGINE: %s",
+		         NativeEngine_GetProfileName(s_nativeGarageEngineProfile));
+#endif
+
 	// Use the longest voice for calculating the box size in order to support multilanguage text.
 	int boxLeft = classNamePosX;
 	int boxRight = classNamePosX;
@@ -314,42 +433,66 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 		boxLeft = (int)statBarPosX;
 	if (statBarRight > boxRight)
 		boxRight = statBarRight;
+	if (showEngineSelector)
+	{
+		const int engineWidth = DecalFont_GetLineWidth(engineLabel, FONT_SMALL);
+		const int engineLeft = (int)classNamePosX - (engineWidth >> 1);
+		const int engineRight = engineLeft + engineWidth;
+		// Include the selector arrows (12 px from text plus their 10 px
+		// half-width) when sizing the panel.
+		const int selectorLeft = engineLeft - 22;
+		const int selectorRight = engineRight + 22;
+		if (selectorLeft < boxLeft)
+			boxLeft = selectorLeft;
+		if (selectorRight > boxRight)
+			boxRight = selectorRight;
+	}
+
+	int arrowColor = ORANGE;
+	if ((FPS_HALF(sdata->frameCounter) & 4) == 0)
+		arrowColor = RED;
+	u32 *arrowColors = data.ptrColor[(s32)arrowColor];
+	struct Icon **iconPtrArray = ICONGROUP_GETICONS(gGT->iconGroup[4]);
+#ifdef CTR_NATIVE
+	if (showEngineSelector)
+	{
+		const int selectorHalfWidth = DecalFont_GetLineWidth(engineLabel, FONT_SMALL) >> 1;
+		const int selectorCenterY = engineLabelY + 4;
+		// Font cap center: 1.25 px top gap + half of its 5.5 px height.
+		DecalFont_DrawLine(engineLabel, classNamePosX, engineLabelY, FONT_SMALL, JUSTIFY_CENTER | ORANGE);
+		for (int side = 0; side < 2; side++)
+			DecalHUD_Arrow2D(iconPtrArray[GARAGE_CHARACTER_ARROW_ICON_INDEX],
+			                 (int)classNamePosX + (side ? selectorHalfWidth + 12 : -selectorHalfWidth - 12),
+			                 selectorCenterY, primMem, gGT->pushBuffer_UI.ptrOT,
+			                 arrowColors[0], arrowColors[1], arrowColors[2], arrowColors[3],
+			                 0, GARAGE_CHARACTER_ARROW_SCALE, side ? 0 : GARAGE_CHARACTER_ARROW_ROT_LEFT);
+	}
+#endif
 
 	// Stats box
 	r.x = boxLeft - GARAGE_STAT_BOX_PADDING_X;
 	r.y = GARAGE_STAT_BOX_Y;
 	r.w = (boxRight - boxLeft) + GARAGE_STAT_BOX_PADDING_X * 2;
-	r.h = GARAGE_STAT_BOX_HEIGHT;
+	r.h = GARAGE_STAT_BOX_HEIGHT + (showEngineSelector ? 18 : 0);
 
 	// Draw 2D Menu rectangle background
 	RECTMENU_DrawInnerRect(&r, 4, gGT->backBuffer->otMem.uiOT);
 
 	char *name = sdata->lngStrings[nameIndex];
+#ifdef CTR_NATIVE
+	(void)engineLabel;
+#endif
 
 	// Draw character name
 	DecalFont_DrawLine(name, GARAGE_CHARACTER_NAME_X, GARAGE_CHARACTER_NAME_Y, FONT_BIG, 0xffff8000);
 
-	int arrowColor = ORANGE;
-
-	// blink arrows
-	if ((FPS_HALF(sdata->frameCounter) & 4) == 0)
-	{
-		arrowColor = RED;
-	}
-
-	// Color data
-	u32 *arrowColors = data.ptrColor[(s32)arrowColor];
-
 	int nameLen = DecalFont_GetLineWidth(name, FONT_BIG) >> 1;
-
+	int arrowY = GARAGE_CHARACTER_ARROW_Y;
 	int arrowPos[2] = {GARAGE_CHARACTER_ARROW_LEFT_BASE_X - nameLen, nameLen + GARAGE_CHARACTER_ARROW_RIGHT_BASE_X};
 	int arrowRot[2] = {GARAGE_CHARACTER_ARROW_ROT_LEFT, 0};
-
-	struct Icon **iconPtrArray = ICONGROUP_GETICONS(gGT->iconGroup[4]);
-
-	for (int i = 0; i < 2; i++)
+	for (int i = 0; !showEngineSelector && i < 2; i++)
 	{
-		DecalHUD_Arrow2D(iconPtrArray[GARAGE_CHARACTER_ARROW_ICON_INDEX], arrowPos[i], GARAGE_CHARACTER_ARROW_Y,
+		DecalHUD_Arrow2D(iconPtrArray[GARAGE_CHARACTER_ARROW_ICON_INDEX], arrowPos[i], arrowY,
 
 		                 primMem, gGT->pushBuffer_UI.ptrOT,
 
@@ -357,8 +500,40 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 
 		                 0, GARAGE_CHARACTER_ARROW_SCALE, arrowRot[i]);
 	}
-
 	garageFrames = gGarage.numFramesCurr_GarageMove;
+	#ifdef CTR_NATIVE
+	if (gNativeEngineSelectionEnabled && (s_nativeGarageEngineStage == NATIVE_GARAGE_ENGINE_SELECT))
+	{
+		const u32 tap = (u32)sdata->AnyPlayerTap;
+		if ((tap & GARAGE_INPUT_HORIZONTAL) != 0)
+		{
+			s_nativeGarageEngineProfile = CS_Garage_NativeStepProfile(
+				s_nativeGarageEngineProfile, (tap & BTN_LEFT) ? -1 : 1);
+			for (int statIndex = 0; statIndex < 3; statIndex++)
+				gGarage.statBarLengths[statIndex] = 0;
+			OtherFX_Play(0, 1);
+		}
+		else if ((tap & GARAGE_INPUT_CONFIRM) != 0)
+		{
+			NativeEngine_SetSelectedProfile(0, s_nativeGarageEngineProfile);
+			data.characterIDs[0] = currCharacterID;
+			sdata->advProgress.characterID = currCharacterID;
+			s_nativeGarageEngineStage = NATIVE_GARAGE_ENGINE_CHARACTER;
+			gGarage.boolSelected = 1;
+			gGarage.delayOneSecond = 0;
+			OtherFX_Play(1, 1);
+		}
+		else if ((tap & GARAGE_INPUT_BACK) != 0)
+		{
+			s_nativeGarageEngineStage = NATIVE_GARAGE_ENGINE_CHARACTER;
+			gGarage.boolSelected = 0;
+			gGarage.delayOneSecond = 0;
+			OtherFX_Play(2, 1);
+		}
+		RECTMENU_ClearInput();
+		goto update_garage_camera;
+	}
+	#endif
 
 	if (((gGT->renderFlags & RENDER_FLAG_CHECKERED_FLAG) != 0) ||
 	    (((sdata->AnyPlayerTap & GARAGE_INPUT_MENU) == 0) && ((sdata->AnyPlayerHold & GARAGE_INPUT_HORIZONTAL) == 0)))
@@ -414,7 +589,20 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 			if (gGarage.boolSelected == 0)
 			{
 				// make it true
-				gGarage.boolSelected = 1;
+#ifdef CTR_NATIVE
+				if (gNativeEngineSelectionEnabled)
+				{
+					s_nativeGarageEngineProfile = CS_Garage_NativeProfileForCharacter(currCharacterID);
+					s_nativeGarageEngineStage = NATIVE_GARAGE_ENGINE_SELECT;
+					for (int statIndex = 0; statIndex < 3; statIndex++)
+						gGarage.statBarLengths[statIndex] = 0;
+					OtherFX_Play(1, 1);
+				}
+				else
+#endif
+				{
+					gGarage.boolSelected = 1;
+				}
 			}
 
 			// if true

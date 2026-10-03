@@ -58,6 +58,16 @@ extern int gNativeColorDepth;
 // 1 - 2 * near / depth, so geometry closer than this is clipped.
 #define NATIVE_DRAW3D_NEAR_PLANE 32.0f
 
+// Camera depth covered by one retail OT slot (level faces sort at depth >> 6).
+#define NATIVE_DRAW3D_OT_SLOT_DEPTH 64.0f
+// Depth a positive draw-order slot pushes a level face back. Retail compares
+// whole faces, so a full slot per unit lets long faces just behind a pushed
+// one (tunnel walls behind a mouth frame) show through it per pixel. Half a
+// slot still hides the faces retail tucks behind walls. Internal builds read
+// CTR_DRAW_ORDER_SLOT_DEPTH (0 disables the push-back).
+#define NATIVE_DRAW3D_DRAW_ORDER_SLOT_DEPTH (NATIVE_DRAW3D_OT_SLOT_DEPTH * 0.5f)
+float NativeDraw3D_GetDrawOrderSlotDepth(void);
+
 enum NativeDraw3DFlags
 {
 	NATIVE_DRAW3D_TEXTURED = 0x01,
@@ -110,6 +120,10 @@ typedef struct
 	u16 flags;
 	// Retail OT draw-order bias. Negative values draw over coplanar surfaces.
 	s8 depthBias;
+	// OT slots this surface tests behind its depth. Retail hides positive
+	// draw-order level faces behind walls they poke through; a relative bias
+	// is too small for that, so they move back by the full retail distance.
+	u8 depthSlots;
 	// Pixel offset applied after mirror projection (retail water side effects).
 	s8 screenOffsetX;
 } NativeDraw3DMaterial;

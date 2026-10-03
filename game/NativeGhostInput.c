@@ -1,5 +1,7 @@
 #include <common.h>
 #include <platform/native_memcard.h>
+#include <platform/native_engine.h>
+#include <platform/native_engine_metadata.h>
 
 enum
 {
@@ -107,6 +109,7 @@ static u32 s_nativeGhostInputTotalTimeMS;
 static u16 s_nativeGhostInputTrackID;
 static u16 s_nativeGhostInputCharacterID;
 static u16 s_nativeGhostInputRecordingFlags;
+static s32 s_nativeGhostInputEngineProfile = -1;
 static u32 s_nativeGhostInputStartTimerPhase;
 static u32 s_nativeGhostInputPlaybackTimerPhase;
 static b32 s_nativeGhostInputPlaybackTimerPhasePending;
@@ -305,6 +308,7 @@ void NativeGhostInput_EndReplaySimulationFrame(void)
         s_nativeGhostInputPlaybackActive = false;
         s_nativeGhostInputDisplayValid = false;
         NativeGhostInput_ResetReplayControls();
+        NativeEngine_ClearReplayOverrides();
         return;
     }
 
@@ -367,6 +371,11 @@ static b32 NativeGhostInput_ValidateHeader(const struct NativeGhostInputHeader *
         ((header->version != 2) || NativeGhostInput_FlagsRateIndex(header->flags) < 2 ||
          NativeGhostInput_FlagsRateIndex(header->flags) >= NATIVE_FRAME_RATE_COUNT))
         return false;
+
+    if (NativeEngineMetadata_DecodeWord(header->reserved[1]) == NATIVE_ENGINE_METADATA_INVALID)
+    {
+        return false;
+    }
 
     return true;
 }
@@ -458,6 +467,7 @@ void NativeGhostInput_ClearSelection(void)
 {
 #if defined(CTR_NATIVE)
     NativeGhostInput_ResetReplayControls();
+    NativeEngine_ClearReplayOverrides();
 #endif
     s_nativeGhostInputSelectedName[0] = '\0';
     s_nativeGhostInputPlaybackActive = false;
@@ -525,12 +535,14 @@ static const u8 s_nativeGhostInputOverlayDefaultButtons[NATIVE_GHOST_INPUT_OVERL
 static void NativeGhostInput_StoreHeaderMetadata(struct NativeGhostInputHeader *header)
 {
     header->reserved[0] = s_nativeGhostInputStartTimerPhase & NativeGhostInput_TimerPhaseMask(header->flags);
+    header->reserved[1] = NativeEngineMetadata_EncodeWord(s_nativeGhostInputEngineProfile);
     if (header->flags & NATIVE_GHOST_INPUT_FLAG_HIGH_FPS) header->version = 2;
 }
 
 static void NativeGhostInput_LoadHeaderMetadata(const struct NativeGhostInputHeader *header)
 {
     s_nativeGhostInputStartTimerPhase = header->reserved[0] & NativeGhostInput_TimerPhaseMask(header->flags);
+    s_nativeGhostInputEngineProfile = NativeEngineMetadata_DecodeWord(header->reserved[1]);
 }
 
 static u32 NativeGhostInput_OverlayButtonBit(u8 overlayButton)
@@ -677,6 +689,11 @@ void NativeGhostInput_StartRecording(void)
     s_nativeGhostInputTotalTimeMS = 0;
     s_nativeGhostInputTrackID = NativeReverseTrack_GetCurrentLogicalTrackId();
     s_nativeGhostInputCharacterID = data.characterIDs[driver->driverID];
+#if defined(CTR_NATIVE)
+    s_nativeGhostInputEngineProfile = NativeEngine_GetEffectiveProfile(driver->driverID);
+#else
+    s_nativeGhostInputEngineProfile = -1;
+#endif
     s_nativeGhostInputRecordingFlags = NATIVE_GHOST_INPUT_FLAG_TIMING_METADATA |
                                        NATIVE_GHOST_INPUT_FLAG_RIGHT_STICK_Y |
                                        NATIVE_GHOST_INPUT_FLAG_STICK_OVERLAY_SOURCE;
@@ -775,6 +792,7 @@ void NativeGhostInput_ProcessGamepad(struct GamepadSystem *gGamepads)
             s_nativeGhostInputDisplayValid = false;
 #if defined(CTR_NATIVE)
             NativeGhostInput_ResetReplayControls();
+            NativeEngine_ClearReplayOverrides();
 #endif
             return;
         }
@@ -1096,6 +1114,7 @@ b32 NativeGhostInput_BeginPlayback(void)
 
 #if defined(CTR_NATIVE)
     NativeGhostInput_ResetReplayControls();
+    NativeEngine_ClearReplayOverrides();
 #endif
     s_nativeGhostInputPlaybackActive = false;
     s_nativeGhostInputPlaybackIndex = 0;
@@ -1115,6 +1134,18 @@ b32 NativeGhostInput_BeginPlayback(void)
 
         b32 use60Fps = (s_nativeGhostInputRecordingFlags & NATIVE_GHOST_INPUT_FLAG_TIMING_METADATA) &&
                        (s_nativeGhostInputRecordingFlags & NATIVE_GHOST_INPUT_FLAG_60FPS);
+#if defined(CTR_NATIVE)
+        int profile = s_nativeGhostInputEngineProfile;
+        if ((profile < 0) || (profile >= NATIVE_ENGINE_COUNT))
+        {
+            profile = NativeEngine_GetDefaultProfile(s_nativeGhostInputCharacterID);
+        }
+        NativeEngine_SetReplayOverride(0, profile);
+        if ((sdata != NULL) && (sdata->gGT != NULL) && (sdata->gGT->drivers[0] != NULL))
+        {
+            VehBirth_SetConsts(sdata->gGT->drivers[0]);
+        }
+#endif
         gNativeGhostReplayFpsOverride = NativeGhostInput_FlagsRateIndex(s_nativeGhostInputRecordingFlags);
         s_nativeGhostInputPlaybackTimerPhase = s_nativeGhostInputStartTimerPhase & NativeGhostInput_TimerPhaseMask(s_nativeGhostInputRecordingFlags);
         s_nativeGhostInputPlaybackTimerPhasePending = use60Fps;
@@ -1157,6 +1188,20 @@ b32 NativeGhostInput_BeginPlayback(void)
     s_nativeGhostInputTotalTimeMS = header.totalTimeMS;
     s_nativeGhostInputRecordingFlags = header.flags;
     NativeGhostInput_LoadHeaderMetadata(&header);
+#if defined(CTR_NATIVE)
+    {
+        int profile = s_nativeGhostInputEngineProfile;
+        if ((profile < 0) || (profile >= NATIVE_ENGINE_COUNT))
+        {
+            profile = NativeEngine_GetDefaultProfile(header.characterID);
+        }
+        NativeEngine_SetReplayOverride(0, profile);
+        if ((sdata != NULL) && (sdata->gGT != NULL) && (sdata->gGT->drivers[0] != NULL))
+        {
+            VehBirth_SetConsts(sdata->gGT->drivers[0]);
+        }
+    }
+#endif
     b32 use60Fps = NativeGhostInput_HeaderUses60Fps(&header);
     gNativeGhostReplayFpsOverride = NativeGhostInput_FlagsRateIndex(s_nativeGhostInputRecordingFlags);
     if (use60Fps && ((header.flags & NATIVE_GHOST_INPUT_FLAG_TIMING_METADATA) != 0))

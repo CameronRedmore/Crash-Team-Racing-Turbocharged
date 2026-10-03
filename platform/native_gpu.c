@@ -133,6 +133,8 @@ typedef struct
 	int overrideTextureWidth;
 	int overrideTextureHeight;
 	bool overrideTexturePsxStp;
+	bool overrideTextureTextSdf;
+	bool overrideTextureStraightAlpha;
 
 	int drawPrimMode;
 	bool psxDrawMaskSet;
@@ -1167,7 +1169,8 @@ void MakeVertexQuad(GrVertex *vertex, VERTTYPE *p0, VERTTYPE *p1, VERTTYPE *p2, 
 	if (NativeGpu_ApplyNative2D(vertex, screenPoints, 4, ofsX, ofsY)) return;
 #endif
 #if NATIVE_PGXP_SUPPORTED
-	if (NATIVE_VERTEX_TRACKING_ACTIVE())
+	// Font glyphs always carry subpixel pen positions (see DecalFont.c).
+	if (NATIVE_VERTEX_TRACKING_ACTIVE() || s_gpu.overrideTextureTextSdf)
 	{
 		VERTTYPE *const points[4] = {p0, p1, p2, p3};
 		NativeGpu_ApplyPgxp(vertex, points, 4, ofsX, ofsY);
@@ -1749,6 +1752,17 @@ internal void AddSplit(bool semiTrans, bool textured, bool framebufferFeedback, 
 		// override texture format, zero tpage
 		texFormat = TF_32_BIT_RGBA;
 		textureId = s_gpu.overrideTexture;
+		if (s_gpu.overrideTextureStraightAlpha)
+		{
+			blendMode = BM_STRAIGHT_ALPHA;
+			psxTexturedSemiTrans = false;
+		}
+		if (s_gpu.overrideTextureTextSdf)
+		{
+			texFormat = TF_TEXT_SDF;
+			blendMode = BM_STRAIGHT_ALPHA;
+			psxTexturedSemiTrans = false;
+		}
 	}
 
 #ifdef __vita__
@@ -1847,7 +1861,7 @@ internal void NativeGpu_SetSplitShaderState(const GPUDrawSplit *split, int semiT
 	                          false,
 #endif
 	                          cachedP4);
-	if (split->texFormat == TF_32_BIT_RGBA)
+	if (split->texFormat == TF_32_BIT_RGBA || split->texFormat == TF_TEXT_SDF)
 	{
 		NativeRenderer_SetOverrideTextureSize(split->drawenv.tw.w, split->drawenv.tw.h);
 	}
@@ -3834,6 +3848,26 @@ internal int NativeGpu_Draw3DCompareTranslucent(const void *a, const void *b)
 	return ia < ib ? -1 : (ia > ib);
 }
 
+#if defined(CTR_INTERNAL)
+// Internal diagnostic for level draw-order push-back: CTR_DRAW_ORDER_DEBUG=1
+// tints pushed faces by slots (1-3 red, 4-7 green, 8-15 blue, 16+ magenta).
+internal int NativeGpu_EnvFlag(const char *name, int fallback)
+{
+	const char *env = getenv(name);
+	return ((env == NULL) || (env[0] == '\0')) ? fallback : (env[0] != '0');
+}
+
+internal int NativeGpu_DrawOrderDebug(void)
+{
+	static int debug = -1;
+	if (debug < 0)
+	{
+		debug = NativeGpu_EnvFlag("CTR_DRAW_ORDER_DEBUG", 0);
+	}
+	return debug;
+}
+#endif
+
 internal void NativeGpu_EmitDraw3DTriangle(const NativeDraw3DView *view, const NativeDraw3DTriangle *triangle, float ofsX, float ofsY)
 {
 	const NativeDraw3DMaterial *material = &triangle->material;
@@ -3852,10 +3886,43 @@ internal void NativeGpu_EmitDraw3DTriangle(const NativeDraw3DView *view, const N
 	GrVertex *vertex = &s_gpu.vertexBuffer[s_gpu.vertexIndex];
 	memset(vertex, 0, sizeof(GrVertex) * 3);
 
-	// Clip z = w - 2 * near / bias, so NDC depth is 1 - 2 * near / (depth * bias),
-	// the PGXP encoding. The bias factor only moves depth, not the projection.
+	// NDC depth is 1 - 2 * near / tested, the PGXP encoding of the tested depth:
+	// camera depth plus any pushed-back OT slots, times the bias factor. These
+	// only move depth, not the projection. Clip z = a * w + b must stay affine
+	// in camera depth for host clipping behind the camera, so NDC = a + b / w is
+	// exact without push-back and otherwise passes through the encoding at the
+	// triangle's nearest and farthest visible depths.
 	float biasFactor = 1.0f + (float)material->depthBias * NATIVE_GPU_DRAW3D_DEPTH_BIAS_SCALE;
-	const float nearDepth = (2.0f * NATIVE_DRAW3D_NEAR_PLANE) / (biasFactor > 0.5f ? biasFactor : 0.5f);
+	biasFactor = biasFactor > 0.5f ? biasFactor : 0.5f;
+	const float twoNear = 2.0f * NATIVE_DRAW3D_NEAR_PLANE;
+	float depthA = 1.0f;
+	float depthB = -twoNear / biasFactor;
+	const float pushBack = (float)material->depthSlots * NativeDraw3D_GetDrawOrderSlotDepth();
+	if (pushBack > 0.0f)
+	{
+		float zNear = triangle->position[0][2];
+		float zFar = zNear;
+		for (int i = 1; i < 3; i++)
+		{
+			zNear = fminf(zNear, triangle->position[i][2]);
+			zFar = fmaxf(zFar, triangle->position[i][2]);
+		}
+		zNear = fmaxf(zNear, NATIVE_DRAW3D_NEAR_PLANE);
+		zFar = fmaxf(zFar, NATIVE_DRAW3D_NEAR_PLANE);
+		const float ndcNear = 1.0f - twoNear / ((zNear + pushBack) * biasFactor);
+		const float ndcFar = 1.0f - twoNear / ((zFar + pushBack) * biasFactor);
+		if (zFar - zNear > zFar * (1.0f / 1024.0f))
+		{
+			depthB = (ndcNear - ndcFar) / (1.0f / zNear - 1.0f / zFar);
+		}
+		else
+		{
+			// Tangent of the encoding in 1 / w for a triangle at nearly one depth.
+			const float scale = zNear / (zNear + pushBack);
+			depthB = -twoNear * scale * scale / biasFactor;
+		}
+		depthA = ndcNear - depthB / zNear;
+	}
 	for (int i = 0; i < 3; i++)
 	{
 		const float x = view->mirror ? -triangle->position[i][0] : triangle->position[i][0];
@@ -3864,7 +3931,7 @@ internal void NativeGpu_EmitDraw3DTriangle(const NativeDraw3DView *view, const N
 
 		vertex[i].x = view->projection * x + (view->centerX + ofsX + material->screenOffsetX) * z;
 		vertex[i].y = view->projection * y + (view->centerY + ofsY) * z;
-		vertex[i].w = z - nearDepth;
+		vertex[i].w = depthA * z + depthB;
 		vertex[i].depth = z;
 		vertex[i].clipSpace = 1;
 	}
@@ -3889,6 +3956,14 @@ internal void NativeGpu_EmitDraw3DTriangle(const NativeDraw3DView *view, const N
 	}
 
 	MakeColourTriangle(vertex, true, (u8 *)triangle->color[0], (u8 *)triangle->color[1], (u8 *)triangle->color[2]);
+#if defined(CTR_INTERNAL)
+	if ((material->depthSlots != 0) && NativeGpu_DrawOrderDebug())
+	{
+		static u8 tints[4][3] = {{255, 48, 48}, {48, 255, 48}, {48, 96, 255}, {255, 48, 255}};
+		const int band = material->depthSlots < 4 ? 0 : material->depthSlots < 8 ? 1 : material->depthSlots < 16 ? 2 : 3;
+		MakeColourTriangle(vertex, true, tints[band], tints[band], tints[band]);
+	}
+#endif
 	if (superTurboTint)
 	{
 		MakeColourSuperTurboTint(vertex, 3);
@@ -3962,6 +4037,8 @@ internal int ProcessPsyXPrims(P_TAG *polyTag)
 		s_gpu.overrideTextureWidth = psytex->code[1] & 0xFFF;
 		s_gpu.overrideTextureHeight = psytex->code[1] >> 16 & 0xFFF;
 		s_gpu.overrideTexturePsxStp = (psytex->code[1] & PSYX_TEX_FLAG_PSX_STP) != 0;
+		s_gpu.overrideTextureTextSdf = s_gpu.overrideTexture != 0 && (psytex->code[1] & PSYX_TEX_FLAG_TEXT_SDF) != 0;
+		s_gpu.overrideTextureStraightAlpha = s_gpu.overrideTexture != 0 && (psytex->code[1] & PSYX_TEX_FLAG_STRAIGHT_ALPHA) != 0;
 		return 2;
 	}
 	case 0x02:

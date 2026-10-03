@@ -26,6 +26,7 @@
 #include "platform/native_savestate.h"
 #include "platform/native_adhoc.h"
 #include "platform/native_custom_racer.h"
+#include "platform/native_engine.h"
 #include "platform/native_leaderboard.h"
 #include "platform/native_network.h"
 #include "platform/native_user_id.h"
@@ -68,6 +69,7 @@ DIR *__wrap_opendir(const char *fname) {
 
 #include <platform.h>
 #include <platform/native_input.h>
+#include <platform/native_kart_color.h>
 
 int gNativeRelicRaceMode = 0;
 int gNativeRelicRaceResultTier = -1;
@@ -119,6 +121,10 @@ int gNativeRelicRaceResultTier = -1;
 #include "platform/native_platform.c"
 #include "platform/native_replay_scheduler.c"
 #include "platform/native_renderer.c"
+#include "platform/native_font.c"
+#include "platform/native_kart_color.c"
+#include "platform/native_minimap.c"
+#include "platform/native_hud_icons.c"
 #include "platform/native_savestate.c"
 #include "platform/native_state.c"
 #include "platform/native_str.c"
@@ -192,12 +198,14 @@ static int NativeArg_IsVersion(const char *arg)
 	return (arg != NULL) && ((strcmp(arg, "--version") == 0) || (strcmp(arg, "-v") == 0));
 }
 
+extern int gNativePresetPending; // Fresh install, preset popup not answered yet
 extern s32 s_nativeLanguageChosen; // Flag if language has been selected on first boot
 extern int gNativeMirrorModeEnabled;
 int gNative60FpsEnabled = 0;
 int gNativeForce30Fps = 0;
 int gNativeDefaultCameraFar = 0;
 int gNativeDefaultHudSpeedometer = 0;
+int gNativeSkipMaskHints = 0;
 int gNativeAIRacersMode = NATIVE_AI_RACERS_EXTENDED;
 u32 gNativeCheatConfigMask = 0;
 #ifndef __vita__
@@ -264,7 +272,13 @@ void load_config(void)
 {
 	char buffer[30];
 	int value;
+#ifndef __vita__
+	int minimapPriority = 0;
+#endif
 	FILE *config = fopen(NativeConfig_GetPath(), "r");
+#ifndef __vita__
+	gNativePresetPending = 1; // cleared by the preset_seen key: installs that haven't seen the preset menu get offered it
+#endif
 	if (config)
 	{
 		while (EOF != fscanf(config, "%[^=]=%d\n", buffer, &value))
@@ -273,6 +287,12 @@ void load_config(void)
 			{
 				cfg_language = value;
 				s_nativeLanguageChosen = 1;
+			}
+			else if (strcmp("preset_seen", buffer) == 0)
+			{
+#ifndef __vita__
+				gNativePresetPending = (value == 0);
+#endif
 			}
 			else if (strcmp("mirror_mode", buffer) == 0)
 			{
@@ -301,6 +321,18 @@ void load_config(void)
 				{
 					gNativeAIRacersMode = value;
 				}
+			}
+			else if (strcmp("skip_mask_hints", buffer) == 0)
+			{
+				gNativeSkipMaskHints = (value != 0);
+			}
+			else if (strcmp("engine_selection", buffer) == 0)
+			{
+				gNativeEngineSelectionEnabled = (value != 0);
+			}
+			else if (strcmp("additional_unlocks", buffer) == 0)
+			{
+				gNativeAdditionalUnlocksEnabled = (value != 0);
 			}
 			else if (strcmp("custom_ai_racers", buffer) == 0)
 			{
@@ -345,7 +377,34 @@ void load_config(void)
 			}
 			else if (strcmp("precise_minimap", buffer) == 0)
 			{
-				gNativePreciseMinimapEnabled = (value != 0);
+				if (minimapPriority < 1)
+				{
+					gNativeModernMapEnabled = (value != 0);
+					minimapPriority = 1;
+				}
+				gNativePreciseMinimapEnabled = 0;
+			}
+			else if (strcmp("modern_minimap", buffer) == 0 || strcmp("modern_map", buffer) == 0)
+			{
+				const int priority = strcmp("modern_minimap", buffer) == 0 ? 3 : 2;
+				if (priority >= minimapPriority)
+				{
+					gNativeModernMapEnabled = (value != 0);
+					minimapPriority = priority;
+				}
+				gNativePreciseMinimapEnabled = 0;
+			}
+			else if (strcmp("modern_hud_icons", buffer) == 0)
+			{
+				gNativeModernHudIconsEnabled = (value != 0);
+			}
+			else if (strcmp("font", buffer) == 0)
+			{
+				gNativeFont = ((value >= 0) && (value < NATIVE_FONT_COUNT)) ? value : NATIVE_FONT_ORIGINAL;
+			}
+			else if (strcmp("kart_hue", buffer) == 0)
+			{
+				gNativeKartHue = ((value >= 0) && (value < NATIVE_KART_HUE_STEPS)) ? value : 0;
 			}
 			else if (strcmp("pgxp_integer_nclip", buffer) == 0)
 			{
@@ -402,16 +461,22 @@ void load_config(void)
 
 void save_config(void)
 {
+	// Keep the config unwritten until a preset is chosen so an interrupted first launch repeats the popup.
+	if (gNativePresetPending) return;
 	FILE *config = fopen(NativeConfig_GetPath(), "w+");
 	if (config != NULL)
 	{
 		fprintf(config, "%s=%d\n", "language", cfg_language);
+		fprintf(config, "%s=%d\n", "preset_seen", 1);
 		fprintf(config, "%s=%d\n", "mirror_mode", gNativeMirrorModeEnabled != 0);
 		fprintf(config, "%s=%d\n", "60fps", gNative60FpsEnabled != 0);
 		fprintf(config, "%s=%d\n", "frame_rate", NativeFrameRate_FromIndex(gNative60FpsEnabled));
 		fprintf(config, "%s=%d\n", "default_camera_far", gNativeDefaultCameraFar != 0);
 		fprintf(config, "%s=%d\n", "default_hud_speedometer", gNativeDefaultHudSpeedometer != 0);
 		fprintf(config, "%s=%d\n", "ai_racers", gNativeAIRacersMode);
+		fprintf(config, "%s=%d\n", "skip_mask_hints", gNativeSkipMaskHints != 0);
+		fprintf(config, "%s=%d\n", "engine_selection", gNativeEngineSelectionEnabled != 0);
+		fprintf(config, "%s=%d\n", "additional_unlocks", gNativeAdditionalUnlocksEnabled != 0);
 #ifndef __vita__
 		fprintf(config, "%s=%d\n", "anti_aliasing", gNativeAntiAliasingMode);
 		fprintf(config, "%s=%d\n", "dithering", gNativeDitheringEnabled != 0);
@@ -423,7 +488,10 @@ void save_config(void)
 		fprintf(config, "%s=%d\n", "color_depth", gNativeColorDepth);
 		fprintf(config, "%s=%d\n", "texture_filter", g_cfg_bilinearFiltering ? NATIVE_TEXTURE_FILTER_BILINEAR : NATIVE_TEXTURE_FILTER_NEAREST);
 		fprintf(config, "%s=%d\n", "pgxp_integer_nclip", gNativePgxpIntegerNclipEnabled != 0);
-		fprintf(config, "%s=%d\n", "precise_minimap", gNativePreciseMinimapEnabled != 0);
+		fprintf(config, "%s=%d\n", "modern_minimap", gNativeModernMapEnabled != 0);
+		fprintf(config, "%s=%d\n", "modern_hud_icons", gNativeModernHudIconsEnabled != 0);
+		fprintf(config, "%s=%d\n", "font", gNativeFont);
+		fprintf(config, "%s=%d\n", "kart_hue", gNativeKartHue);
 		fprintf(config, "%s=%d\n", "max_lod", gNativeMaxLodEnabled != 0);
 		fprintf(config, "%s=%d\n", "depth_buffer", gNativeDepthBufferEnabled != 0);
 		fprintf(config, "%s=%d\n", "hd_pause_screen", gNativeHdPauseMode);

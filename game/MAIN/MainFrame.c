@@ -3,6 +3,8 @@
 #if defined(CTR_NATIVE)
 #include "platform/native_adhoc.h"
 
+extern int gNativeSkipMaskHints;
+
 static void MainFrame_RegisterGpuLinkRanges(struct GameTracker *gGT)
 {
 	static const char *const primLabels[2] = {"db0 prim", "db1 prim"};
@@ -996,6 +998,20 @@ void MainFrame_RequestMaskHint(s16 hintId, s16 interruptWarpPad)
 
 	if (((gGT->gameMode1 & PAUSE_ALL) == 0) && (sdata->AkuHint_RequestedHint == -1))
 	{
+#if defined(CTR_NATIVE)
+		if (gNativeSkipMaskHints)
+		{
+			// Unlock automatic hints without queuing the cutscene or freezing the driver.
+			// The Hints menu plays them directly, so manual playback remains available.
+			UNLOCK_ADV_BIT(sdata->advProgress.rewards, (int)hintId + ADV_REWARD_FIRST_HINT);
+			if (hintId == ADV_MASK_HINT_ID_WELCOME_TO_ARENA)
+			{
+				UNLOCK_ADV_BIT(sdata->advProgress.rewards, ADV_REWARD_HINT_USING_WARP_PAD);
+				UNLOCK_ADV_BIT(sdata->advProgress.rewards, ADV_REWARD_HINT_MAP_INFORMATION);
+			}
+			return;
+		}
+#endif
 		sdata->AkuAkuHintState = 1;
 
 		gGT->drivers[0]->funcPtrs[DRIVER_FUNC_INIT] = VehPhysProc_FreezeEndEvent_Init;

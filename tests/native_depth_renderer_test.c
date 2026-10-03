@@ -245,7 +245,7 @@ static void DepthTest_Native(int mode)
 		NativeDraw3DVertex a = {-500, 300, 500, 0, 0, 255, 0, 0};
 		NativeDraw3DVertex b = {500, 300, 500, 0, 0, 255, 0, 0};
 		NativeDraw3DVertex c = {0, -300, -100, 0, 0, 255, 0, 0};
-		NativeDraw3DMaterial material = {0, 0, NATIVE_DRAW3D_DOUBLE_SIDED, 0};
+		NativeDraw3DMaterial material = {.flags = NATIVE_DRAW3D_DOUBLE_SIDED};
 		assert(NativeDraw3D_AddTriangle(layer, &a, &b, &c, &material) == 1);
 	}
 	DepthTest_Marker(0, layer);
@@ -262,7 +262,7 @@ static void DepthTest_Native(int mode)
 		NativeDraw3DVertex a = DepthTest_NativeVertex(20, 20, 300, 0);
 		NativeDraw3DVertex b = DepthTest_NativeVertex(150, 20, 300, 0);
 		NativeDraw3DVertex c = DepthTest_NativeVertex(20, 220, 300, 0);
-		NativeDraw3DMaterial material = {0, 0, 0, 0};
+		NativeDraw3DMaterial material = {0};
 		assert(NativeDraw3D_AddTriangle(layer, &a, &b, &c, &material) == 1);
 	}
 	DepthTest_Marker(0, layer);
@@ -286,6 +286,47 @@ static void DepthTest_Native(int mode)
 		DepthTest_DrawPackets(packets, 1);
 		DepthTest_Pixel(160, 100, bias ? 248 : 0, 0, bias ? 0 : 248);
 	}
+
+	// Pushed-back OT slots hide a surface behind one up to that distance
+	// further away (hub tunnel mouths poking through walls), and not beyond.
+	const float slotDepth = NativeDraw3D_GetDrawOrderSlotDepth();
+	for (int slots = 0; slots < 3; slots++)
+	{
+		DepthTest_Begin(1, mode);
+		layer = DepthTest_BeginNativeLayer(0);
+		DepthTest_NativeTriangle(layer, 2, 400 + 1.5f * slotDepth, 0, 0);
+		{
+			NativeDraw3DVertex a = DepthTest_NativeVertex(20, 20, 400, 0);
+			NativeDraw3DVertex b = DepthTest_NativeVertex(300, 20, 400, 0);
+			NativeDraw3DVertex c = DepthTest_NativeVertex(160, 220, 400, 0);
+			NativeDraw3DMaterial material = {.depthSlots = (u8)slots};
+			assert(NativeDraw3D_AddTriangle(layer, &a, &b, &c, &material) == 1);
+		}
+		DepthTest_Marker(0, layer);
+		void *packets[] = {&depthTestMarkers[0]};
+		DepthTest_DrawPackets(packets, 1);
+		// Two slots move the near surface behind the far one; one does not.
+		DepthTest_Pixel(160, 100, slots == 2 ? 0 : 248, 0, slots == 2 ? 248 : 0);
+	}
+
+	// Push-back keeps clip depth affine, so a pushed triangle reaching behind
+	// the camera still clips at the near plane and stays in front of depth 800.
+	DepthTest_Begin(1, mode);
+	DepthTest_Polygon(0, 2, farDepth, 1, 0);
+	layer = DepthTest_BeginNativeLayer(0);
+	{
+		NativeDraw3DVertex a = {-500, 300, 500, 0, 0, 255, 0, 0};
+		NativeDraw3DVertex b = {500, 300, 500, 0, 0, 255, 0, 0};
+		NativeDraw3DVertex c = {0, -300, -100, 0, 0, 255, 0, 0};
+		NativeDraw3DMaterial material = {.flags = NATIVE_DRAW3D_DOUBLE_SIDED, .depthSlots = 1};
+		assert(NativeDraw3D_AddTriangle(layer, &a, &b, &c, &material) == 1);
+	}
+	DepthTest_Marker(0, layer);
+	{
+		void *packets[] = {&depthTestPolys[0], &depthTestMarkers[0]};
+		DepthTest_DrawPackets(packets, 2);
+	}
+	DepthTest_Pixel(160, 120, 248, 0, 0);
 
 	gNativeRendererMode = NATIVE_RENDERER_CLASSIC;
 }
@@ -613,21 +654,65 @@ static void DepthTest_MinimapPrecision(void)
 	// no perspective divisor or depth. The real GPU parser retains fractions.
 	NativePgxp_SetWorldPhase(1);
 	const SVec2 points[3] = {{{0, -8}}, {{-5, 4}}, {{5, 4}}};
-	char colors[12] = {0};
-	AH_Map_HubArrowPrecise(100.25f, 80.5f, points, colors, 0x800, 0);
-	assert(tracker.backBuffer->primMem.cursor == packets + 5);
-	for (int i = 0; i < 5; i++)
+	char colors[16] = {0};
+	tracker.backBuffer->primMem.end = packets + 5;
+	AH_Map_HubArrowPrecise(100.25f, 80.5f, points, colors, 0x800, 0, 1.0f);
+	// One fill triangle, then a one-pixel mitred outline submitted behind it.
+	assert(tracker.backBuffer->primMem.cursor == packets + 2);
+	const float fillX[3] = {106.25f, 102.25f, 110.25f};
+	const float fillY[3] = {80.5f, 86.5f, 86.5f};
+	VERTTYPE *fillCorners[3] = {&packets[0].x0, &packets[0].x1, &packets[0].x3};
+	VERTTYPE *outlineCorners[3] = {&packets[1].x0, &packets[1].x1, &packets[1].x3};
+	for (int i = 0; i < 3; i++)
 	{
 		NativePgxpVertex precise;
-		const u32 packed = (u16)packets[i].x2 | ((u32)(u16)packets[i].y2 << 16);
-		assert(NativePgxp_Lookup(&packets[i].x2, packed, &precise));
-		assert(fabs(precise.x - (106.25f + D232.hubArrowPrimOffset[i].x)) < 0.0001);
-		assert(fabs(precise.y - (80.5f + D232.hubArrowPrimOffset[i].y)) < 0.0001);
+		u32 packed = (u16)fillCorners[i][0] | ((u32)(u16)fillCorners[i][1] << 16);
+		assert(NativePgxp_Lookup(fillCorners[i], packed, &precise));
+		assert(fabs(precise.x - fillX[i]) < 0.0001 && fabs(precise.y - fillY[i]) < 0.0001);
 		assert(precise.w == NATIVE_PGXP_SCREEN_W && precise.depth == 0);
-		GrVertex vertices[4];
-		MakeVertexQuad(vertices, &packets[i].x0, &packets[i].x1, &packets[i].x2, &packets[i].x3);
-		assert(fabs(vertices[2].x - precise.x) < 0.0001);
-		assert(fabs(vertices[2].y - precise.y) < 0.0001);
+
+		NativePgxpVertex outline;
+		packed = (u16)outlineCorners[i][0] | ((u32)(u16)outlineCorners[i][1] << 16);
+		assert(NativePgxp_Lookup(outlineCorners[i], packed, &outline));
+		const float centreX = (fillX[0] + fillX[1] + fillX[2]) / 3.0f;
+		const float centreY = (fillY[0] + fillY[1] + fillY[2]) / 3.0f;
+		const float fillDistance = hypotf(precise.x - centreX, precise.y - centreY);
+		assert(hypotf(outline.x - centreX, outline.y - centreY) > fillDistance + 0.99f);
+	}
+	GrVertex vertices[4];
+	MakeVertexQuad(vertices, &packets[0].x0, &packets[0].x1, &packets[0].x2, &packets[0].x3);
+	assert(fabs(vertices[0].x - 106.25f) < 0.0001 && fabs(vertices[3].y - 86.5f) < 0.0001);
+	// The player arrow keeps its smaller size.
+	NativePgxp_EndFrame();
+	tracker.backBuffer->primMem.cursor = packets;
+	AH_Map_HubArrowPrecise(100.25f, 80.5f, points, colors, 0x800, 0, 0.6f);
+	{
+		NativePgxpVertex precise;
+		const u32 packed = (u16)packets[0].x1 | ((u32)(u16)packets[0].y1 << 16);
+		assert(NativePgxp_Lookup(&packets[0].x1, packed, &precise));
+		assert(fabs(precise.x - (106.25f - 4.0f * 0.6f)) < 0.0001);
+	}
+	// The save/load marker quad keeps fractions and gets square mitred corners.
+	NativePgxp_EndFrame();
+	tracker.backBuffer->primMem.cursor = packets;
+	AH_Map_LoadSavePrecise(50.5f, 40.25f, &D232.loadSavePos[0], colors, 0x800, 0);
+	assert(tracker.backBuffer->primMem.cursor == packets + 2);
+	{
+		const float quadX[4] = {53.3f, 59.7f, 53.3f, 59.7f};
+		const float quadY[4] = {43.25f, 43.25f, 45.25f, 45.25f};
+		const float outward[4][2] = {{-1, -1}, {1, -1}, {-1, 1}, {1, 1}};
+		for (int q = 0; q < 2; q++)
+		{
+			VERTTYPE *corners[4] = {&packets[q].x0, &packets[q].x1, &packets[q].x2, &packets[q].x3};
+			for (int i = 0; i < 4; i++)
+			{
+				NativePgxpVertex precise;
+				const u32 packed = (u16)corners[i][0] | ((u32)(u16)corners[i][1] << 16);
+				assert(NativePgxp_Lookup(corners[i], packed, &precise));
+				assert(fabs(precise.x - (quadX[i] + q * outward[i][0])) < 0.0001);
+				assert(fabs(precise.y - (quadY[i] + q * outward[i][1])) < 0.0001);
+			}
+		}
 	}
 	// The minimap toggle works with 3D PGXP and world depth both off.
 	gNativePgxpMode = NATIVE_PGXP_MODE_OFF;
@@ -657,6 +742,105 @@ static void DepthTest_MinimapPrecision(void)
 		assert(fabs(second[i].x - first[i].x - 0.05 * 34.0 / 45.0) < 0.0001);
 		assert(second[i].y == first[i].y);
 	}
+	// Modern Map replaces the sprites with vector shapes centred on
+	// the world position. They keep fractions with Precise Minimap Off.
+	gNativeModernMapEnabled = 1;
+	gNativePreciseMinimapEnabled = 0;
+	assert(NATIVE_VERTEX_TRACKING_ACTIVE());
+	static POLY_G3 shapes[96];
+	NativeGpuLinks_RegisterRangeChecked("marker shapes", shapes, sizeof(shapes));
+	tracker.backBuffer->primMem.guardEnd = shapes + 95;
+	const float aspectX = (512.0f / 216.0f) / (4.0f / 3.0f) * 34.0f / 45.0f;
+	const u32 markerColors[4] = {0xff, 0xff, 0x80, 0x80};
+	for (int star = 0; star < 2; star++)
+	{
+		NativePgxp_EndFrame();
+		tracker.backBuffer->primMem.cursor = shapes;
+		AH_Map_MarkerShape(100.25f, 80.5f, star ? 3.7f : 2.1f, star, markerColors);
+		const int rim = star ? 10 : 20;
+		// A fill fan, then a black outline fan behind it.
+		assert(tracker.backBuffer->primMem.cursor == shapes + 2 * rim);
+		const float radius = star ? 3.7f : 2.1f;
+		const float outline = radius + (star ? 1.7f : 1.0f);
+		for (int i = 0; i < 2 * rim; i++)
+		{
+			GrVertex tri[3];
+			MakeVertexTriangle(tri, &shapes[i].x0, &shapes[i].x1, &shapes[i].x2);
+			assert(fabsf(tri[0].x - 100.25f) < 0.0001f && fabsf(tri[0].y - 80.5f) < 0.0001f);
+			if ((i % rim) == 0)
+			{
+				// The first rim point is straight up.
+				assert(fabsf(tri[1].x - 100.25f) < 0.0001f);
+				assert(fabsf(tri[1].y - (80.5f - ((i < rim) ? radius : outline))) < 0.0001f);
+			}
+			if ((i % rim) == rim / 4 && !star)
+			{
+				// A quarter turn is scaled for the HUD pixel aspect.
+				assert(fabsf(tri[1].x - (100.25f + ((i < rim) ? radius : outline) * aspectX)) < 0.001f);
+			}
+		}
+		// The fill centre is lightened towards white; the outline is black.
+		assert(shapes[0].r0 == 217 && shapes[0].g0 == 102 && shapes[0].b0 == 102);
+		assert(shapes[rim].r0 == 0 && shapes[rim].g1 == 0 && shapes[rim].b2 == 0);
+	}
+	// Modern hub pulses are smaller rings, centred on the marker.
+	for (int frame = 0; frame < 64; frame++)
+	{
+		NativePgxp_EndFrame();
+		tracker.backBuffer->primMem.cursor = shapes;
+		tracker.timer = frame;
+		AH_Map_MarkerPulse(0, 100.25f, 80.5f, false);
+		for (POLY_G3 *tri = shapes; tri < (POLY_G3 *)tracker.backBuffer->primMem.cursor; tri++)
+		{
+			GrVertex v[3];
+			MakeVertexTriangle(v, &tri->x0, &tri->x1, &tri->x2);
+			for (int i = 0; i < 3; i++)
+			{
+				const float distance = hypotf((v[i].x - 100.25f) / aspectX, v[i].y - 80.5f);
+				assert(distance > 3.4f - 0.61f && distance < 10.2f + 0.61f);
+			}
+		}
+	}
+	// Race target rings sit between radius +- half width.
+	NativePgxp_EndFrame();
+	tracker.backBuffer->primMem.cursor = shapes;
+	AH_Map_MarkerOutline(100.25f, 80.5f, 4.6f, 0.5f, false, 0xff);
+	assert(tracker.backBuffer->primMem.cursor == shapes + 40);
+	for (int i = 0; i < 40; i++)
+	{
+		GrVertex v[3];
+		MakeVertexTriangle(v, &shapes[i].x0, &shapes[i].x1, &shapes[i].x2);
+		for (int k = 0; k < 3; k++)
+		{
+			const float distance = hypotf((v[k].x - 100.25f) / aspectX, v[k].y - 80.5f);
+			assert(fabsf(distance - 4.1f) < 0.0001f || fabsf(distance - 5.1f) < 0.0001f);
+		}
+	}
+	// Flicker blends start on the first colour and reach the second half a period later.
+	tracker.timer = 0;
+	u32 flash[4];
+	AH_Map_MarkerFlash(flash, CRASH_BLUE, CORTEX_RED, 2.0f);
+	assert(flash[0] == data.ptrColor[CRASH_BLUE][0]);
+	tracker.timer = 1;
+	AH_Map_MarkerFlash(flash, CRASH_BLUE, CORTEX_RED, 2.0f);
+	assert(flash[0] == data.ptrColor[CORTEX_RED][0]);
+	tracker.timer = 0;
+	// The Adventure arrow pivots on the marker itself, as a vector arrow.
+	NativePgxp_EndFrame();
+	tracker.backBuffer->primMem.cursor = packets;
+	tracker.backBuffer->primMem.guardEnd = packets + 4;
+	UI_Map_DrawAdvPlayer(&map, world, 0, 0, 0, 0x800);
+	{
+		float markerX, markerY;
+		UI_Map_GetIconPosPrecise(&map, world, &markerX, &markerY);
+		NativePgxpVertex tip;
+		const u32 packed = (u16)packets[0].x0 | ((u32)(u16)packets[0].y0 << 16);
+		assert(NativePgxp_Lookup(&packets[0].x0, packed, &tip));
+		const float tipY = data.playerIconAdvMap.pos[0].y * 0x800 * 0.6f / 4096.0f;
+		assert(fabsf(tip.x - markerX) < 0.0001f && fabsf(tip.y - (markerY + tipY)) < 0.0001f);
+	}
+	gNativeModernMapEnabled = 0;
+
 	// Disabling the enhancement returns to the exact integer drawing path.
 	NativePgxp_EndFrame();
 	gNativePreciseMinimapEnabled = 0;
@@ -675,12 +859,641 @@ static void DepthTest_MinimapPrecision(void)
 	sdata->gGT = savedTracker;
 }
 
+// Validate ground coverage separately from GL: a nine-vertex patch, the
+// triangular-block special case, collision exclusions, and invalid indices.
+static void DepthTest_CollisionMinimap(void)
+{
+	struct LevVertex vertices[9] = {0};
+	const s16 x[9] = {0,100,0,100,50,0,50,100,50};
+	const s16 z[9] = {0,0,100,100,0,50,50,50,100};
+	for (int i = 0; i < 9; i++) { vertices[i].pos.x = x[i]; vertices[i].pos.z = z[i]; }
+	struct QuadBlock blocks[2] = {0};
+	for (int i = 0; i < 9; i++) blocks[0].index[i] = blocks[1].index[i] = i;
+	blocks[0].quadFlags = QUADBLOCK_FLAG_GROUND;
+	blocks[1].quadFlags = QUADBLOCK_FLAG_GROUND | QUADBLOCK_FLAG_KILL_PLANE;
+	struct mesh_info mesh = {.numQuadBlock = 2, .numVertex = 9,
+	                        .ptrQuadBlockArray = blocks, .ptrVertexArray = vertices};
+	struct UIMap map = {100,100,0,0,20,10,400,180,0};
+	struct NativeMinimapImage image = {0};
+	for (int mode = 0; mode < 4; mode++)
+	{
+		map.mode = mode;
+		u8 *pixels = NativeMinimap_BuildPixels(&mesh, &map, &image);
+		assert(pixels && image.pixelWidth == 208 && image.pixelHeight == 208);
+		int ground = 0;
+		for (int i = 0; i < image.pixelWidth * image.pixelHeight; i++)
+			ground += pixels[4*i] != 0;
+		assert(ground == 160 * 160);
+		assert(pixels[3] == 0); // Padding stays transparent.
+		free(pixels);
+	}
+	map.mode = 0;
+	blocks[0].index[3] = blocks[0].index[2];
+	u8 *pixels = NativeMinimap_BuildPixels(&mesh, &map, &image);
+	assert(pixels);
+	int ground = 0;
+	for (int i = 0; i < image.pixelWidth * image.pixelHeight; i++) ground += pixels[4*i] != 0;
+	assert(ground >= 12700 && ground <= 12900); // Only the first half of the grid.
+	free(pixels);
+	blocks[0].quadFlags |= QUADBLOCK_FLAG_NO_COLLISION_RESPONSE;
+	assert(!NativeMinimap_BuildPixels(&mesh, &map, &image));
+	blocks[0].quadFlags = QUADBLOCK_FLAG_GROUND | QUADBLOCK_FLAG_TRIGGER;
+	assert(!NativeMinimap_BuildPixels(&mesh, &map, &image));
+	blocks[0].quadFlags = QUADBLOCK_FLAG_GROUND;
+	blocks[0].index[6] = 9;
+	assert(!NativeMinimap_BuildPixels(&mesh, &map, &image));
+	blocks[0].index[6] = 6;
+	map.worldEndX = map.worldStartX;
+	assert(!NativeMinimap_BuildPixels(&mesh, &map, &image));
+	// The switch must bypass generation and disk reads entirely when disabled.
+	gNativeModernMapEnabled = 0;
+	assert(!NativeMinimap_DrawLive(NULL, NULL, 1));
+	assert(!NativeMinimap_DrawPreview(CRASH_COVE, 0, 0, 100, 100, NULL, NULL, 1));
+}
+
+static const u8 *DepthTest_MapSample(const u8 *pixels, const struct NativeMinimapImage *image, float x, float y)
+{
+	const int sx = (int)((x - image->left) * image->pixelWidth / image->width);
+	const int sy = (int)((y - image->top) * image->pixelHeight / image->height);
+	assert(sx >= 0 && sy >= 0 && sx < image->pixelWidth && sy < image->pixelHeight);
+	return pixels + 4 * (sy * image->pixelWidth + sx);
+}
+
+static void DepthTest_MinimapCrossingsAndCache(void)
+{
+	struct LevVertex vertices[18] = {0};
+	const s16 x[9] = {0,100,0,100,50,0,50,100,50};
+	const s16 z[9] = {0,0,100,100,0,50,50,50,100};
+	struct QuadBlock blocks[2] = {0};
+	for (int i = 0; i < 9; i++)
+	{
+		vertices[i].pos.x = x[i]; vertices[i].pos.z = z[i];
+		vertices[i+9].pos.x = 40 + x[i]/5;
+		vertices[i+9].pos.z = z[i]; vertices[i+9].pos.y = 200;
+		blocks[0].index[i] = i; blocks[1].index[i] = i+9;
+	}
+	blocks[0].quadFlags = blocks[1].quadFlags = QUADBLOCK_FLAG_GROUND;
+	struct mesh_info mesh = {.numQuadBlock=2, .numVertex=18, .ptrQuadBlockArray=blocks, .ptrVertexArray=vertices};
+	struct UIMap map = {100,100,0,0,20,10,0,0,0};
+	struct NativeMinimapImage image = {0};
+	u8 *pixels = NativeMinimap_BuildPixels(&mesh, &map, &image);
+	assert(pixels);
+	// Upper road at X=40..60 is continuous; its two side edges survive the
+	// overlapping lower floor. The lower route remains visible on both sides.
+	assert(DepthTest_MapSample(pixels,&image,10,10)[0] == 255);
+	assert(DepthTest_MapSample(pixels,&image,8.1f,10)[0] < 32);
+	assert(DepthTest_MapSample(pixels,&image,11.9f,10)[0] < 32);
+	assert(DepthTest_MapSample(pixels,&image,7,10)[0] >= 192);
+	assert(DepthTest_MapSample(pixels,&image,13,10)[0] >= 192);
+	int fractional = 0;
+	for (int i = 0; i < image.pixelWidth * image.pixelHeight; i++)
+		fractional += pixels[4*i+3] > 0 && pixels[4*i+3] < 255;
+	assert(fractional > 0);
+
+	char oldBase[1024];
+	snprintf(oldBase,sizeof(oldBase),"%s",NativeAssets_GetBaseDir());
+	assert(SDL_CreateDirectory("/tmp/ctr-minimap-cache-fixture"));
+	assert(NativeAssets_Init("/tmp/ctr-minimap-cache-fixture"));
+	const u64 key = NativeMinimap_GeometryKey(&mesh,&map);
+	char name[48], path[1024];
+	snprintf(name,sizeof(name),"%016llx.map",(unsigned long long)key);
+	assert(NativeMinimap_CachePath(name,path,0));
+	SDL_RemovePath(path);
+	struct NativeMinimapImage loaded = {0};
+	// A drawing-time cache miss returns immediately without generating.
+	assert(!NativeMinimap_GetPixels(&mesh,&map,&loaded,0));
+	assert(NativeMinimap_SaveCache(key,&image,pixels));
+	u8 *copy = NativeMinimap_GetPixels(&mesh,&map,&loaded,0);
+	assert(copy && loaded.pixelWidth == image.pixelWidth && loaded.pixelHeight == image.pixelHeight);
+	assert(memcmp(copy,pixels,(size_t)image.pixelWidth * image.pixelHeight * 4) == 0);
+	free(copy);
+	NativeMinimap_WriteIndex(0,1,42,key);
+	assert(NativeMinimap_ReadIndex(0,1,42) == key && NativeMinimap_ReadIndex(0,1,43) == 0);
+	map.iconStartX = 100; map.iconStartY = 200;
+	assert(NativeMinimap_GeometryKey(&mesh,&map) == key);
+	vertices[9].pos.y++;
+	assert(NativeMinimap_GeometryKey(&mesh,&map) != key);
+	vertices[9].pos.y--;
+	FILE *file = fopen(path,"wb"); // Interrupted/corrupt cache must be rejected.
+	assert(file); fputs("bad",file); fclose(file);
+	assert(!NativeMinimap_LoadCache(key,&loaded));
+	SDL_RemovePath(path);
+	assert(NativeAssets_Init(oldBase));
+	free(pixels);
+
+	// A steep but continuous slope has no bridge outlines.
+	mesh.numQuadBlock = 1;
+	for (int i = 0; i < 9; i++) vertices[i].pos.y = vertices[i].pos.x * 3;
+	pixels = NativeMinimap_BuildPixels(&mesh,&map,&image);
+	assert(pixels);
+	assert(DepthTest_MapSample(pixels,&image,10,10)[0] >= 192);
+	free(pixels);
+}
+
+static void DepthTest_MinimapAssets(const char *baseDir)
+{
+	assert(NativeAssets_Init(baseDir));
+	for (int level = 0; level <= CITADEL_CITY; level++)
+	{
+		struct NativeMinimapImage image = {0};
+		u8 *pixels = NativeMinimap_ReadLevelPixels(level, LOAD_LEVEL_LOD_1P, &image, 1);
+		// Battle arenas have no retail map metadata; their absence is supported.
+		if (level >= NITRO_COURT && level <= LAB_BASEMENT && !pixels) continue;
+		assert(pixels && image.pixelWidth <= 1024 && image.pixelHeight <= 1024);
+		printf("Collision map %d: %dx%d, HUD %.0fx%.0f\n", level, image.pixelWidth, image.pixelHeight, image.width, image.height);
+		char path[100];
+		snprintf(path, sizeof(path), "/tmp/ctr-minimap-%02d.ppm", level);
+		FILE *file = fopen(path, "wb");
+		assert(file);
+		fprintf(file, "P6\n%d %d\n255\n", image.pixelWidth, image.pixelHeight);
+		for (int i = 0; i < image.pixelWidth * image.pixelHeight; i++)
+		{
+			if (pixels[4*i+3]) fwrite(pixels + 4*i, 1, 3, file);
+			else { const u8 background[3] = {40,60,80}; fwrite(background, 1, 3, file); }
+		}
+		fclose(file);
+		free(pixels);
+	}
+}
+
+static void DepthTest_SaveHudPreview(const char *path)
+{
+	const struct NativeRenderTarget *resolved = NativeRenderer_ResolveMainRenderTarget();
+	u8 *pixels = malloc((size_t)resolved->width * resolved->height * 4);
+	assert(pixels);
+	glBindFramebuffer(GL_FRAMEBUFFER, resolved->framebuffer);
+	glReadPixels(0, 0, resolved->width, resolved->height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+	FILE *preview = fopen(path, "wb");
+	assert(preview);
+	fprintf(preview, "P6\n%d %d\n255\n", resolved->width, resolved->height);
+	for (int y = resolved->height - 1; y >= 0; y--)
+		for (int x = 0; x < resolved->width; x++) fwrite(pixels + (y * resolved->width + x) * 4, 1, 3, preview);
+	fclose(preview);
+	free(pixels);
+	NativeRenderer_BindMainRenderTarget();
+}
+
+static void DepthTest_HudIcons(void)
+{
+	static POLY_G4 packets[HUD_LIGHT_MAX_QUADS * 12];
+	struct Icon icon = {0};
+	icon.texLayout.u1 = 56;
+	icon.texLayout.v2 = 56;
+	struct PrimMem memory = {0};
+	memory.cursor = packets;
+	memory.end = packets + HUD_LIGHT_MAX_QUADS * 12;
+	u32 ot = 0xffffff;
+	NativeGpuLinks_Reset();
+	NativeGpuLinks_RegisterRangeChecked("HUD icons", packets, sizeof(packets));
+	NativePgxp_SetPrimRegion(packets, sizeof(packets));
+	gNativeModernMapEnabled = gNativePreciseMinimapEnabled = 0;
+	gNativeModernHudIconsEnabled = 0;
+	assert(!NativeHudIcons_DrawButton('*', &icon, 20, 20, FP(1.0), &memory, &ot));
+	assert(memory.cursor == packets && ot == 0xffffff);
+	gNativeModernHudIconsEnabled = 1;
+	memory.end = packets + 1;
+	assert(!NativeHudIcons_DrawLight(&icon, 20, 20, FP(1.0), 0, 1, &memory, &ot));
+	assert(memory.cursor == packets && ot == 0xffffff);
+	memory.end = packets + HUD_LIGHT_MAX_QUADS * 12;
+	assert(!NativeHudIcons_DrawButton('A', &icon, 20, 20, FP(1.0), &memory, &ot));
+	DepthTest_Begin(0, NATIVE_PGXP_MODE_OFF);
+	gNativeColorDepth = NATIVE_COLOR_DEPTH_TRUE;
+	const char buttons[4] = {'*', '@', '[', '^'};
+	for (int i = 0; i < 4; i++)
+	{
+		assert(NativeHudIcons_DrawButton(buttons[i], &icon, 20 + 72*i, 20, FP(1.0), &memory, &ot));
+		assert(NativeHudIcons_DrawLight(&icon, 20 + 72*i, 94, FP(1.0), i == 3, 0, &memory, &ot));
+		assert(NativeHudIcons_DrawLight(&icon, 20 + 72*i, 168, FP(1.0), i == 3, 1, &memory, &ot));
+	}
+	ParsePrimitivesLinkedList(NativeGpuLinks_ToHostPointer(ot), 0);
+	DrawAllSplits();
+	u8 pixel[4];
+	DepthTest_ReadPixel(48, 48, pixel);
+	assert(pixel[2] > pixel[0] + 70); // Blue cross is in front of the grey face.
+	DepthTest_ReadPixel(48, 196, pixel);
+	assert(pixel[0] > pixel[1] + 70); // Lit red lens.
+	DepthTest_ReadPixel(264, 196, pixel);
+	assert(pixel[1] > pixel[0] + 70); // Lit green lens.
+	// The housing dressing occupies space outside the circular lens.
+	DepthTest_ReadPixel(28, 122, pixel);
+	assert(pixel[2] > pixel[0] + 20); // Left blue steel bracket.
+	DepthTest_ReadPixel(68, 130, pixel);
+	assert(pixel[2] > pixel[0] + 20); // Right bracket.
+	DepthTest_ReadPixel(48, 145, pixel);
+	assert(pixel[2] > pixel[0] + 20); // Bottom mounting foot.
+	DepthTest_ReadPixel(48, 122, pixel);
+	const int unlitRed = pixel[0];
+	DepthTest_ReadPixel(48, 196, pixel);
+	assert(pixel[0] > unlitRed + 40); // Countdown state changes the lens glow.
+	DepthTest_SaveHudPreview("/tmp/ctr-hud-icons.ppm");
+	gNativeModernHudIconsEnabled = 0;
+	NativePgxp_SetPrimRegion(NULL, 0);
+}
+
+static void DepthTest_MenuArrows(void)
+{
+	static struct GameTracker tracker;
+	static struct { struct IconGroup group; struct Icon *icons[0x39]; } font;
+	static POLY_G4 packets[64];
+	struct Icon icon = {0};
+	icon.texLayout.u1 = 56;
+	icon.texLayout.v2 = 40;
+	font.group.numIcons = 0x39;
+	font.icons[0x38] = &icon;
+	tracker.iconGroup[4] = &font.group;
+	struct GameTracker *previous = sdata->gGT;
+	sdata->gGT = &tracker;
+	struct PrimMem memory = {0};
+	memory.cursor = packets;
+	memory.end = packets + 64;
+	u32 ot = 0xffffff;
+	NativeGpuLinks_Reset();
+	NativeGpuLinks_RegisterRangeChecked("menu arrow packets", packets, sizeof(packets));
+	NativePgxp_SetPrimRegion(packets, sizeof(packets));
+	gNativeModernHudIconsEnabled = 0;
+	DecalHUD_Arrow2D(&icon, 70, 70, &memory, &ot, 0x00b0ff, 0x00b0ff, 0x0018ff, 0x0018ff, 0, FP(1.0), 0);
+	assert((u8 *)memory.cursor == (u8 *)packets + sizeof(POLY_GT4)); // Toggle Off keeps the bitmap.
+	memory.cursor = packets;
+	ot = 0xffffff;
+	gNativeModernHudIconsEnabled = 1;
+	struct Icon otherIcon = icon;
+	DecalHUD_Arrow2D(&otherIcon, 70, 70, &memory, &ot, 0, 0, 0, 0, 0, FP(1.0), 0);
+	assert((u8 *)memory.cursor == (u8 *)packets + sizeof(POLY_GT4)); // Other decals stay untouched.
+	memory.cursor = packets;
+	ot = 0xffffff;
+	DepthTest_Begin(0, NATIVE_PGXP_MODE_OFF);
+	const int cx[4] = {70, 240, 70, 240};
+	const int cy[4] = {70, 70, 170, 170};
+	const int rotations[4] = {0x800, 0, 0x400, 0xc00};
+	for (int i = 0; i < 4; i++)
+	{
+		DecalHUD_Arrow2D(&icon, cx[i], cy[i], &memory, &ot, 0x00b0ff, 0x00b0ff, 0x0018ff, 0x0018ff, 0, FP(1.0), rotations[i]);
+		assert(memory.cursor == packets + 14 * (i + 1));
+	}
+	ParsePrimitivesLinkedList(NativeGpuLinks_ToHostPointer(ot), 0);
+	DrawAllSplits();
+	for (int i = 0; i < 4; i++)
+	{
+		u8 pixel[4];
+		DepthTest_ReadPixel(cx[i], cy[i], pixel);
+		assert(pixel[0] > 200 && pixel[1] > 50 && pixel[2] < 10);
+	}
+	DepthTest_SaveHudPreview("/tmp/ctr-menu-arrows.ppm");
+	gNativeModernHudIconsEnabled = 0;
+	NativePgxp_SetPrimRegion(NULL, 0);
+	sdata->gGT = previous;
+}
+
+static void EngineTest_Physics(void)
+{
+	struct GameTracker tracker = {0};
+	tracker.numPlyrCurrGame = 1;
+	sdata->gGT = &tracker;
+	sdata->gameProgress.unlockFlags |= UNLOCK_PENTA;
+	NativeEngine_ClearReplayOverrides();
+	const int donors[NATIVE_ENGINE_COUNT] = {CRASH_BANDICOOT, COCO_BANDICOOT, TINY_TIGER, POLAR, PENTA_PENGUIN};
+	struct Driver reference[NATIVE_ENGINE_COUNT];
+	for (int profile = 0; profile < NATIVE_ENGINE_COUNT; profile++)
+	{
+		memset(&reference[profile], 0, sizeof(struct Driver));
+		gNativeEngineSelectionEnabled = 0;
+		data.characterIDs[0] = donors[profile];
+		VehBirth_SetConsts(&reference[profile]);
+		gNativeEngineSelectionEnabled = 1;
+		data.characterIDs[0] = CRASH_BANDICOOT;
+		NativeEngine_SetSelectedProfile(0, profile);
+		struct Driver selected = {0};
+		VehBirth_SetConsts(&selected);
+		assert(data.characterIDs[0] == CRASH_BANDICOOT);
+		for (u32 i = 0; i < len(data.metaPhys); i++)
+		{
+			struct MetaPhys *entry = &data.metaPhys[i];
+			assert(memcmp((u8 *)&selected + entry->offset, (u8 *)&reference[profile] + entry->offset, entry->size) == 0);
+		}
+	}
+	// Balanced must remain distinct from Penta's separate PAL profile.
+	b32 balancedDiffersFromPenta = false;
+	for (u32 i = 0; i < len(data.metaPhys); i++)
+	{
+		struct MetaPhys *entry = &data.metaPhys[i];
+		if (memcmp((u8 *)&reference[NATIVE_ENGINE_BALANCED] + entry->offset,
+		           (u8 *)&reference[NATIVE_ENGINE_PENTA] + entry->offset, entry->size) != 0)
+			balancedDiffersFromPenta = true;
+	}
+	assert(balancedDiffersFromPenta);
+	for (int stat = 0; stat < 3; stat++)
+	{
+		assert(s_nativeCharacterSelectStatTargets[NATIVE_ENGINE_BALANCED][stat] == 0x37);
+		assert(s_nativeCharacterSelectStatTargets[NATIVE_ENGINE_PENTA][stat] == 0x50);
+	}
+	assert(*(s16 *)((u8 *)&reference[NATIVE_ENGINE_BALANCED] + ACCEL_CLASS_STAT_OFFSET) == 480);
+	assert(*(s16 *)((u8 *)&reference[NATIVE_ENGINE_BALANCED] + SPEED_CLASS_STAT_OFFSET) == 13140);
+	assert(*((u8 *)&reference[NATIVE_ENGINE_BALANCED] + TURN_RATE_OFFSET) == 28);
+	assert(*(s16 *)((u8 *)&reference[NATIVE_ENGINE_PENTA] + ACCEL_CLASS_STAT_OFFSET) == 544);
+	assert(*(s16 *)((u8 *)&reference[NATIVE_ENGINE_PENTA] + SPEED_CLASS_STAT_OFFSET) == 13900);
+	assert(*((u8 *)&reference[NATIVE_ENGINE_PENTA] + TURN_RATE_OFFSET) == 30);
+	data.characterIDs[0] = PENTA_PENGUIN;
+	NativeEngine_SetSelectedProfile(0, NATIVE_ENGINE_SPEED);
+	struct Driver pentaWithSpeed = {0};
+	VehBirth_SetConsts(&pentaWithSpeed);
+	for (u32 i = 0; i < len(data.metaPhys); i++)
+	{
+		struct MetaPhys *entry = &data.metaPhys[i];
+		assert(memcmp((u8 *)&pentaWithSpeed + entry->offset, (u8 *)&reference[NATIVE_ENGINE_SPEED] + entry->offset, entry->size) == 0);
+	}
+	gNativeEngineSelectionEnabled = 0;
+	VehBirth_SetConsts(&pentaWithSpeed);
+	for (u32 i = 0; i < len(data.metaPhys); i++)
+	{
+		struct MetaPhys *entry = &data.metaPhys[i];
+		assert(memcmp((u8 *)&pentaWithSpeed + entry->offset, (u8 *)&reference[NATIVE_ENGINE_PENTA] + entry->offset, entry->size) == 0);
+	}
+}
+
+// Exercise the menu's real input transitions without rendering or controllers.
+static void EngineTest_Lifecycle(void)
+{
+	struct GameTracker tracker = {0};
+	sdata->gGT = &tracker;
+	gNativeEngineSelectionEnabled = 1;
+	sdata->gameProgress.unlockFlags &= ~UNLOCK_PENTA;
+	assert(MM_Characters_NativeStepEngineProfile(NATIVE_ENGINE_TURN, 1) == NATIVE_ENGINE_BALANCED);
+	assert(MM_Characters_NativeStepEngineProfile(NATIVE_ENGINE_BALANCED, -1) == NATIVE_ENGINE_TURN);
+	sdata->gameProgress.unlockFlags |= UNLOCK_PENTA;
+	assert(MM_Characters_NativeStepEngineProfile(NATIVE_ENGINE_TURN, 1) == NATIVE_ENGINE_PENTA);
+	sdata->gameProgress.unlockFlags &= ~UNLOCK_PENTA;
+	for (int players = 2; players <= 4; players++)
+	{
+		tracker.numPlyrNextGame = tracker.numPlyrCurrGame = players;
+		D230.characterSelectMenuState = IN_MENU;
+		sdata->characterSelectFlags = (1 << players) - 1;
+		for (int player = 0; player < players; player++)
+		{
+			data.characterIDs[player] = CRASH_BANDICOOT;
+			NativeEngine_SetSelectedProfile(player, NATIVE_ENGINE_BALANCED);
+			s_nativeEngineSelectStage[player] = NATIVE_ENGINE_SELECT_ENGINE;
+			s_nativeEngineSelectProfile[player] = NATIVE_ENGINE_SPEED;
+		}
+		// Ready -> engine -> character; one player's Back leaves others alone.
+		MM_Characters_NativeEngineInput(0, MM_CHARACTER_SELECT_INPUT_CONFIRM);
+		assert(D230.characterSelectMenuState == IN_MENU);
+		MM_Characters_NativeEngineInput(0, MM_CHARACTER_SELECT_INPUT_BACK);
+		assert(s_nativeEngineSelectStage[0] == NATIVE_ENGINE_SELECT_ENGINE);
+		MM_Characters_NativeEngineInput(0, MM_CHARACTER_SELECT_INPUT_BACK);
+		assert(s_nativeEngineSelectStage[0] == NATIVE_ENGINE_SELECT_CHARACTER);
+		assert(sdata->characterSelectFlags == (u32)((1 << players) - 2));
+		assert(s_nativeEngineSelectStage[1] == NATIVE_ENGINE_SELECT_ENGINE);
+		s_nativeEngineSelectStage[0] = NATIVE_ENGINE_SELECT_ENGINE;
+		sdata->characterSelectFlags |= 1;
+		MM_Characters_NativeEngineInput(0, BTN_RIGHT);
+		assert(s_nativeEngineSelectProfile[0] == NATIVE_ENGINE_TURN);
+		assert(s_nativeEngineSelectProfile[1] == NATIVE_ENGINE_SPEED);
+		assert(NativeEngine_GetSelectedProfile(0) == NATIVE_ENGINE_BALANCED);
+		for (int player = 0; player < players; player++)
+		{
+			MM_Characters_NativeEngineInput(player, MM_CHARACTER_SELECT_INPUT_CONFIRM);
+			assert(D230.characterSelectMenuState == (player == players - 1 ? EXITING_MENU : IN_MENU));
+		}
+		assert(D230.characterSelectExitsForward == 1);
+		for (int player = 0; player < players; player++)
+			assert(NativeEngine_GetEffectiveProfile(player) == (player == 0 ? NATIVE_ENGINE_TURN : NATIVE_ENGINE_SPEED));
+
+	}
+
+	struct GhostHeader ghost = {0};
+	ghost.characterID = PENTA_PENGUIN;
+	assert(GhostReplay_GetEngineProfile(&ghost) == NATIVE_ENGINE_PENTA);
+	NativeEngineMetadata_StoreRetail(ghost.emptyPadding, NATIVE_ENGINE_SPEED);
+	assert(GhostReplay_GetEngineProfile(&ghost) == NATIVE_ENGINE_SPEED);
+	tracker.numPlyrCurrGame = 1;
+	data.characterIDs[0] = CRASH_BANDICOOT;
+	NativeEngine_SetSelectedProfile(0, NATIVE_ENGINE_TURN);
+	NativeEngine_SetReplayOverride(0, NATIVE_ENGINE_PENTA);
+	assert(NativeEngine_GetEffectiveProfile(0) == NATIVE_ENGINE_PENTA);
+	NativeGhostInput_ClearSelection();
+	assert(NativeEngine_GetEffectiveProfile(0) == NATIVE_ENGINE_TURN);
+	NativeEngine_SetReplayOverride(0, NATIVE_ENGINE_SPEED);
+	GhostTape_Destroy();
+	assert(NativeEngine_GetEffectiveProfile(0) == NATIVE_ENGINE_TURN);
+	NativeEngine_SetReplayOverride(0, NATIVE_ENGINE_SPEED);
+	tracker.gameMode1 = MAIN_MENU;
+	GhostReplay_Init1();
+	assert(NativeEngine_GetEffectiveProfile(0) == NATIVE_ENGINE_TURN);
+}
+
+// Use both actual preset menu definitions with the real controller input path.
+static int presetTestConfirmed;
+static void PresetTest_Callback(struct RectMenu *menu)
+{
+	assert(menu->funcState == RECTMENU_FUNC_STATE_INPUT);
+	presetTestConfirmed = menu->rowSelected + 1;
+}
+
+static void PresetTest_Input(void)
+{
+	struct GameTracker tracker = {0};
+	struct GamepadSystem pads = {0};
+	sdata->gGT = &tracker;
+	sdata->gGamepads = &pads;
+	tracker.numPlyrNextGame = 1;
+	struct RectMenu *definitions[] = {&s_nativePresetMenu, &s_nativePresetOptionsMenu};
+	for (int i = 0; i < 2; i++)
+	{
+		struct RectMenu menu = *definitions[i];
+		assert(menu.state & RECTMENU_NATIVE_DRAW_CALLBACK);
+		assert(!(menu.state & RECTMENU_DRAW_CALLBACK_FLAGS));
+		menu.state |= MUTE_SOUND_OF_MOVING_CURSOR;
+		menu.rowSelected = 1;
+		menu.funcPtr = PresetTest_Callback;
+		sdata->activeSubMenu = &menu;
+		pads.gamepad[0].buttonsTapped = BTN_DOWN;
+		RECTMENU_CollectInput();
+		assert(RECTMENU_ProcessInput(&menu) == 0);
+		assert(menu.rowSelected == 2);
+		pads.gamepad[0].buttonsTapped = BTN_UP;
+		RECTMENU_CollectInput();
+		RECTMENU_ProcessInput(&menu);
+		assert(menu.rowSelected == 1);
+		presetTestConfirmed = 0;
+		pads.gamepad[0].buttonsTapped = BTN_CROSS_one;
+		RECTMENU_CollectInput();
+		assert(RECTMENU_ProcessInput(&menu) == 1);
+		assert(presetTestConfirmed == 2);
+	}
+	sdata->activeSubMenu = NULL;
+	sdata->gGT = NULL;
+	sdata->gGamepads = NULL;
+}
+
+static void UnlockTest_OxideGhosts(void)
+{
+	static struct GameTracker tracker;
+	static struct Driver driver;
+	static struct Thread thread;
+	sdata->gGT = &tracker;
+	gNativeAdditionalUnlocksEnabled = 1;
+	gNativeGhostReplayMode = 0;
+	tracker.gameMode1 = TIME_TRIAL;
+	tracker.drivers[0] = &driver;
+	tracker.threadBuckets[PLAYER].thread = &thread;
+	thread.object = &driver;
+	data.bitIndex_timeTrialFlags_saveData.nTropyOpen = 1;
+	data.bitIndex_timeTrialFlags_saveData.nOxideOpen = 2;
+
+	// The former character requirements and Tropy ghosts alone no longer qualify.
+	sdata->gameProgress.unlockFlags = UNLOCK_CHARACTERS;
+	for (int i = 0; i < MEMCARD_HIGH_SCORE_TRACK_COUNT; i++)
+		sdata->gameProgress.highScoreTracks[i].timeTrialFlags = 3;
+	GAMEPROG_AdvPercent(&sdata->advProgress);
+	assert(!CHECK_ADV_BIT(sdata->gameProgress.unlocks, GAME_UNLOCK_BIT_OXIDE));
+	sdata->gameProgress.unlockFlags = 0;
+
+	// Every original track is required, even with all the other ghosts beaten.
+	for (int missing = 0; missing < MEMCARD_HIGH_SCORE_TRACK_COUNT; missing++)
+	{
+		for (int i = 0; i < MEMCARD_HIGH_SCORE_TRACK_COUNT; i++)
+			sdata->gameProgress.highScoreTracks[i].timeTrialFlags = (i == missing) ? 3 : 7;
+		GAMEPROG_AdvPercent(&sdata->advProgress);
+		assert(!CHECK_ADV_BIT(sdata->gameProgress.unlocks, GAME_UNLOCK_BIT_OXIDE));
+	}
+
+	// Beating the final ghost grants Oxide immediately alongside the scrapbook.
+	tracker.levelID = MEMCARD_HIGH_SCORE_TRACK_COUNT - 1;
+	GAMEPROG_GetPtrHighScoreTrack();
+	tracker.timeToBeatInTimeTrial_ForCurrentEvent = 100;
+	driver.timeElapsedInRace = 99;
+	MainGameEnd_SoloRaceGetReward(0);
+	assert(CHECK_ADV_BIT(sdata->gameProgress.unlocks, GAME_UNLOCK_BIT_OXIDE));
+	assert(CHECK_ADV_BIT(sdata->gameProgress.unlocks, GAME_UNLOCK_BIT_SCRAPBOOK));
+	assert(tracker.levelID == MEMCARD_HIGH_SCORE_TRACK_COUNT - 1);
+
+	// Completed saves qualify without Gem Cup characters, when the option is on.
+	memset(sdata->gameProgress.unlocks, 0, sizeof(sdata->gameProgress.unlocks));
+	gNativeAdditionalUnlocksEnabled = 0;
+	tracker.gameModeEnd = 0;
+	MainGameEnd_SoloRaceGetReward(0);
+	GAMEPROG_AdvPercent(&sdata->advProgress);
+	assert(!CHECK_ADV_BIT(sdata->gameProgress.unlocks, GAME_UNLOCK_BIT_OXIDE));
+	gNativeAdditionalUnlocksEnabled = 1;
+	GAMEPROG_AdvPercent(&sdata->advProgress);
+	assert(CHECK_ADV_BIT(sdata->gameProgress.unlocks, GAME_UNLOCK_BIT_OXIDE));
+}
+
+// Exercise the actual browser navigation and measure its wrapped text without
+// booting the game, reading saves or drawing into the user's active session.
+static void UnlockMenuTest(void)
+{
+	struct RectMenu menu = s_nativeUnlocksMenu;
+	gNativeFont = NATIVE_FONT_ORIGINAL;
+	gNativeAdditionalUnlocksEnabled = 1;
+	assert(MM_NativeUnlockEntryAt(5)->name == LNG_DR_N_TROPY);
+	assert(MM_NativeUnlockEntryAt(6)->name == LNG_N_OXIDE_FULL);
+	assert(MM_NativeUnlockEntryAt(7)->name == LNG_PENTA_PENGUIN);
+	for (int additional = 0; additional <= 1; additional++)
+	{
+		gNativeAdditionalUnlocksEnabled = additional;
+		int count = MM_NativeUnlockCount();
+		assert(count == 13 + additional);
+		menu.rowSelected = 0;
+		s_nativeUnlockFirst = 0;
+		for (int i = 1; i <= count * 2; i++)
+		{
+			MM_NativeUnlocksInput(&menu, BTN_DOWN);
+			assert(menu.rowSelected == i % count);
+			assert(s_nativeUnlockFirst >= 0);
+			assert(s_nativeUnlockFirst + MM_NATIVE_UNLOCK_VISIBLE_ROWS <= count);
+			assert(menu.rowSelected >= s_nativeUnlockFirst);
+			assert(menu.rowSelected < s_nativeUnlockFirst + MM_NATIVE_UNLOCK_VISIBLE_ROWS);
+		}
+		MM_NativeUnlocksInput(&menu, BTN_UP);
+		assert(menu.rowSelected == count - 1);
+		MM_NativeUnlocksInput(&menu, BTN_RIGHT);
+		assert(menu.rowSelected == 0);
+		MM_NativeUnlocksInput(&menu, BTN_LEFT);
+		assert(menu.rowSelected == count - 1);
+		for (int i = 0; i < count; i++)
+		{
+			const struct MMNativeUnlockEntry *entry = MM_NativeUnlockEntryAt(i);
+			char requirement[160];
+			snprintf(requirement, sizeof(requirement), "%s %s", entry->requirement[0], entry->requirement[1]);
+			int bottom = 94 + DecalFont_DrawMultiLine(requirement, 250, 94, 234, FONT_SMALL, 0x800);
+			if (entry->name == LNG_PENTA_PENGUIN && !additional)
+				bottom += 10 + DecalFont_DrawMultiLine("ENABLE ADDITIONAL UNLOCKS IN OPTIONS > GAMEPLAY", 250, 0, 234, FONT_SMALL, 0x800);
+			assert(bottom <= 178);
+		}
+	}
+	// An options change must clamp both selection and scroll position.
+	gNativeAdditionalUnlocksEnabled = 0;
+	MM_NativeUnlocksInput(&menu, 0);
+	assert(menu.rowSelected == 12 && s_nativeUnlockFirst == 6);
+	MM_NativeUnlocksInput(&menu, BTN_TRIANGLE);
+	assert(sdata->ptrDesiredMenu == &D230.menuMainMenu);
+	sdata->ptrDesiredMenu = NULL;
+	MM_NativeUnlocksInput(&menu, BTN_SQUARE_one);
+	assert(sdata->ptrDesiredMenu == &D230.menuMainMenu);
+	sdata->ptrDesiredMenu = NULL;
+}
+
 int main(int argc, char **argv)
 {
+	if (argc == 2 && strcmp(argv[1], "--unlock-menu-only") == 0)
+	{
+		UnlockMenuTest();
+		puts("Unlock browser navigation and text bounds checks passed");
+		return 0;
+	}
+	if (argc == 2 && strcmp(argv[1], "--oxide-unlock-only") == 0)
+	{
+		UnlockTest_OxideGhosts();
+		puts("Oxide ghost unlock checks passed");
+		return 0;
+	}
+	if (argc == 2 && strcmp(argv[1], "--preset-input-only") == 0)
+	{
+		PresetTest_Input();
+		puts("Preset controller navigation and confirmation checks passed");
+		return 0;
+	}
+	if (argc == 2 && strcmp(argv[1], "--engine-lifecycle-only") == 0)
+	{
+		EngineTest_Lifecycle();
+		puts("Engine multiplayer and replay lifecycle checks passed");
+		return 0;
+	}
+	if (argc == 2 && strcmp(argv[1], "--engine-physics-only") == 0)
+	{
+		EngineTest_Physics();
+		puts("Independent engine physics checks passed");
+		return 0;
+	}
+	if (argc == 3 && strcmp(argv[1], "--engine-config-check") == 0)
+	{
+		load_config();
+		assert(gNativeEngineSelectionEnabled == atoi(argv[2]));
+		save_config();
+		gNativeEngineSelectionEnabled = !atoi(argv[2]);
+		load_config();
+		assert(gNativeEngineSelectionEnabled == atoi(argv[2]));
+		puts("Engine setting persistence passed");
+		return 0;
+	}
+	if (argc == 4 && strcmp(argv[1], "--config-check") == 0)
+	{
+		load_config();
+		assert(gNativeModernMapEnabled == atoi(argv[2]));
+		assert(gNativePreciseMinimapEnabled == 0);
+		assert(gNativeModernHudIconsEnabled == atoi(argv[3]));
+		save_config();
+		puts("HUD settings migration and save passed");
+		return 0;
+	}
+
 	if (argc == 2 && strcmp(argv[1], "--minimap-only") == 0)
 	{
 		DepthTest_MinimapPrecision();
-		puts("Minimap precision checks passed");
+		DepthTest_CollisionMinimap();
+		DepthTest_MinimapCrossingsAndCache();
+		puts("Minimap precision and collision checks passed");
 		return 0;
 	}
 	if (argc == 2 && strcmp(argv[1], "--model-submission-only") == 0)
@@ -701,12 +1514,28 @@ int main(int argc, char **argv)
 		puts("Tiger Temple sky ordering checks passed");
 		return 0;
 	}
+	if (argc == 3 && strcmp(argv[1], "--minimap-assets") == 0)
+	{
+		DepthTest_MinimapAssets(argv[2]);
+		return 0;
+	}
 	if (!SDL_Init(SDL_INIT_VIDEO)) return 77;
 	gNativeDitheringEnabled = 0;
 	gNativeBorderlessEnabled = 0;
 	if (!NativeRenderer_InitialiseRender("CTR depth test", 320, 240, 0)) return 77;
 	SDL_HideWindow(g_window);
 	assert(NativeRenderer_InitialisePSX());
+	if (argc == 2 && strcmp(argv[1], "--hud-icons-only") == 0)
+	{
+		DepthTest_HudIcons();
+		DepthTest_MenuArrows();
+		NativeRenderer_Shutdown();
+		SDL_DestroyWindow(g_window);
+		SDL_Quit();
+		puts("Native HUD icon checks passed");
+		return 0;
+	}
+
 	const float nearDepth[3] = {200, 200, 200};
 	const float farDepth[3] = {800, 800, 800};
 

@@ -1,4 +1,5 @@
 #include <common.h>
+#include <platform/native_unlock.h>
 
 #if defined(CTR_NATIVE)
 #include "platform/native_adhoc.h"
@@ -305,6 +306,9 @@ void MainFrame_RenderFrame(struct GameTracker *gGT, struct GamepadSystem *gGamep
 	}
 #endif
 
+#if defined(CTR_NATIVE)
+	NativeUnlock_Draw();
+#endif
 	RenderDispEnv_UI(gGT);
 	MAINFRAME_PERF_END(NATIVE_PERF_BUCKET_MAINFRAME_UI);
 

@@ -15,6 +15,8 @@ int gNativePgxpMode = NATIVE_PGXP_MODE_OFF;
 
 int gNativePgxpIntegerNclipEnabled = 0;
 int gNativePreciseMinimapEnabled = 0;
+int gNativeModernMapEnabled = 0;
+int gNativeModernHudIconsEnabled = 0;
 // Enabled by default on PC builds; Vita keeps the retail polygon ordering.
 #if defined(__vita__)
 int gNativeDepthBufferEnabled = 0;
@@ -698,6 +700,18 @@ void NativePgxp_Transform(int mx, int cv, const double *rotation, const double *
 		const double t = (usePreciseTransforms && cv < 3 && s_pgxpTranslationValid[cv]) ?
 			s_pgxpTransformBanks[cv].preciseTranslation[row] : translation[row];
 		result[row] = r[0] * input[0] + r[1] * input[1] + r[2] * input[2] + t * 4096.0;
+	}
+}
+
+void NativePgxp_PushDepth(const void *addr, u32 value, float offset)
+{
+	// Shadow storage is mutable; FindShadow only returns it const for lookups.
+	NativePgxpVertex *vertex = (NativePgxpVertex *)NativePgxp_FindShadow(addr, value);
+
+	// Retail-order (negative) and unknown depths stay as they are.
+	if ((vertex != NULL) && (vertex->depth > 0.0f))
+	{
+		vertex->depth += offset;
 	}
 }
 

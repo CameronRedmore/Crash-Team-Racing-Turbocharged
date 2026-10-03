@@ -2,6 +2,7 @@
 
 #if defined(CTR_NATIVE)
 #include <platform/native_custom_racer.h>
+#include <platform/native_engine.h>
 #endif
 
 enum
@@ -596,6 +597,9 @@ void VehBirth_SetConsts(struct Driver *driver)
 
 	int characterID = data.characterIDs[driver->driverID];
 	int engineID = data.MetaDataCharacters[characterID].engineID;
+#if defined(CTR_NATIVE)
+	engineID = NativeEngine_GetEffectiveProfile(driver->driverID);
+#endif
 
 	for (u32 i = 0; i < VEH_BIRTH_META_PHYS_COUNT; i++)
 	{
@@ -605,7 +609,11 @@ void VehBirth_SetConsts(struct Driver *driver)
 
 		// Patch Penta Penguin stats to PAL version ones
 		u32 rawValue;
-		if (characterID == PENTA_PENGUIN) {
+		int usePentaStats = characterID == PENTA_PENGUIN;
+#if defined(CTR_NATIVE)
+		usePentaStats = engineID == NATIVE_ENGINE_PENTA;
+#endif
+		if (usePentaStats) {
 			rawValue = (u32)s_pentaPalMetaPhys[i];
 		} else {
 			rawValue = (u32)metaPhys->value[engineID];

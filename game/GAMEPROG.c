@@ -1,4 +1,8 @@
 #include <common.h>
+#include <platform/native_unlock.h>
+#if defined(CTR_NATIVE)
+#include "platform/native_engine.h"
+#endif
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800265c0-0x8002689c.
 void GAMEPROG_AdvPercent(struct AdvProgress *adv)
@@ -107,6 +111,22 @@ void GAMEPROG_AdvPercent(struct AdvProgress *adv)
 		// then extra 1% is not earned
 		allGoldOrPlatinumRelics = false;
 	}
+
+#if defined(CTR_NATIVE)
+	// Additional Unlocks: all gold/platinum relics unlocks Penta Penguin.
+	// Only the active profile counts, since the profile menu also calls this for every slot.
+	if (gNativeAdditionalUnlocksEnabled && allGoldOrPlatinumRelics && (adv == &sdata->advProgress))
+	{
+		NativeUnlock_GrantMask(UNLOCK_PENTA);
+	}
+
+	// Recognize completed Oxide ghost progress when loading the active profile.
+	if (gNativeAdditionalUnlocksEnabled && (adv == &sdata->advProgress) &&
+	    GAMEPROG_CheckGhostsBeaten(2))
+	{
+		NativeUnlock_GrantBit(GAME_UNLOCK_BIT_OXIDE);
+	}
+#endif
 
 	percent += gGT->currAdvProfile.numRelics * 2 + gGT->currAdvProfile.numTrophies * 2 + gGT->currAdvProfile.numKeys + gGT->currAdvProfile.numCtrTokens.total +
 	           gGT->currAdvProfile.numCtrTokens.purple + numGems + oxidePercent + allGoldOrPlatinumRelics;

@@ -1,5 +1,6 @@
 #include <common.h>
 #include "platform/native_leaderboard.h"
+#include "platform/native_engine.h"
 
 #if CTR_NATIVE_HAS_LEADERBOARD
 #include "platform/native_log.h"
@@ -1462,6 +1463,8 @@ void NativeLeaderboard_StageTimeTrialRecord(u16 trackId, u16 characterId, const 
 {
     NativeLeaderboard_ClearPendingUpload();
     if (NativeCheat_DisablesRecords()) return;
+    // The service categorizes records by character, without a separate engine.
+    if (NativeEngine_GetEffectiveProfile(0) != NativeEngine_GetDefaultProfile(characterId)) return;
     if (!s_nativeLeaderboard.initialized || (!raceBest && !lapBest) || (trackId >= NATIVE_LEADERBOARD_TRACK_COUNT)) return;
     struct NativeLeaderboardUpload *upload = &s_nativeLeaderboard.pendingUpload;
     upload->trackId = trackId;
@@ -1506,6 +1509,7 @@ void NativeLeaderboard_StageRelicRaceRecord(u16 trackId, u16 characterId, const 
 {
     NativeLeaderboard_ClearPendingUpload();
     if (NativeCheat_DisablesRecords()) return;
+    if (NativeEngine_GetEffectiveProfile(0) != NativeEngine_GetDefaultProfile(characterId)) return;
     if (!s_nativeLeaderboard.initialized || !relicBest || (trackId >= NATIVE_LEADERBOARD_TRACK_COUNT)) return;
 
     struct NativeLeaderboardUpload *upload = &s_nativeLeaderboard.pendingUpload;

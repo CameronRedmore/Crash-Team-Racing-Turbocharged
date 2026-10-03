@@ -2,6 +2,7 @@
 
 #if defined(CTR_NATIVE)
 #include "platform/native_adhoc.h"
+#include "platform/native_hud_icons.h"
 #endif
 
 enum
@@ -94,6 +95,12 @@ void DotLights_Video(struct GameTracker *gGT, s32 red1, s32 red2, s32 red3, s32 
 		for (s32 lightIndex = 0; lightIndex < DOT_LIGHT_COUNT; lightIndex++)
 		{
 			s32 iconIndex = iconState[lightIndex] + (DOT_LIGHT_GREEN_ICON_OFFSET * (lightIndex == DOT_LIGHT_GREEN_INDEX));
+
+#if defined(CTR_NATIVE)
+			if (NativeHudIcons_DrawLight(gGT->trafficLightIcon[iconIndex], newPosX + (sizeX * lightIndex), newPosY, scale,
+			                            lightIndex == DOT_LIGHT_GREEN_INDEX, iconState[lightIndex], &gGT->backBuffer->primMem, pb->ptrOT)) continue;
+
+#endif
 			DecalHUD_DrawPolyFT4(gGT->trafficLightIcon[iconIndex], newPosX + (sizeX * lightIndex), newPosY, &gGT->backBuffer->primMem, pb->ptrOT, 0, scale);
 		}
 	}

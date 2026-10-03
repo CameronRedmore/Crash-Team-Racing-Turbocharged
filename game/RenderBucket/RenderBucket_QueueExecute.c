@@ -1,5 +1,6 @@
 #include <common.h>
 #include <math.h>
+#include <platform/native_kart_color.h>
 
 #if defined(CTR_NATIVE)
 #include "platform/native_adhoc.h"
@@ -3194,7 +3195,14 @@ static struct TextureLayout *RenderBucket_GetCommandTexture(struct RenderBucketD
 	// NOTE(aalhendi): Retail only uses texture index zero as the explicit G3
 	// path, but a null texture-table entry also reaches DrawInstPrim_Normal as
 	// `a2 == 0` and emits G3. Do not reject that case here.
-	return ctx->idpp->ptrTexLayout[texIndex - 1];
+	struct TextureLayout *layout = ctx->idpp->ptrTexLayout[texIndex - 1];
+#if defined(CTR_NATIVE) && NATIVE_KART_COLOR_SUPPORTED
+	if (layout != NULL)
+	{
+		NativeKartColor_OnLayout(ctx->inst, layout);
+	}
+#endif
+	return layout;
 }
 
 static int RenderBucket_OTEntryPassesDpctGate(const uint32_t *otEntry)

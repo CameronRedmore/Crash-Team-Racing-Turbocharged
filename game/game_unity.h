@@ -68,6 +68,8 @@
 #include "NativeAutoSave.c"
 #endif
 
+#include "NativeEngine.c"
+#include "NativeUnlock.c"
 #include "NativeGhostInput.c"
 
 #include "GAMEPAD.c"

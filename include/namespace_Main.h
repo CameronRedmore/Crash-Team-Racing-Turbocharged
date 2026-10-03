@@ -245,8 +245,9 @@ enum GameMode2
 	INC_TROPHY = 0x4000000,
 	CHEAT_TURBOCOUNT = 0x8000000,
 	LNG_CHANGE = 0x10000000, // (EurRetail Only)
+	// The boost counter only changes the HUD (Options > Interface), so it is not a record-disabling cheat.
 	CHEAT_ALL = CHEAT_ADV | CHEAT_BOMBS | CHEAT_ENGINE | CHEAT_ICY | CHEAT_INVISIBLE | CHEAT_MASK | CHEAT_TURBO |
-	            CHEAT_TURBOCOUNT | CHEAT_TURBOPAD | CHEAT_WUMPA,
+	            CHEAT_TURBOPAD | CHEAT_WUMPA,
 };
 
 enum GameMode2Masks

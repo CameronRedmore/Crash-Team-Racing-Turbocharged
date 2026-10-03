@@ -3,6 +3,7 @@
 #include <macros.h>
 
 #include "platform/native_audio.h"
+#include "platform/native_kart_color.h"
 #include "platform/native_adhoc.h"
 #include "platform/native_cd.h"
 #include "platform/native_discord.h"
@@ -520,6 +521,7 @@ int Platform_BeginScene(void)
 	NativeRenderer_UpdateSwapIntervalState(0);
 #endif
 
+	NativeKartColor_BeginFrame();
 	NativeRenderer_BeginScene();
 
 	if (NativeGpu_GetRenderDrawEnv()->isbg)

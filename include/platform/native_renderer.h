@@ -17,6 +17,9 @@ void NativeRenderer_StoreFrameBuffer(int x, int y, int w, int h);
 #ifndef __vita__
 int NativeRenderer_CapturePauseBackground(const u16 *bgr555Palette16, int smooth);
 TextureID NativeRenderer_GetPauseBackgroundTexture(void);
+u32 NativeRenderer_CreateFontAtlasTexture(int width, int height, const u8 *pixels);
+u32 NativeRenderer_CreateMinimapTexture(int width, int height, const u8 *pixels);
+void NativeRenderer_DestroyFontAtlasTexture(u32 texture);
 #endif
 void NativeRenderer_PresentMainRenderTarget(void);
 void NativeRenderer_DrawGhostReplayOverlay(void);
