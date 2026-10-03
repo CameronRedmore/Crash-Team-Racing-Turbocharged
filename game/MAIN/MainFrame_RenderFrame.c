@@ -825,7 +825,8 @@ void RenderAllBoxSceneSplitLines(struct GameTracker *gGT)
 void RenderBucket_QueueAllInstances(struct GameTracker *gGT)
 {
 	int lod;
-	int *RBI;
+	// Render bucket entries start with an Instance pointer (native-sized).
+	void **RBI;
 	int numPlyrCurrGame = gGT->numPlyrCurrGame;
 	int renderPlayerCount = numPlyrCurrGame;
 
@@ -862,7 +863,7 @@ void RenderBucket_QueueAllInstances(struct GameTracker *gGT)
 #endif
 
 	// null terminator at end of list
-	*RBI = 0;
+	*RBI = NULL;
 }
 
 void RenderAllNormalParticles(struct GameTracker *gGT)
