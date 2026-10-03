@@ -2,12 +2,12 @@
 
 void GetPrimitiveMem(void **ppPrim, size_t primSize)
 {
-	struct DB *backBuffer = sdata->gGT->backBuffer;
-	if (backBuffer->primMem.cursor <= backBuffer->primMem.guardEnd)
+	struct DB *backBuffer = P32_GET(struct DB *, P32_GET(struct GameTracker *, sdata->gGT)->backBuffer);
+	if (P32_GET(void *, backBuffer->primMem.cursor) <= P32_GET(void *, backBuffer->primMem.guardEnd))
 	{
-		*ppPrim = backBuffer->primMem.cursor;
+		*ppPrim = P32_GET(void *, backBuffer->primMem.cursor);
 
-		backBuffer->primMem.cursor = (void *)((size_t)backBuffer->primMem.cursor + primSize);
+		P32_SET(backBuffer->primMem.cursor, (void *)((size_t)P32_GET(void *, backBuffer->primMem.cursor) + primSize));
 
 		((Tag *)*ppPrim)->size = (primSize - sizeof(Tag)) / sizeof(u32);
 	}

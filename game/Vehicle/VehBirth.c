@@ -90,7 +90,7 @@ static int VehBirth_IsDoor5InstDef(struct InstDef *instDef)
 
 static struct InstDef *VehBirth_FindDoor5(struct Level *level)
 {
-	struct InstDef *instDef = level->ptrInstDefs;
+	struct InstDef *instDef = P32_GET(struct InstDef *, level->ptrInstDefs);
 
 	for (int i = 0; i < (int)level->numInstances; i++, instDef++)
 	{
@@ -138,7 +138,7 @@ static int VehBirth_ShouldUseStartlineInAdv(struct GameTracker *gGT, s16 *warppa
 
 static struct SpawnPosRot *VehBirth_SpawnType2PosRot(struct Level *level)
 {
-	return level->ptrSpawnType2_PosRot[1].posRot;
+	return P32_GET(struct SpawnPosRot *, P32_GET(struct SpawnType2 *, level->ptrSpawnType2_PosRot)[1].posRot);
 }
 
 static void VehBirth_SetBottomFromPos(SVec3 *posBottom, const SVec3 *pos)
@@ -159,7 +159,7 @@ static void VehBirth_SetStartlinePosition(struct Driver *d, struct Level *level,
 
 	d->actionsFlagSet |= ACTION_BEHIND_START_LINE;
 #ifdef CTR_NATIVE
-	if (level->ptr_restart_points == NULL)
+	if (P32_GET(struct CheckpointNode *, level->ptr_restart_points) == NULL)
 	{
 		// NOTE(aalhendi): Retail does an unguarded low-address read here;
 		// native cannot dereference PS1 null-space for menu/hub-style LEVs.
@@ -168,7 +168,7 @@ static void VehBirth_SetStartlinePosition(struct Driver *d, struct Level *level,
 	else
 	{
 #endif
-		d->distanceToFinish_checkpoint = level->ptr_restart_points[0].distToFinish << 3;
+		d->distanceToFinish_checkpoint = P32_GET(struct CheckpointNode *, level->ptr_restart_points)[0].distToFinish << 3;
 	}
 	VehBirth_SetBottomFromPos(posBottom, &level->DriverSpawn[spawnIndex].pos);
 }
@@ -197,8 +197,8 @@ void VehBirth_TeleportSelf(struct Driver *d, u8 spawnFlag, int spawnPosY)
 	SVec3 posBottom;
 	SVec3 warppadPos;
 
-	struct GameTracker *gGT = sdata->gGT;
-	struct Level *level1 = gGT->level1;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct Level *level1 = P32_GET(struct Level *, gGT->level1);
 	struct Instance *dInst;
 	struct ScratchpadStruct *sps = CTR_SCRATCHPAD_PTR(struct ScratchpadStruct, 0x108);
 
@@ -208,12 +208,12 @@ void VehBirth_TeleportSelf(struct Driver *d, u8 spawnFlag, int spawnPosY)
 	int spawnAtBoss;
 	int spawnOutsideBoss = 0;
 
-	if ((level1 == NULL) || (level1->ptr_mesh_info == NULL))
+	if ((level1 == NULL) || (P32_GET(struct mesh_info *, level1->ptr_mesh_info) == NULL))
 	{
 		return;
 	}
 
-	dInst = d->instSelf;
+	dInst = P32_GET(struct Instance *, d->instSelf);
 
 	sps->Union.QuadBlockColl.quadFlagsWanted = QUADBLOCK_FLAG_GROUND | QUADBLOCK_FLAG_COLLISION_SURFACE;
 	sps->Union.QuadBlockColl.quadFlagsIgnored = 0;
@@ -222,7 +222,7 @@ void VehBirth_TeleportSelf(struct Driver *d, u8 spawnFlag, int spawnPosY)
 	{
 		sps->Union.QuadBlockColl.searchFlags = COLL_SEARCH_HIGH_LOD;
 	}
-	sps->ptr_mesh_info = level1->ptr_mesh_info;
+	P32_SET(sps->ptr_mesh_info, P32_GET(struct mesh_info *, level1->ptr_mesh_info));
 
 	gGT->gameMode2 &= ~VEH_FREEZE_DOOR;
 	spawnAtBoss = gGT->gameMode2 & SPAWN_AT_BOSS;
@@ -302,7 +302,7 @@ void VehBirth_TeleportSelf(struct Driver *d, u8 spawnFlag, int spawnPosY)
 	else
 	{
 		d->AxisAngle3_normalVec = sps->hit.plane.normal;
-		d->lastValid = sps->hit.ptrQuadblock;
+		P32_SET(d->lastValid, P32_GET(struct QuadBlock *, sps->hit.ptrQuadblock));
 	}
 
 	d->AxisAngle1_normalVec = d->AxisAngle3_normalVec;
@@ -392,7 +392,7 @@ void VehBirth_TeleportSelf(struct Driver *d, u8 spawnFlag, int spawnPosY)
 	d->rotPrev.w = 0;
 	d->pendingDamageType = 0;
 	d->jumpSquishStretch = 0;
-	d->underDriver = 0;
+	P32_SET(d->underDriver, 0);
 	d->distanceDrivenBackwards = 0;
 	d->clockReceive = 0;
 	d->revEngineState = 0;
@@ -424,19 +424,19 @@ void VehBirth_TeleportSelf(struct Driver *d, u8 spawnFlag, int spawnPosY)
 		return;
 	}
 
-	if (dInst->thread->modelIndex == DYNAMIC_PLAYER)
+	if (P32_GET(struct Thread *, dInst->thread)->modelIndex == DYNAMIC_PLAYER)
 	{
 		for (int i = 0; i < DRIVER_FUNC_COUNT; i++)
 		{
-			d->funcPtrs[i] = NULL;
+			P32_SET(d->funcPtrs[i], NULL);
 		}
 
 		CAM_StartOfRace(&gGT->cameraDC[d->driverID]);
 
-		dInst->thread->funcThTick = ((gGT->gameMode1 & (GAME_CUTSCENE | MAIN_MENU)) == 0) ? NULL : VehBirth_NullThread;
+		P32_SET(P32_GET(struct Thread *, dInst->thread)->funcThTick, ((gGT->gameMode1 & (GAME_CUTSCENE | MAIN_MENU)) == 0) ? NULL : VehBirth_NullThread);
 
 		// set OnInit function
-		d->funcPtrs[DRIVER_FUNC_INIT] = ((gGT->gameMode1 & ADVENTURE_ARENA) == 0) ? VehStuckProc_RevEngine_Init : VehPhysProc_Driving_Init;
+		P32_SET(d->funcPtrs[DRIVER_FUNC_INIT], ((gGT->gameMode1 & ADVENTURE_ARENA) == 0) ? VehStuckProc_RevEngine_Init : VehPhysProc_Driving_Init);
 	}
 
 	d->lapIndex = 0;
@@ -502,20 +502,20 @@ void VehBirth_TeleportAll(struct GameTracker *gGT, u32 spawnFlags)
 {
 	// NOTE(aalhendi): Retail ignores this parameter and reloads gGT from globals.
 	(void)gGT;
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	struct Driver *d;
 
 	for (int i = 0; i < (int)len(gGT->drivers); i++)
 	{
-		d = gGT->drivers[i];
+		d = P32_GET(struct Driver *, gGT->drivers[i]);
 
 		if (d == NULL)
 		{
 			continue;
 		}
 
-		if (d->instSelf->thread->modelIndex == DYNAMIC_ROBOT_CAR)
+		if (P32_GET(struct Thread *, P32_GET(struct Instance *, d->instSelf)->thread)->modelIndex == DYNAMIC_ROBOT_CAR)
 		{
 			BOTS_GotoStartingLine(d);
 		}
@@ -552,7 +552,7 @@ struct Model *VehBirth_GetModelByName(char *searchName)
 	// maximum of 4, used in VS mode
 	for (int i = 0; i < VEH_EXTRA_DRIVER_MODEL_COUNT; i++)
 	{
-		struct Model *m = data.driverModelExtras[i].model;
+		struct Model *m = P32_GET(struct Model *, data.driverModelExtras[i].model);
 
 #if defined(CTR_NATIVE)
 		if (NativeCustomRacer_GetDriverSelection(i) >= 0)
@@ -568,7 +568,7 @@ struct Model *VehBirth_GetModelByName(char *searchName)
 		}
 	}
 
-	struct Model **models = (struct Model **)sdata->PLYROBJECTLIST;
+	struct Model **models = (struct Model **)P32_GET(int **, sdata->PLYROBJECTLIST);
 
 	if (
 	    // list is valid, and first element is valid
@@ -641,11 +641,11 @@ void VehBirth_SetConsts(struct Driver *driver)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80058ba4-0x80058c44.
 void VehBirth_EngineAudio_AllPlayers(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
-	for (struct Thread *th = gGT->threadBuckets[PLAYER].thread; th != 0; th = th->siblingThread)
+	for (struct Thread *th = P32_GET(struct Thread *, gGT->threadBuckets[PLAYER].thread); th != 0; th = P32_GET(struct Thread *, th->siblingThread))
 	{
-		struct Driver *d = th->object;
+		struct Driver *d = P32_GET(void *, th->object);
 
 		u8 driverID = d->driverID;
 
@@ -664,13 +664,13 @@ void VehBirth_NullThread(struct Thread *t)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80058c4c-0x80058d2c.
 void VehBirth_TireSprites(struct Thread *t)
 {
-	struct GameTracker *gGT = sdata->gGT;
-	struct Driver *d = t->object;
-	struct IconGroup *tireAnim = gGT->iconGroup[0];
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct Driver *d = P32_GET(void *, t->object);
+	struct IconGroup *tireAnim = P32_GET(struct IconGroup *, gGT->iconGroup[0]);
 	int driverID = d->driverID;
 
 	struct Icon **tire = ICONGROUP_GETICONS(tireAnim);
-	d->wheelSprites = tire;
+	P32_SET(d->wheelSprites, tire);
 
 	d->wheelSize = VEH_BIRTH_WHEEL_SIZE;
 
@@ -706,7 +706,7 @@ void VehBirth_TireSprites(struct Thread *t)
 	d->reserved_0x412 = VEH_BIRTH_RESERVED_0x412_INITIAL;
 	d->numFramesSpentSteering = VEH_BIRTH_STEERING_FRAMES_RESET;
 
-	d->terrainMeta1 = VehAfterColl_GetTerrain(TERRAIN_NONE);
+	P32_SET(d->terrainMeta1, VehAfterColl_GetTerrain(TERRAIN_NONE));
 
 	d->BattleHUD.numLives = gGT->battleLifeLimit;
 
@@ -728,8 +728,8 @@ void VehBirth_NonGhost(struct Thread *t, int index)
 	t->driverCollisionReserved_0x3c = 0;
 	t->driverCollisionReserved_0x40 = 0;
 
-	struct Driver *d = t->object;
-	struct GameTracker *gGT = sdata->gGT;
+	struct Driver *d = P32_GET(void *, t->object);
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	int id = data.characterIDs[0];
 	if ((gGT->gameMode1 & MAIN_MENU) == 0)
@@ -742,18 +742,18 @@ void VehBirth_NonGhost(struct Thread *t, int index)
 	m = NativeAIRandomizer_GetDriverModel(index);
 #endif
 	if (m == NULL)
-		m = VehBirth_GetModelByName(data.MetaDataCharacters[id].name_Debug);
+		m = VehBirth_GetModelByName(P32_GET(char *, data.MetaDataCharacters[id].name_Debug));
 
 	struct Instance *inst = INSTANCE_Birth3D(m, m->name, t);
 
-	t->inst = inst;
+	P32_SET(t->inst, inst);
 
 	// Wake
-	m = gGT->modelPtr[STATIC_WAKE];
+	m = P32_GET(struct Model *, gGT->modelPtr[STATIC_WAKE]);
 	if (m != 0)
 	{
 		inst = INSTANCE_Birth3D(m, m->name, 0);
-		d->wakeInst = inst;
+		P32_SET(d->wakeInst, inst);
 
 		if (inst != 0)
 		{
@@ -771,7 +771,7 @@ void VehBirth_NonGhost(struct Thread *t, int index)
 	printf("wake not in level\n");
 	*/
 
-	inst = t->inst;
+	inst = P32_GET(struct Instance *, t->inst);
 	if (index < gGT->numPlyrCurrGame)
 	{
 		inst->flags |= OWNER_PUSHBUFFER_GATE;
@@ -781,13 +781,13 @@ void VehBirth_NonGhost(struct Thread *t, int index)
 #if defined(CTR_NATIVE)
 	NativePhysics_ResetDriver(d);
 #endif
-	d->instSelf = inst;
+	P32_SET(d->instSelf, inst);
 
 	VehBirth_TireSprites(t);
 #ifdef CTR_NATIVE
 	// NOTE(aalhendi): Retail leaves terrainMeta2 unset until COLL_FIXED;
 	// native cannot dereference the PS1 low-memory null-space before then.
-	d->terrainMeta2 = d->terrainMeta1;
+	P32_SET(d->terrainMeta2, P32_GET(struct Terrain *, d->terrainMeta1));
 #endif
 	VehBirth_SetConsts(d);
 
@@ -795,7 +795,7 @@ void VehBirth_NonGhost(struct Thread *t, int index)
 	if ((gGT->gameMode1 & GAME_MODE_MENU_OR_CUTSCENE_MASK) != 0)
 	{
 		// dont update, make invisible
-		t->funcThTick = VehBirth_NullThread;
+		P32_SET(t->funcThTick, VehBirth_NullThread);
 		inst->flags |= HIDE_MODEL;
 	}
 }
@@ -805,14 +805,14 @@ struct Driver *VehBirth_Player(int index)
 {
 	struct Thread *t = PROC_BirthWithObject(VEH_BIRTH_PLAYER_THREAD_FLAGS, 0, sdata->s_player, 0);
 
-	struct Driver *d = t->object;
+	struct Driver *d = P32_GET(void *, t->object);
 	memset(d, 0, DRIVER_NTSC_RETAIL_SIZE);
 
 	VehBirth_NonGhost(t, index);
 
-	d->funcPtrs[DRIVER_FUNC_INIT] = VehPhysProc_Driving_Init;
+	P32_SET(d->funcPtrs[DRIVER_FUNC_INIT], VehPhysProc_Driving_Init);
 
-	d->BattleHUD.teamID = sdata->gGT->battleSetup.teamOfEachPlayer[index];
+	d->BattleHUD.teamID = P32_GET(struct GameTracker *, sdata->gGT)->battleSetup.teamOfEachPlayer[index];
 
 	return d;
 }

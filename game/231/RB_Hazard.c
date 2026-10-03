@@ -4,7 +4,7 @@
 
 int RB_Hazard_HurtDriver(struct Driver *driverVictim, int damageType, struct Driver *driverAttacker, int reason)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	int result = 0;
 
 	if ((driverVictim->actionsFlagSet & ACTION_BOT) == 0)
@@ -36,7 +36,7 @@ struct Instance *RB_Hazard_CollideWithDrivers(struct Instance *weaponInst, s16 p
 
 	for (int i = 0; i < 8; i++)
 	{
-		struct Driver *driver = sdata->gGT->drivers[i];
+		struct Driver *driver = P32_GET(struct Driver *, P32_GET(struct GameTracker *, sdata->gGT)->drivers[i]);
 
 		if (driver == 0)
 		{
@@ -46,7 +46,7 @@ struct Instance *RB_Hazard_CollideWithDrivers(struct Instance *weaponInst, s16 p
 		{
 			continue;
 		}
-		struct Instance *driverInst = driver->instSelf;
+		struct Instance *driverInst = P32_GET(struct Instance *, driver->instSelf);
 
 		for (j = 0; j < 3; j++)
 		{
@@ -54,7 +54,7 @@ struct Instance *RB_Hazard_CollideWithDrivers(struct Instance *weaponInst, s16 p
 			dist[j] = (u32)delta * (u32)delta;
 		}
 
-		modelID = weaponInst->model->id;
+		modelID = P32_GET(struct Model *, weaponInst->model)->id;
 
 		// 2D collision (barrel, warpball)
 		distCheck = dist[0] + dist[2];
@@ -99,10 +99,10 @@ struct Instance *RB_Hazard_CollideWithBucket(struct Instance *weaponInst, struct
 
 	(void)weaponTh;
 
-	for (; bucket != 0; bucket = bucket->siblingThread)
+	for (; bucket != 0; bucket = P32_GET(struct Thread *, bucket->siblingThread))
 	{
 		distCheck = 0;
-		struct Instance *threadInst = bucket->inst;
+		struct Instance *threadInst = P32_GET(struct Instance *, bucket->inst);
 
 		for (i = 0; i < 3; i++)
 		{
@@ -135,13 +135,13 @@ void RB_Hazard_ThCollide_Generic_Alt(struct Thread **threadSlot)
 // NOTE(aalhendi): Native ThCollide ABI is void; retail returns v0=1.
 void RB_Hazard_ThCollide_Missile(struct Thread *thread)
 {
-	struct Instance *inst = thread->inst;
-	struct TrackerWeapon *tw = inst->thread->object;
+	struct Instance *inst = P32_GET(struct Instance *, thread->inst);
+	struct TrackerWeapon *tw = P32_GET(void *, P32_GET(struct Thread *, inst->thread)->object);
 
-	if (inst->model->id == DYNAMIC_ROCKET)
+	if (P32_GET(struct Model *, inst->model)->id == DYNAMIC_ROCKET)
 	{
 		// get driver
-		struct Driver *driver = tw->driverTarget;
+		struct Driver *driver = P32_GET(struct Driver *, tw->driverTarget);
 
 		// if driver is valid
 		if (driver != 0)
@@ -166,17 +166,17 @@ void RB_Hazard_ThCollide_Missile(struct Thread *thread)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800ac4b8-0x800ac5e8.
 void RB_Hazard_ThCollide_Generic(struct Thread *thread)
 {
-	struct Instance *inst = thread->inst;
-	struct MineWeapon *mw = thread->object;
+	struct Instance *inst = P32_GET(struct Instance *, thread->inst);
+	struct MineWeapon *mw = P32_GET(void *, thread->object);
 	int soundID;
 
-	struct Instance *crateInst = mw->crateInst;
+	struct Instance *crateInst = P32_GET(struct Instance *, mw->crateInst);
 	if (crateInst != 0)
 	{
-		struct Thread *crateThread = crateInst->thread;
+		struct Thread *crateThread = P32_GET(struct Thread *, crateInst->thread);
 		if (crateThread != NULL)
 		{
-			struct Crate *crateObj = crateThread->object;
+			struct Crate *crateObj = P32_GET(void *, crateThread->object);
 			if (crateObj != NULL)
 			{
 				crateObj->boolPauseCooldown = 0;
@@ -184,7 +184,7 @@ void RB_Hazard_ThCollide_Generic(struct Thread *thread)
 		}
 	}
 
-	int modelID = inst->model->id;
+	int modelID = P32_GET(struct Model *, inst->model)->id;
 
 	// if red beaker or green beaker
 	if ((u32)(modelID - STATIC_BEAKER_RED) < 2)
@@ -214,7 +214,7 @@ void RB_Hazard_ThCollide_Generic(struct Thread *thread)
 			// at this point, must be TNT
 
 			// if driver hit TNT
-			if (mw->driverTarget != 0)
+			if (P32_GET(struct Driver *, mw->driverTarget) != 0)
 			{
 				// quit, explosion handled
 				// by TNT thread
@@ -250,24 +250,24 @@ u16 RB_Hazard_CollLevInst(struct ScratchpadStruct *sps, struct Thread *th)
 	struct InstDef *instdef;
 
 	// Check if the hitbox flag has the collision bit set and if InstDef is not NULL
-	if ((sps->bspHitbox->flag & 0x80) && (instdef = sps->bspHitbox->data.hitbox.instDef) != NULL)
+	if ((P32_GET(struct BSP *, sps->bspHitbox)->flag & 0x80) && (instdef = P32_GET(struct InstDef *, P32_GET(struct BSP *, sps->bspHitbox)->data.hitbox.instDef)) != NULL)
 	{
-		struct Instance *inst = instdef->ptrInstance;
+		struct Instance *inst = P32_GET(struct Instance *, instdef->ptrInstance);
 		if (inst == NULL)
 		{
 			return 1;
 		}
 
-		s16 model = inst->model->id;
+		s16 model = P32_GET(struct Model *, inst->model)->id;
 
 		// Get the metadata for the model
 		struct MetaDataMODEL *meta = COLL_LevModelMeta(model);
 
 		// Check if LInC is not nullptr
-		if ((meta != NULL) && (meta->LInC != NULL))
+		if ((meta != NULL) && (P32_GET(int (*)(struct Instance *, struct Thread *, struct ScratchpadStruct *), meta->LInC) != NULL))
 		{
 			// Execute LInC, create a thread for this instance, and let it run thread->funcThCollide upon collision
-			u16 flag = meta->LInC(inst, th, sps);
+			u16 flag = P32_GET(int (*)(struct Instance *, struct Thread *, struct ScratchpadStruct *), meta->LInC)(inst, th, sps);
 
 			// if not PU_WUMPA_FRUIT
 			if (model != 2)

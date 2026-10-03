@@ -169,8 +169,8 @@ static void CC_EndEvent_UnlockRewardBit(struct AdvProgress *adv, s32 rewardBit)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8009f710-0x8009fbec for the retail path.
 void CC_EndEvent_DrawMenu()
 {
-	struct GameTracker *gGT = sdata->gGT;
-	struct Driver *driver = gGT->drivers[0];
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct Driver *driver = P32_GET(struct Driver *, gGT->drivers[0]);
 	b32 use30HzStep = true;
 #if CTR_NATIVE_60FPS
 	use30HzStep = CTR_RETAIL_FRAME_TICK(gGT->timer);
@@ -192,15 +192,15 @@ void CC_EndEvent_DrawMenu()
 #if defined(CTR_NATIVE)
 	// NOTE(aalhendi): Menu-storage can enter this flow in tracks without
 	// crystal HUD instances; keep reward/menu logic and skip missing models.
-	if (sdata->ptrHudCrystal != NULL)
+	if (P32_GET(struct Instance *, sdata->ptrHudCrystal) != NULL)
 #endif
 	{
-		sdata->ptrHudCrystal->flags |= HIDE_MODEL;
+		P32_GET(struct Instance *, sdata->ptrHudCrystal)->flags |= HIDE_MODEL;
 	}
 
 	// fly in from left
 	UI_Lerp2D_Linear(pos.v, -0x64, 0x18, 0x100, 0x18, elapsedFrames, FPS_DOUBLE(CC_FLY_IN_FRAMES));
-	DecalFont_DrawLine(sdata->lngStrings[LNG_TIME_REMAINING], pos.x, pos.y, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
+	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_TIME_REMAINING], pos.x, pos.y, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
 	UI_DrawLimitClock(pos.x - 0x33, pos.y + 0x11, FONT_BIG);
 
 	// fly in from right
@@ -208,11 +208,11 @@ void CC_EndEvent_DrawMenu()
 
 	// Crystal count
 #if defined(CTR_NATIVE)
-	if (sdata->ptrMenuCrystal != NULL)
+	if (P32_GET(struct Instance *, sdata->ptrMenuCrystal) != NULL)
 #endif
 	{
-		sdata->ptrMenuCrystal->matrix.t[0] = UI_ConvertX_2(pos.x, CC_SCREEN_DEPTH);
-		sdata->ptrMenuCrystal->matrix.t[1] = UI_ConvertY_2(pos.y, CC_SCREEN_DEPTH);
+		P32_GET(struct Instance *, sdata->ptrMenuCrystal)->matrix.t[0] = UI_ConvertX_2(pos.x, CC_SCREEN_DEPTH);
+		P32_GET(struct Instance *, sdata->ptrMenuCrystal)->matrix.t[1] = UI_ConvertY_2(pos.y, CC_SCREEN_DEPTH);
 	}
 	UI_DrawNumCrystal(pos.x + 0xf, pos.y - 0x10, driver);
 
@@ -223,7 +223,7 @@ void CC_EndEvent_DrawMenu()
 	}
 
 	// YOU WIN, or TRY AGAIN
-	DecalFont_DrawLine(sdata->lngStrings[resultStringIndex], pos.x + 0x33, pos.y + 8, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
+	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[resultStringIndex], pos.x + 0x33, pos.y + 8, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
 
 	// if a token is not newly-unlocked
 	if (didLose || CC_EndEvent_HasRewardBit(adv, tokenRewardBit))
@@ -234,7 +234,7 @@ void CC_EndEvent_DrawMenu()
 			return;
 		}
 
-		DecalFont_DrawLine(sdata->lngStrings[LNG_PRESS_TO_CONTINUE], 0x100, 0xbe, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
+		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_PRESS_TO_CONTINUE], 0x100, 0xbe, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
 
 		if ((sdata->AnyPlayerTap & CC_CONFIRM_BUTTON_MASK) == 0)
 		{
@@ -249,7 +249,7 @@ void CC_EndEvent_DrawMenu()
 
 	// == if a token is newly-unlocked ==
 
-	struct Instance *token = sdata->ptrToken;
+	struct Instance *token = P32_GET(struct Instance *, sdata->ptrToken);
 	s32 color = (JUSTIFY_CENTER | ORANGE);
 	if (gGT->timer == 0)
 	{
@@ -258,7 +258,7 @@ void CC_EndEvent_DrawMenu()
 
 	UI_Lerp2D_Linear(pos.v, -0x64, 0xA2, 0x100, 0xA2, elapsedFrames, FPS_DOUBLE(CC_FLY_IN_FRAMES));
 
-	DecalFont_DrawLine(sdata->lngStrings[LNG_CTR_TOKEN_AWARDED], pos.x, pos.y, FONT_BIG, color);
+	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_CTR_TOKEN_AWARDED], pos.x, pos.y, FONT_BIG, color);
 #if defined(CTR_NATIVE)
 	if (token != NULL)
 #endif
@@ -288,7 +288,7 @@ void CC_EndEvent_DrawMenu()
 		OtherFX_Play(0x67, 1);
 	}
 
-	DecalFont_DrawLine(sdata->lngStrings[LNG_PRESS_TO_CONTINUE], 0x100, 0xbe, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
+	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_PRESS_TO_CONTINUE], 0x100, 0xbe, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
 
 	// if still waiting to press X/O, quit function
 	if ((sdata->AnyPlayerTap & CC_CONFIRM_BUTTON_MASK) == 0)

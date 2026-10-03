@@ -62,17 +62,17 @@ static u16 VehGroundSkids_ReadTexHalf(const struct TextureLayout *layout, size_t
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8005c120-0x8005c278.
 void VehGroundSkids_Subset1(u32 *currXY, u32 *prevXY, int depth, struct VehGroundSkidsScratch *scratch)
 {
-	struct GameTracker *gGT = sdata->gGT;
-	struct DB *backBuffer = gGT->backBuffer;
-	POLY_GT4 *poly = backBuffer->primMem.cursor;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct DB *backBuffer = P32_GET(struct DB *, gGT->backBuffer);
+	POLY_GT4 *poly = P32_GET(void *, backBuffer->primMem.cursor);
 	POLY_GT4 *nextPrim = poly + 1;
 
-	if ((char *)backBuffer->primMem.guardEnd < (char *)nextPrim)
+	if ((char *)P32_GET(void *, backBuffer->primMem.guardEnd) < (char *)nextPrim)
 	{
 		return;
 	}
 
-	backBuffer->primMem.cursor = nextPrim;
+	P32_SET(backBuffer->primMem.cursor, nextPrim);
 
 	CtrGpu_WriteColorCode(&poly->r0, scratch->colorNear);
 	CtrGpu_WriteColorCode(&poly->r1, scratch->colorNear);
@@ -84,7 +84,7 @@ void VehGroundSkids_Subset1(u32 *currXY, u32 *prevXY, int depth, struct VehGroun
 	CtrGpu_WritePackedXY(&poly->x2, prevXY[0]);
 	CtrGpu_WritePackedXY(&poly->x3, prevXY[1]);
 
-	struct Icon *icon = gGT->ptrIcons[VEH_GROUND_SKIDS_ICON_TIREMARK];
+	struct Icon *icon = P32_GET(struct Icon *, gGT->ptrIcons[VEH_GROUND_SKIDS_ICON_TIREMARK]);
 	CtrGpu_WritePackedUVWord(&poly->u0, VehGroundSkids_ReadTexWord(&icon->texLayout, offsetof(struct TextureLayout, u0)));
 
 	u32 tpage = VehGroundSkids_ReadTexWord(&icon->texLayout, offsetof(struct TextureLayout, u1));
@@ -101,8 +101,8 @@ void VehGroundSkids_Subset1(u32 *currXY, u32 *prevXY, int depth, struct VehGroun
 	CtrGpu_WritePackedUV(&poly->u2, VehGroundSkids_ReadTexHalf(&icon->texLayout, offsetof(struct TextureLayout, u2)));
 	CtrGpu_WritePackedUV(&poly->u3, VehGroundSkids_ReadTexHalf(&icon->texLayout, offsetof(struct TextureLayout, u3)));
 
-	struct PushBuffer *pb = scratch->pushBuffer;
-	u32 *ot = pb->ptrOT + ((s32)depth >> VEH_GROUND_SKIDS_OT_DEPTH_SHIFT);
+	struct PushBuffer *pb = P32_GET(struct PushBuffer *, scratch->pushBuffer);
+	u32 *ot = P32_GET(uint32_t *, pb->ptrOT) + ((s32)depth >> VEH_GROUND_SKIDS_OT_DEPTH_SHIFT);
 	CtrGpu_LinkPacket24(ot, &poly->tag, poly, VEH_GROUND_SKIDS_GPU_TAG_POLY_GT4);
 }
 
@@ -220,11 +220,11 @@ static int VehGroundSkids_SubmitNativeSegment(struct VehGroundSkidsScratch *scra
                                                int pointIndex, int depth, const union VehEmitterSkidmark *mark)
 {
 	if (!NATIVE_DRAW3D_ACTIVE()) return 0;
-	struct PrimMem *primMem = &sdata->gGT->backBuffer->primMem;
-	DR_PSYX_DRAW3D *marker = primMem->cursor;
-	if ((u8 *)(marker + 1) > (u8 *)primMem->guardEnd) return 1;
-	struct PushBuffer *pb = scratch->pushBuffer;
-	struct Icon *icon = sdata->gGT->ptrIcons[VEH_GROUND_SKIDS_ICON_TIREMARK];
+	struct PrimMem *primMem = &P32_GET(struct DB *, P32_GET(struct GameTracker *, sdata->gGT)->backBuffer)->primMem;
+	DR_PSYX_DRAW3D *marker = P32_GET(void *, primMem->cursor);
+	if ((u8 *)(marker + 1) > (u8 *)P32_GET(void *, primMem->guardEnd)) return 1;
+	struct PushBuffer *pb = P32_GET(struct PushBuffer *, scratch->pushBuffer);
+	struct Icon *icon = P32_GET(struct Icon *, P32_GET(struct GameTracker *, sdata->gGT)->ptrIcons[VEH_GROUND_SKIDS_ICON_TIREMARK]);
 	if (icon == NULL) return 1;
 	NativeDraw3DView view = {0};
 	double rotation[9], translation[3];
@@ -269,8 +269,8 @@ static int VehGroundSkids_SubmitNativeSegment(struct VehGroundSkidsScratch *scra
 	if (slot < 0) slot = 0;
 	if (slot > 0x3ff) slot = 0x3ff;
 	NativeDraw3D_SetMarker(marker, layer);
-	AddPrim(&pb->ptrOT[slot], marker);
-	primMem->cursor = marker + 1;
+	AddPrim(&P32_GET(uint32_t *, pb->ptrOT)[slot], marker);
+	P32_SET(primMem->cursor, marker + 1);
 	return 1;
 }
 #endif
@@ -314,7 +314,7 @@ void VehGroundSkids_Main(struct Thread *thread, struct PushBuffer *pb)
 
 	struct VehGroundSkidsScratch *scratch = CTR_SCRATCHPAD_PTR(struct VehGroundSkidsScratch, 0x0);
 
-	scratch->pushBuffer = pb;
+	P32_SET(scratch->pushBuffer, pb);
 	scratch->origin.x = 0;
 	scratch->origin.y = 0;
 	scratch->origin.z = 0;
@@ -328,7 +328,7 @@ void VehGroundSkids_Main(struct Thread *thread, struct PushBuffer *pb)
 
 	while (thread != NULL)
 	{
-		struct Driver *d = thread->object;
+		struct Driver *d = P32_GET(void *, thread->object);
 		u32 flags = d->skidmarkEnableFlags;
 
 		if (flags > DRIVER_SKIDMARK_CURRENT_FRAME_MASK)
@@ -410,7 +410,7 @@ void VehGroundSkids_Main(struct Thread *thread, struct PushBuffer *pb)
 			}
 		}
 
-		thread = thread->siblingThread;
+		thread = P32_GET(struct Thread *, thread->siblingThread);
 	}
 #if defined(CTR_NATIVE)
 	NativePgxp_SetDepthContext(nativeDepthContext);

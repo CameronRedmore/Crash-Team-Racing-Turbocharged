@@ -162,7 +162,7 @@ b32 RaceFlag_IsTransitioning(void)
 	    (pos != RACE_FLAG_POSITION_ONSCREEN) && (pos != RACE_FLAG_POSITION_OFFSCREEN_LEFT) && (pos != RACE_FLAG_POSITION_OFFSCREEN) &&
 
 	    // is allowed to render
-	    ((sdata->gGT->renderFlags & RENDER_FLAG_CHECKERED_FLAG) != 0);
+	    ((P32_GET(struct GameTracker *, sdata->gGT)->renderFlags & RENDER_FLAG_CHECKERED_FLAG) != 0);
 }
 
 
@@ -197,7 +197,7 @@ void RaceFlag_BeginTransition(int direction)
 	}
 
 	// enable loading screen's checkered flag
-	sdata->gGT->renderFlags |= RENDER_FLAG_CHECKERED_FLAG;
+	P32_GET(struct GameTracker *, sdata->gGT)->renderFlags |= RENDER_FLAG_CHECKERED_FLAG;
 }
 
 
@@ -211,7 +211,7 @@ void RaceFlag_SetFullyOnScreen()
 	sdata->RaceFlag_Position = RACE_FLAG_POSITION_ONSCREEN;
 
 	// enable loading screen's checkered flag
-	sdata->gGT->renderFlags |= RENDER_FLAG_CHECKERED_FLAG;
+	P32_GET(struct GameTracker *, sdata->gGT)->renderFlags |= RENDER_FLAG_CHECKERED_FLAG;
 }
 
 
@@ -225,7 +225,7 @@ void RaceFlag_SetFullyOffScreen()
 	sdata->RaceFlag_Position = RACE_FLAG_POSITION_OFFSCREEN;
 
 	// disable loading screen's checkered flag
-	sdata->gGT->renderFlags &= ~RENDER_FLAG_CHECKERED_FLAG;
+	P32_GET(struct GameTracker *, sdata->gGT)->renderFlags &= ~RENDER_FLAG_CHECKERED_FLAG;
 }
 
 
@@ -248,13 +248,13 @@ u32 *RaceFlag_GetOT(void)
 {
 	s16 positionStep;
 	int position;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	u32 *otDrawFirst_FarthestDepth;
 	u32 *otDrawLast_ClosestDepth;
 
-	otDrawFirst_FarthestDepth = (u32 *)&gGT->pushBuffer[0].ptrOT[0x3FF];
-	otDrawLast_ClosestDepth = gGT->otSwapchainDB[gGT->swapchainIndex];
+	otDrawFirst_FarthestDepth = (u32 *)&P32_GET(uint32_t *, gGT->pushBuffer[0].ptrOT)[0x3FF];
+	otDrawLast_ClosestDepth = P32_GET(void *, gGT->otSwapchainDB[gGT->swapchainIndex]);
 
 #if defined(__vita__)
 	if (NativeAdhoc_IsSingleViewRenderActive())
@@ -366,7 +366,7 @@ void RaceFlag_ResetTextAnim(void)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800442a0-0x800444e8.
 void RaceFlag_DrawLoadingString(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	int loadingTextBytes;
 	int letterAnimFrame;
 	int letterX;
@@ -379,13 +379,13 @@ void RaceFlag_DrawLoadingString(void)
 	u32 *oldOT;
 	u8 glyph[2];
 
-	loadingText = sdata->lngStrings[LNG_LOADING];
+	loadingText = P32_GET(char **, sdata->lngStrings)[LNG_LOADING];
 
 	// pointer to OT mem
-	oldOT = (u32 *)gGT->pushBuffer_UI.ptrOT;
+	oldOT = (u32 *)P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT);
 
 	// pointer to OT mem
-	gGT->pushBuffer_UI.ptrOT = gGT->otSwapchainDB[gGT->swapchainIndex];
+	P32_SET(gGT->pushBuffer_UI.ptrOT, P32_GET(void *, gGT->otSwapchainDB[gGT->swapchainIndex]));
 
 	// get length of "LOADING..." string
 	loadingTextBytes = strlen(loadingText);
@@ -481,7 +481,7 @@ void RaceFlag_DrawLoadingString(void)
 	}
 
 	// pointer to OT mem
-	gGT->pushBuffer_UI.ptrOT = (uint32_t *)oldOT;
+	P32_SET(gGT->pushBuffer_UI.ptrOT, (uint32_t *)oldOT);
 
 	if (letterAnimFrame < RACE_FLAG_LOADING_ANIM_RESET_FRAME)
 	{
@@ -554,7 +554,7 @@ void RaceFlag_DrawSelf()
 	u32 var1;
 
 	POLY_G4 *p;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	int time;
 	int lightL;
@@ -594,13 +594,13 @@ SKIP_LOADING_TEXT:
 	gte_SetGeomOffset(0x100, 0x78);
 	gte_SetGeomScreen(0x100);
 
-	p = (POLY_G4 *)gGT->backBuffer->primMem.cursor;
+	p = (POLY_G4 *)P32_GET(void *, P32_GET(struct DB *, gGT->backBuffer)->primMem.cursor);
 
 #if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
 	int nativeLayer = -1;
 	NativeDraw3DVertex nativePoints[2][RACE_FLAG_SCREEN_ROWS * RACE_FLAG_SCREEN_POINTS_PER_ROW];
 	DR_PSYX_DRAW3D *nativeMarker = (DR_PSYX_DRAW3D *)p;
-	if (NATIVE_DRAW3D_ACTIVE() && (u8 *)(nativeMarker + 1) <= (u8 *)gGT->backBuffer->primMem.guardEnd)
+	if (NATIVE_DRAW3D_ACTIVE() && (u8 *)(nativeMarker + 1) <= (u8 *)P32_GET(void *, P32_GET(struct DB *, gGT->backBuffer)->primMem.guardEnd))
 	{
 		NativeDraw3DView view = {0};
 		double rotation[9], translation[3];
@@ -880,6 +880,6 @@ SKIP_LOADING_TEXT:
 		AddPrim(ot, nativeMarker);
 	}
 #endif
-	gGT->backBuffer->primMem.cursor = p;
+	P32_SET(P32_GET(struct DB *, gGT->backBuffer)->primMem.cursor, p);
 	sdata->RaceFlag_ElapsedTime += gGT->elapsedTimeMS * 100;
 }

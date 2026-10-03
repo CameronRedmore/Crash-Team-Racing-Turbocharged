@@ -21,6 +21,8 @@ typedef int8_t s8;
 typedef float f32;
 typedef double f64;
 
+#include <ctr_ptr32.h>
+
 #define AugReview 805
 // TODO: Aug5 and Aug14
 #define SepReview 903

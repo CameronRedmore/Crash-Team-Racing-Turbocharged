@@ -174,7 +174,7 @@ static void MM_Characters_NativeResetStats(void)
 
 static void MM_Characters_NativeDrawStats(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	if (gGT->numPlyrNextGame != 1)
 	{
 		return;
@@ -227,7 +227,7 @@ static void MM_Characters_NativeDrawStats(void)
 	}
 
 	struct TransitionMeta *driverTransition =
-		&D230.characterSelectTransitionMeta[
+		&P32_GET(struct TransitionMeta *, D230.characterSelectTransitionMeta)[
 #if defined(CTR_NATIVE)
 			MM_Characters_NativeDriverWindowTransitionFirst()
 #else
@@ -248,12 +248,12 @@ static void MM_Characters_NativeDrawStats(void)
 		classIndex = 1;
 	}
 
-	char *classText = sdata->lngStrings[s_nativeCharacterSelectClassStrings[classIndex]];
+	char *classText = P32_GET(char **, sdata->lngStrings)[s_nativeCharacterSelectClassStrings[classIndex]];
 	char *statTexts[3] =
 	{
-		sdata->lngStrings[LNG_SPEED],
-		sdata->lngStrings[LNG_ACCEL],
-		sdata->lngStrings[LNG_TURN],
+		P32_GET(char **, sdata->lngStrings)[LNG_SPEED],
+		P32_GET(char **, sdata->lngStrings)[LNG_ACCEL],
+		P32_GET(char **, sdata->lngStrings)[LNG_TURN],
 	};
 
 	s32 contentLeft = barX;
@@ -294,7 +294,7 @@ static void MM_Characters_NativeDrawStats(void)
 	DecalFont_DrawLine(statTexts[2], labelX, MM_CHARACTER_SELECT_STATS_TURN_Y,
 	                   FONT_BIG, JUSTIFY_RIGHT | BLUE);
 
-	struct PrimMem *primMem = &gGT->backBuffer->primMem;
+	struct PrimMem *primMem = &P32_GET(struct DB *, gGT->backBuffer)->primMem;
 	Color white = MakeColor(0xff, 0xff, 0xff);
 	Color black = MakeColor(0, 0, 0);
 	s16 barStartY = MM_CHARACTER_SELECT_STATS_BAR_START_Y;
@@ -310,7 +310,7 @@ static void MM_Characters_NativeDrawStats(void)
 		r.y = barStartY;
 		r.w = drawLength;
 		r.h = MM_CHARACTER_SELECT_STATS_BAR_HEIGHT;
-		CTR_Box_DrawWireBox(&r, &white, gGT->pushBuffer_UI.ptrOT, primMem);
+		CTR_Box_DrawWireBox(&r, &white, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), primMem);
 
 		r.x = barX + 1;
 		r.y = shadowY;
@@ -318,7 +318,7 @@ static void MM_Characters_NativeDrawStats(void)
 		r.h = MM_CHARACTER_SELECT_STATS_BAR_SHADOW_HEIGHT;
 		if (r.w > 0)
 		{
-			CTR_Box_DrawWireBox(&r, &black, gGT->pushBuffer_UI.ptrOT, primMem);
+			CTR_Box_DrawWireBox(&r, &black, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), primMem);
 		}
 
 		s32 segmentStart = 0;
@@ -339,12 +339,12 @@ static void MM_Characters_NativeDrawStats(void)
 
 			if ((segmentStart + currSegmentLen <= statLength) && (currSegmentLen > 0))
 			{
-				POLY_G4 *poly = primMem->cursor;
-				if (primMem->end < (void *)poly)
+				POLY_G4 *poly = P32_GET(void *, primMem->cursor);
+				if (P32_GET(void *, primMem->end) < (void *)poly)
 				{
 					return;
 				}
-				primMem->cursor = poly + 1;
+				P32_SET(primMem->cursor, poly + 1);
 
 				u32 color0 = s_nativeCharacterSelectStatColors[segmentIndex];
 				u32 color1 = s_nativeCharacterSelectStatColors[segmentIndex + 1];
@@ -363,7 +363,7 @@ static void MM_Characters_NativeDrawStats(void)
 				poly->y2 = barEndY;
 				poly->x3 = right;
 				poly->y3 = barEndY;
-				addPolyG4(gGT->pushBuffer_UI.ptrOT, poly);
+				addPolyG4(P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), poly);
 			}
 
 			segmentStart += MM_CHARACTER_SELECT_STATS_BAR_SEGMENT_WIDTH;
@@ -380,7 +380,7 @@ static void MM_Characters_NativeDrawStats(void)
 	box.y = MM_CHARACTER_SELECT_STATS_BOX_Y;
 	box.w = (contentRight - contentLeft) + 12;
 	box.h = MM_CHARACTER_SELECT_STATS_BOX_H;
-	RECTMENU_DrawInnerRect(&box, 0, gGT->backBuffer->otMem.uiOT);
+	RECTMENU_DrawInnerRect(&box, 0, P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT));
 }
 
 #if defined(CTR_NATIVE)
@@ -459,9 +459,9 @@ internal struct Model *MM_Characters_GetOxideMenuModel(void)
 
 		s_oxideCharacterSelectModel = (struct Model *)modelBuf;
 
-		if ((s_oxideCharacterSelectModel->headers != NULL) && (s_oxideCharacterSelectModel->numHeaders > 0))
+		if ((P32_GET(struct ModelHeader *, s_oxideCharacterSelectModel->headers) != NULL) && (s_oxideCharacterSelectModel->numHeaders > 0))
 		{
-			struct ModelHeader *header = &s_oxideCharacterSelectModel->headers[0];
+			struct ModelHeader *header = &P32_GET(struct ModelHeader *, s_oxideCharacterSelectModel->headers)[0];
 			header->scale.x = (header->scale.x * 5) >> 3;
 			header->scale.y = (header->scale.y * 5) >> 3;
 			header->scale.z = (header->scale.z * 5) >> 3;
@@ -483,7 +483,7 @@ internal struct CharacterSelectMeta *MM_Characters_GetOxideMetaForLayout(s32 lay
 	case MM_CHARACTER_SELECT_LAYOUT_4P:
 		return s_oxideCharacterSelectMeta4P;
 	default:
-		return D230.characterSelectMetaByLayout[layoutIndex];
+		return P32_GET(struct CharacterSelectMeta *, D230.characterSelectMetaByLayout[layoutIndex]);
 	}
 }
 
@@ -553,17 +553,17 @@ static struct TransitionMeta *MM_Characters_GetOxideTransitionsForPlayerCount(s3
 
 static b32 MM_Characters_NativeCustomRosterEnabled(void)
 {
-	return (sdata != NULL) && (sdata->gGT != NULL) && NativeCustomRacer_IsRosterEnabled();
+	return (sdata != NULL) && (P32_GET(struct GameTracker *, sdata->gGT) != NULL) && NativeCustomRacer_IsRosterEnabled();
 }
 
 static s32 MM_Characters_NativePage0CustomSlots(void)
 {
-	return (sdata->gGT->numPlyrNextGame <= 2) ? 2 : 0;
+	return (P32_GET(struct GameTracker *, sdata->gGT)->numPlyrNextGame <= 2) ? 2 : 0;
 }
 
 static s32 MM_Characters_NativeCustomPageSlots(void)
 {
-	return (sdata->gGT->numPlyrNextGame <= 2) ? MM_CHARACTER_SELECT_PAGED_ICON_COUNT : MM_CHARACTER_SELECT_ICON_COUNT;
+	return (P32_GET(struct GameTracker *, sdata->gGT)->numPlyrNextGame <= 2) ? MM_CHARACTER_SELECT_PAGED_ICON_COUNT : MM_CHARACTER_SELECT_ICON_COUNT;
 }
 
 static s32 MM_Characters_NativePageCount(void)
@@ -592,7 +592,7 @@ static void MM_Characters_NativeDrawPageHints(void)
 	s32 pageCountY = MM_CHARACTER_SELECT_PAGE_COUNT_Y;
 	u32 pageCountJustify = JUSTIFY_RIGHT;
 
-	if (sdata->gGT->numPlyrNextGame == 3)
+	if (P32_GET(struct GameTracker *, sdata->gGT)->numPlyrNextGame == 3)
 	{
 		// Keep the page hints away from the three large driver preview windows.
 		leftX = 0x20;
@@ -601,7 +601,7 @@ static void MM_Characters_NativeDrawPageHints(void)
 		pageCountX = 0x18;
 		pageCountJustify = 0;
 	}
-	else if (sdata->gGT->numPlyrNextGame >= 4)
+	else if (P32_GET(struct GameTracker *, sdata->gGT)->numPlyrNextGame >= 4)
 	{
 		// Keep 4P hints above the preview windows and center the page counter.
 		hintY = 0x64;
@@ -614,25 +614,25 @@ static void MM_Characters_NativeDrawPageHints(void)
 	DecalFont_DrawLine("R", rightX, hintY,
 	                   FONT_BIG, JUSTIFY_CENTER | ORANGE);
 
-	struct GameTracker *gGT = sdata->gGT;
-	struct IconGroup *fontIconGroup = gGT->iconGroup[4];
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct IconGroup *fontIconGroup = P32_GET(struct IconGroup *, gGT->iconGroup[4]);
 	if (fontIconGroup != NULL)
 	{
 		struct Icon **iconPtrArray = ICONGROUP_GETICONS(fontIconGroup);
 		const s32 halfLetterWidth = DecalFont_GetLineWidth("L", FONT_BIG) >> 1;
-		u32 *arrowColors = data.ptrColor[ORANGE];
+		u32 *arrowColors = P32_GET(u32 *, data.ptrColor[ORANGE]);
 
 		DecalHUD_Arrow2D(iconPtrArray[MM_CHARACTER_SELECT_PAGE_HINT_ARROW_ICON],
 		                 leftX - halfLetterWidth - MM_CHARACTER_SELECT_PAGE_HINT_ARROW_LEFT_GAP,
 		                 hintY + MM_CHARACTER_SELECT_PAGE_HINT_ARROW_Y_OFFSET + MM_CHARACTER_SELECT_PAGE_HINT_ARROW_LEFT_Y_NUDGE,
-		                 &gGT->backBuffer->primMem, gGT->pushBuffer_UI.ptrOT,
+		                 &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT),
 		                 arrowColors[0], arrowColors[1], arrowColors[2], arrowColors[3],
 		                 0, MM_CHARACTER_SELECT_PAGE_HINT_ARROW_SCALE, MM_CHARACTER_SELECT_PAGE_HINT_ARROW_LEFT_ROTATION);
 
 		DecalHUD_Arrow2D(iconPtrArray[MM_CHARACTER_SELECT_PAGE_HINT_ARROW_ICON],
 		                 rightX + halfLetterWidth + MM_CHARACTER_SELECT_PAGE_HINT_ARROW_RIGHT_GAP,
 		                 hintY + MM_CHARACTER_SELECT_PAGE_HINT_ARROW_Y_OFFSET,
-		                 &gGT->backBuffer->primMem, gGT->pushBuffer_UI.ptrOT,
+		                 &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT),
 		                 arrowColors[0], arrowColors[1], arrowColors[2], arrowColors[3],
 		                 0, MM_CHARACTER_SELECT_PAGE_HINT_ARROW_SCALE, 0);
 	}
@@ -696,11 +696,11 @@ static void MM_Characters_NativeDrawPortraitTexture(u32 texture, int textureWidt
 	    (textureWidth > 255) || (textureHeight > 255) || (templateIcon == NULL))
 		return;
 
-	struct GameTracker *gGT = sdata->gGT;
-	struct PrimMem *primMem = &gGT->backBuffer->primMem;
-	u32 *ot = gGT->pushBuffer_UI.ptrOT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct PrimMem *primMem = &P32_GET(struct DB *, gGT->backBuffer)->primMem;
+	u32 *ot = P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT);
 	u32 oldTag = *ot;
-	DR_PSYX_TEX *setTexture = (DR_PSYX_TEX *)primMem->cursor;
+	DR_PSYX_TEX *setTexture = (DR_PSYX_TEX *)P32_GET(void *, primMem->cursor);
 	POLY_FT4 *poly = (POLY_FT4 *)(setTexture + 1);
 	DR_PSYX_TEX *resetTexture = (DR_PSYX_TEX *)(poly + 1);
 	const int iconWidth = (int)templateIcon->texLayout.u1 - (int)templateIcon->texLayout.u0;
@@ -746,7 +746,7 @@ static void MM_Characters_NativeDrawPortraitTexture(u32 texture, int textureWidt
 	SetPsyXTexture(resetTexture, 0, 0, 0);
 	resetTexture->tag = CtrGpu_PackOTTag(oldTag, 0x02000000);
 	*ot = CtrGpu_PrimToOTLink24(setTexture);
-	primMem->cursor = resetTexture + 1;
+	P32_SET(primMem->cursor, resetTexture + 1);
 }
 
 static b32 MM_Characters_NativeSlotAvailable(int slot)
@@ -768,11 +768,11 @@ static void MM_Characters_NativeCopyTransitionConfig(struct TransitionMeta *dst,
 
 static void MM_Characters_NativeInitPagedTransitions(void)
 {
-	struct TransitionMeta *src = MM_Characters_GetOxideTransitionsForPlayerCount(sdata->gGT->numPlyrNextGame);
+	struct TransitionMeta *src = MM_Characters_GetOxideTransitionsForPlayerCount(P32_GET(struct GameTracker *, sdata->gGT)->numPlyrNextGame);
 	for (s32 i = 0; i < MM_CHARACTER_SELECT_ICON_COUNT; i++)
 		MM_Characters_NativeCopyTransitionConfig(&s_nativeCharacterSelectPagedTransitions[i], &src[i]);
 
-	if (sdata->gGT->numPlyrNextGame <= 2)
+	if (P32_GET(struct GameTracker *, sdata->gGT)->numPlyrNextGame <= 2)
 	{
 		// The two added icons occupy the empty left/right spaces on the bottom row.
 		MM_Characters_NativeCopyTransitionConfig(&s_nativeCharacterSelectPagedTransitions[16], &src[12]);
@@ -851,7 +851,7 @@ static void MM_Characters_NativeBuildPagedMeta(void)
 {
 	MM_Characters_NativeInitPagedTransitions();
 	memset(s_nativeCharacterSelectPagedMeta, 0, sizeof(s_nativeCharacterSelectPagedMeta));
-	struct CharacterSelectMeta *layoutMeta = sdata->gGT->numPlyrNextGame <= 2
+	struct CharacterSelectMeta *layoutMeta = P32_GET(struct GameTracker *, sdata->gGT)->numPlyrNextGame <= 2
 		? s_oxideCharacterSelectMeta1P2P
 		: MM_Characters_GetOxideMetaForLayout(D230.characterSelectLayoutIndex);
 
@@ -883,7 +883,7 @@ static void MM_Characters_NativeBuildPagedMeta(void)
 	for (s32 slot = 0; slot < MM_CHARACTER_SELECT_PAGED_ICON_COUNT; slot++)
 	{
 		const int racerIndex = MM_Characters_NativeCustomIndexForSlot(slot);
-		const b32 compactMultiplayer = sdata->gGT->numPlyrNextGame >= 3;
+		const b32 compactMultiplayer = P32_GET(struct GameTracker *, sdata->gGT)->numPlyrNextGame >= 3;
 		const s16 x = compactMultiplayer && slot < MM_CHARACTER_SELECT_ICON_COUNT
 			? layoutMeta[slot].posX
 			: (s16)(64 + (slot % 6) * 64);
@@ -920,7 +920,7 @@ static void MM_Characters_NativeApplySlotToPlayer(s32 playerIndex, s32 slot)
 	}
 
 	if (playerIndex == 0)
-		NativeCustomRacer_QueueSharedVramForSelections(sdata->ptrBigfile1);
+		NativeCustomRacer_QueueSharedVramForSelections(P32_GET(struct BigHeader *, sdata->ptrBigfile1));
 }
 
 static s32 MM_Characters_NativeNthAvailableSlot(s32 ordinal)
@@ -937,7 +937,7 @@ static s32 MM_Characters_NativeNthAvailableSlot(s32 ordinal)
 
 static void MM_Characters_NativeResetSlotsForPage(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	for (s32 playerIndex = 0; playerIndex < gGT->numPlyrNextGame; playerIndex++)
 	{
 		if ((sdata->characterSelectFlags & (1U << playerIndex)) != 0)
@@ -955,7 +955,7 @@ static void MM_Characters_NativeResetSlotsForPage(void)
 static b32 MM_Characters_NativeTryChangePage(s32 playerIndex, u32 button)
 {
 	if (!MM_Characters_NativeCustomRosterEnabled() ||
-	    (playerIndex < 0) || (playerIndex >= sdata->gGT->numPlyrNextGame) ||
+	    (playerIndex < 0) || (playerIndex >= P32_GET(struct GameTracker *, sdata->gGT)->numPlyrNextGame) ||
 	    ((sdata->characterSelectFlags & (1U << playerIndex)) != 0))
 		return false;
 
@@ -996,7 +996,7 @@ void MM_Characters_AnimateColors(u8 *colorData, s16 playerID, s16 flag)
 
 	// access int RGBA as a char array,
 	// for editing components of color
-	u8 *ptrColor = (u8 *)data.ptrColor[playerID + PLAYER_BLUE];
+	u8 *ptrColor = (u8 *)P32_GET(u32 *, data.ptrColor[playerID + PLAYER_BLUE]);
 
 	trigApprox = 0;
 
@@ -1038,8 +1038,8 @@ void MM_Characters_AnimateColors(u8 *colorData, s16 playerID, s16 flag)
 // NOTE(aalhendi): ASM-verified against NTSC-U 926 overlay 230 0x800ada4c-0x800adae4.
 int MM_Characters_GetNextDriver(s16 direction, s16 characterID)
 {
-	u8 nextIcon = D230.activeCharacterSelectMeta[(s32)characterID].nextIconByDirection[direction];
-	s16 unlocked = D230.activeCharacterSelectMeta[(s32)nextIcon].unlockFlags;
+	u8 nextIcon = P32_GET(struct CharacterSelectMeta *, D230.activeCharacterSelectMeta)[(s32)characterID].nextIconByDirection[direction];
+	s16 unlocked = P32_GET(struct CharacterSelectMeta *, D230.activeCharacterSelectMeta)[(s32)nextIcon].unlockFlags;
 
 	// set new driver to the driver
 	// you'd get when pressing Up button
@@ -1096,7 +1096,7 @@ struct Model *MM_Characters_GetModelByName(const char *name)
 {
 	struct Model **models;
 	struct Model *model;
-	struct Level *level1 = sdata->gGT->level1;
+	struct Level *level1 = P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1);
 
 	// if LEV is invalid
 	if (level1 == NULL)
@@ -1104,7 +1104,7 @@ struct Model *MM_Characters_GetModelByName(const char *name)
 		return NULL;
 	}
 
-	models = level1->ptrModelsPtrArray;
+	models = P32_GET(struct Model **, level1->ptrModelsPtrArray);
 	if (models == NULL)
 	{
 		return NULL;
@@ -1128,10 +1128,10 @@ struct Model *MM_Characters_GetModelByName(const char *name)
 	}
 
 #if defined(CTR_NATIVE)
-	if ((ModelName_ReadWord(name, 0) == ModelName_ReadWord(data.MetaDataCharacters[NITROS_OXIDE].name_Debug, 0)) &&
-	    (ModelName_ReadWord(name, 1) == ModelName_ReadWord(data.MetaDataCharacters[NITROS_OXIDE].name_Debug, 1)) &&
-	    (ModelName_ReadWord(name, 2) == ModelName_ReadWord(data.MetaDataCharacters[NITROS_OXIDE].name_Debug, 2)) &&
-	    (ModelName_ReadWord(name, 3) == ModelName_ReadWord(data.MetaDataCharacters[NITROS_OXIDE].name_Debug, 3)))
+	if ((ModelName_ReadWord(name, 0) == ModelName_ReadWord(P32_GET(char *, data.MetaDataCharacters[NITROS_OXIDE].name_Debug), 0)) &&
+	    (ModelName_ReadWord(name, 1) == ModelName_ReadWord(P32_GET(char *, data.MetaDataCharacters[NITROS_OXIDE].name_Debug), 1)) &&
+	    (ModelName_ReadWord(name, 2) == ModelName_ReadWord(P32_GET(char *, data.MetaDataCharacters[NITROS_OXIDE].name_Debug), 2)) &&
+	    (ModelName_ReadWord(name, 3) == ModelName_ReadWord(P32_GET(char *, data.MetaDataCharacters[NITROS_OXIDE].name_Debug), 3)))
 	{
 		return MM_Characters_GetOxideMenuModel();
 	}
@@ -1143,7 +1143,7 @@ struct Model *MM_Characters_GetModelByName(const char *name)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 overlay 230 0x800adc0c-0x800ae0bc PSX path.
 void MM_Characters_DrawWindows(b32 boolShowDrivers)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	SVec3 rot;
 
 	if (boolShowDrivers != 0)
@@ -1154,7 +1154,7 @@ void MM_Characters_DrawWindows(b32 boolShowDrivers)
 
 	for (s32 playerIndex = 0; playerIndex < gGT->numPlyrNextGame; playerIndex++)
 	{
-		SVec2 *windowPos = &D230.activeCharacterSelectWindowPos[playerIndex];
+		SVec2 *windowPos = &P32_GET(SVec2 *, D230.activeCharacterSelectWindowPos)[playerIndex];
 		struct PushBuffer *pb = &gGT->pushBuffer[playerIndex];
 		const s32 driverWindowTransitionFirst =
 #if defined(CTR_NATIVE)
@@ -1162,7 +1162,7 @@ void MM_Characters_DrawWindows(b32 boolShowDrivers)
 #else
 			MM_CHARACTER_SELECT_DRIVER_WINDOW_TRANSITION_FIRST;
 #endif
-		struct TransitionMeta *driverWindowTransition = &D230.characterSelectTransitionMeta[driverWindowTransitionFirst + playerIndex];
+		struct TransitionMeta *driverWindowTransition = &P32_GET(struct TransitionMeta *, D230.characterSelectTransitionMeta)[driverWindowTransitionFirst + playerIndex];
 		pb->rect.x = windowPos->x + driverWindowTransition->currX;
 		pb->rect.y = windowPos->y + driverWindowTransition->currY;
 		pb->rect.w = D230.characterSelectWindowWidth;
@@ -1227,7 +1227,7 @@ void MM_Characters_DrawWindows(b32 boolShowDrivers)
 		pb->rot.z = 0;
 
 		// player -> instance
-		struct Instance *driverInst = gGT->drivers[playerIndex]->instSelf;
+		struct Instance *driverInst = P32_GET(struct Instance *, P32_GET(struct Driver *, gGT->drivers[playerIndex])->instSelf);
 
 		// Make Visible
 		driverInst->flags &= ~HIDE_MODEL;
@@ -1242,14 +1242,14 @@ void MM_Characters_DrawWindows(b32 boolShowDrivers)
 		struct InstDrawPerPlayer *idpp = INST_GETIDPP(driverInst);
 
 		// clear pushBuffer in every InstDrawPerPlayer
-		idpp[0].pushBuffer = 0;
-		idpp[1].pushBuffer = 0;
-		idpp[2].pushBuffer = 0;
-		idpp[3].pushBuffer = 0;
+		P32_SET(idpp[0].pushBuffer, 0);
+		P32_SET(idpp[1].pushBuffer, 0);
+		P32_SET(idpp[2].pushBuffer, 0);
+		P32_SET(idpp[3].pushBuffer, 0);
 
 		// set pushBuffer in InstDrawPerPlayer,
 		// so that each camera can only see one driver
-		idpp[playerIndex].pushBuffer = pb;
+		P32_SET(idpp[playerIndex].pushBuffer, pb);
 
 		// numPlyrNextGame is at most 4; GCC can't see that through the u8 loop bound.
 		CTR_ASSUME(playerIndex < 4);
@@ -1264,7 +1264,7 @@ void MM_Characters_DrawWindows(b32 boolShowDrivers)
 		{
 			showWheels = NativeCustomRacer_GetWheelsEnabled(desiredCustomPreview, showWheels);
 		}
-		gGT->drivers[playerIndex]->wheelSize = showWheels ? MM_CHARACTER_SELECT_WHEEL_SIZE : 0;
+		P32_GET(struct Driver *, gGT->drivers[playerIndex])->wheelSize = showWheels ? MM_CHARACTER_SELECT_WHEEL_SIZE : 0;
 #endif
 
 		driverInst->animFrame = 0;
@@ -1281,10 +1281,10 @@ void MM_Characters_DrawWindows(b32 boolShowDrivers)
 		}
 	#endif
 		if (model == NULL)
-			model = MM_Characters_GetModelByName(data.MetaDataCharacters[(int)*currCharacterID].name_Debug);
+			model = MM_Characters_GetModelByName(P32_GET(char *, data.MetaDataCharacters[(int)*currCharacterID].name_Debug));
 
 		// set modelPtr in Instance
-		driverInst->model = model;
+		P32_SET(driverInst->model, model);
 	#if defined(CTR_NATIVE)
 		// Start animated custom previews at the neutral midpoint used by gameplay.
 		if (usingCustomPreviewModel)
@@ -1381,7 +1381,7 @@ void MM_Characters_SetMenuLayout(void)
 	// By default, draw "Select character" in 3P menu
 	D230.characterSelectRosterExpanded = 0;
 
-	s32 numPlyrNextGame = sdata->gGT->numPlyrNextGame;
+	s32 numPlyrNextGame = P32_GET(struct GameTracker *, sdata->gGT)->numPlyrNextGame;
 	s32 layoutIndex = numPlyrNextGame - 1;
 
 	// Loop through bottom characters,
@@ -1423,13 +1423,13 @@ void MM_Characters_SetMenuLayout(void)
 	D230.characterSelectWindowWidth = D230.characterSelectLayout.windowW[layoutIndex];
 	D230.characterSelectWindowHeight = D230.characterSelectLayout.windowH[layoutIndex];
 
-	D230.activeCharacterSelectWindowPos = D230.characterSelectWindowPosByLayout[layoutIndex];
+	P32_SET(D230.activeCharacterSelectWindowPos, P32_GET(SVec2 *, D230.characterSelectWindowPosByLayout[layoutIndex]));
 
 	if (numPlyrNextGame == 1)
 	{
-		s_nativeCharacterSelect1PWindowPos = D230.activeCharacterSelectWindowPos[0];
+		s_nativeCharacterSelect1PWindowPos = P32_GET(SVec2 *, D230.activeCharacterSelectWindowPos)[0];
 		s_nativeCharacterSelect1PWindowPos.x = MM_CHARACTER_SELECT_1P_WINDOW_X;
-		D230.activeCharacterSelectWindowPos = &s_nativeCharacterSelect1PWindowPos;
+		P32_SET(D230.activeCharacterSelectWindowPos, &s_nativeCharacterSelect1PWindowPos);
 		D230.characterSelectWindowWidth = MM_CHARACTER_SELECT_1P_WINDOW_W;
 	}
 
@@ -1440,13 +1440,13 @@ void MM_Characters_SetMenuLayout(void)
 		if ((s_nativeCharacterSelectPage < 0) || (s_nativeCharacterSelectPage >= pageCount))
 			s_nativeCharacterSelectPage = 0;
 		MM_Characters_NativeBuildPagedMeta();
-		D230.activeCharacterSelectMeta = s_nativeCharacterSelectPagedMeta;
+		P32_SET(D230.activeCharacterSelectMeta, s_nativeCharacterSelectPagedMeta);
 	}
 	else
 	{
 		s_nativeCharacterSelectPage = 0;
 		NativeCustomRacer_ClearPlayerSelections();
-		D230.activeCharacterSelectMeta = MM_Characters_GetOxideMetaForLayout(layoutIndex);
+		P32_SET(D230.activeCharacterSelectMeta, MM_Characters_GetOxideMetaForLayout(layoutIndex));
 	}
 #else
 	D230.activeCharacterSelectMeta = D230.characterSelectMetaByLayout[layoutIndex];
@@ -1455,9 +1455,9 @@ void MM_Characters_SetMenuLayout(void)
 	D230.characterSelectNameTextY = D230.characterSelectLayout.textY[layoutIndex];
 
 #if defined(CTR_NATIVE)
-	D230.characterSelectTransitionMeta = MM_Characters_NativeCustomRosterEnabled()
+	P32_SET(D230.characterSelectTransitionMeta, MM_Characters_NativeCustomRosterEnabled()
 		? (MM_Characters_NativeInitPagedTransitions(), s_nativeCharacterSelectPagedTransitions)
-		: MM_Characters_GetOxideTransitionsForPlayerCount(numPlyrNextGame);
+		: MM_Characters_GetOxideTransitionsForPlayerCount(numPlyrNextGame));
 #else
 	D230.characterSelectTransitionMeta = D230.characterSelectTransitionByPlayerCount[numPlyrNextGame - 1];
 #endif
@@ -1490,7 +1490,7 @@ void MM_Characters_BackupIDs(void)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 overlay 230 0x800ae2c0-0x800ae464.
 void MM_Characters_PreventOverlap(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	s8 availableDefaultCharacters[MM_CHARACTER_SELECT_DEFAULT_DRIVER_COUNT];
 
 	// default 0,1,2,3,4,5,6,7
@@ -1545,7 +1545,7 @@ void MM_Characters_PreventOverlap(void)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 overlay 230 0x800ae464-0x800ae6b0.
 void MM_Characters_RestoreIDs(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	MM_Characters_NativeResetStats();
 
@@ -1585,7 +1585,7 @@ void MM_Characters_RestoreIDs(void)
 		// Basically sets them to 0, 1, 2, 3, 4... up to 0xE,
 		// setting Oxide's manually to 0xF is needed to make his icon appear
 
-		D230.characterMenuID[(s32)D230.activeCharacterSelectMeta[iconIndex].characterID] = iconIndex;
+		D230.characterMenuID[(s32)P32_GET(struct CharacterSelectMeta *, D230.activeCharacterSelectMeta)[iconIndex].characterID] = iconIndex;
 	}
 
 	for (s32 playerIndex = 0; playerIndex < gGT->numPlyrNextGame; playerIndex++)
@@ -1603,7 +1603,7 @@ void MM_Characters_RestoreIDs(void)
 #endif
 
 		// get unlock requirement for this character
-		s16 unlocked = D230.activeCharacterSelectMeta[(s32)*currID].unlockFlags;
+		s16 unlocked = P32_GET(struct CharacterSelectMeta *, D230.activeCharacterSelectMeta)[(s32)*currID].unlockFlags;
 
 		if (
 		    // If Icon has an unlock requirement
@@ -1663,13 +1663,13 @@ void MM_Characters_RestoreIDs(void)
 // NOTE(aalhendi): ASM-verified against NTSC-U 926 overlay 230 0x800ae6b0-0x800ae74c.
 void MM_Characters_HideDrivers(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	for (s32 playerIndex = 0; playerIndex < MM_CHARACTER_SELECT_MAX_PLAYERS; playerIndex++)
 	{
 		PushBuffer_Init(&gGT->pushBuffer[playerIndex], 0, 1);
 
-		gGT->drivers[playerIndex]->instSelf->flags |= HIDE_MODEL;
+		P32_GET(struct Instance *, P32_GET(struct Driver *, gGT->drivers[playerIndex])->instSelf)->flags |= HIDE_MODEL;
 	}
 
 	return;
@@ -1692,9 +1692,9 @@ void MM_Characters_MenuProc(struct RectMenu *menu)
 
 	int direction;
 
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
-	u32 *ot = gGT->backBuffer->otMem.uiOT;
+	u32 *ot = P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT);
 
 	for (s32 playerIndex = 0; playerIndex < MM_CHARACTER_SELECT_MAX_PLAYERS; playerIndex++)
 	{
@@ -1712,7 +1712,7 @@ void MM_Characters_MenuProc(struct RectMenu *menu)
 	// if menu is not in focus
 	if (D230.characterSelectMenuState != IN_MENU)
 	{
-		MM_TransitionInOut(D230.characterSelectTransitionMeta, (int)D230.characterSelectTransitionFrame, FPS_DOUBLE(MM_CHARACTER_SELECT_TRANSITION_STEP));
+		MM_TransitionInOut(P32_GET(struct TransitionMeta *, D230.characterSelectTransitionMeta), (int)D230.characterSelectTransitionFrame, FPS_DOUBLE(MM_CHARACTER_SELECT_TRANSITION_STEP));
 	}
 
 	MM_Characters_SetMenuLayout();
@@ -1803,13 +1803,13 @@ void MM_Characters_MenuProc(struct RectMenu *menu)
 			// if you are in a cup
 			if ((gGT->gameMode2 & CUP_ANY_KIND) != 0)
 			{
-				sdata->ptrDesiredMenu = &D230.menuCupSelect;
+				P32_SET(sdata->ptrDesiredMenu, &D230.menuCupSelect);
 				MM_CupSelect_Init();
 				return;
 			}
 
 			// if going to track selection
-			sdata->ptrDesiredMenu = &D230.menuTrackSelect;
+			P32_SET(sdata->ptrDesiredMenu, &D230.menuTrackSelect);
 			MM_TrackSelect_Init();
 			return;
 		}
@@ -1821,8 +1821,8 @@ void MM_Characters_MenuProc(struct RectMenu *menu)
 #else
 		MM_CHARACTER_SELECT_TITLE_TRANSITION_INDEX;
 #endif
-	int posX = D230.characterSelectTransitionMeta[titleTransitionIndex].currX;
-	int posY = D230.characterSelectTransitionMeta[titleTransitionIndex].currY;
+	int posX = P32_GET(struct TransitionMeta *, D230.characterSelectTransitionMeta)[titleTransitionIndex].currX;
+	int posY = P32_GET(struct TransitionMeta *, D230.characterSelectTransitionMeta)[titleTransitionIndex].currY;
 
 	u32 characterSelectType;
 	char *characterSelectString;
@@ -1837,11 +1837,11 @@ void MM_Characters_MenuProc(struct RectMenu *menu)
 			goto dontDrawSelectCharacter;
 		}
 
-		DecalFont_DrawLine(sdata->lngStrings[LNG_SELECT_CHARACTER_SELECT], posX + MM_CHARACTER_SELECT_3P_TITLE_X, posY + MM_CHARACTER_SELECT_3P_SELECT_Y,
+		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_SELECT_CHARACTER_SELECT], posX + MM_CHARACTER_SELECT_3P_TITLE_X, posY + MM_CHARACTER_SELECT_3P_SELECT_Y,
 		                   FONT_BIG, (JUSTIFY_CENTER | ORANGE));
 		characterSelectType = FONT_BIG;
 
-		characterSelectString = sdata->lngStrings[LNG_CHARACTER];
+		characterSelectString = P32_GET(char **, sdata->lngStrings)[LNG_CHARACTER];
 
 		posX = posX + MM_CHARACTER_SELECT_3P_TITLE_X;
 		posY = posY + MM_CHARACTER_SELECT_3P_CHARACTER_Y;
@@ -1856,11 +1856,11 @@ void MM_Characters_MenuProc(struct RectMenu *menu)
 			goto dontDrawSelectCharacter;
 		}
 
-		DecalFont_DrawLine(sdata->lngStrings[LNG_SELECT_CHARACTER_SELECT], posX + MM_CHARACTER_SELECT_4P_TITLE_X, posY + MM_CHARACTER_SELECT_4P_SELECT_Y,
+		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_SELECT_CHARACTER_SELECT], posX + MM_CHARACTER_SELECT_4P_TITLE_X, posY + MM_CHARACTER_SELECT_4P_SELECT_Y,
 		                   FONT_CREDITS, (JUSTIFY_CENTER | ORANGE));
 		characterSelectType = FONT_CREDITS;
 
-		characterSelectString = sdata->lngStrings[LNG_CHARACTER];
+		characterSelectString = P32_GET(char **, sdata->lngStrings)[LNG_CHARACTER];
 
 		posX = posX + MM_CHARACTER_SELECT_4P_TITLE_X;
 		posY = posY + MM_CHARACTER_SELECT_4P_CHARACTER_Y;
@@ -1872,7 +1872,7 @@ void MM_Characters_MenuProc(struct RectMenu *menu)
 	case MM_CHARACTER_SELECT_LAYOUT_2P_LIMITED:
 		characterSelectType = FONT_BIG;
 
-		characterSelectString = sdata->lngStrings[LNG_SELECT_CHARACTER];
+		characterSelectString = P32_GET(char **, sdata->lngStrings)[LNG_SELECT_CHARACTER];
 
 		posX = posX + MM_CHARACTER_SELECT_LIMITED_TITLE_X;
 		posY = posY + MM_CHARACTER_SELECT_LIMITED_TITLE_Y;
@@ -1927,7 +1927,7 @@ dontDrawSelectCharacter:
 		Color playerColor;
 		MM_Characters_AnimateColors((u8 *)&playerColor, playerIndex, (int)(s16)(sdata->characterSelectFlags & playerSelectFlag));
 
-		struct CharacterSelectMeta *preInputCharacterMeta = &D230.activeCharacterSelectMeta[currentIcon];
+		struct CharacterSelectMeta *preInputCharacterMeta = &P32_GET(struct CharacterSelectMeta *, D230.activeCharacterSelectMeta)[currentIcon];
 
 		if ((D230.characterSelectMenuState == IN_MENU) &&
 		    // If you press the D-Pad, or Cross, Square, Triangle, Circle
@@ -2128,7 +2128,7 @@ dontDrawSelectCharacter:
 		iconPerPlayer[playerIndex] = currentIcon;
 
 		// transition of each icon
-		struct TransitionMeta *currentIconTransition = &D230.characterSelectTransitionMeta[currentIcon];
+		struct TransitionMeta *currentIconTransition = &P32_GET(struct TransitionMeta *, D230.characterSelectTransitionMeta)[currentIcon];
 
 		// if player has not selected a character
 		b32 playerSelectedAfterInput = ((sdata->characterSelectFlags >> playerIndex) & 1U) != 0;
@@ -2137,7 +2137,7 @@ dontDrawSelectCharacter:
 		{
 			// draw string
 			// "1", "2", "3", "4", above the character icon
-			DecalFont_DrawLine(D230.playerNumberStrings[playerIndex], currentIconTransition->currX + (u32)preInputCharacterMeta->posX - 6,
+			DecalFont_DrawLine(P32_GET(char *, D230.playerNumberStrings[playerIndex]), currentIconTransition->currX + (u32)preInputCharacterMeta->posX - 6,
 			                   currentIconTransition->currY + (u32)preInputCharacterMeta->posY - 3, FONT_BIG, WHITE);
 			outlineColor = playerColor;
 		}
@@ -2158,7 +2158,7 @@ dontDrawSelectCharacter:
 	MM_Characters_PreventOverlap();
 #endif
 
-	struct CharacterSelectMeta *iconDrawMeta = D230.activeCharacterSelectMeta;
+	struct CharacterSelectMeta *iconDrawMeta = P32_GET(struct CharacterSelectMeta *, D230.activeCharacterSelectMeta);
 	const s32 activeIconCount =
 #if defined(CTR_NATIVE)
 		MM_Characters_NativeActiveIconCount();
@@ -2198,9 +2198,9 @@ dontDrawSelectCharacter:
 				}
 			}
 
-			struct TransitionMeta *iconTransition = &D230.characterSelectTransitionMeta[iconIndex];
+			struct TransitionMeta *iconTransition = &P32_GET(struct TransitionMeta *, D230.characterSelectTransitionMeta)[iconIndex];
 
-			struct Icon *retailIcon = gGT->ptrIcons[data.MetaDataCharacters[drawMeta->characterID].iconID];
+			struct Icon *retailIcon = P32_GET(struct Icon *, gGT->ptrIcons[data.MetaDataCharacters[drawMeta->characterID].iconID]);
 			const s16 portraitX = iconTransition->currX + drawMeta->posX + MM_CHARACTER_SELECT_ICON_DECAL_OFFSET_X;
 			const s16 portraitY = iconTransition->currY + drawMeta->posY + MM_CHARACTER_SELECT_ICON_DECAL_OFFSET_Y;
 #if defined(CTR_NATIVE)
@@ -2226,14 +2226,14 @@ dontDrawSelectCharacter:
 #endif
 
 			RECTMENU_DrawPolyGT4(retailIcon, portraitX, portraitY,
-			                     &gGT->backBuffer->primMem, gGT->pushBuffer_UI.ptrOT,
+			                     &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT),
 			                     iconColor.self, iconColor.self, iconColor.self, iconColor.self, TRANS_50_DECAL, FP(1.0));
 		}
 
 	}
 
 	// reset
-	struct CharacterSelectMeta *activeCharacterSelectMeta = D230.activeCharacterSelectMeta;
+	struct CharacterSelectMeta *activeCharacterSelectMeta = P32_GET(struct CharacterSelectMeta *, D230.activeCharacterSelectMeta);
 
 #if defined(CTR_NATIVE)
 	if (MM_Characters_NativeCustomRosterEnabled())
@@ -2258,7 +2258,7 @@ dontDrawSelectCharacter:
 	{
 		s16 playerIcon = iconPerPlayer[playerIndex];
 		struct CharacterSelectMeta *playerCharacterMeta =
-		    (playerIcon >= 0) ? &D230.activeCharacterSelectMeta[playerIcon] : NULL;
+		    (playerIcon >= 0) ? &P32_GET(struct CharacterSelectMeta *, D230.activeCharacterSelectMeta)[playerIcon] : NULL;
 		b32 playerSelected = (((int)(s16)sdata->characterSelectFlags >> playerIndex) & 1U) != 0;
 
 		// if player has not selected a character
@@ -2275,7 +2275,7 @@ dontDrawSelectCharacter:
 			animatedColor.g = (u8)((int)((u32)animatedColor.g << 2) / 5);
 			animatedColor.b = (u8)((int)((u32)animatedColor.b << 2) / 5);
 
-			struct TransitionMeta *selectedIconTransition = &D230.characterSelectTransitionMeta[playerIcon];
+			struct TransitionMeta *selectedIconTransition = &P32_GET(struct TransitionMeta *, D230.characterSelectTransitionMeta)[playerIcon];
 
 			drawRect.x = selectedIconTransition->currX + playerCharacterMeta->posX + MM_CHARACTER_SELECT_HIGHLIGHT_OFFSET_X;
 			drawRect.y = selectedIconTransition->currY + playerCharacterMeta->posY + MM_CHARACTER_SELECT_HIGHLIGHT_OFFSET_Y;
@@ -2307,8 +2307,8 @@ dontDrawSelectCharacter:
 				MM_CHARACTER_SELECT_DRIVER_WINDOW_TRANSITION_FIRST;
 #endif
 			struct TransitionMeta *driverWindowTransition =
-			    &D230.characterSelectTransitionMeta[playerIndex + driverWindowTransitionFirst];
-			SVec2 *windowPos = &D230.activeCharacterSelectWindowPos[playerIndex];
+			    &P32_GET(struct TransitionMeta *, D230.characterSelectTransitionMeta)[playerIndex + driverWindowTransitionFirst];
+			SVec2 *windowPos = &P32_GET(SVec2 *, D230.activeCharacterSelectWindowPos)[playerIndex];
 			s16 nameBaseY = driverWindowTransition->currY + windowPos->y;
 			s16 nameYOffset = (s16)((((u32)(numPlyrNextGame < 3) ^ 1) << 0x12) >> 0x10);
 			s16 nameY;
@@ -2326,7 +2326,7 @@ dontDrawSelectCharacter:
 			s16 characterID = data.characterIDs[playerIndex];
 			if (playerCharacterMeta != NULL)
 				characterID = playerCharacterMeta->characterID;
-			const char *characterName = sdata->lngStrings[data.MetaDataCharacters[characterID].name_LNG_long];
+			const char *characterName = P32_GET(char **, sdata->lngStrings)[data.MetaDataCharacters[characterID].name_LNG_long];
 #if defined(CTR_NATIVE)
 			const int customRacerIndex = NativeCustomRacer_GetPlayerSelection(playerIndex);
 			if (customRacerIndex >= 0)
@@ -2342,7 +2342,7 @@ dontDrawSelectCharacter:
 	}
 
 	// reset
-	activeCharacterSelectMeta = D230.activeCharacterSelectMeta;
+	activeCharacterSelectMeta = P32_GET(struct CharacterSelectMeta *, D230.activeCharacterSelectMeta);
 
 	// loop through all icons
 	for (s32 iconIndex = 0; iconIndex < activeIconCount; iconIndex++)
@@ -2362,7 +2362,7 @@ dontDrawSelectCharacter:
 		    // also the variable written by cheats
 		    CHECK_ADV_BIT(sdata->gameProgress.unlocks, unlockRequirement))
 		{
-			struct TransitionMeta *iconTransition = &D230.characterSelectTransitionMeta[iconIndex];
+			struct TransitionMeta *iconTransition = &P32_GET(struct TransitionMeta *, D230.characterSelectTransitionMeta)[iconIndex];
 
 			drawRect.x = iconTransition->currX + activeCharacterSelectMeta[iconIndex].posX;
 			drawRect.y = iconTransition->currY + activeCharacterSelectMeta[iconIndex].posY;
@@ -2374,7 +2374,7 @@ dontDrawSelectCharacter:
 		}
 	}
 
-	SVec2 *windowPos = D230.activeCharacterSelectWindowPos;
+	SVec2 *windowPos = P32_GET(SVec2 *, D230.activeCharacterSelectWindowPos);
 
 	for (s32 playerIndex = 0; playerIndex < gGT->numPlyrNextGame; playerIndex++)
 	{
@@ -2384,7 +2384,7 @@ dontDrawSelectCharacter:
 #else
 			MM_CHARACTER_SELECT_DRIVER_WINDOW_TRANSITION_FIRST;
 #endif
-		struct TransitionMeta *driverWindowTransition = &D230.characterSelectTransitionMeta[playerIndex + driverWindowTransitionFirst];
+		struct TransitionMeta *driverWindowTransition = &P32_GET(struct TransitionMeta *, D230.characterSelectTransitionMeta)[playerIndex + driverWindowTransitionFirst];
 		b32 playerSelected = (((int)(s16)sdata->characterSelectFlags >> playerIndex) & 1U) != 0;
 		Color animatedColor;
 
@@ -2434,7 +2434,7 @@ dontDrawSelectCharacter:
 		drawRect.x = 0;
 		drawRect.y = 0;
 
-		RECTMENU_DrawRwdBlueRect(&drawRect, &D230.characterSelect_BlueRectColors[0], &gGT->pushBuffer[playerIndex].ptrOT[0x3ff], &gGT->backBuffer->primMem);
+		RECTMENU_DrawRwdBlueRect(&drawRect, &D230.characterSelect_BlueRectColors[0], &P32_GET(uint32_t *, gGT->pushBuffer[playerIndex].ptrOT)[0x3ff], &P32_GET(struct DB *, gGT->backBuffer)->primMem);
 	}
 	return;
 }

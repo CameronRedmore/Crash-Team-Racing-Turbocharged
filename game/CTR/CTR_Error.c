@@ -26,10 +26,10 @@ void CTR_ErrorScreen(u8 r, u8 g, u8 b)
 		// this is the first, and last, primitive
 		p.tag = 0x3ffffff;
 
-		p.x0 = sdata->gGT->frontBuffer->drawEnv.clip.x;
-		p.y0 = sdata->gGT->frontBuffer->drawEnv.clip.y;
-		p.w = sdata->gGT->frontBuffer->drawEnv.clip.w;
-		p.h = sdata->gGT->frontBuffer->drawEnv.clip.h;
+		p.x0 = P32_GET(struct DB *, P32_GET(struct GameTracker *, sdata->gGT)->frontBuffer)->drawEnv.clip.x;
+		p.y0 = P32_GET(struct DB *, P32_GET(struct GameTracker *, sdata->gGT)->frontBuffer)->drawEnv.clip.y;
+		p.w = P32_GET(struct DB *, P32_GET(struct GameTracker *, sdata->gGT)->frontBuffer)->drawEnv.clip.w;
+		p.h = P32_GET(struct DB *, P32_GET(struct GameTracker *, sdata->gGT)->frontBuffer)->drawEnv.clip.h;
 
 		p.r0 = r;
 		p.g0 = g;

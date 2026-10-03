@@ -73,7 +73,7 @@ int Timer_GetTime_Elapsed(int oldVal, int *retVal)
 /// the difference of the scaled running level time keeps the sum exact instead.
 int Timer_ScaleByElapsed(int value, int shift)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	int elapsed = gGT->elapsedTimeMS;
 
 #if defined(CTR_NATIVE)

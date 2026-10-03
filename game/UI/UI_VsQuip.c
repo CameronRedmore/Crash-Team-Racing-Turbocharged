@@ -45,9 +45,9 @@ void UI_VsQuipAssign(struct Driver *driver, struct QuipMeta *meta, struct Driver
 		return;
 	}
 
-	struct QuipStr *selected = meta->ptrQuipStrCurr;
+	struct QuipStr *selected = P32_GET(struct QuipStr *, meta->ptrQuipStrCurr);
 
-	for (struct QuipStr *curr = selected + 1; curr < meta->ptrQuipStrNext; curr++)
+	for (struct QuipStr *curr = selected + 1; curr < P32_GET(struct QuipStr *, meta->ptrQuipStrNext); curr++)
 	{
 		if (selected->priority < curr->priority)
 		{
@@ -61,7 +61,7 @@ void UI_VsQuipAssign(struct Driver *driver, struct QuipMeta *meta, struct Driver
 		}
 	}
 
-	struct QuipStr *oldQuip = (struct QuipStr *)driver->EndOfRaceComment_ptrQuip;
+	struct QuipStr *oldQuip = (struct QuipStr *)P32_GET(s16 *, driver->EndOfRaceComment_ptrQuip);
 
 	if (oldQuip != NULL)
 	{
@@ -91,10 +91,10 @@ void UI_VsQuipAssign(struct Driver *driver, struct QuipMeta *meta, struct Driver
 		selected->priority = -selected->priority;
 	}
 
-	driver->EndOfRaceComment_ptrQuip = (s16 *)selected;
+	P32_SET(driver->EndOfRaceComment_ptrQuip, (s16 *)selected);
 	driver->EndOfRaceComment_characterID = characterID;
 
-	sdata->gGT->timerEndOfRaceVS = FPS_DOUBLE(((sdata->gGT->gameMode1 & BATTLE_MODE) != 0) ? 150 : 300);
+	P32_GET(struct GameTracker *, sdata->gGT)->timerEndOfRaceVS = FPS_DOUBLE(((sdata->gGT->gameMode1 & BATTLE_MODE) != 0) ? 150 : 300);
 }
 
 #define UI_QUIP_DATA_BASE_PSX 0x800864dcu
@@ -134,8 +134,8 @@ static struct QuipMeta UI_VsQuipMetaFromRaw(struct QuipMetaRaw *raw)
 {
 	struct QuipMeta meta;
 
-	meta.ptrQuipStrCurr = UI_VsQuipPtrFromPsx(raw->ptrQuipStrCurr);
-	meta.ptrQuipStrNext = UI_VsQuipPtrFromPsx(raw->ptrQuipStrNext);
+	P32_SET(meta.ptrQuipStrCurr, UI_VsQuipPtrFromPsx(raw->ptrQuipStrCurr));
+	P32_SET(meta.ptrQuipStrNext, UI_VsQuipPtrFromPsx(raw->ptrQuipStrNext));
 	meta.conditionType = raw->conditionType;
 	meta.flags = raw->flags;
 	meta.threshold = raw->threshold;
@@ -148,7 +148,7 @@ static struct QuipMeta UI_VsQuipMetaFromRaw(struct QuipMetaRaw *raw)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80054bfc-0x800550f4
 void UI_VsQuipAssignAll(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	int characterID = 0;
 
 	if (gGT->numPlyrCurrGame < 2)
@@ -186,13 +186,13 @@ void UI_VsQuipAssignAll(void)
 	int secondScore = 0;
 	int scoreByDriverID[8];
 
-	struct Thread *thread = gGT->threadBuckets[PLAYER].thread;
+	struct Thread *thread = P32_GET(struct Thread *, gGT->threadBuckets[PLAYER].thread);
 
 	while (thread != NULL)
 	{
-		struct Driver *driver = thread->object;
+		struct Driver *driver = P32_GET(void *, thread->object);
 
-		driver->EndOfRaceComment_ptrQuip = NULL;
+		P32_SET(driver->EndOfRaceComment_ptrQuip, NULL);
 
 		int score;
 
@@ -219,7 +219,7 @@ void UI_VsQuipAssignAll(void)
 			bestDriver = NULL;
 		}
 
-		thread = thread->siblingThread;
+		thread = P32_GET(struct Thread *, thread->siblingThread);
 	}
 
 	for (struct QuipMetaRaw *raw = metaStart; raw < metaEnd; raw++)
@@ -241,11 +241,11 @@ void UI_VsQuipAssignAll(void)
 			threshold *= numLaps;
 		}
 
-		thread = gGT->threadBuckets[PLAYER].thread;
+		thread = P32_GET(struct Thread *, gGT->threadBuckets[PLAYER].thread);
 
 		while (thread != NULL)
 		{
-			struct Driver *driver = thread->object;
+			struct Driver *driver = P32_GET(void *, thread->object);
 			struct Driver *nextSelectedDriver = selectedDriver;
 			int nextThreshold = threshold;
 			u32 nextBestValue = bestValue;
@@ -420,7 +420,7 @@ void UI_VsQuipAssignAll(void)
 			}
 
 			case 9:
-				if (driver->EndOfRaceComment_ptrQuip == NULL)
+				if (P32_GET(s16 *, driver->EndOfRaceComment_ptrQuip) == NULL)
 				{
 					UI_VsQuipAssign(driver, &meta, bestDriver, 0);
 				}
@@ -435,7 +435,7 @@ void UI_VsQuipAssignAll(void)
 				UI_VsQuipAssign(nextSelectedDriver, &meta, bestDriver, characterID);
 			}
 
-			thread = thread->siblingThread;
+			thread = P32_GET(struct Thread *, thread->siblingThread);
 			selectedDriver = nextSelectedDriver;
 			threshold = nextThreshold;
 			bestValue = nextBestValue;
@@ -458,7 +458,7 @@ void UI_VsQuipDrawAll(void)
 	s16 *printArr;
 	struct Driver *d;
 
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	struct Thread *thread;
 #if defined(__vita__)
 	int adhocSingleView = NativeAdhoc_IsConnected() && (gGT->numPlyrCurrGame == 2) &&
@@ -474,10 +474,10 @@ void UI_VsQuipDrawAll(void)
 
 	// loop through player threads
 	int playerIndex = 0;
-	for (thread = gGT->threadBuckets[0].thread; thread != 0; thread = thread->siblingThread, playerIndex++)
+	for (thread = P32_GET(struct Thread *, gGT->threadBuckets[0].thread); thread != 0; thread = P32_GET(struct Thread *, thread->siblingThread), playerIndex++)
 	{
 		// get player struct from thread
-		d = (struct Driver *)thread->object;
+		d = (struct Driver *)P32_GET(void *, thread->object);
 #if defined(__vita__)
 		if (adhocSingleView && (d->driverID != adhocLocalPlayer))
 		{
@@ -495,7 +495,7 @@ void UI_VsQuipDrawAll(void)
 		}
 
 		// This is secretly a s16[2], to hold a config bit
-		printArr = (s16 *)d->EndOfRaceComment_ptrQuip;
+		printArr = (s16 *)P32_GET(s16 *, d->EndOfRaceComment_ptrQuip);
 
 		if (printArr == 0)
 		{
@@ -509,7 +509,7 @@ void UI_VsQuipDrawAll(void)
 		if ((printArr[1] & 1) == 0)
 		{
 			// Print the string as a comment
-			print = sdata->lngStrings[printArr[0]];
+			print = P32_GET(char **, sdata->lngStrings)[printArr[0]];
 		}
 
 		// if the comment is conjoined
@@ -520,12 +520,12 @@ void UI_VsQuipDrawAll(void)
 
 			        // Contains '%s' format:
 			        // Original end-of-race comment
-			        sdata->lngStrings[printArr[0]],
+			        P32_GET(char **, sdata->lngStrings)[printArr[0]],
 
 			        // second part of comment,
 			        // lngIndex of driver,
 			        // for stuff like "hit by Crash Bandicoot" or something
-			        sdata->lngStrings[data.MetaDataCharacters[d->EndOfRaceComment_characterID].name_LNG_long]);
+			        P32_GET(char **, sdata->lngStrings)[data.MetaDataCharacters[d->EndOfRaceComment_characterID].name_LNG_long]);
 
 			print = printBuffer;
 		}
@@ -576,7 +576,7 @@ void UI_VsWaitForPressX(void)
 	Color clearColor;
 	RECT clearRect;
 
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	u8 numPlayers = gGT->numPlyrCurrGame;
 #if defined(__vita__)
 	int adhocSingleView = NativeAdhoc_IsConnected() && (numPlayers == 2) &&
@@ -597,7 +597,7 @@ void UI_VsWaitForPressX(void)
 		// flags, for which players have pressed X to continue
 		char *pressState = &sdata->Battle_EndOfRace.boolPressX[playerIndex];
 
-		struct Driver *driver = gGT->drivers[playerIndex];
+		struct Driver *driver = P32_GET(struct Driver *, gGT->drivers[playerIndex]);
 		RECT *viewport = &gGT->pushBuffer[playerIndex].rect;
 #if defined(__vita__)
 		if (adhocSingleView && (playerIndex == adhocLocalPlayer))
@@ -605,7 +605,7 @@ void UI_VsWaitForPressX(void)
 			viewport = &adhocDisplayPB.rect;
 		}
 #endif
-		int buttonsTapped = sdata->gGamepads->gamepad[playerIndex].buttonsTapped;
+		int buttonsTapped = P32_GET(struct GamepadSystem *, sdata->gGamepads)->gamepad[playerIndex].buttonsTapped;
 
 		// If Player has not pressed X to continue
 		// Draw comment, and battle stats
@@ -631,7 +631,7 @@ void UI_VsWaitForPressX(void)
 			{
 				int promptString = LNG_YOU_HIT + (*pressState & UI_VS_WAIT_STAT_MODE_HIT_YOU);
 
-				DecalFont_DrawLine(sdata->lngStrings[promptString],
+				DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[promptString],
 
 				                   // Midpoint between pushBuffer Start X and End X
 				                   viewport->x + (viewport->w >> 1),
@@ -681,7 +681,7 @@ void UI_VsWaitForPressX(void)
 
 
 					// Get font color based on battle team
-					s16 teamID = (s16)gGT->drivers[statPlayerIndex]->BattleHUD.teamID;
+					s16 teamID = (s16)P32_GET(struct Driver *, gGT->drivers[statPlayerIndex])->BattleHUD.teamID;
 					int statTextFlags = ((teamID + (u32)UI_VS_WAIT_TEAM_COLOR_BASE) | UI_VS_WAIT_TEAM_TEXT_FLAGS);
 
 
@@ -709,7 +709,7 @@ void UI_VsWaitForPressX(void)
 			{
 				memset(&clearColor, 0, sizeof(clearColor));
 				clearRect = *viewport;
-				CTR_Box_DrawClearBox(&clearRect, &clearColor, 0, gGT->backBuffer->otMem.uiOT);
+				CTR_Box_DrawClearBox(&clearRect, &clearColor, 0, P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT));
 			}
 
 			// Allow Go-Back option to YouHit/HitYou

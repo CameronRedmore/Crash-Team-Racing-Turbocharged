@@ -8,7 +8,7 @@
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80043b30-0x80043c04.
 void QueueLoadTrack_MenuProc(struct RectMenu *menu)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	if (gNativeBossFightMode != 0)
 	{

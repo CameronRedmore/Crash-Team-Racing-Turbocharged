@@ -15,22 +15,22 @@ int RB_CtrLetter_ThCollide(struct Thread *letterTh, struct Thread *driverTh, voi
 		return 0;
 	}
 
-	letterInst = letterTh->inst;
-	driver = driverTh->object;
+	letterInst = P32_GET(struct Instance *, letterTh->inst);
+	driver = P32_GET(void *, driverTh->object);
 
-	pb = &sdata->gGT->pushBuffer[driver->driverID];
+	pb = &P32_GET(struct GameTracker *, sdata->gGT)->pushBuffer[driver->driverID];
 	RB_Fruit_GetScreenCoords(pb, letterInst, &posScreen[0]);
 
 	driver->PickupLetterHUD.startX = pb->rect.x + posScreen[0];
 	driver->PickupLetterHUD.startY = pb->rect.y + posScreen[1] - 0x14;
 	driver->PickupLetterHUD.cooldown = FPS_DOUBLE(10);
 	driver->PickupLetterHUD.numCollected++;
-	driver->PickupLetterHUD.modelID = letterInst->model->id;
+	driver->PickupLetterHUD.modelID = P32_GET(struct Model *, letterInst->model)->id;
 
 	letterInst->scale.x = 0;
 	letterInst->scale.y = 0;
 	letterInst->scale.z = 0;
-	letterInst->thread = 0;
+	P32_SET(letterInst->thread, 0);
 	letterInst->flags |= HIDE_MODEL;
 
 	OtherFX_Play(100, 1);
@@ -45,23 +45,23 @@ int RB_CtrLetter_LInC(struct Instance *letterInst, struct Thread *driverTh, stru
 {
 	struct Thread *letterTh;
 
-	letterTh = letterInst->thread;
+	letterTh = P32_GET(struct Thread *, letterInst->thread);
 	if (letterTh == NULL)
 	{
 		letterTh = PROC_BirthWithObject(SIZE_RELATIVE_POOL_BUCKET(4, NONE, SMALL, STATIC), RB_CtrLetter_ThTick, "ctr", NULL);
 
-		letterInst->thread = letterTh;
+		P32_SET(letterInst->thread, letterTh);
 		if (letterTh == NULL)
 		{
 			return 0;
 		}
 
-		letterTh->inst = letterInst;
-		letterTh->funcThCollide = (void *)RB_CtrLetter_ThCollide;
-		letterTh = letterInst->thread;
+		P32_SET(letterTh->inst, letterInst);
+		P32_SET(letterTh->funcThCollide, (void *)RB_CtrLetter_ThCollide);
+		letterTh = P32_GET(struct Thread *, letterInst->thread);
 	}
 
-	if ((letterTh == NULL) || (letterTh->funcThCollide == NULL))
+	if ((letterTh == NULL) || (P32_GET(void *, letterTh->funcThCollide) == NULL))
 	{
 		return 0;
 	}
@@ -71,7 +71,7 @@ int RB_CtrLetter_LInC(struct Instance *letterInst, struct Thread *driverTh, stru
 		return 0;
 	}
 
-	return ((ThreadScratchCollideFunc)letterTh->funcThCollide)(letterTh, driverTh, letterTh->funcThCollide, sps);
+	return ((ThreadScratchCollideFunc)P32_GET(void *, letterTh->funcThCollide))(letterTh, driverTh, P32_GET(void *, letterTh->funcThCollide), sps);
 }
 
 SVec3 letterLightDir = {{0x94F, 0x94F, -0x94F}};
@@ -83,8 +83,8 @@ void RB_CtrLetter_ThTick(struct Thread *t)
 	struct Instance *letterInst;
 	struct CtrLetter *letterObj;
 
-	letterInst = t->inst;
-	letterObj = t->object;
+	letterInst = P32_GET(struct Instance *, t->inst);
+	letterObj = P32_GET(void *, t->object);
 
 	// rotate each frame
 	letterObj->rot.y += CTR_FRAME_STEP(0x40, sdata->gGT->timer);
@@ -100,7 +100,7 @@ void RB_CtrLetter_LInB(struct Instance *inst)
 	struct CtrLetter *letterObj;
 	struct Thread *t;
 
-	if (inst->thread == NULL)
+	if (P32_GET(struct Thread *, inst->thread) == NULL)
 	{
 		t = PROC_BirthWithObject(
 		    // creation flags
@@ -111,16 +111,16 @@ void RB_CtrLetter_LInB(struct Instance *inst)
 		    0                    // thread relative
 		);
 
-		inst->thread = t;
+		P32_SET(inst->thread, t);
 		if (t == 0)
 		{
 			return;
 		}
 
-		t->funcThCollide = (void *)RB_CtrLetter_ThCollide;
-		t->inst = inst;
+		P32_SET(t->funcThCollide, (void *)RB_CtrLetter_ThCollide);
+		P32_SET(t->inst, inst);
 
-		letterObj = ((struct CtrLetter *)t->object);
+		letterObj = ((struct CtrLetter *)P32_GET(void *, t->object));
 		letterObj->rot.x = 0;
 		letterObj->rot.y = 0;
 		letterObj->rot.z = 0;

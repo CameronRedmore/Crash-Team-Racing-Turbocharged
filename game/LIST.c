@@ -3,8 +3,8 @@
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80031734-0x80031744.
 void LIST_Clear(struct LinkedList *L)
 {
-	L->first = 0;
-	L->last = 0;
+	P32_SET(L->first, 0);
+	P32_SET(L->last, 0);
 	L->count = 0;
 }
 
@@ -16,21 +16,21 @@ void LIST_AddFront(struct LinkedList *L, struct Item *I)
 		return;
 	}
 
-	I->prev = 0;
+	P32_SET(I->prev, 0);
 
-	struct Item *oldFirst = L->first;
-	I->next = oldFirst;
+	struct Item *oldFirst = P32_GET(struct Item *, L->first);
+	P32_SET(I->next, oldFirst);
 
 	if (oldFirst != 0)
 	{
-		L->first->prev = I;
+		P32_SET(P32_GET(struct Item *, L->first)->prev, I);
 	}
 	else
 	{
-		L->last = I;
+		P32_SET(L->last, I);
 	}
 
-	L->first = I;
+	P32_SET(L->first, I);
 	L->count = L->count + 1;
 }
 
@@ -42,34 +42,34 @@ void LIST_AddBack(struct LinkedList *L, struct Item *I)
 		return;
 	}
 
-	I->next = 0;
+	P32_SET(I->next, 0);
 
-	struct Item *oldLast = L->last;
-	I->prev = oldLast;
+	struct Item *oldLast = P32_GET(struct Item *, L->last);
+	P32_SET(I->prev, oldLast);
 
 	if (oldLast != 0)
 	{
-		L->last->next = I;
+		P32_SET(P32_GET(struct Item *, L->last)->next, I);
 	}
 	else
 	{
-		L->first = I;
+		P32_SET(L->first, I);
 	}
 
-	L->last = I;
+	P32_SET(L->last, I);
 	L->count = L->count + 1;
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800317cc-0x800317d8.
 void *LIST_GetNextItem(struct Item *I)
 {
-	return I->next;
+	return P32_GET(struct Item *, I->next);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800317d8-0x800317e4.
 void *LIST_GetFirstItem(struct LinkedList *L)
 {
-	return L->first;
+	return P32_GET(struct Item *, L->first);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800317e4-0x8003186c.
@@ -80,31 +80,31 @@ struct Item *LIST_RemoveMember(struct LinkedList *L, struct Item *I)
 		return 0;
 	}
 
-	if (L->first != 0)
+	if (P32_GET(struct Item *, L->first) != 0)
 	{
-		if (I->prev != 0)
+		if (P32_GET(struct Item *, I->prev) != 0)
 		{
-			I->prev->next = I->next;
+			P32_SET(P32_GET(struct Item *, I->prev)->next, P32_GET(struct Item *, I->next));
 		}
 		else
 		{
-			L->first = I->next;
+			P32_SET(L->first, P32_GET(struct Item *, I->next));
 		}
 
-		if (I->next != 0)
+		if (P32_GET(struct Item *, I->next) != 0)
 		{
-			I->next->prev = I->prev;
+			P32_SET(P32_GET(struct Item *, I->next)->prev, P32_GET(struct Item *, I->prev));
 		}
 		else
 		{
-			L->last = I->prev;
+			P32_SET(L->last, P32_GET(struct Item *, I->prev));
 		}
 
 		L->count = L->count - 1;
 	}
 
-	I->next = 0;
-	I->prev = 0;
+	P32_SET(I->next, 0);
+	P32_SET(I->prev, 0);
 
 	return I;
 }
@@ -112,34 +112,34 @@ struct Item *LIST_RemoveMember(struct LinkedList *L, struct Item *I)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8003186c-0x800318ec.
 struct Item *LIST_RemoveFront(struct LinkedList *L)
 {
-	struct Item *I = L->first;
+	struct Item *I = P32_GET(struct Item *, L->first);
 
 	if (I == 0)
 	{
 		return 0;
 	}
 
-	if (I->prev != 0)
+	if (P32_GET(struct Item *, I->prev) != 0)
 	{
-		I->prev->next = I->next;
+		P32_SET(P32_GET(struct Item *, I->prev)->next, P32_GET(struct Item *, I->next));
 	}
 	else
 	{
-		L->first = I->next;
+		P32_SET(L->first, P32_GET(struct Item *, I->next));
 	}
 
-	if (I->next != 0)
+	if (P32_GET(struct Item *, I->next) != 0)
 	{
-		I->next->prev = I->prev;
+		P32_SET(P32_GET(struct Item *, I->next)->prev, P32_GET(struct Item *, I->prev));
 	}
 	else
 	{
-		L->last = I->prev;
+		P32_SET(L->last, P32_GET(struct Item *, I->prev));
 	}
 
 	L->count = L->count - 1;
-	I->next = 0;
-	I->prev = 0;
+	P32_SET(I->next, 0);
+	P32_SET(I->prev, 0);
 
 	return I;
 }
@@ -147,38 +147,38 @@ struct Item *LIST_RemoveFront(struct LinkedList *L)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800318ec-0x8003197c.
 struct Item *LIST_RemoveBack(struct LinkedList *L)
 {
-	struct Item *I = L->last;
+	struct Item *I = P32_GET(struct Item *, L->last);
 
 	if (I == 0)
 	{
 		return 0;
 	}
 
-	if (L->first != 0)
+	if (P32_GET(struct Item *, L->first) != 0)
 	{
-		if (I->prev != 0)
+		if (P32_GET(struct Item *, I->prev) != 0)
 		{
-			I->prev->next = I->next;
+			P32_SET(P32_GET(struct Item *, I->prev)->next, P32_GET(struct Item *, I->next));
 		}
 		else
 		{
-			L->first = I->next;
+			P32_SET(L->first, P32_GET(struct Item *, I->next));
 		}
 
-		if (I->next != 0)
+		if (P32_GET(struct Item *, I->next) != 0)
 		{
-			I->next->prev = I->prev;
+			P32_SET(P32_GET(struct Item *, I->next)->prev, P32_GET(struct Item *, I->prev));
 		}
 		else
 		{
-			L->last = I->prev;
+			P32_SET(L->last, P32_GET(struct Item *, I->prev));
 		}
 
 		L->count = L->count - 1;
 	}
 
-	I->next = 0;
-	I->prev = 0;
+	P32_SET(I->next, 0);
+	P32_SET(I->prev, 0);
 
 	return I;
 }

@@ -77,13 +77,13 @@ struct Ovr233_Credits_BSS creditsBSS = OVR233_CREDITS_BSS_INITIALIZER;
 
 void OVR233_RebuildInitMatrixTable(void)
 {
-	D233.cs_initMatrixTable[0].data = &D233.cs_initMatrixData[0];
+	P32_SET(D233.cs_initMatrixTable[0].data, &D233.cs_initMatrixData[0]);
 	D233.cs_initMatrixTable[0].count = 41;
-	D233.cs_initMatrixTable[1].data = &D233.cs_initMatrixData[41];
+	P32_SET(D233.cs_initMatrixTable[1].data, &D233.cs_initMatrixData[41]);
 	D233.cs_initMatrixTable[1].count = 45;
-	D233.cs_initMatrixTable[2].data = &D233.cs_initMatrixData[86];
+	P32_SET(D233.cs_initMatrixTable[2].data, &D233.cs_initMatrixData[86]);
 	D233.cs_initMatrixTable[2].count = 49;
-	D233.cs_initMatrixTable[3].data = &D233.cs_initMatrixData[135];
+	P32_SET(D233.cs_initMatrixTable[3].data, &D233.cs_initMatrixData[135]);
 	D233.cs_initMatrixTable[3].count = 55;
 }
 
@@ -103,8 +103,8 @@ static void OVR233_ResetD233(void)
 	D233.audioVolumeBackupPad = R233.audioVolumeBackupPad;
 	D233.podiumPrizeDropReady = R233.podiumPrizeDropReady;
 	D233.cutsceneState = R233.cutsceneState;
-	D233.ptrModelBossHead = R233.ptrModelBossHead;
-	D233.ptrModelBossBody = R233.ptrModelBossBody;
+	P32_SET(D233.ptrModelBossHead, P32_GET(struct Model *const, R233.ptrModelBossHead));
+	P32_SET(D233.ptrModelBossBody, P32_GET(struct Model *const, R233.ptrModelBossBody));
 	memcpy(D233.cs_initMatrixData, R233.cs_initMatrixData, sizeof(D233.cs_initMatrixData));
 	OVR233_RebuildInitMatrixTable();
 }

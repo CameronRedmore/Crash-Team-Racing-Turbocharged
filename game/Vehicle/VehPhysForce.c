@@ -147,7 +147,7 @@ void VehPhysForce_OnGravity(struct Driver *driver, Vec3 *velocity)
 	}
 #endif
 
-	int elapsedTimeMS = sdata->gGT->elapsedTimeMS;
+	int elapsedTimeMS = P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS;
 
 	gte_SetRotMatrix(&driver->matrixMovingDir);
 	VehPhysForce_OnGravity_SetLightMatrixTranspose(&driver->matrixMovingDir);
@@ -155,7 +155,7 @@ void VehPhysForce_OnGravity(struct Driver *driver, Vec3 *velocity)
 	Vec3 localVelocity = VehPhysForce_OnGravity_RotateVectorLocal(&driver->matrixMovingDir, (s16)velocity->x, (s16)velocity->y, (s16)velocity->z);
 	int originalLocalZ = localVelocity.z;
 	int gravityY = CTR_MipsNegLo(driver->const_Gravity);
-	struct QuadBlock *underDriver = driver->underDriver;
+	struct QuadBlock *underDriver = P32_GET(struct QuadBlock *, driver->underDriver);
 
 	// NOTE(aalhendi): Retail does not branch before reading this flag. Native
 	// can reach this frame after TeleportSelf clears underDriver and before
@@ -230,7 +230,7 @@ void VehPhysForce_OnGravity(struct Driver *driver, Vec3 *velocity)
 		}
 	}
 
-	TerrainFlags terrainFlags = driver->terrainMeta1->flags;
+	TerrainFlags terrainFlags = P32_GET(struct Terrain *, driver->terrainMeta1)->flags;
 	int terminalVelocity = driver->const_TerminalVelocity;
 	if ((localY < 0) && ((terrainFlags & TERRAIN_FLAG_MUD_PHYSICS) != 0))
 	{
@@ -269,7 +269,7 @@ void VehPhysForce_OnGravity(struct Driver *driver, Vec3 *velocity)
 		localZ = 0;
 	}
 	else if (((driver->actionsFlagSetPrevFrame & ACTION_TOUCH_GROUND) != 0) || (driver->kartState == KS_BLASTED) ||
-	         ((driver->terrainScaledBaseSpeed < driver->speedApprox) && (driver->terrainMeta2->speedMultiplier < VEH_PHYS_FORCE_TERRAIN_SCALE_NEUTRAL)))
+	         ((driver->terrainScaledBaseSpeed < driver->speedApprox) && (P32_GET(struct Terrain *, driver->terrainMeta2)->speedMultiplier < VEH_PHYS_FORCE_TERRAIN_SCALE_NEUTRAL)))
 	{
 		int perpendicularFriction;
 		int forwardFriction;
@@ -366,7 +366,7 @@ void VehPhysForce_OnGravity(struct Driver *driver, Vec3 *velocity)
 		perpendicularFriction = CTR_MipsSra(CTR_MipsMulLo(perpendicularFriction, frictionElapsedTimeMS), 5);
 		forwardFriction = CTR_MipsSra(CTR_MipsMulLo(forwardFriction, frictionElapsedTimeMS), 5);
 
-		int terrainFrictionScale = driver->terrainMeta1->groundFrictionScale;
+		int terrainFrictionScale = P32_GET(struct Terrain *, driver->terrainMeta1)->groundFrictionScale;
 		if (terrainFrictionScale != VEH_PHYS_FORCE_TERRAIN_SCALE_NEUTRAL)
 		{
 			perpendicularFriction = CTR_MipsSra(CTR_MipsMulLo(terrainFrictionScale, perpendicularFriction), 8);
@@ -575,7 +575,7 @@ void VehPhysForce_OnApplyForces(struct Thread *thread, struct Driver *driver)
 
 	VehPhysForce_ConvertSpeedToVecOut(driver, &driver->velocity);
 
-	if ((driver->underDriver) && (driver->underDriver->terrain_type == TERRAIN_MUD))
+	if ((P32_GET(struct QuadBlock *, driver->underDriver)) && (P32_GET(struct QuadBlock *, driver->underDriver)->terrain_type == TERRAIN_MUD))
 	{
 		if (driver->posCurr.y > maxMudSinkYLevel)
 		{
@@ -591,7 +591,7 @@ void VehPhysForce_OnApplyForces(struct Thread *thread, struct Driver *driver)
 	driver->normalVecUP = up;
 	driver->AxisAngle1_normalVec = up;
 	driver->collisionFlags = 0;
-	driver->currBlockTouching = nullptr;
+	P32_SET(driver->currBlockTouching, nullptr);
 
 #if defined(CTR_NATIVE) && !defined(__vita__)
 	if (CTR_NATIVE_SMOOTHED_PHYSICS_ACTIVE || CTR_NATIVE_SMOOTHED_STEERING_ACTIVE)
@@ -629,7 +629,7 @@ void VehPhysForce_CollideDrivers(struct Thread *thread, struct Driver *driver)
 	}
 	else if ((stepFlagSet & COLL_STEP_TRIGGER_TURBO_PAD) != 0)
 	{
-		if ((sdata->gGT->gameMode2 & CHEAT_TURBOPAD) == 0)
+		if ((P32_GET(struct GameTracker *, sdata->gGT)->gameMode2 & CHEAT_TURBOPAD) == 0)
 		{
 			VehFire_Increment(driver, VEH_PHYS_FORCE_TURBO_PAD_RESERVES, TURBO_PAD | FREEZE_RESERVES_ON_TURBO_PAD, VEH_PHYS_FORCE_TURBO_PAD_FIRE_LEVEL);
 		}
@@ -642,12 +642,12 @@ void VehPhysForce_CollideDrivers(struct Thread *thread, struct Driver *driver)
 
 	if ((stepFlagSet & COLL_STEP_FLAG_WATER_BSP) != 0)
 	{
-		thread->inst->vertSplit = 0;
-		thread->inst->flags |= SPLIT_LINE;
+		P32_GET(struct Instance *, thread->inst)->vertSplit = 0;
+		P32_GET(struct Instance *, thread->inst)->flags |= SPLIT_LINE;
 	}
 	else
 	{
-		thread->inst->flags &= ~SPLIT_LINE;
+		P32_GET(struct Instance *, thread->inst)->flags &= ~SPLIT_LINE;
 	}
 
 	if ((thread->flags & THREAD_FLAG_DISABLE_COLLISION) == 0)
@@ -656,23 +656,23 @@ void VehPhysForce_CollideDrivers(struct Thread *thread, struct Driver *driver)
 
 		CTR_SET_VEC3(search.bucket.pos.v, (s16)CTR_MipsSra(driver->posCurr.x, FRACTIONAL_BITS_8), (s16)CTR_MipsSra(driver->posCurr.y, FRACTIONAL_BITS_8),
 		             (s16)CTR_MipsSra(driver->posCurr.z, FRACTIONAL_BITS_8));
-		search.bucket.th = NULL;
+		P32_SET(search.bucket.th, NULL);
 		search.bucket.bestDistSq = VEH_PHYS_FORCE_COLLISION_BEST_DIST_INIT;
 
 		#if defined(CTR_NATIVE) && !defined(__vita__)
-		if (CTR_NATIVE_SMOOTHED_COLLISION_ACTIVE) NativeCollision_CarSearch(driver, thread->siblingThread, &search.bucket);
+		if (CTR_NATIVE_SMOOTHED_COLLISION_ACTIVE) NativeCollision_CarSearch(driver, P32_GET(struct Thread *, thread->siblingThread), &search.bucket);
 		else
 #endif
-		PROC_CollidePointWithBucket(thread->siblingThread, &search.bucket);
+		PROC_CollidePointWithBucket(P32_GET(struct Thread *, thread->siblingThread), &search.bucket);
 		#if defined(CTR_NATIVE) && !defined(__vita__)
-		if (CTR_NATIVE_SMOOTHED_COLLISION_ACTIVE) NativeCollision_CarSearch(driver, sdata->gGT->threadBuckets[ROBOT].thread, &search.bucket);
+		if (CTR_NATIVE_SMOOTHED_COLLISION_ACTIVE) NativeCollision_CarSearch(driver, P32_GET(struct Thread *, P32_GET(struct GameTracker *, sdata->gGT)->threadBuckets[ROBOT].thread), &search.bucket);
 		else
 #endif
-		PROC_CollidePointWithBucket(sdata->gGT->threadBuckets[ROBOT].thread, &search.bucket);
+		PROC_CollidePointWithBucket(P32_GET(struct Thread *, P32_GET(struct GameTracker *, sdata->gGT)->threadBuckets[ROBOT].thread), &search.bucket);
 
-		if (search.bucket.th != NULL)
+		if (P32_GET(struct Thread *, search.bucket.th) != NULL)
 		{
-			int radiusSum = CTR_MipsAddLo(thread->driverHitRadius, search.bucket.th->driverHitRadius);
+			int radiusSum = CTR_MipsAddLo(thread->driverHitRadius, P32_GET(struct Thread *, search.bucket.th)->driverHitRadius);
 
 			if (CTR_NATIVE_SMOOTHED_COLLISION_ACTIVE || search.bucket.bestDistSq < CTR_MipsMulLo(radiusSum, radiusSum))
 			{
@@ -743,7 +743,7 @@ static Vec3 VehPhysForce_TranslateMatrix_RotateVector(const MATRIX *m, s16 vx, s
 
 static struct MatrixND *VehPhysForce_TranslateMatrix_GetBakedEntry(u8 matrixArray, u8 matrixIndex)
 {
-	return &((struct MatrixND *)data.bakedGteMath[matrixArray].physEntry)[matrixIndex];
+	return &((struct MatrixND *)P32_GET(void *, data.bakedGteMath[matrixArray].physEntry))[matrixIndex];
 }
 
 static u8 VehPhysForce_TranslateMatrix_RemapIndex(u8 matrixIndex, int fromArray, int toArray)
@@ -846,9 +846,9 @@ static void VehPhysForce_TranslateMatrix_UpdateSquashStretch(struct Instance *in
 		d->jumpSquishStretch2 = jumpHeightCurr;
 	}
 
-	if ((d->instTntRecv != NULL) && (d->instTntRecv->scale.y < VEH_PHYS_FORCE_TNT_SCALE_Y_THRESHOLD))
+	if ((P32_GET(struct Instance *, d->instTntRecv) != NULL) && (P32_GET(struct Instance *, d->instTntRecv)->scale.y < VEH_PHYS_FORCE_TNT_SCALE_Y_THRESHOLD))
 	{
-		targetSquish = CTR_MipsAddLo(targetSquish, CTR_MipsSll(CTR_MipsSubLo(d->instTntRecv->scale.y, VEH_PHYS_FORCE_TNT_SCALE_Y_BASE), 1));
+		targetSquish = CTR_MipsAddLo(targetSquish, CTR_MipsSll(CTR_MipsSubLo(P32_GET(struct Instance *, d->instTntRecv)->scale.y, VEH_PHYS_FORCE_TNT_SCALE_Y_BASE), 1));
 	}
 
 	if (VehPhysForce_TranslateMatrix_Abs(d->jumpSquishStretch) < VehPhysForce_TranslateMatrix_Abs(targetSquish))
@@ -869,7 +869,7 @@ static void VehPhysForce_TranslateMatrix_UpdateSquashStretch(struct Instance *in
 	}
 	else if (inst->scale.y == 0)
 	{
-		if (d->instSelf->thread->modelIndex == DYNAMIC_PLAYER)
+		if (P32_GET(struct Thread *, P32_GET(struct Instance *, d->instSelf)->thread)->modelIndex == DYNAMIC_PLAYER)
 		{
 #if defined(__vita__)
 			if (NativeAdhoc_ShouldPresentDriver(d->driverID))
@@ -1016,7 +1016,7 @@ static void VehPhysForce_TranslateMatrix_UpdateInstanceMatrix(struct Instance *i
 
 static void VehPhysForce_TranslateMatrix_HideWake(struct Instance *inst, struct Driver *d)
 {
-	struct Instance *wake = d->wakeInst;
+	struct Instance *wake = P32_GET(struct Instance *, d->wakeInst);
 
 	if (inst->matrix.t[1] > 0)
 	{
@@ -1034,12 +1034,12 @@ static void VehPhysForce_TranslateMatrix_HideWake(struct Instance *inst, struct 
 
 static void VehPhysForce_TranslateMatrix_SpawnWakeParticle(struct Driver *d)
 {
-	struct Particle *p = Particle_Init(0, sdata->gGT->iconGroup[VEH_PHYS_FORCE_WAKE_PARTICLE_ICON_GROUP], &data.emSet_Falling[0]);
+	struct Particle *p = Particle_Init(0, P32_GET(struct IconGroup *, P32_GET(struct GameTracker *, sdata->gGT)->iconGroup[VEH_PHYS_FORCE_WAKE_PARTICLE_ICON_GROUP]), &data.emSet_Falling[0]);
 
 	if (p != NULL)
 	{
-		p->otIndexOffset = d->instSelf->depthBiasNormal;
-		p->driverInst = d->instSelf;
+		p->otIndexOffset = P32_GET(struct Instance *, d->instSelf)->depthBiasNormal;
+		P32_SET(p->driverInst, P32_GET(struct Instance *, d->instSelf));
 		p->driverID = d->driverID;
 	}
 }
@@ -1078,7 +1078,7 @@ static void VehPhysForce_TranslateMatrix_UpdateWake(struct Instance *inst, struc
 		return;
 	}
 
-	wake = d->wakeInst;
+	wake = P32_GET(struct Instance *, d->wakeInst);
 	if (wake == NULL)
 	{
 		return;
@@ -1098,7 +1098,7 @@ static void VehPhysForce_TranslateMatrix_UpdateWake(struct Instance *inst, struc
 	{
 		d->wakeScale = VEH_PHYS_FORCE_WAKE_INITIAL_SCALE;
 
-		if (sdata->gGT->numPlyrCurrGame < 2)
+		if (P32_GET(struct GameTracker *, sdata->gGT)->numPlyrCurrGame < 2)
 		{
 			if ((VehPhysForce_TranslateMatrix_Abs(d->speed) > VEH_PHYS_FORCE_WAKE_PARTICLE_SPEED_MIN) &&
 			    (d->posPrev.y > VEH_PHYS_FORCE_WAKE_PARTICLE_PREV_Y_MIN))
@@ -1114,7 +1114,7 @@ static void VehPhysForce_TranslateMatrix_UpdateWake(struct Instance *inst, struc
 			}
 		}
 	}
-	else if (sdata->gGT->numPlyrCurrGame < 2)
+	else if (P32_GET(struct GameTracker *, sdata->gGT)->numPlyrCurrGame < 2)
 	{
 		if (VehPhysForce_TranslateMatrix_Abs(d->speed) > VEH_PHYS_FORCE_WAKE_PARTICLE_SPEED_MIN)
 		{
@@ -1129,7 +1129,7 @@ static void VehPhysForce_TranslateMatrix_UpdateWake(struct Instance *inst, struc
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8005ee34-0x8005f89c
 void VehPhysForce_TranslateMatrix(struct Thread *thread, struct Driver *driver)
 {
-	struct Instance *inst = thread->inst;
+	struct Instance *inst = P32_GET(struct Instance *, thread->inst);
 
 	VehPhysForce_TranslateMatrix_UpdateSquashStretch(inst, driver);
 	VehPhysForce_RotAxisAngle(&driver->matrixFacingDir, driver->AxisAngle2_normalVec.v, driver->rotCurr.y);
@@ -1301,7 +1301,7 @@ void VehPhysForce_CounterSteer(struct Driver *driver)
 	}
 
 	if (speedApprox <= FP8(3) || driver->actionsFlagSet & ACTION_WARP || driver->kartState == KS_CRASHING || driver->wallRubTimer ||
-	    !(driver->actionsFlagSet & ACTION_TOUCH_GROUND) || driver->terrainMeta1->counterSteerRatio == 0)
+	    !(driver->actionsFlagSet & ACTION_TOUCH_GROUND) || P32_GET(struct Terrain *, driver->terrainMeta1)->counterSteerRatio == 0)
 	{
 		return;
 	}
@@ -1318,7 +1318,7 @@ void VehPhysForce_CounterSteer(struct Driver *driver)
 	}
 
 	int sine = MATH_Sin(angle);
-	int counterSteerStrength = CTR_MipsSra(CTR_MipsMulLo(driver->terrainMeta1->counterSteerRatio, -8000), 8);
+	int counterSteerStrength = CTR_MipsSra(CTR_MipsMulLo(P32_GET(struct Terrain *, driver->terrainMeta1)->counterSteerRatio, -8000), 8);
 	SVec3 accel = VehPhysForce_CounterSteer_RotateVector(&driver->matrixMovingDir, (s16)CTR_MipsSra(CTR_MipsMulLo(counterSteerStrength, sine), 12), 0, 0);
 
 	driver->accel = accel;

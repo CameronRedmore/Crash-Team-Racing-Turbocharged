@@ -18,13 +18,13 @@ void LOAD_AppendQueue(struct BigHeader *bigfile, int type, int fileIndex, void *
 	}
 
 	struct LoadQueueSlot *lqs = &sdata->queueSlots[(s32)sdata->queueLength];
-	lqs->ptrBigfileCdPos_UNUSED = bigfile;
+	P32_SET(lqs->ptrBigfileCdPos_UNUSED, bigfile);
 	lqs->flags = 0;
 	lqs->type_UNUSED = type;
 	lqs->subfileIndex = fileIndex;
-	lqs->ptrDestination = destinationPtr;
+	P32_SET(lqs->ptrDestination, destinationPtr);
 	lqs->size_UNUSED = 0;
-	lqs->callbackFuncPtr = callback;
+	P32_SET(lqs->callbackFuncPtr, callback);
 
 	sdata->queueLength++;
 }
@@ -32,9 +32,9 @@ void LOAD_AppendQueue(struct BigHeader *bigfile, int type, int fileIndex, void *
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80032d8c-0x80032dc0.
 void LOAD_CDRequestCallback(struct LoadQueueSlot *lqs)
 {
-	if (lqs->callbackFuncPtr != NULL)
+	if (P32_GET(void (*)(struct LoadQueueSlot *), lqs->callbackFuncPtr) != NULL)
 	{
-		lqs->callbackFuncPtr(lqs);
+		P32_GET(void (*)(struct LoadQueueSlot *), lqs->callbackFuncPtr)(lqs);
 	}
 
 	sdata->queueReady = 1;
@@ -68,7 +68,7 @@ void LOAD_NextQueuedFile()
 		}
 
 	#ifdef CTR_NATIVE
-		if (NativeCustomRacer_IsBigHeader(curr->ptrBigfileCdPos_UNUSED))
+		if (NativeCustomRacer_IsBigHeader(P32_GET(struct BigHeader *, curr->ptrBigfileCdPos_UNUSED)))
 		{
 			NativeCustomRacer_LoadQueueSlot(curr);
 		}
@@ -77,18 +77,16 @@ void LOAD_NextQueuedFile()
 		switch (curr->type_UNUSED)
 		{
 		case LT_RAW:
-			curr->ptrDestination = LOAD_ReadFile_ex(curr->ptrBigfileCdPos_UNUSED, LT_SETADDR, curr->subfileIndex, curr->ptrDestination, &curr->size_UNUSED,
-			                                        LOAD_CDRequestCallback);
+			P32_SET(curr->ptrDestination, LOAD_ReadFile_ex(P32_GET(struct BigHeader *, curr->ptrBigfileCdPos_UNUSED), LT_SETADDR, curr->subfileIndex, P32_GET(void *, curr->ptrDestination), &curr->size_UNUSED,
+			                                        LOAD_CDRequestCallback));
 			break;
 
 		case LT_DRAM:
-			curr->ptrDestination =
-			    LOAD_DramFile(curr->ptrBigfileCdPos_UNUSED, curr->subfileIndex, curr->ptrDestination, &curr->size_UNUSED, (int)(intptr_t)curr->callbackFuncPtr);
+			P32_SET(curr->ptrDestination, LOAD_DramFile(P32_GET(struct BigHeader *, curr->ptrBigfileCdPos_UNUSED), curr->subfileIndex, P32_GET(void *, curr->ptrDestination), &curr->size_UNUSED, (int)(intptr_t)P32_GET(void (*)(struct LoadQueueSlot *), curr->callbackFuncPtr)));
 			break;
 
 		case LT_VRAM:
-			curr->ptrDestination =
-			    LOAD_VramFile(curr->ptrBigfileCdPos_UNUSED, curr->subfileIndex, curr->ptrDestination, &curr->size_UNUSED, (int)(intptr_t)curr->callbackFuncPtr);
+			P32_SET(curr->ptrDestination, LOAD_VramFile(P32_GET(struct BigHeader *, curr->ptrBigfileCdPos_UNUSED), curr->subfileIndex, P32_GET(void *, curr->ptrDestination), &curr->size_UNUSED, (int)(intptr_t)P32_GET(void (*)(struct LoadQueueSlot *), curr->callbackFuncPtr)));
 			break;
 		}
 
@@ -97,11 +95,11 @@ void LOAD_NextQueuedFile()
 
 	if (sdata->frameFinishedVRAM != 0)
 	{
-		if ((u32)(sdata->gGT->frameTimer_VsyncCallback - sdata->frameFinishedVRAM) >= LOAD_QUEUE_VRAM_CALLBACK_DELAY_FRAMES)
+		if ((u32)(P32_GET(struct GameTracker *, sdata->gGT)->frameTimer_VsyncCallback - sdata->frameFinishedVRAM) >= LOAD_QUEUE_VRAM_CALLBACK_DELAY_FRAMES)
 		{
-			if (curr->callbackFuncPtr != NULL)
+			if (P32_GET(void (*)(struct LoadQueueSlot *), curr->callbackFuncPtr) != NULL)
 			{
-				curr->callbackFuncPtr(curr);
+				P32_GET(void (*)(struct LoadQueueSlot *), curr->callbackFuncPtr)(curr);
 			}
 
 			sdata->frameFinishedVRAM = 0;

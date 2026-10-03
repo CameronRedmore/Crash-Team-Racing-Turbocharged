@@ -132,7 +132,7 @@ void UI_WeaponBG_DrawShine(struct Icon *icon, s16 posX, s16 posY, struct PrimMem
 
 	for (quadIndex = 0; quadIndex < UI_ICON_QUAD_COUNT; quadIndex++)
 	{
-		p = primMem->cursor;
+		p = P32_GET(void *, primMem->cursor);
 		CtrGpu_WritePackedUVWord(&p->u0, CTR_ReadU32LE(&icon->texLayout.u0));
 		CtrGpu_WritePackedUVWord(&p->u1, CTR_ReadU32LE(&icon->texLayout.u1));
 		CtrGpu_WritePackedUVWord(&p->u2, CTR_ReadU32LE(&icon->texLayout.u2));
@@ -218,7 +218,7 @@ void UI_WeaponBG_DrawShine(struct Icon *icon, s16 posX, s16 posY, struct PrimMem
 
 		AddPrim(ot, p);
 
-		primMem->cursor = p + 1;
+		P32_SET(primMem->cursor, p + 1);
 	}
 }
 
@@ -257,8 +257,8 @@ void UI_TrackerBG(struct Icon *targetIcon, s16 centerX, s16 centerY, struct Prim
 
 	for (quadIndex = 0; quadIndex < UI_ICON_QUAD_COUNT; quadIndex++)
 	{
-		p = primMem->cursor;
-		primMem->cursor = (p + 1);
+		p = P32_GET(void *, primMem->cursor);
+		P32_SET(primMem->cursor, (p + 1));
 
 		CtrGpu_WriteColorCode(&p->r0, (u32)color);
 		CtrGpu_WritePackedUVWord(&p->u0, CTR_ReadU32LE(&targetIcon->texLayout.u0));
@@ -323,7 +323,7 @@ void UI_TrackerBG(struct Icon *targetIcon, s16 centerX, s16 centerY, struct Prim
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8004e8d8-0x8004eaa8.
 void UI_DrawDriverIcon(struct Icon *icon, s16 posX, s16 posY, struct PrimMem *primMem, uint32_t *ot, char transparency, s16 scale, u32 color)
 {
-	PolyFT4 *p = primMem->cursor;
+	PolyFT4 *p = P32_GET(void *, primMem->cursor);
 	const PrimCode primCode = {.poly = {.renderCode = RenderCode_Polygon, .quad = 1, .textured = 1}};
 	p->colorCode.self = color;
 	p->colorCode.code = primCode;
@@ -380,7 +380,7 @@ void UI_DrawDriverIcon(struct Icon *icon, s16 posX, s16 posY, struct PrimMem *pr
 	p->v[3].texCoords.v = bottomV;
 
 	AddPrimitive(p, ot);
-	primMem->cursor = p + 1;
+	P32_SET(primMem->cursor, p + 1);
 }
 
 #if defined(CTR_NATIVE)
@@ -405,7 +405,7 @@ internal void UI_NativeDrawDriverIconTexture(u32 texture, int textureWidth, int 
 		return;
 
 	u32 oldTag = *ot;
-	DR_PSYX_TEX *setTexture = (DR_PSYX_TEX *)primMem->cursor;
+	DR_PSYX_TEX *setTexture = (DR_PSYX_TEX *)P32_GET(void *, primMem->cursor);
 	PolyFT4 *poly = (PolyFT4 *)(setTexture + 1);
 	DR_PSYX_TEX *resetTexture = (DR_PSYX_TEX *)(poly + 1);
 	struct Icon nativeIcon = *templateIcon;
@@ -421,7 +421,7 @@ internal void UI_NativeDrawDriverIconTexture(u32 texture, int textureWidth, int 
 	nativeIcon.texLayout.clut = 0;
 
 	SetPsyXTextureSTP(setTexture, texture, textureWidth, textureHeight);
-	primMem->cursor = poly;
+	P32_SET(primMem->cursor, poly);
 	UI_DrawDriverIcon(&nativeIcon, posX, posY, primMem, ot, transparency, scale, color);
 
 	SetPsyXTexture(resetTexture, 0, 0, 0);
@@ -429,7 +429,7 @@ internal void UI_NativeDrawDriverIconTexture(u32 texture, int textureWidth, int 
 	poly->tag.self = CtrGpu_PackOTTag(CtrGpu_PrimToOTLink24(resetTexture), 0x09000000);
 	resetTexture->tag = CtrGpu_PackOTTag(oldTag, 0x02000000);
 	*ot = CtrGpu_PrimToOTLink24(setTexture);
-	primMem->cursor = resetTexture + 1;
+	P32_SET(primMem->cursor, resetTexture + 1);
 }
 
 internal void UI_NativeDrawDriverIconDecalTexture(u32 texture, int textureWidth, int textureHeight,
@@ -440,7 +440,7 @@ internal void UI_NativeDrawDriverIconDecalTexture(u32 texture, int textureWidth,
 		return;
 
 	u32 oldTag = *ot;
-	DR_PSYX_TEX *setTexture = (DR_PSYX_TEX *)primMem->cursor;
+	DR_PSYX_TEX *setTexture = (DR_PSYX_TEX *)P32_GET(void *, primMem->cursor);
 	POLY_FT4 *poly = (POLY_FT4 *)(setTexture + 1);
 	DR_PSYX_TEX *resetTexture = (DR_PSYX_TEX *)(poly + 1);
 	struct Icon nativeIcon = *templateIcon;
@@ -456,7 +456,7 @@ internal void UI_NativeDrawDriverIconDecalTexture(u32 texture, int textureWidth,
 	nativeIcon.texLayout.clut = 0;
 
 	SetPsyXTextureSTP(setTexture, texture, textureWidth, textureHeight);
-	primMem->cursor = poly;
+	P32_SET(primMem->cursor, poly);
 	DecalHUD_DrawPolyFT4(&nativeIcon, posX, posY, primMem, ot, transparency, scale);
 
 	SetPsyXTexture(resetTexture, 0, 0, 0);
@@ -464,7 +464,7 @@ internal void UI_NativeDrawDriverIconDecalTexture(u32 texture, int textureWidth,
 	poly->tag = CtrGpu_PackOTTag(CtrGpu_PrimToOTLink24(resetTexture), 0x09000000);
 	resetTexture->tag = CtrGpu_PackOTTag(oldTag, 0x02000000);
 	*ot = CtrGpu_PrimToOTLink24(setTexture);
-	primMem->cursor = resetTexture + 1;
+	P32_SET(primMem->cursor, resetTexture + 1);
 }
 
 internal void UI_NativeDrawDriverIconGT4Texture(u32 texture, int textureWidth, int textureHeight,
@@ -476,7 +476,7 @@ internal void UI_NativeDrawDriverIconGT4Texture(u32 texture, int textureWidth, i
 		return;
 
 	u32 oldTag = *ot;
-	DR_PSYX_TEX *setTexture = (DR_PSYX_TEX *)primMem->cursor;
+	DR_PSYX_TEX *setTexture = (DR_PSYX_TEX *)P32_GET(void *, primMem->cursor);
 	POLY_GT4 *poly = (POLY_GT4 *)(setTexture + 1);
 	DR_PSYX_TEX *resetTexture = (DR_PSYX_TEX *)(poly + 1);
 	struct Icon nativeIcon = *templateIcon;
@@ -492,7 +492,7 @@ internal void UI_NativeDrawDriverIconGT4Texture(u32 texture, int textureWidth, i
 	nativeIcon.texLayout.clut = 0;
 
 	SetPsyXTextureSTP(setTexture, texture, textureWidth, textureHeight);
-	primMem->cursor = poly;
+	P32_SET(primMem->cursor, poly);
 	DecalHUD_DrawPolyGT4(&nativeIcon, posX, posY, primMem, ot,
 		color0, color1, color2, color3, transparency, scale);
 
@@ -501,7 +501,7 @@ internal void UI_NativeDrawDriverIconGT4Texture(u32 texture, int textureWidth, i
 	poly->tag = CtrGpu_PackOTTag(CtrGpu_PrimToOTLink24(resetTexture), 0x0c000000);
 	resetTexture->tag = CtrGpu_PackOTTag(oldTag, 0x02000000);
 	*ot = CtrGpu_PrimToOTLink24(setTexture);
-	primMem->cursor = resetTexture + 1;
+	P32_SET(primMem->cursor, resetTexture + 1);
 }
 #endif
 

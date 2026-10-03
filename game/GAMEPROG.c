@@ -3,7 +3,7 @@
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800265c0-0x8002689c.
 void GAMEPROG_AdvPercent(struct AdvProgress *adv)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	struct MetaDataLEV *mdLev = &data.metaDataLEV[0];
 
 	// start counter
@@ -145,7 +145,7 @@ void GAMEPROG_ResetHighScores(struct GameProgress *gameProg)
 				entry->time = MEMCARD_HIGH_SCORE_DEFAULT_TIME;
 				entry->characterID = characterID;
 
-				char *name = sdata->lngStrings[data.MetaDataCharacters[characterID].name_LNG_short];
+				char *name = P32_GET(char **, sdata->lngStrings)[data.MetaDataCharacters[characterID].name_LNG_short];
 
 				// can't do an int-copy,
 				// strings in LNG are unaligned
@@ -159,7 +159,7 @@ void GAMEPROG_ResetHighScores(struct GameProgress *gameProg)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80026ae4-0x80026bf0
 b32 GAMEPROG_CheckGhostsBeaten(int ghostID)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	b32 result = true;
 	s16 levelID = gGT->levelID;
 	int flagWordIndex = (s16)ghostID >> 5;
@@ -307,17 +307,16 @@ void GAMEPROG_NewGame_OnBoot()
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80026e80-0x80026ed8
 void GAMEPROG_GetPtrHighScoreTrack(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	s32 gameMode1 = gGT->gameMode1;
 
 #if defined(CTR_NATIVE)
 	struct HighScoreTrack *nativeTrack = NativeReverseTrack_GetHighScoreTrack(NativeReverseTrack_GetCurrentLogicalTrackId());
 	if (nativeTrack != NULL)
 	{
-		sdata->ptrActiveHighScoreEntry = &nativeTrack->scoreEntry[MEMCARD_HIGH_SCORE_ENTRIES_PER_MODE * ((gameMode1 & RELIC_RACE) != 0)];
+		P32_SET(sdata->ptrActiveHighScoreEntry, &nativeTrack->scoreEntry[MEMCARD_HIGH_SCORE_ENTRIES_PER_MODE * ((gameMode1 & RELIC_RACE) != 0)]);
 		return;
 	}
 #endif
-	sdata->ptrActiveHighScoreEntry =
-	    &sdata->gameProgress.highScoreTracks[gGT->levelID].scoreEntry[MEMCARD_HIGH_SCORE_ENTRIES_PER_MODE * ((gameMode1 & RELIC_RACE) != 0)];
+	P32_SET(sdata->ptrActiveHighScoreEntry, &sdata->gameProgress.highScoreTracks[gGT->levelID].scoreEntry[MEMCARD_HIGH_SCORE_ENTRIES_PER_MODE * ((gameMode1 & RELIC_RACE) != 0)]);
 }

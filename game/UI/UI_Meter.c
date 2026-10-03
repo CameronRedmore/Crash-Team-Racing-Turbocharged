@@ -79,7 +79,7 @@ void UI_JumpMeter_Update(struct Driver *driver)
 			}
 			else
 			{
-				driver->jumpMeterTimer -= sdata->gGT->elapsedTimeMS;
+				driver->jumpMeterTimer -= P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS;
 				if (driver->jumpMeterTimer < 0)
 				{
 					driver->jumpMeterTimer = 0;
@@ -141,7 +141,7 @@ void UI_JumpMeter_Update(struct Driver *driver)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80051e24-0x80052250.
 void UI_JumpMeter_Draw(s16 posX, s16 posY, struct Driver *driver)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	u32 barColorAndCode;
 	s16 currentJumpMeter;
 	struct DB *backDB;
@@ -182,15 +182,15 @@ void UI_JumpMeter_Draw(s16 posX, s16 posY, struct Driver *driver)
 
 	Color color;
 	color.self = data.colors[BLACK][0];
-	CTR_Box_DrawWireBox(&box, &color, gGT->pushBuffer_UI.ptrOT, &gGT->backBuffer->primMem);
+	CTR_Box_DrawWireBox(&box, &color, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), &P32_GET(struct DB *, gGT->backBuffer)->primMem);
 
-	backDB = gGT->backBuffer;
-	primMemCursor = backDB->primMem.cursor;
+	backDB = P32_GET(struct DB *, gGT->backBuffer);
+	primMemCursor = P32_GET(void *, backDB->primMem.cursor);
 	p = 0;
 
-	if (primMemCursor <= (u32 *)backDB->primMem.guardEnd)
+	if (primMemCursor <= (u32 *)P32_GET(void *, backDB->primMem.guardEnd))
 	{
-		backDB->primMem.cursor = &primMemCursor[6];
+		P32_SET(backDB->primMem.cursor, &primMemCursor[6]);
 		p = (POLY_F4 *)primMemCursor;
 	}
 
@@ -206,7 +206,7 @@ void UI_JumpMeter_Draw(s16 posX, s16 posY, struct Driver *driver)
 		p->y2 = box.y + UI_JUMP_METER_NUMBER_BOX_H;
 		p->y3 = box.y + UI_JUMP_METER_NUMBER_BOX_H;
 
-		primMemCursor = gGT->pushBuffer_UI.ptrOT;
+		primMemCursor = P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT);
 
 		p->tag = CtrGpu_PackOTTag(*primMemCursor, UI_JUMP_METER_POLY_F4_OT_TAG);
 		*primMemCursor = CtrGpu_PrimToOTLink24(p);
@@ -216,15 +216,15 @@ void UI_JumpMeter_Draw(s16 posX, s16 posY, struct Driver *driver)
 		box2.h = UI_JUMP_METER_BAR_H;
 		box2.x = posX;
 
-		CTR_Box_DrawWireBox(&box2, &color, gGT->pushBuffer_UI.ptrOT, &backDB->primMem);
+		CTR_Box_DrawWireBox(&box2, &color, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), &backDB->primMem);
 
-		backDB = gGT->backBuffer;
-		primMemCursor = backDB->primMem.cursor;
+		backDB = P32_GET(struct DB *, gGT->backBuffer);
+		primMemCursor = P32_GET(void *, backDB->primMem.cursor);
 		p = 0;
 
-		if (primMemCursor <= (u32 *)backDB->primMem.guardEnd)
+		if (primMemCursor <= (u32 *)P32_GET(void *, backDB->primMem.guardEnd))
 		{
-			backDB->primMem.cursor = &primMemCursor[6];
+			P32_SET(backDB->primMem.cursor, &primMemCursor[6]);
 			p = (POLY_F4 *)primMemCursor;
 		}
 
@@ -263,18 +263,18 @@ void UI_JumpMeter_Draw(s16 posX, s16 posY, struct Driver *driver)
 			p->y0 = barTopY;
 			p->y1 = barTopY;
 
-			primMemCursor = gGT->pushBuffer_UI.ptrOT;
+			primMemCursor = P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT);
 
 			p->tag = CtrGpu_PackOTTag(*primMemCursor, UI_JUMP_METER_POLY_F4_OT_TAG);
 			*primMemCursor = CtrGpu_PrimToOTLink24(p);
 
-			backDB = gGT->backBuffer;
-			primMemCursor = backDB->primMem.cursor;
+			backDB = P32_GET(struct DB *, gGT->backBuffer);
+			primMemCursor = P32_GET(void *, backDB->primMem.cursor);
 			p = 0;
 
-			if (primMemCursor <= (u32 *)backDB->primMem.guardEnd)
+			if (primMemCursor <= (u32 *)P32_GET(void *, backDB->primMem.guardEnd))
 			{
-				backDB->primMem.cursor = &primMemCursor[6];
+				P32_SET(backDB->primMem.cursor, &primMemCursor[6]);
 				p = (POLY_F4 *)primMemCursor;
 			}
 
@@ -290,7 +290,7 @@ void UI_JumpMeter_Draw(s16 posX, s16 posY, struct Driver *driver)
 				p->x3 = barRightX;
 				p->y3 = posY;
 
-				primMemCursor = gGT->pushBuffer_UI.ptrOT;
+				primMemCursor = P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT);
 
 				p->tag = CtrGpu_PackOTTag(*primMemCursor, UI_JUMP_METER_POLY_F4_OT_TAG);
 				*primMemCursor = CtrGpu_PrimToOTLink24(p);
@@ -303,7 +303,7 @@ void UI_JumpMeter_Draw(s16 posX, s16 posY, struct Driver *driver)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80052250-0x800524c4.
 void UI_DrawSlideMeter(s16 posX, s16 posY, struct Driver *driver)
 {
-	const struct GameTracker *gGT = sdata->gGT;
+	const struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	const int barWidth = CTR_WIDESCREEN_SCALE_X(UI_SLIDE_METER_BAR_W);
 	int barHeight = gGT->numPlyrCurrGame >= UI_SLIDE_METER_SPLIT_PLAYER_COUNT ? UI_SLIDE_METER_BAR_H_SPLIT : UI_SLIDE_METER_BAR_H_FULL;
 
@@ -324,7 +324,7 @@ void UI_DrawSlideMeter(s16 posX, s16 posY, struct Driver *driver)
 	box.w = barWidth;
 	box.h = barHeight;
 	Color black = MakeColor(0, 0, 0);
-	CTR_Box_DrawWireBox(&box, &black, gGT->pushBuffer_UI.ptrOT, &gGT->backBuffer->primMem);
+	CTR_Box_DrawWireBox(&box, &black, P32_GET(uint32_t *const, gGT->pushBuffer_UI.ptrOT), &P32_GET(struct DB *const, gGT->backBuffer)->primMem);
 
 	const PrimCode primCode = {.poly = {.quad = 1, .renderCode = RenderCode_Polygon}};
 	ColorCode colorCode = MakeColorCode(UI_SLIDE_METER_READY_R, UI_SLIDE_METER_READY_G, UI_SLIDE_METER_READY_B, primCode);
@@ -404,7 +404,7 @@ void UI_DrawSlideMeter(s16 posX, s16 posY, struct Driver *driver)
 		p->v[2].pos.x = posX - meterLength;
 		p->v[3].pos.x = posX;
 
-		AddPrimitive(p, gGT->pushBuffer_UI.ptrOT);
+		AddPrimitive(p, P32_GET(uint32_t *const, gGT->pushBuffer_UI.ptrOT));
 		colorCode = MakeColorCode(UI_SLIDE_METER_EMPTY_R, UI_SLIDE_METER_EMPTY_G, UI_SLIDE_METER_EMPTY_B, primCode);
 		meterLength = barWidth;
 	}
@@ -418,7 +418,7 @@ void UI_DrawReservesMeter(s16 posX, s16 posY, struct Driver *driver)
 		return;
 	}
 
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	const int barWidth = CTR_WIDESCREEN_SCALE_X(UI_RESERVES_METER_BAR_W);
 	const int barHeight = UI_RESERVES_METER_BAR_H;
 
@@ -459,7 +459,7 @@ void UI_DrawReservesMeter(s16 posX, s16 posY, struct Driver *driver)
 		.h = (s16)barHeight,
 	};
 	Color black = MakeColor(0, 0, 0);
-	CTR_Box_DrawWireBox(&box, &black, gGT->pushBuffer_UI.ptrOT, &gGT->backBuffer->primMem);
+	CTR_Box_DrawWireBox(&box, &black, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), &P32_GET(struct DB *, gGT->backBuffer)->primMem);
 
 	for (int i = 0; i < 2; i++)
 	{
@@ -480,7 +480,7 @@ void UI_DrawReservesMeter(s16 posX, s16 posY, struct Driver *driver)
 		p->v[3].pos.x = posX;
 		p->v[3].pos.y = posY;
 
-		AddPrimitive(p, gGT->pushBuffer_UI.ptrOT);
+		AddPrimitive(p, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT));
 
 		meterColor = MakeColorCode(0x80, 0x80, 0x80, primCode);
 		meterWidth = barWidth;

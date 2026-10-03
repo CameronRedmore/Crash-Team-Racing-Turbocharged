@@ -32,7 +32,7 @@ void COLL_SearchBSP_CallbackQUADBLK(const SVec3 *top, const SVec3 *bottom, struc
 	sps->numTrianglesTested = 0;
 	sps->boolDidTouchQuadblock = 0;
 	sps->collision.stepFlags = 0;
-	struct mesh_info *meshInfo = sps->ptr_mesh_info;
+	struct mesh_info *meshInfo = P32_GET(struct mesh_info *, sps->ptr_mesh_info);
 	sps->numBspHitboxesHit = 0;
 
 	sps->Input1.pos = *top;
@@ -80,7 +80,7 @@ void COLL_SearchBSP_CallbackQUADBLK(const SVec3 *top, const SVec3 *bottom, struc
 	sps->bbox.min.z = min;
 	sps->bbox.max.z = max;
 
-	COLL_SearchBSP_CallbackPARAM(meshInfo->bspRoot, &sps->bbox, COLL_FIXED_BSPLEAF_TestQuadblocks, sps);
+	COLL_SearchBSP_CallbackPARAM(P32_GET(struct BSP *, meshInfo->bspRoot), &sps->bbox, COLL_FIXED_BSPLEAF_TestQuadblocks, sps);
 }
 
 
@@ -341,7 +341,7 @@ u32 COLL_FIXED_INSTANC_TestPoint(struct ScratchpadStruct *sps, struct BSP *node)
 
 	if (Coll_BspHitboxClass(node) == BSP_HITBOX_CLASS_TOUCH)
 	{
-		sps->bspHitbox = node;
+		P32_SET(sps->bspHitbox, node);
 		sps->boolDidTouchHitbox = (s16)CTR_MipsAddLo((u16)sps->boolDidTouchHitbox, 1);
 	}
 
@@ -350,7 +350,7 @@ u32 COLL_FIXED_INSTANC_TestPoint(struct ScratchpadStruct *sps, struct BSP *node)
 		CTR_SET_VEC3(sps->hit.plane.normal.v, 0, COLL_FRACTION_ONE, 0);
 		sps->hit.reorderResult = COLL_TRIANGLE_CLIP_FACE;
 		sps->hitFraction = 0;
-		sps->bspHitbox = node;
+		P32_SET(sps->bspHitbox, node);
 		sps->Union.QuadBlockColl.hitPos = sps->Union.QuadBlockColl.pos;
 		sps->boolDidTouchHitbox = (s16)CTR_MipsAddLo((u16)sps->boolDidTouchHitbox, 1);
 		return 6;
@@ -489,7 +489,7 @@ u32 COLL_FIXED_INSTANC_TestPoint(struct ScratchpadStruct *sps, struct BSP *node)
 		}
 	}
 
-	sps->bspHitbox = node;
+	P32_SET(sps->bspHitbox, node);
 	sps->hitFraction = factor;
 	sps->boolDidTouchHitbox = (s16)CTR_MipsAddLo((u16)sps->boolDidTouchHitbox, 1);
 	scratch->hitDelta.x = hitX;
@@ -545,7 +545,7 @@ u32 COLL_FIXED_INSTANC_TestPoint(struct ScratchpadStruct *sps, struct BSP *node)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8001d610-0x8001d77c
 void COLL_FIXED_BSPLEAF_TestInstance(struct BSP *node, struct ScratchpadStruct *sps)
 {
-	struct BSP *bspArray = node->data.leaf.bspHitboxArray;
+	struct BSP *bspArray = P32_GET(struct BSP *, node->data.leaf.bspHitboxArray);
 
 	if (bspArray == NULL)
 	{
@@ -562,7 +562,7 @@ void COLL_FIXED_BSPLEAF_TestInstance(struct BSP *node, struct ScratchpadStruct *
 		s32 arraySize = sps->numBspHitboxesHit - 1;
 		for (; arraySize >= 0; arraySize--)
 		{
-			if (bspArray == sps->bspHitboxesHit[arraySize])
+			if (bspArray == P32_GET(struct BSP *, sps->bspHitboxesHit[arraySize]))
 			{
 				goto NextBSP;
 			}
@@ -574,14 +574,14 @@ void COLL_FIXED_BSPLEAF_TestInstance(struct BSP *node, struct ScratchpadStruct *
 		            // if collision for instance is disabled
 		            ((bspArray->flag & BSP_HITBOX_COLLIDABLE) == 0) ||
 		            // if bspHitbox.InstDef doesn't exist
-		            (bspArray->data.hitbox.instDef == NULL))
+		            (P32_GET(struct InstDef *, bspArray->data.hitbox.instDef) == NULL))
 
 		        ||
 
 		        // if data is valid
 
 		        // allows drawing flag is enabled
-		        ((bspArray->data.hitbox.instDef->ptrInstance->flags & DRAW_COLLISION_MASK) != 0)) &&
+		        ((P32_GET(struct Instance *, P32_GET(struct InstDef *, bspArray->data.hitbox.instDef)->ptrInstance)->flags & DRAW_COLLISION_MASK) != 0)) &&
 
 		    // compare bsp boundingbox to scratchpad boundingbox
 		    ((sps->bbox.min.x <= bbox->max.x) &&
@@ -638,7 +638,7 @@ void COLL_FIXED_BotsSearch(const SVec3 *posCurr, const SVec3 *posPrev, struct Sc
 	sps->numBspHitboxesHit = 0;
 	sps->collision.stepFlags = 0;
 
-	COLL_SearchBSP_CallbackPARAM(sps->ptr_mesh_info->bspRoot, &sps->bbox, COLL_FIXED_BSPLEAF_TestInstance, sps);
+	COLL_SearchBSP_CallbackPARAM(P32_GET(struct BSP *, P32_GET(struct mesh_info *, sps->ptr_mesh_info)->bspRoot), &sps->bbox, COLL_FIXED_BSPLEAF_TestInstance, sps);
 }
 
 
@@ -812,7 +812,7 @@ internal void COLL_FIXED_TRIANGL_TestPoint_Body(struct ScratchpadStruct *sps, st
 		}
 	}
 
-	struct QuadBlock *quad = sps->candidate.ptrQuadblock;
+	struct QuadBlock *quad = P32_GET(struct QuadBlock *, sps->candidate.ptrQuadblock);
 
 	if ((baryA < 0) || (CTR_MipsSubLo(CTR_MipsAddLo(baryA, baryB), COLL_FRACTION_ONE) > 0))
 	{
@@ -825,12 +825,12 @@ internal void COLL_FIXED_TRIANGL_TestPoint_Body(struct ScratchpadStruct *sps, st
 		return;
 	}
 
-	sps->hit.ptrQuadblock = quad;
+	P32_SET(sps->hit.ptrQuadblock, quad);
 	sps->hitBarycentrics.v1 = (s16)baryA;
 	sps->hitBarycentrics.v2 = (s16)baryB;
-	sps->hitLevelTriangle.v0 = v1->pLevelVertex;
-	sps->hitLevelTriangle.v1 = baryVertex1->pLevelVertex;
-	sps->hitLevelTriangle.v2 = baryVertex2->pLevelVertex;
+	P32_SET(sps->hitLevelTriangle.v0, P32_GET(struct LevVertex *, v1->pLevelVertex));
+	P32_SET(sps->hitLevelTriangle.v1, P32_GET(struct LevVertex *, baryVertex1->pLevelVertex));
+	P32_SET(sps->hitLevelTriangle.v2, P32_GET(struct LevVertex *, baryVertex2->pLevelVertex));
 	sps->boolDidTouchQuadblock = (s16)CTR_MipsAddLo(sps->boolDidTouchQuadblock, 1);
 	sps->hit.hitPos = sps->candidate.hitPos;
 	sps->Union.QuadBlockColl.hitPos = sps->candidate.hitPos;
@@ -923,7 +923,7 @@ internal void COLL_FIXED_QUADBLK_SetLoadScratchpadVertsContext(struct Scratchpad
 {
 	// NOTE(aalhendi): Retail passes these through implicit MIPS registers t8/t9.
 	// Native records that register state explicitly before calling the loader.
-	sCollFixedLoadScratchpadVertsVertexArray = sps->ptr_mesh_info->ptrVertexArray;
+	sCollFixedLoadScratchpadVertsVertexArray = P32_GET(struct LevVertex *, P32_GET(struct mesh_info *, sps->ptr_mesh_info)->ptrVertexArray);
 	sCollFixedLoadScratchpadVertsQuad = quad;
 }
 
@@ -940,7 +940,7 @@ void COLL_FIXED_QUADBLK_LoadScratchpadVerts(struct ScratchpadStruct *sps)
 	for (const u16 *index = &ptrQuad->index[0]; index < &ptrQuad->index[9]; index++, bsv++)
 	{
 		struct LevVertex *vertCurr = &ptrVert[*index];
-		bsv->pLevelVertex = vertCurr;
+		P32_SET(bsv->pLevelVertex, vertCurr);
 		bsv->pos = vertCurr->pos;
 		bsv->normalAxis = (CollNormalAxis)vertCurr->flags;
 	}
@@ -1026,7 +1026,7 @@ void COLL_FIXED_QUADBLK_TestTriangles(struct QuadBlock *quad, struct ScratchpadS
 	struct BspSearchVertex *bsv = &sps->bspSearchVert[0];
 	b32 hasSecondTriangle = quad->index[2] != quad->index[3];
 
-	sps->candidate.ptrQuadblock = quad;
+	P32_SET(sps->candidate.ptrQuadblock, quad);
 
 	if (((sps->Union.QuadBlockColl.quadFlagsWanted & quad->quadFlags) == 0) || ((sps->Union.QuadBlockColl.quadFlagsIgnored & quad->quadFlags) != 0) ||
 	    (quad->bbox.min.x > sps->bbox.max.x) || (quad->bbox.min.y > sps->bbox.max.y) || (quad->bbox.min.z > sps->bbox.max.z) ||
@@ -1081,7 +1081,7 @@ void COLL_FIXED_BSPLEAF_TestQuadblocks(struct BSP *node, struct ScratchpadStruct
 	}
 
 	s32 numQuads = node->data.leaf.numQuads;
-	struct QuadBlock *ptrQuad = node->data.leaf.ptrQuadBlockArray;
+	struct QuadBlock *ptrQuad = P32_GET(struct QuadBlock *, node->data.leaf.ptrQuadBlockArray);
 
 	// loop through all quadblocks
 	do
@@ -1194,7 +1194,7 @@ internal struct CollFixedPlayerTrig COLL_FIXED_PlayerSearch_Trig(s32 angle)
 
 internal void COLL_FIXED_PlayerSearch_SetupSearch(struct ScratchpadStruct *sps, struct Driver *d)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	s32 posX = CTR_MipsSra(d->posCurr.x, 8);
 	s32 posY = CTR_MipsSra(d->posCurr.y, 8);
 	s32 posZ = CTR_MipsSra(d->posCurr.z, 8);
@@ -1214,7 +1214,7 @@ internal void COLL_FIXED_PlayerSearch_SetupSearch(struct ScratchpadStruct *sps, 
 	sps->Union.QuadBlockColl.pos = probeTop;
 	sps->Input1.pos = probeBottom;
 
-	sps->ptr_mesh_info = gGT->level1->ptr_mesh_info;
+	P32_SET(sps->ptr_mesh_info, P32_GET(struct mesh_info *, P32_GET(struct Level *, gGT->level1)->ptr_mesh_info));
 	sps->Union.QuadBlockColl.quadFlagsIgnored = QUADBLOCK_FLAG_NO_COLLISION_RESPONSE;
 	sps->Union.QuadBlockColl.quadFlagsWanted = QUADBLOCK_FLAG_GROUND | QUADBLOCK_FLAG_COLLISION_SURFACE;
 
@@ -1240,9 +1240,9 @@ internal void COLL_FIXED_PlayerSearch_SetupSearch(struct ScratchpadStruct *sps, 
 
 internal void COLL_FIXED_PlayerSearch_UpdateLighting(struct ScratchpadStruct *sps, struct Driver *d, struct Instance *inst)
 {
-	struct LevVertex *v0 = sps->hitLevelTriangle.v0;
-	struct LevVertex *v1 = sps->hitLevelTriangle.v1;
-	struct LevVertex *v2 = sps->hitLevelTriangle.v2;
+	struct LevVertex *v0 = P32_GET(struct LevVertex *, sps->hitLevelTriangle.v0);
+	struct LevVertex *v1 = P32_GET(struct LevVertex *, sps->hitLevelTriangle.v1);
+	struct LevVertex *v2 = P32_GET(struct LevVertex *, sps->hitLevelTriangle.v2);
 
 	if ((v0 == NULL) || (v1 == NULL) || (v2 == NULL))
 	{
@@ -1314,8 +1314,8 @@ internal void COLL_FIXED_PlayerSearch_NormalizeAxis2(struct Driver *d, s32 x, s3
 
 internal b32 COLL_FIXED_PlayerSearch_CheckMaskGrabProgress(struct Driver *d, struct QuadBlock *quad)
 {
-	struct GameTracker *gGT = sdata->gGT;
-	struct Level *level = gGT->level1;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct Level *level = P32_GET(struct Level *, gGT->level1);
 
 	if ((quad->quadFlags & QUADBLOCK_FLAG_KILL_PLANE) != 0)
 	{
@@ -1332,63 +1332,63 @@ internal b32 COLL_FIXED_PlayerSearch_CheckMaskGrabProgress(struct Driver *d, str
 	{
 		if ((u32)(gGT->levelID - GEM_STONE_VALLEY) < 5)
 		{
-			d->lastValid = quad;
+			P32_SET(d->lastValid, quad);
 		}
 		return 0;
 	}
 
-	struct CheckpointNode *node = &level->ptr_restart_points[quad->checkpointIndex];
+	struct CheckpointNode *node = &P32_GET(struct CheckpointNode *, level->ptr_restart_points)[quad->checkpointIndex];
 
 	if (((d->actionsFlagSet & ACTION_BEHIND_START_LINE) == 0) && (node->nextIndex_forward > 1) &&
-	    ((((level->ptr_restart_points[0].distToFinish >> 2) << 3) < (s32)(d->distanceToFinish_checkpoint - CTR_MipsMulLo(node->distToFinish, 8)))))
+	    ((((P32_GET(struct CheckpointNode *, level->ptr_restart_points)[0].distToFinish >> 2) << 3) < (s32)(d->distanceToFinish_checkpoint - CTR_MipsMulLo(node->distToFinish, 8)))))
 	{
 		return 1;
 	}
 
-	u16 trackLength = level->ptr_restart_points[0].distToFinish;
+	u16 trackLength = P32_GET(struct CheckpointNode *, level->ptr_restart_points)[0].distToFinish;
 
 #if defined(CTR_NATIVE)
 	// NOTE(aalhendi): Retail reaches directly through lastValid here. Native
 	// can enter this early checkpoint path before spawn/collision has seeded
 	// lastValid, and cannot mirror PS1 low-memory null-space reads.
-	if (d->lastValid == NULL)
+	if (P32_GET(struct QuadBlock *, d->lastValid) == NULL)
 	{
-		d->lastValid = d->currBlockTouching;
+		P32_SET(d->lastValid, P32_GET(struct QuadBlock *, d->currBlockTouching));
 		return 0;
 	}
 #endif
 
-	if ((node->distToFinish < (CTR_MipsMulLo(trackLength, 0xf) >> 4)) && (d->lastValid->checkpointIndex != 0xff) &&
-	    ((level->ptr_restart_points[d->lastValid->checkpointIndex].distToFinish + (trackLength >> 2)) < node->distToFinish))
+	if ((node->distToFinish < (CTR_MipsMulLo(trackLength, 0xf) >> 4)) && (P32_GET(struct QuadBlock *, d->lastValid)->checkpointIndex != 0xff) &&
+	    ((P32_GET(struct CheckpointNode *, level->ptr_restart_points)[P32_GET(struct QuadBlock *, d->lastValid)->checkpointIndex].distToFinish + (trackLength >> 2)) < node->distToFinish))
 	{
 		return 1;
 	}
 
-	d->lastValid = d->currBlockTouching;
+	P32_SET(d->lastValid, P32_GET(struct QuadBlock *, d->currBlockTouching));
 	return 0;
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8001d944-0x8001eb0c
 void COLL_FIXED_PlayerSearch(struct Thread *t, struct Driver *d)
 {
-	struct GameTracker *gGT = sdata->gGT;
-	struct Level *level = gGT->level1;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct Level *level = P32_GET(struct Level *, gGT->level1);
 	struct ScratchpadStruct *sps = CTR_SCRATCHPAD_PTR(struct ScratchpadStruct, 0x108);
 	s32 normalBlendWeight;
 
 	COLL_FIXED_PlayerSearch_SetupSearch(sps, d);
 
-	if (d->underDriver != NULL)
+	if (P32_GET(struct QuadBlock *, d->underDriver) != NULL)
 	{
-		COLL_FIXED_QUADBLK_TestTriangles(d->underDriver, sps);
+		COLL_FIXED_QUADBLK_TestTriangles(P32_GET(struct QuadBlock *, d->underDriver), sps);
 	}
 
-	if ((sps->boolDidTouchQuadblock == 0) && (sps->ptr_mesh_info != NULL) && (sps->ptr_mesh_info->bspRoot != NULL))
+	if ((sps->boolDidTouchQuadblock == 0) && (P32_GET(struct mesh_info *, sps->ptr_mesh_info) != NULL) && (P32_GET(struct BSP *, P32_GET(struct mesh_info *, sps->ptr_mesh_info)->bspRoot) != NULL))
 	{
-		COLL_SearchBSP_CallbackPARAM(sps->ptr_mesh_info->bspRoot, &sps->bbox, COLL_FIXED_BSPLEAF_TestQuadblocks, sps);
+		COLL_SearchBSP_CallbackPARAM(P32_GET(struct BSP *, P32_GET(struct mesh_info *, sps->ptr_mesh_info)->bspRoot), &sps->bbox, COLL_FIXED_BSPLEAF_TestQuadblocks, sps);
 	}
 
-	struct Instance *inst = t->inst;
+	struct Instance *inst = P32_GET(struct Instance *, t->inst);
 
 	if (sps->boolDidTouchQuadblock == 0)
 	{
@@ -1398,7 +1398,7 @@ void COLL_FIXED_PlayerSearch(struct Thread *t, struct Driver *d)
 	}
 	else
 	{
-		struct QuadBlock *quad = sps->hit.ptrQuadblock;
+		struct QuadBlock *quad = P32_GET(struct QuadBlock *, sps->hit.ptrQuadblock);
 		inst->compressedNormalAndDriverIndex =
 		    INST_CompressNormalVectorAndDriverIndex(sps->hit.plane.normal.x, sps->hit.plane.normal.y, sps->hit.plane.normal.z, d->driverID);
 		d->quadBlockHeight = CTR_MipsSll(sps->Union.QuadBlockColl.hitPos.y, 8);
@@ -1440,7 +1440,7 @@ void COLL_FIXED_PlayerSearch(struct Thread *t, struct Driver *d)
 			d->actionsFlagSet |= ACTION_ENGINE_ECHO;
 		}
 
-		d->underDriver = quad;
+		P32_SET(d->underDriver, quad);
 
 		if ((d->posCurr.y <= d->quadBlockHeight + 0x1000) || ((quad->terrain_type == TERRAIN_MUD) && (d->posCurr.y < 1)))
 		{
@@ -1450,9 +1450,9 @@ void COLL_FIXED_PlayerSearch(struct Thread *t, struct Driver *d)
 				d->collisionFlags |= DRIVER_COLL_FLAG_GROUNDED;
 			}
 
-			if (d->currBlockTouching == NULL)
+			if (P32_GET(struct QuadBlock *, d->currBlockTouching) == NULL)
 			{
-				d->currBlockTouching = quad;
+				P32_SET(d->currBlockTouching, quad);
 				d->AxisAngle1_normalVec = sps->hit.plane.normal;
 			}
 
@@ -1462,17 +1462,17 @@ void COLL_FIXED_PlayerSearch(struct Thread *t, struct Driver *d)
 
 	if (d->quadBlockHeight + 0x8000 < d->posCurr.y)
 	{
-		d->terrainMeta2 = VehAfterColl_GetTerrain(TERRAIN_NONE);
+		P32_SET(d->terrainMeta2, VehAfterColl_GetTerrain(TERRAIN_NONE));
 	}
 
-	if (d->posCurr.y < CTR_MipsSll(CTR_MipsSubLo(level->ptr_mesh_info->bspRoot->box.min.y, 0x40), 8))
+	if (d->posCurr.y < CTR_MipsSll(CTR_MipsSubLo(P32_GET(struct BSP *, P32_GET(struct mesh_info *, level->ptr_mesh_info)->bspRoot)->box.min.y, 0x40), 8))
 	{
 		d->collisionFlags |= DRIVER_COLL_FLAG_MASK_GRAB_REQUEST;
 	}
 
 	s32 landingDelta = CTR_MipsSubLo(d->velocity.y, d->ySpeed);
 
-	if ((d->currBlockTouching != NULL) && ((d->collisionFlags & (DRIVER_COLL_FLAG_MASK_GRAB_REQUEST | DRIVER_COLL_FLAG_GROUNDED)) == 0) &&
+	if ((P32_GET(struct QuadBlock *, d->currBlockTouching) != NULL) && ((d->collisionFlags & (DRIVER_COLL_FLAG_MASK_GRAB_REQUEST | DRIVER_COLL_FLAG_GROUNDED)) == 0) &&
 	    (d->kartState != KS_MASK_GRABBED))
 	{
 		d->velocity.x = CTR_MipsAddLo(d->velocity.x, CTR_MipsSra(d->AxisAngle1_normalVec.x, 1));
@@ -1480,7 +1480,7 @@ void COLL_FIXED_PlayerSearch(struct Thread *t, struct Driver *d)
 		d->velocity.z = CTR_MipsAddLo(d->velocity.z, CTR_MipsSra(d->AxisAngle1_normalVec.z, 1));
 	}
 
-	struct QuadBlock *quad = d->currBlockTouching;
+	struct QuadBlock *quad = P32_GET(struct QuadBlock *, d->currBlockTouching);
 
 	d->xSpeed = d->velocity.x;
 	d->ySpeed = d->velocity.y;
@@ -1510,7 +1510,7 @@ void COLL_FIXED_PlayerSearch(struct Thread *t, struct Driver *d)
 	}
 	else
 	{
-		u8 terrainType = d->currBlockTouching->terrain_type;
+		u8 terrainType = P32_GET(struct QuadBlock *, d->currBlockTouching)->terrain_type;
 
 		if ((terrainType != TERRAIN_ICE) && (d->currentTerrain == TERRAIN_ICE))
 		{
@@ -1520,8 +1520,8 @@ void COLL_FIXED_PlayerSearch(struct Thread *t, struct Driver *d)
 		d->currentTerrain = terrainType;
 	}
 
-	d->terrainMeta1 = VehAfterColl_GetTerrain(d->currentTerrain);
-	d->terrainMeta2 = d->terrainMeta1;
+	P32_SET(d->terrainMeta1, VehAfterColl_GetTerrain(d->currentTerrain));
+	P32_SET(d->terrainMeta2, P32_GET(struct Terrain *, d->terrainMeta1));
 	d->jump_CoyoteTimerMS = COLL_FIXED_PLAYER_SEARCH_COYOTE_TIME_MS;
 
 	{
@@ -1565,7 +1565,7 @@ DriverAirborne:
 		d->actionsFlagSet |= ACTION_HIGH_JUMP;
 	}
 
-	d->terrainMeta1 = VehAfterColl_GetTerrain(TERRAIN_NONE);
+	P32_SET(d->terrainMeta1, VehAfterColl_GetTerrain(TERRAIN_NONE));
 	d->currentTerrain = TERRAIN_NONE;
 	d->actionsFlagSet &= ~ACTION_TOUCH_GROUND;
 
@@ -1631,7 +1631,7 @@ if (CTR_RETAIL_FRAME_TICK(gGT->timer))
 			{
 				s32 screenOffset = Coll_MipsAbsS32((s8)d->Screen_OffsetY);
 
-				if ((screenOffset < 4) && ((d->terrainMeta1->flags & TERRAIN_FLAG_RAISE_GROUND_OFFSET) != 0))
+				if ((screenOffset < 4) && ((P32_GET(struct Terrain *, d->terrainMeta1)->flags & TERRAIN_FLAG_RAISE_GROUND_OFFSET) != 0))
 				{
 					d->distanceFromGround = 4;
 					goto UpdateGroundOffset;
@@ -1674,12 +1674,12 @@ UpdateGroundOffset:
 			{
 				d->Screen_OffsetY = 0;
 
-				if ((d->terrainMeta1->flags & TERRAIN_FLAG_ONESHOT_GROUND_SOUND) != 0)
+				if ((P32_GET(struct Terrain *, d->terrainMeta1)->flags & TERRAIN_FLAG_ONESHOT_GROUND_SOUND) != 0)
 				{
 					u32 echo = ((d->actionsFlagSet & ACTION_ENGINE_ECHO) != 0);
 					u32 soundFlags = HowlSfx_Pack(HOWL_SFX_LR_CENTER, HOWL_SFX_DISTORTION_NONE, 0x80, echo);
 
-					OtherFX_Play_LowLevel(d->terrainMeta1->sound, 0, soundFlags);
+					OtherFX_Play_LowLevel(P32_GET(struct Terrain *, d->terrainMeta1)->sound, 0, soundFlags);
 				}
 			}
 		}
@@ -1703,7 +1703,7 @@ UpdateGroundOffset:
 		d->collisionFlags |= DRIVER_COLL_FLAG_MASK_GRAB_REQUEST;
 	}
 
-	if ((d->kartState != KS_MASK_GRABBED) && ((d->collisionFlags & DRIVER_COLL_FLAG_MASK_GRAB_REQUEST) != 0) && (d->lastValid != NULL) &&
+	if ((d->kartState != KS_MASK_GRABBED) && ((d->collisionFlags & DRIVER_COLL_FLAG_MASK_GRAB_REQUEST) != 0) && (P32_GET(struct QuadBlock *, d->lastValid) != NULL) &&
 	    ((sdata->HudAndDebugFlags & 0x1000) == 0) && ((d->stepFlagSet & COLL_STEP_TRIGGER_SUPPRESS_MASK_GRAB) == 0))
 	{
 		VehStuckProc_MaskGrab_Init(t, d);
@@ -1895,7 +1895,7 @@ void COLL_MOVED_TRIANGL_TestPoint(struct ScratchpadStruct *sps, struct BspSearch
 	sps->candidate.normalAxis = v1->normalAxis;
 	sps->candidate.plane = v1->plane;
 
-	struct QuadBlock *quad = sps->candidate.ptrQuadblock;
+	struct QuadBlock *quad = P32_GET(struct QuadBlock *, sps->candidate.ptrQuadblock);
 	s32 normalZW = (s32)CTR_PackS16Pair(sps->candidate.plane.normal.z, sps->candidate.plane.halfDistance);
 
 	if (((quad->quadFlags & QUADBLOCK_FLAG_DOOR) != 0) && (((s32)(s8)quad->terrain_type & sdata->doorAccessFlags) != 0))
@@ -1971,9 +1971,9 @@ KeepNormal:;
 	CTR_SET_VEC3(sps->candidate.pushOut.v, (s16)CTR_MipsSubLo(sps->Input1.pos.x, hitX), (s16)CTR_MipsSubLo(sps->Input1.pos.y, hitY),
 	             (s16)CTR_MipsSubLo(sps->Input1.pos.z, hitZ));
 
-	sps->hitBspSearchTriangle.v0 = v1;
-	sps->hitBspSearchTriangle.v1 = v2;
-	sps->hitBspSearchTriangle.v2 = v3;
+	P32_SET(sps->hitBspSearchTriangle.v0, v1);
+	P32_SET(sps->hitBspSearchTriangle.v1, v2);
+	P32_SET(sps->hitBspSearchTriangle.v2, v3);
 
 	s32 reorderResult = COLL_MOVED_TRIANGL_ReorderNormals(&sps->candidate, v1, v2, v3);
 	if (reorderResult < 0)
@@ -2042,15 +2042,15 @@ KeepNormal:;
 	}
 
 	sps->hitFraction = distance;
-	sps->hitLevelTriangle.v0 = v1->pLevelVertex;
-	sps->hitLevelTriangle.v1 = v2->pLevelVertex;
-	sps->hitLevelTriangle.v2 = v3->pLevelVertex;
+	P32_SET(sps->hitLevelTriangle.v0, P32_GET(struct LevVertex *, v1->pLevelVertex));
+	P32_SET(sps->hitLevelTriangle.v1, P32_GET(struct LevVertex *, v2->pLevelVertex));
+	P32_SET(sps->hitLevelTriangle.v2, P32_GET(struct LevVertex *, v3->pLevelVertex));
 
 	sps->hit.hitPos = sps->candidate.hitPos;
 	sps->hit.normalAxis = sps->candidate.normalAxis;
 	sps->hit.plane = sps->candidate.plane;
 	sps->hit.pushOut = sps->candidate.pushOut;
-	sps->hit.ptrQuadblock = quad;
+	P32_SET(sps->hit.ptrQuadblock, quad);
 
 	sps->hit.triangleID = sps->candidate.triangleID;
 	sps->hit.reorderResult = (CollTriangleClipResult)reorderResult;
@@ -2081,7 +2081,7 @@ void COLL_MOVED_QUADBLK_TestTriangles(struct QuadBlock *quad, struct ScratchpadS
 	struct BspSearchVertex *bsv = &sps->bspSearchVert[0];
 	b32 hasSecondTriangle = quad->index[2] != quad->index[3];
 
-	sps->candidate.ptrQuadblock = quad;
+	P32_SET(sps->candidate.ptrQuadblock, quad);
 
 	if (((sps->Union.QuadBlockColl.quadFlagsWanted & quad->quadFlags) == 0) || ((sps->Union.QuadBlockColl.quadFlagsIgnored & quad->quadFlags) != 0) ||
 	    (quad->bbox.min.x > sps->bbox.max.x) || (quad->bbox.min.y > sps->bbox.max.y) || (quad->bbox.min.z > sps->bbox.max.z) ||
@@ -2148,7 +2148,7 @@ void COLL_MOVED_BSPLEAF_TestQuadblocks(struct BSP *node, struct ScratchpadStruct
 	}
 
 	s32 numQuads = node->data.leaf.numQuads;
-	struct QuadBlock *ptrQuad = node->data.leaf.ptrQuadBlockArray;
+	struct QuadBlock *ptrQuad = P32_GET(struct QuadBlock *, node->data.leaf.ptrQuadBlockArray);
 
 	// loop through all quadblocks
 	do
@@ -2189,7 +2189,7 @@ void COLL_MOVED_FindScrub(struct QuadBlock *qb, s32 triangleID, struct Scratchpa
 	{
 		struct BspSearchTriangle *tri = &ext->bspSearchTriangle[i];
 
-		if ((tri->quadblock == qb) && (tri->triangleID == triangleID))
+		if ((P32_GET(struct QuadBlock *, tri->quadblock) == qb) && (tri->triangleID == triangleID))
 		{
 			s32 scrubDepth = tri->scrubDepth;
 			s16 scrub = scrubDepth;
@@ -2210,7 +2210,7 @@ void COLL_MOVED_FindScrub(struct QuadBlock *qb, s32 triangleID, struct Scratchpa
 	{
 		struct BspSearchTriangle *tri = &ext->bspSearchTriangle[ext->numTriangles];
 
-		tri->quadblock = qb;
+		P32_SET(tri->quadblock, qb);
 		tri->triangleID = triangleID;
 		tri->scrubDepth = 0;
 	}
@@ -2240,19 +2240,19 @@ internal void CollMoved_PlayerSearch_SetBBoxAxis(struct ScratchpadStruct *sps, s
 
 internal int CollMoved_PlayerSearch_RunHitboxLInC(struct ScratchpadStruct *sps, struct Thread *t)
 {
-	struct BSP *bsp = sps->bspHitbox;
+	struct BSP *bsp = P32_GET(struct BSP *, sps->bspHitbox);
 	struct Instance *linCInstance;
 	s16 modelID;
 
 	if ((bsp->flag & BSP_HITBOX_COLLIDABLE) != 0)
 	{
-		struct InstDef *instDef = bsp->data.hitbox.instDef;
+		struct InstDef *instDef = P32_GET(struct InstDef *, bsp->data.hitbox.instDef);
 		if (instDef == NULL)
 		{
 			return 1;
 		}
 
-		linCInstance = instDef->ptrInstance;
+		linCInstance = P32_GET(struct Instance *, instDef->ptrInstance);
 		if (linCInstance == NULL)
 		{
 			return 1;
@@ -2272,7 +2272,7 @@ internal int CollMoved_PlayerSearch_RunHitboxLInC(struct ScratchpadStruct *sps, 
 			return 1;
 		}
 
-		struct InstDef *instDef = bsp->data.hitbox.instDef;
+		struct InstDef *instDef = P32_GET(struct InstDef *, bsp->data.hitbox.instDef);
 		if (instDef == NULL)
 		{
 			return 1;
@@ -2280,13 +2280,13 @@ internal int CollMoved_PlayerSearch_RunHitboxLInC(struct ScratchpadStruct *sps, 
 
 		// Retail passes the InstDef pointer for these hitboxes, not ptrInstance.
 		linCInstance = (struct Instance *)instDef;
-		modelID = instDef->model->id;
+		modelID = P32_GET(struct Model *, instDef->model)->id;
 	}
 
 	struct MetaDataMODEL *meta = COLL_LevModelMeta(modelID);
-	if ((meta != NULL) && (meta->LInC != NULL))
+	if ((meta != NULL) && (P32_GET(int (*)(struct Instance *, struct Thread *, struct ScratchpadStruct *), meta->LInC) != NULL))
 	{
-		return meta->LInC(linCInstance, t, sps);
+		return P32_GET(int (*)(struct Instance *, struct Thread *, struct ScratchpadStruct *), meta->LInC)(linCInstance, t, sps);
 	}
 
 	return 1;
@@ -2294,14 +2294,14 @@ internal int CollMoved_PlayerSearch_RunHitboxLInC(struct ScratchpadStruct *sps, 
 
 internal void CollMoved_PlayerSearch_StoreHitbox(struct ScratchpadStruct *sps)
 {
-	sps->bspHitboxesHit[sps->numBspHitboxesHit] = sps->bspHitbox;
+	P32_SET(sps->bspHitboxesHit[sps->numBspHitboxesHit], P32_GET(struct BSP *, sps->bspHitbox));
 	sps->numBspHitboxesHit++;
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80020410-0x80020c58
 static void CollMoved_PlayerSearch_Run(struct Thread *t, struct Driver *d)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	struct ScratchpadStruct *sps = CTR_SCRATCHPAD_PTR(struct ScratchpadStruct, 0x108);
 	double multiplier = COLL_FRACTION_ONE;
 	s16 hitRadius = COLL_MOVED_PLAYER_HIT_RADIUS;
@@ -2313,7 +2313,7 @@ static void CollMoved_PlayerSearch_Run(struct Thread *t, struct Driver *d)
 	sps->Union.QuadBlockColl.quadFlagsWanted = QUADBLOCK_FLAG_GROUND | QUADBLOCK_FLAG_COLLISION_SURFACE;
 	sps->Union.QuadBlockColl.quadFlagsIgnored = 0;
 	sps->Union.QuadBlockColl.searchFlags = COLL_SEARCH_TEST_INSTANCES;
-	sps->ptr_mesh_info = gGT->level1->ptr_mesh_info;
+	P32_SET(sps->ptr_mesh_info, P32_GET(struct mesh_info *, P32_GET(struct Level *, gGT->level1)->ptr_mesh_info));
 
 	if (gGT->numPlyrCurrGame < 3)
 	{
@@ -2403,9 +2403,9 @@ static void CollMoved_PlayerSearch_Run(struct Thread *t, struct Driver *d)
 
 		sps->Union.QuadBlockColl.searchFlags = (sps->Union.QuadBlockColl.searchFlags | COLL_SEARCH_TEST_INSTANCES) & ~COLL_SEARCH_REUSE_NORMALS;
 
-		if ((gGT->level1 != NULL) && (gGT->level1->ptr_mesh_info != NULL) && (gGT->level1->ptr_mesh_info->bspRoot != NULL))
+		if ((P32_GET(struct Level *, gGT->level1) != NULL) && (P32_GET(struct mesh_info *, P32_GET(struct Level *, gGT->level1)->ptr_mesh_info) != NULL) && (P32_GET(struct BSP *, P32_GET(struct mesh_info *, P32_GET(struct Level *, gGT->level1)->ptr_mesh_info)->bspRoot) != NULL))
 		{
-			COLL_SearchBSP_CallbackPARAM(gGT->level1->ptr_mesh_info->bspRoot, &sps->bbox, COLL_MOVED_BSPLEAF_TestQuadblocks, sps);
+			COLL_SearchBSP_CallbackPARAM(P32_GET(struct BSP *, P32_GET(struct mesh_info *, P32_GET(struct Level *, gGT->level1)->ptr_mesh_info)->bspRoot), &sps->bbox, COLL_MOVED_BSPLEAF_TestQuadblocks, sps);
 		}
 
 		if (sps->boolDidTouchQuadblock != 0)
@@ -2435,7 +2435,7 @@ static void CollMoved_PlayerSearch_Run(struct Thread *t, struct Driver *d)
 
 		if (sps->boolDidTouchHitbox != 0)
 		{
-			struct BSP *bspHitbox = sps->bspHitbox;
+			struct BSP *bspHitbox = P32_GET(struct BSP *, sps->bspHitbox);
 
 			sps->Union.QuadBlockColl.searchFlags &= ~COLL_SEARCH_REUSE_NORMALS;
 			d->collisionFlags &= ~DRIVER_COLL_FLAG_SURFACE_PUSHBACK;
@@ -2473,7 +2473,7 @@ static void CollMoved_PlayerSearch_Run(struct Thread *t, struct Driver *d)
 				break;
 			}
 
-			struct QuadBlock *quad = sps->hit.ptrQuadblock;
+			struct QuadBlock *quad = P32_GET(struct QuadBlock *, sps->hit.ptrQuadblock);
 
 			if ((quad->quadFlags & QUADBLOCK_FLAG_KILL_PLANE) != 0)
 			{
@@ -2489,12 +2489,12 @@ static void CollMoved_PlayerSearch_Run(struct Thread *t, struct Driver *d)
 			}
 			else
 			{
-				if ((quad != d->underDriver) && ((quad->quadFlags & 8) != 0))
+				if ((quad != P32_GET(struct QuadBlock *, d->underDriver)) && ((quad->quadFlags & 8) != 0))
 				{
-					d->underDriver = NULL;
+					P32_SET(d->underDriver, NULL);
 				}
 
-				d->currBlockTouching = quad;
+				P32_SET(d->currBlockTouching, quad);
 				d->normalVecUP = sps->hit.plane.normal;
 				d->AxisAngle1_normalVec = sps->hit.plane.normal;
 				d->collisionFlags |= DRIVER_COLL_FLAG_GROUNDED;
@@ -2621,8 +2621,8 @@ u32 COLL_MOVED_ScrubImpact(struct Driver *d, struct Thread *t, struct Scratchpad
 
 	SVec3 normal = sps->hit.plane.normal;
 
-	if ((d->vShiftCount != 0) && (sps->boolDidTouchQuadblock != 0) && ((sps->hit.ptrQuadblock->quadFlags & QUADBLOCK_FLAG_GROUND) != 0) &&
-	    (sps->hit.reorderResult != COLL_TRIANGLE_CLIP_FACE) && (sps->hit.ptrQuadblock != d->underDriver))
+	if ((d->vShiftCount != 0) && (sps->boolDidTouchQuadblock != 0) && ((P32_GET(struct QuadBlock *, sps->hit.ptrQuadblock)->quadFlags & QUADBLOCK_FLAG_GROUND) != 0) &&
+	    (sps->hit.reorderResult != COLL_TRIANGLE_CLIP_FACE) && (P32_GET(struct QuadBlock *, sps->hit.ptrQuadblock) != P32_GET(struct QuadBlock *, d->underDriver)))
 	{
 		if ((Coll_MipsAbsS32(d->speedApprox) < 0x300) && (Coll_MipsAbsS32(d->jumpHeightCurr) < 0x300) && (d->fireSpeed == 0))
 		{
@@ -2705,7 +2705,7 @@ u32 COLL_MOVED_ScrubImpact(struct Driver *d, struct Thread *t, struct Scratchpad
 			impact = CollMoved_ScrubImpact_GteLLV0(impact.x, impact.y, impact.z);
 
 			if ((sps->boolDidTouchQuadblock != 0) && ((sps->Union.QuadBlockColl.searchFlags & COLL_SEARCH_WALL_PROJECTION_DONE) == 0) &&
-			    ((d->actionsFlagSetPrevFrame & ACTION_TOUCH_GROUND) == 0) && ((sps->hit.ptrQuadblock->quadFlags & QUADBLOCK_FLAG_GROUND) != 0))
+			    ((d->actionsFlagSetPrevFrame & ACTION_TOUCH_GROUND) == 0) && ((P32_GET(struct QuadBlock *, sps->hit.ptrQuadblock)->quadFlags & QUADBLOCK_FLAG_GROUND) != 0))
 			{
 				Vec3 wallVelocity;
 				CollMoved_ScrubImpact_ProjectWallVelocity(&normal, oldVelX, oldVelZ, &wallVelocity);
@@ -2778,8 +2778,8 @@ u32 COLL_MOVED_ScrubImpact(struct Driver *d, struct Thread *t, struct Scratchpad
 						d->rotCurr.w = (s16)CTR_MipsSubLo((u16)d->rotCurr.w, (u16)turnAngle);
 					}
 
-					d->instSelf->animIndex = 2;
-					d->instSelf->animFrame = 0;
+					P32_GET(struct Instance *, d->instSelf)->animIndex = 2;
+					P32_GET(struct Instance *, d->instSelf)->animFrame = 0;
 					d->matrixArray = BAKED_GTE_MATRIX_CRASH_FALL;
 					d->matrixIndex = 0;
 

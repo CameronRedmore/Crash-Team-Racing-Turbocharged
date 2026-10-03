@@ -171,7 +171,7 @@ static int DrawLevelOvr2P_DrawViewportBucket(struct DrawLevelOvr1PRenderList *re
 	void *bucketValue = DrawLevelOvr1P_GetRenderListBucketValue(renderList, bucket);
 	u32 setupAddress = R227.bucketSetupAddresses[bucketIndex];
 	u32 handlerAddress = R227.bucketHandlerAddresses[bucketIndex];
-	struct QuadBlock **renderedOverflowBase = (struct QuadBlock **)data.ptrRenderedQuadblockDestination_forEachPlayer[playerIndex];
+	struct QuadBlock **renderedOverflowBase = (struct QuadBlock **)P32_GET(void *, data.ptrRenderedQuadblockDestination_forEachPlayer[playerIndex]);
 
 	if (bucketValue == NULL)
 	{
@@ -184,7 +184,7 @@ static int DrawLevelOvr2P_DrawViewportBucket(struct DrawLevelOvr1PRenderList *re
 		DrawLevelOvr2P_ApplyBucketSetup(setupAddress, handlerAddress);
 	}
 
-	DrawLevelOvr1P_SetViewportScratchContext(pb, visFaceList, data.PtrClipBuffer[playerIndex], *clipCursor, renderedOverflowBase);
+	DrawLevelOvr1P_SetViewportScratchContext(pb, visFaceList, P32_GET(void *, data.PtrClipBuffer[playerIndex]), *clipCursor, renderedOverflowBase);
 	if (!DrawLevelOvr2P_DispatchBucketHandler(handlerAddress, bucketValue, pb, mesh, primMem, visFaceList))
 	{
 		return 0;
@@ -222,7 +222,7 @@ static int DrawLevelOvr2P_DispatchBucketTable(struct DrawLevelOvr1PRenderList *r
 
 static int DrawLevelOvr2P_ConsumeClipRecordsForViewport(struct PushBuffer *pb, struct PrimMem *primMem, u8 *clipCursor, int playerIndex)
 {
-	u8 *start = data.PtrClipBuffer[playerIndex];
+	u8 *start = P32_GET(void *, data.PtrClipBuffer[playerIndex]);
 
 	DrawLevelOvr1P_SetClipRecordStart(start);
 	DrawLevelOvr1P_SetClipRecordCursor(clipCursor);
@@ -235,14 +235,14 @@ void DrawLevelOvr2P(void *LevRenderList, struct PushBuffer *pb, struct BSP *bspL
 {
 	struct DrawLevelOvr1PRenderList *renderLists = LevRenderList;
 	struct mesh_info *mesh = (struct mesh_info *)bspList;
-	u8 *clipCursors[2] = {data.PtrClipBuffer[0], data.PtrClipBuffer[1]};
+	u8 *clipCursors[2] = {P32_GET(void *, data.PtrClipBuffer[0]), P32_GET(void *, data.PtrClipBuffer[1])};
 	u32 hostStackAnchor;
 
 	// NOTE(aalhendi): ASM-audited against NTSC-U 926 227 entry/setup
 	// 0x800a0cbc-0x800a1010. Native keeps explicit host pointers while
 	// preserving the retail scratch ownership and two-viewport ordering.
 	DrawLevelOvr1P_Scratch()->savedStackPtr32 = (u32)(uintptr_t)&hostStackAnchor;
-	DrawLevelOvr1P_Scratch()->primMemEndPtr32 = (u32)(uintptr_t)primMem->end;
+	DrawLevelOvr1P_Scratch()->primMemEndPtr32 = (u32)(uintptr_t)P32_GET(void *, primMem->end);
 	DrawLevelOvr1P_Scratch()->visFaceListArgPtr32[0] = (u32)(uintptr_t)visFaceList0;
 	DrawLevelOvr1P_Scratch()->visFaceListArgPtr32[1] = (u32)(uintptr_t)visFaceList1;
 
@@ -257,7 +257,7 @@ void DrawLevelOvr2P(void *LevRenderList, struct PushBuffer *pb, struct BSP *bspL
 	DrawLevelOvr1P_Scratch()->playerClipCursorPtr32[0] = (u32)(uintptr_t)clipCursors[0];
 	DrawLevelOvr1P_Scratch()->playerClipCursorPtr32[1] = (u32)(uintptr_t)clipCursors[1];
 
-	if (mesh->ptrQuadBlockArray == NULL)
+	if (P32_GET(struct QuadBlock *, mesh->ptrQuadBlockArray) == NULL)
 	{
 		return;
 	}

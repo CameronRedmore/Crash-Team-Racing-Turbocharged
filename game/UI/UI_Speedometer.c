@@ -80,7 +80,7 @@ void UI_DrawSpeedNeedle(s16 posX, s16 posY, struct Driver *driver)
 	p->v[0].pos.x = posX + (FP_INT(sin[0] * needleHeight) + needleCenterX);
 	p->v[0].pos.y = posY + (yLen + needleCenterY);
 
-	AddPrimitive(p, sdata->gGT->pushBuffer_UI.ptrOT);
+	AddPrimitive(p, P32_GET(uint32_t *, P32_GET(struct GameTracker *, sdata->gGT)->pushBuffer_UI.ptrOT));
 	GetPrimMem(p);
 	if (p == nullptr)
 	{
@@ -118,7 +118,7 @@ void UI_DrawSpeedNeedle(s16 posX, s16 posY, struct Driver *driver)
 	p->v[0].pos.x = posX + (FP_INT(sin[0] * needleHeight) + needleCenterX);
 	p->v[0].pos.y = posY + (yLen + needleCenterY);
 
-	AddPrimitive(p, sdata->gGT->pushBuffer_UI.ptrOT);
+	AddPrimitive(p, P32_GET(uint32_t *, P32_GET(struct GameTracker *, sdata->gGT)->pushBuffer_UI.ptrOT));
 }
 
 const Color DrawSpeedBG_Colors[7] = {
@@ -142,8 +142,8 @@ void UI_DrawSpeedBG(void)
 		Point pt[2];
 		pt[0] = MakePoint(UI_SpeedometerAspectX(vertexesExtLine[i].x, xOffset), vertexesExtLine[i].y + yOffset);
 		pt[1] = MakePoint(UI_SpeedometerAspectX(vertexesExtLine[i + 1].x, xOffset), vertexesExtLine[i + 1].y + yOffset);
-		CTR_Box_DrawWirePrims(pt[0], pt[1], MakeColor(0xff, 0xff, 0xff), sdata->gGT->pushBuffer_UI.ptrOT);
-		CTR_Box_DrawWirePrims(MakePoint(pt[0].x + 1, pt[0].y + 1), MakePoint(pt[1].x + 1, pt[1].y + 1), MakeColor(0, 0, 0), sdata->gGT->pushBuffer_UI.ptrOT);
+		CTR_Box_DrawWirePrims(pt[0], pt[1], MakeColor(0xff, 0xff, 0xff), P32_GET(uint32_t *, P32_GET(struct GameTracker *, sdata->gGT)->pushBuffer_UI.ptrOT));
+		CTR_Box_DrawWirePrims(MakePoint(pt[0].x + 1, pt[0].y + 1), MakePoint(pt[1].x + 1, pt[1].y + 1), MakeColor(0, 0, 0), P32_GET(uint32_t *, P32_GET(struct GameTracker *, sdata->gGT)->pushBuffer_UI.ptrOT));
 	}
 
 	/* Draw the vertical lines and colors */
@@ -155,10 +155,10 @@ void UI_DrawSpeedBG(void)
 		{
 			pt[j] = MakePoint(UI_SpeedometerAspectX(vertexes[i + j].x, xOffset), vertexes[i + j].y + yOffset);
 		}
-		CTR_Box_DrawWirePrims(pt[0], pt[2], MakeColor(0xff, 0xff, 0xff), sdata->gGT->pushBuffer_UI.ptrOT);
-		CTR_Box_DrawWirePrims(pt[1], pt[3], MakeColor(0xff, 0xff, 0xff), sdata->gGT->pushBuffer_UI.ptrOT);
-		CTR_Box_DrawWirePrims(MakePoint(pt[0].x + 1, pt[0].y + 1), MakePoint(pt[2].x + 1, pt[2].y + 1), MakeColor(0, 0, 0), sdata->gGT->pushBuffer_UI.ptrOT);
-		CTR_Box_DrawWirePrims(MakePoint(pt[1].x + 1, pt[1].y + 1), MakePoint(pt[3].x + 1, pt[3].y + 1), MakeColor(0, 0, 0), sdata->gGT->pushBuffer_UI.ptrOT);
+		CTR_Box_DrawWirePrims(pt[0], pt[2], MakeColor(0xff, 0xff, 0xff), P32_GET(uint32_t *, P32_GET(struct GameTracker *, sdata->gGT)->pushBuffer_UI.ptrOT));
+		CTR_Box_DrawWirePrims(pt[1], pt[3], MakeColor(0xff, 0xff, 0xff), P32_GET(uint32_t *, P32_GET(struct GameTracker *, sdata->gGT)->pushBuffer_UI.ptrOT));
+		CTR_Box_DrawWirePrims(MakePoint(pt[0].x + 1, pt[0].y + 1), MakePoint(pt[2].x + 1, pt[2].y + 1), MakeColor(0, 0, 0), P32_GET(uint32_t *, P32_GET(struct GameTracker *, sdata->gGT)->pushBuffer_UI.ptrOT));
+		CTR_Box_DrawWirePrims(MakePoint(pt[1].x + 1, pt[1].y + 1), MakePoint(pt[3].x + 1, pt[3].y + 1), MakeColor(0, 0, 0), P32_GET(uint32_t *, P32_GET(struct GameTracker *, sdata->gGT)->pushBuffer_UI.ptrOT));
 
 		PolyG4 *p;
 		GetPrimMem(p);
@@ -181,7 +181,7 @@ void UI_DrawSpeedBG(void)
 			p->v[j + 2].color = colorTop;
 		}
 		p->gPolyCode = primCode;
-		AddPrimitive(p, sdata->gGT->pushBuffer_UI.ptrOT);
+		AddPrimitive(p, P32_GET(uint32_t *, P32_GET(struct GameTracker *, sdata->gGT)->pushBuffer_UI.ptrOT));
 	}
 
 	typedef struct TPage_PolyG3
@@ -226,6 +226,6 @@ void UI_DrawSpeedBG(void)
 		((TPage *)p)->texpage.drawDisplayArea = 1;
 #endif
 
-		AddPrimitive(p, sdata->gGT->pushBuffer_UI.ptrOT);
+		AddPrimitive(p, P32_GET(uint32_t *, P32_GET(struct GameTracker *, sdata->gGT)->pushBuffer_UI.ptrOT));
 	}
 }

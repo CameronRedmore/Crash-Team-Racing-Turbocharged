@@ -35,7 +35,7 @@ CTR_GCC_OPTIMIZE_O0 int ScrapBookPlayMovie_DecodeFrame()
 // NOTE(aalhendi): ASM-verified NTSC-U 926 overlay 230 0x800b4014-0x800b42b0 PSX path.
 void MM_Scrapbook_PlayMovie(struct RectMenu *menu)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// book state (0,1,2,3,4)
 	switch (D230.scrapbookState)

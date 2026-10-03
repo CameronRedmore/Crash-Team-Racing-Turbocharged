@@ -7,24 +7,24 @@ struct PrimMem
 	u32 capacityBytes;
 
 	// 0x4
-	void *start;
+	P32(void *) start;
 
 	// 0x8
-	void *end;
+	P32(void *) end;
 
 	// 0xC
-	void *cursor;
+	P32(void *) cursor;
 
 	// 0x10
 	// NOTE(aalhendi): Retail keeps 0x100 bytes reserved after this guard.
-	void *guardEnd;
+	P32(void *) guardEnd;
 
 	// 0x14
 	s32 primitiveCount;
 
 	// 0x18
 	// NOTE(aalhendi): Retail mirrors the allocation base here.
-	void *allocationStart;
+	P32(void *) allocationStart;
 };
 
 struct OTMem
@@ -33,17 +33,17 @@ struct OTMem
 	u32 capacityBytes;
 
 	// 0x4
-	uint32_t *start;
+	P32(uint32_t *) start;
 
 	// 0x8
-	uint32_t *end;
+	P32(uint32_t *) end;
 
 	// 0xC
-	uint32_t *cursor;
+	P32(uint32_t *) cursor;
 
 	// 0x10
 	// NOTE(aalhendi): UI ordering-table pointer, also stored in pushBuffer_UI.
-	uint32_t *uiOT;
+	P32(uint32_t *) uiOT;
 };
 
 struct DisplayBlurFlatPacket

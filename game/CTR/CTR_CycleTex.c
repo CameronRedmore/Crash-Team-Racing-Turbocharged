@@ -25,7 +25,7 @@ void CTR_CycleTex_LEV(struct AnimTex *animtex, int timer)
 
 		// Save new frame
 		// For levels, this is just a pointer
-		curAnimTex->ptrActiveTex = (int *)ptrArray[frameCurr];
+		P32_SET(curAnimTex->ptrActiveTex, (int *)ptrArray[frameCurr]);
 
 		// Go to next AnimTex, which comes after this AnimTex's ptrarray
 		curAnimTex = (struct AnimTex *)&ptrArray[curAnimTex->numFrames];
@@ -57,7 +57,7 @@ void CTR_CycleTex_Model(struct AnimTex *animtex, int timer)
 
 		// Save new frame
 		// For Model, this is a pointer to a pointer
-		*curAnimTex->ptrActiveTex = (int)ptrArray[frameCurr];
+		*P32_GET(int *, curAnimTex->ptrActiveTex) = (int)ptrArray[frameCurr];
 
 		// Go to next AnimTex, which comes after this AnimTex's ptrarray
 		curAnimTex = (struct AnimTex *)&ptrArray[curAnimTex->numFrames];
@@ -91,11 +91,11 @@ void CTR_CycleTex_AllModels(u32 numModels, struct Model **pModelArray, int timer
 		// iterate over all model headers
 		for (int j = 0; j < pModel->numHeaders; j++)
 		{
-			pHeader = &pModel->headers[j];
+			pHeader = &P32_GET(struct ModelHeader *, pModel->headers)[j];
 
-			if ((pHeader->animtex != NULL) && ((pHeader->flags & 2) == 0))
+			if ((P32_GET(struct AnimTex *, pHeader->animtex) != NULL) && ((pHeader->flags & 2) == 0))
 			{
-				CTR_CycleTex_Model(pHeader->animtex, timer);
+				CTR_CycleTex_Model(P32_GET(struct AnimTex *, pHeader->animtex), timer);
 			}
 		}
 

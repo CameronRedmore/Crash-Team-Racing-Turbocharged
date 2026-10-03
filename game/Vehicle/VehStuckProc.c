@@ -143,7 +143,7 @@ CTR_STATIC_ASSERT(VEH_TUMBLE_RUMBLE_DURATION == 0x60);
 
 static void VehStuckProc_MaskGrab_SearchBsp(struct Driver *d, struct ScratchpadStruct *sps)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	s16 topX = (s16)CTR_MipsSra(d->posCurr.x, FRACTIONAL_BITS_8);
 	s16 topY = (s16)CTR_MipsSra(d->posCurr.y, FRACTIONAL_BITS_8);
 	s16 topZ = (s16)CTR_MipsSra(d->posCurr.z, FRACTIONAL_BITS_8);
@@ -177,19 +177,19 @@ static void VehStuckProc_MaskGrab_SearchBsp(struct Driver *d, struct ScratchpadS
 
 	sps->Union.QuadBlockColl.hitPos = sps->Input1.pos;
 
-	COLL_SearchBSP_CallbackPARAM(sps->ptr_mesh_info->bspRoot, &sps->bbox, COLL_FIXED_BSPLEAF_TestQuadblocks, sps);
+	COLL_SearchBSP_CallbackPARAM(P32_GET(struct BSP *, P32_GET(struct mesh_info *, sps->ptr_mesh_info)->bspRoot), &sps->bbox, COLL_FIXED_BSPLEAF_TestQuadblocks, sps);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8006677c-0x80066cb0.
 void VehStuckProc_MaskGrab_FindDestPos(struct Driver *d, struct QuadBlock *quad)
 {
-	struct GameTracker *gGT = sdata->gGT;
-	struct Level *level = gGT->level1;
-	struct mesh_info *mesh = level->ptr_mesh_info;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct Level *level = P32_GET(struct Level *, gGT->level1);
+	struct mesh_info *mesh = P32_GET(struct mesh_info *, level->ptr_mesh_info);
 
-	if ((level->cnt_restart_points < 1) || (level->ptr_restart_points == NULL) || (quad->checkpointIndex == 0xff))
+	if ((level->cnt_restart_points < 1) || (P32_GET(struct CheckpointNode *, level->ptr_restart_points) == NULL) || (quad->checkpointIndex == 0xff))
 	{
-		struct LevVertex *verts = mesh->ptrVertexArray;
+		struct LevVertex *verts = P32_GET(struct LevVertex *, mesh->ptrVertexArray);
 		struct LevVertex *v0 = &verts[quad->index[0]];
 		struct LevVertex *v3 = &verts[quad->index[3]];
 
@@ -200,15 +200,15 @@ void VehStuckProc_MaskGrab_FindDestPos(struct Driver *d, struct QuadBlock *quad)
 	else
 	{
 		struct ScratchpadStruct *sps = CTR_SCRATCHPAD_PTR(struct ScratchpadStruct, 0x108);
-		struct Thread *driverThread = d->instSelf->thread;
-		struct CheckpointNode *respawn = &level->ptr_restart_points[quad->checkpointIndex];
+		struct Thread *driverThread = P32_GET(struct Thread *, P32_GET(struct Instance *, d->instSelf)->thread);
+		struct CheckpointNode *respawn = &P32_GET(struct CheckpointNode *, level->ptr_restart_points)[quad->checkpointIndex];
 		struct CheckpointNode *nextRespawn;
 
 		sps->Input1.hitRadius = driverThread->driverHitRadius;
 		sps->Input1.hitRadiusSquared = driverThread->driverHitRadiusSquared;
 		sps->Union.QuadBlockColl.hitRadius = driverThread->driverHitRadius;
 		sps->Union.QuadBlockColl.hitRadiusSquared = driverThread->driverHitRadiusSquared;
-		sps->ptr_mesh_info = mesh;
+		P32_SET(sps->ptr_mesh_info, mesh);
 		sps->Union.QuadBlockColl.quadFlagsIgnored = QUADBLOCK_FLAG_NO_CAMERA_RESPAWN_PROBE | QUADBLOCK_FLAG_NO_COLLISION_RESPONSE;
 		sps->Union.QuadBlockColl.quadFlagsWanted = QUADBLOCK_FLAG_GROUND;
 		d->distanceDrivenBackwards = 0;
@@ -217,7 +217,7 @@ void VehStuckProc_MaskGrab_FindDestPos(struct Driver *d, struct QuadBlock *quad)
 		{
 			do
 			{
-				nextRespawn = &level->ptr_restart_points[respawn->nextIndex_forward];
+				nextRespawn = &P32_GET(struct CheckpointNode *, level->ptr_restart_points)[respawn->nextIndex_forward];
 
 				d->posCurr.x = CTR_MipsSll(respawn->pos.x, FRACTIONAL_BITS_8);
 				d->posCurr.y = CTR_MipsSll(CTR_MipsAddLo(respawn->pos.y, VEH_STUCK_RESPAWN_Y_OFFSET), FRACTIONAL_BITS_8);
@@ -231,10 +231,10 @@ void VehStuckProc_MaskGrab_FindDestPos(struct Driver *d, struct QuadBlock *quad)
 				respawn = nextRespawn;
 			} while ((sps->boolDidTouchQuadblock == 0) || ((sps->collision.stepFlags & COLL_STEP_FLAG_KILL_PLANE) != 0));
 
-			struct Thread *playerThread = gGT->threadBuckets[PLAYER].thread;
+			struct Thread *playerThread = P32_GET(struct Thread *, gGT->threadBuckets[PLAYER].thread);
 			while (playerThread != NULL)
 			{
-				struct Driver *other = playerThread->object;
+				struct Driver *other = P32_GET(void *, playerThread->object);
 
 				if (other != d)
 				{
@@ -262,7 +262,7 @@ void VehStuckProc_MaskGrab_FindDestPos(struct Driver *d, struct QuadBlock *quad)
 					}
 				}
 
-				playerThread = playerThread->siblingThread;
+				playerThread = P32_GET(struct Thread *, playerThread->siblingThread);
 			}
 
 			if (playerThread == NULL)
@@ -284,7 +284,7 @@ void VehStuckProc_MaskGrab_Particles(struct Driver *d)
 	for (int i = 10; i > 0; i--)
 	{
 		// Create instance in particle pool
-		p = Particle_Init(0, sdata->gGT->iconGroup[0], &data.emSet_Maskgrab[0]);
+		p = Particle_Init(0, P32_GET(struct IconGroup *, P32_GET(struct GameTracker *, sdata->gGT)->iconGroup[0]), &data.emSet_Maskgrab[0]);
 
 		if (p == NULL)
 		{
@@ -302,7 +302,7 @@ void VehStuckProc_MaskGrab_Particles(struct Driver *d)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80066d4c-0x80066e3c.
 void VehStuckProc_MaskGrab_Update(struct Thread *t, struct Driver *d)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	d->NoInputTimer = (s16)CTR_MipsSubLo((u16)d->NoInputTimer, (u16)gGT->elapsedTimeMS);
 
@@ -319,7 +319,7 @@ void VehStuckProc_MaskGrab_Update(struct Thread *t, struct Driver *d)
 	// when input is allowed,
 	// which is when driver is spawned back over track
 
-	struct MaskHeadWeapon *mask = d->KartStates.MaskGrab.maskObj;
+	struct MaskHeadWeapon *mask = P32_GET(struct MaskHeadWeapon *, d->KartStates.MaskGrab.maskObj);
 
 	if (mask != NULL)
 	{
@@ -335,7 +335,7 @@ void VehStuckProc_MaskGrab_Update(struct Thread *t, struct Driver *d)
 	gGT->cameraDC[d->driverID].flags |= CAMERA_FLAG_DIRECTION_CHANGED;
 
 
-	VehStuckProc_MaskGrab_FindDestPos(d, d->lastValid);
+	VehStuckProc_MaskGrab_FindDestPos(d, P32_GET(struct QuadBlock *, d->lastValid));
 
 	VehBirth_TeleportSelf(d, 0, VEH_STUCK_RESPAWN_Y_OFFSET);
 
@@ -363,8 +363,8 @@ void VehStuckProc_MaskGrab_PhysLinear(struct Thread *t, struct Driver *d)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80066e8c-0x800671b0.
 void VehStuckProc_MaskGrab_Animate(struct Thread *t, struct Driver *d)
 {
-	struct GameTracker *gGT = sdata->gGT;
-	struct Instance *inst = t->inst;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct Instance *inst = P32_GET(struct Instance *, t->inst);
 
 	// if driver touched ground before mask grab
 	if (d->KartStates.MaskGrab.boolStillFalling == false)
@@ -494,7 +494,7 @@ void VehStuckProc_MaskGrab_Animate(struct Thread *t, struct Driver *d)
 		}
 	}
 
-	struct MaskHeadWeapon *mask = d->KartStates.MaskGrab.maskObj;
+	struct MaskHeadWeapon *mask = P32_GET(struct MaskHeadWeapon *, d->KartStates.MaskGrab.maskObj);
 
 	// if maskObj
 	if (mask == 0)
@@ -569,8 +569,8 @@ extern DriverFunc PlayerMaskGrabFuncTable[DRIVER_FUNC_COUNT];
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800671b0-0x8006749c.
 void VehStuckProc_MaskGrab_Init(struct Thread *t, struct Driver *d)
 {
-	struct GameTracker *gGT = sdata->gGT;
-	struct Instance *inst = t->inst;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct Instance *inst = P32_GET(struct Instance *, t->inst);
 
 	d->kartState = KS_MASK_GRABBED;
 
@@ -581,7 +581,7 @@ void VehStuckProc_MaskGrab_Init(struct Thread *t, struct Driver *d)
 	d->KartStates.MaskGrab.boolLiftingPlayer = false;
 	d->KartStates.MaskGrab.boolWhistle = false;
 
-	d->KartStates.MaskGrab.maskObj = VehPickupItem_MaskUseWeapon(d, true);
+	P32_SET(d->KartStates.MaskGrab.maskObj, VehPickupItem_MaskUseWeapon(d, true));
 
 	d->matrixArray = BAKED_GTE_MATRIX_NONE;
 	d->matrixIndex = 0;
@@ -603,7 +603,7 @@ void VehStuckProc_MaskGrab_Init(struct Thread *t, struct Driver *d)
 	{
 		d->numTimesMaskGrab++;
 
-		if ((d->posCurr.y < -VEH_STUCK_MASK_GRAB_FALL_HEIGHT_THRESHOLD) && ((gGT->level1->configFlags & 2) != 0))
+		if ((d->posCurr.y < -VEH_STUCK_MASK_GRAB_FALL_HEIGHT_THRESHOLD) && ((P32_GET(struct Level *, gGT->level1)->configFlags & 2) != 0))
 		{
 			d->KartStates.MaskGrab.AngleAxis_NormalVec = d->AxisAngle2_normalVec;
 
@@ -614,14 +614,14 @@ void VehStuckProc_MaskGrab_Init(struct Thread *t, struct Driver *d)
 
 			for (int i = 10; i > 0; i--)
 			{
-				struct Particle *p = Particle_Init(0, gGT->iconGroup[9], &data.emSet_Falling[0]);
+				struct Particle *p = Particle_Init(0, P32_GET(struct IconGroup *, gGT->iconGroup[9]), &data.emSet_Falling[0]);
 				if (p == NULL)
 				{
 					break;
 				}
 
-				p->otIndexOffset = d->instSelf->depthBiasNormal;
-				p->driverInst = d->instSelf;
+				p->otIndexOffset = P32_GET(struct Instance *, d->instSelf)->depthBiasNormal;
+				P32_SET(p->driverInst, P32_GET(struct Instance *, d->instSelf));
 				p->driverID = d->driverID;
 			}
 
@@ -648,10 +648,10 @@ void VehStuckProc_MaskGrab_Init(struct Thread *t, struct Driver *d)
 
 	for (int i = 0; i < DRIVER_FUNC_COUNT; i++)
 	{
-		d->funcPtrs[i] = PlayerMaskGrabFuncTable[i];
+		P32_SET(d->funcPtrs[i], PlayerMaskGrabFuncTable[i]);
 	}
 
-	struct MaskHeadWeapon *mask = d->KartStates.MaskGrab.maskObj;
+	struct MaskHeadWeapon *mask = P32_GET(struct MaskHeadWeapon *, d->KartStates.MaskGrab.maskObj);
 	if (mask == NULL)
 	{
 		return;
@@ -683,19 +683,19 @@ DriverFunc PlayerMaskGrabFuncTable[DRIVER_FUNC_COUNT] = {NULL,
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8006749c-0x80067554.
 void VehStuckProc_PlantEaten_Update(struct Thread *t, struct Driver *d)
 {
-	d->NoInputTimer = (s16)CTR_MipsSubLo((u16)d->NoInputTimer, (u16)sdata->gGT->elapsedTimeMS);
+	d->NoInputTimer = (s16)CTR_MipsSubLo((u16)d->NoInputTimer, (u16)P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS);
 
 	if (d->NoInputTimer <= 0)
 	{
 		d->NoInputTimer = 0;
 
 		// respawn driver at last valid quadblock
-		VehStuckProc_MaskGrab_FindDestPos(d, d->lastValid);
+		VehStuckProc_MaskGrab_FindDestPos(d, P32_GET(struct QuadBlock *, d->lastValid));
 		VehBirth_TeleportSelf(d, 0, VEH_STUCK_RESPAWN_Y_OFFSET);
 
 		// enable collision, make visible
 		t->flags &= ~THREAD_FLAG_DISABLE_COLLISION;
-		t->inst->flags &= ~(HIDE_MODEL);
+		P32_GET(struct Instance *, t->inst)->flags &= ~(HIDE_MODEL);
 
 		// this lets you rev engine while falling
 		VehStuckProc_RevEngine_Init(t, d);
@@ -722,7 +722,7 @@ void VehStuckProc_PlantEaten_PhysLinear(struct Thread *t, struct Driver *d)
 	d->actionsFlagSet &= ~(ACTION_REVERSING_ENGINE | ACTION_BRAKE_WITH_ACCEL | ACTION_JUMP_BUTTON_HELD);
 	d->actionsFlagSet |= ACTION_ACCEL_PREVENTION;
 
-	d->timeSpentEaten = CTR_MipsAddLo(d->timeSpentEaten, sdata->gGT->elapsedTimeMS);
+	d->timeSpentEaten = CTR_MipsAddLo(d->timeSpentEaten, P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS);
 }
 
 
@@ -736,9 +736,9 @@ void VehStuckProc_PlantEaten_Animate(struct Thread *t, struct Driver *d)
 	VECTOR camVec;
 	s32 gteFlags[2];
 
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
-	struct Thread *plant = d->plantEatingMe;
+	struct Thread *plant = P32_GET(struct Thread *, d->plantEatingMe);
 
 	// if any plant is eating me
 	if (((plant != NULL) &&
@@ -750,12 +750,12 @@ void VehStuckProc_PlantEaten_Animate(struct Thread *t, struct Driver *d)
 	    (d->NoInputTimer < VEH_STUCK_PLANT_CAMERA_INIT_TIME))
 	{
 		// get instance from thread
-		inst = plant->inst;
+		inst = P32_GET(struct Instance *, plant->inst);
 
 		// initialized, player eaten
 		d->KartStates.EatenByPlant.boolInited = true;
 
-		plantVector.vx = (((struct Plant *)plant->object)->side == 0) ? VEH_STUCK_PLANT_CAMERA_SIDE_OFFSET : -VEH_STUCK_PLANT_CAMERA_SIDE_OFFSET;
+		plantVector.vx = (((struct Plant *)P32_GET(void *, plant->object))->side == 0) ? VEH_STUCK_PLANT_CAMERA_SIDE_OFFSET : -VEH_STUCK_PLANT_CAMERA_SIDE_OFFSET;
 		plantVector.vy = 0;
 		plantVector.vz = VEH_STUCK_PLANT_CAMERA_FORWARD_OFFSET;
 
@@ -801,7 +801,7 @@ void VehStuckProc_PlantEaten_Init(struct Thread *t, struct Driver *d)
 	// when this function executes, you are lifted
 	// above the track by the mask, where you respawn
 
-	struct Instance *inst = t->inst;
+	struct Instance *inst = P32_GET(struct Instance *, t->inst);
 
 	// set state to mask grab, so nobody hits you with weapon
 	d->kartState = KS_MASK_GRABBED;
@@ -818,15 +818,15 @@ void VehStuckProc_PlantEaten_Init(struct Thread *t, struct Driver *d)
 	// "cloud" is the raincloud after hitting red potion
 
 	// if thread of "cloud" exists
-	if (d->thCloud != NULL)
+	if (P32_GET(struct Thread *, d->thCloud) != NULL)
 	{
-		((struct RainCloud *)d->thCloud->object)->timeMS = 0;
+		((struct RainCloud *)P32_GET(void *, P32_GET(struct Thread *, d->thCloud)->object))->timeMS = 0;
 
-		d->thCloud->funcThTick = RB_RainCloud_FadeAway;
-		d->thCloud = NULL;
+		P32_SET(P32_GET(struct Thread *, d->thCloud)->funcThTick, RB_RainCloud_FadeAway);
+		P32_SET(d->thCloud, NULL);
 	}
 
-	if (LOAD_IsOpen_RacingOrBattle() && ((sdata->gGT->gameMode1 & ADVENTURE_ARENA) == 0))
+	if (LOAD_IsOpen_RacingOrBattle() && ((P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 & ADVENTURE_ARENA) == 0))
 	{
 		RB_Player_ModifyWumpa(d, -2);
 	}
@@ -846,7 +846,7 @@ void VehStuckProc_PlantEaten_Init(struct Thread *t, struct Driver *d)
 
 	for (int i = 0; i < DRIVER_FUNC_COUNT; i++)
 	{
-		d->funcPtrs[i] = PlayerEatenFuncTable[i];
+		P32_SET(d->funcPtrs[i], PlayerEatenFuncTable[i]);
 	}
 }
 
@@ -872,8 +872,8 @@ void VehStuckProc_RIP_Init(struct Thread *t, struct Driver *d)
 {
 	VehStuckProc_PlantEaten_Init(t, d);
 	d->invisibleTimer = 0;
-	d->funcPtrs[DRIVER_FUNC_UPDATE] = NULL;
-	d->funcPtrs[DRIVER_FUNC_ANIMATE] = NULL;
+	P32_SET(d->funcPtrs[DRIVER_FUNC_UPDATE], NULL);
+	P32_SET(d->funcPtrs[DRIVER_FUNC_ANIMATE], NULL);
 }
 
 
@@ -886,7 +886,7 @@ void VehStuckProc_RevEngine_Update(struct Thread *t, struct Driver *d)
 	if (d->KartStates.RevEngine.boolMaskGrab == false)
 	{
 		// If Traffic Lights are not done counting down
-		if (0 < sdata->gGT->trafficLightsTimer)
+		if (0 < P32_GET(struct GameTracker *, sdata->gGT)->trafficLightsTimer)
 		{
 			// Dont continue with the function,
 			// let your kart stay in a revving state
@@ -911,9 +911,9 @@ void VehStuckProc_RevEngine_Update(struct Thread *t, struct Driver *d)
 	// frozen, and into driving, last iteration of
 	// this function
 
-	if ((d->KartStates.RevEngine.boolMaskGrab == true) && (d->KartStates.RevEngine.maskObj != NULL))
+	if ((d->KartStates.RevEngine.boolMaskGrab == true) && (P32_GET(struct MaskHeadWeapon *, d->KartStates.RevEngine.maskObj) != NULL))
 	{
-		d->KartStates.RevEngine.maskObj->duration = 0;
+		P32_GET(struct MaskHeadWeapon *, d->KartStates.RevEngine.maskObj)->duration = 0;
 	}
 
 	if ((d->const_AccelSpeed_ClassStat < d->KartStates.RevEngine.fireLevel) && (d->KartStates.RevEngine.lockoutFlags & REV_ENGINE_LOCKOUT_ALL) == 0)
@@ -949,7 +949,7 @@ void VehStuckProc_RevEngine_PhysLinear(struct Thread *t, struct Driver *d)
 {
 	u32 cooldownTimer;
 
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	cooldownTimer = (u16)d->KartStates.RevEngine.releaseCooldownTimerMS;
 	cooldownTimer = CTR_MipsSubLo(cooldownTimer, (u16)gGT->elapsedTimeMS);
@@ -977,9 +977,9 @@ void VehStuckProc_RevEngine_PhysLinear(struct Thread *t, struct Driver *d)
 	d->posCurr.y = CTR_MipsSubLo(d->posCurr.y, CTR_FRAME_STEP(VEH_STUCK_REV_MASK_DESCENT_STEP, sdata->gGT->timer));
 
 	// if maskObj exists
-	if (d->KartStates.RevEngine.maskObj != 0)
+	if (P32_GET(struct MaskHeadWeapon *, d->KartStates.RevEngine.maskObj) != 0)
 	{
-		d->KartStates.RevEngine.maskObj->duration = MASK_HEAD_DURATION_NORMAL;
+		P32_GET(struct MaskHeadWeapon *, d->KartStates.RevEngine.maskObj)->duration = MASK_HEAD_DURATION_NORMAL;
 	}
 
 	struct CameraDC *cDC = &gGT->cameraDC[d->driverID];
@@ -991,7 +991,7 @@ void VehStuckProc_RevEngine_PhysLinear(struct Thread *t, struct Driver *d)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80067b7c-0x80067f4c.
 void VehStuckProc_RevEngine_Animate(struct Thread *t, struct Driver *d)
 {
-	struct Instance *inst = t->inst;
+	struct Instance *inst = P32_GET(struct Instance *, t->inst);
 
 	if ((d->fireSpeed > 0) && (d->KartStates.RevEngine.releaseCooldownTimerMS == 0) && ((d->KartStates.RevEngine.lockoutFlags & REV_ENGINE_LOCKOUT_ALL) == 0))
 	{
@@ -1029,7 +1029,7 @@ void VehStuckProc_RevEngine_Animate(struct Thread *t, struct Driver *d)
 		}
 		else
 		{
-			s16 overRevTimerMS = (s16)CTR_MipsAddLo((u16)d->KartStates.RevEngine.overRevTimerMS, (u16)sdata->gGT->elapsedTimeMS);
+			s16 overRevTimerMS = (s16)CTR_MipsAddLo((u16)d->KartStates.RevEngine.overRevTimerMS, (u16)P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS);
 			d->KartStates.RevEngine.overRevTimerMS = overRevTimerMS;
 
 			if (VEH_STUCK_REV_OVERREV_TIMEOUT < overRevTimerMS)
@@ -1222,7 +1222,7 @@ void VehStuckProc_RevEngine_Init(struct Thread *t, struct Driver *d)
 
 	// assume reason for revving is: start of race
 	d->KartStates.RevEngine.boolMaskGrab = false;
-	d->KartStates.RevEngine.maskObj = NULL;
+	P32_SET(d->KartStates.RevEngine.maskObj, NULL);
 	d->KartStates.RevEngine.fireLevel = 0;
 
 	// if this is a mask grab
@@ -1230,17 +1230,17 @@ void VehStuckProc_RevEngine_Init(struct Thread *t, struct Driver *d)
 	{
 		// assume reason for revving is: mask grab
 		d->KartStates.RevEngine.boolMaskGrab = true;
-		d->KartStates.RevEngine.maskObj = VehPickupItem_MaskUseWeapon(d, false);
+		P32_SET(d->KartStates.RevEngine.maskObj, VehPickupItem_MaskUseWeapon(d, false));
 
 		d->actionsFlagSet &= ~ACTION_TOUCH_GROUND;
 
 		// CameraDC flag
-		sdata->gGT->cameraDC[d->driverID].flags |= CAMERA_FLAG_DIRECTION_CHANGED;
+		P32_GET(struct GameTracker *, sdata->gGT)->cameraDC[d->driverID].flags |= CAMERA_FLAG_DIRECTION_CHANGED;
 	}
 
 	for (s32 i = 0; i < DRIVER_FUNC_COUNT; i++)
 	{
-		d->funcPtrs[i] = PlayerRevEngineFuncTable[i];
+		P32_SET(d->funcPtrs[i], PlayerRevEngineFuncTable[i]);
 	}
 
 	d->boolFirstFrameSinceRevEngine = true;
@@ -1277,7 +1277,7 @@ void VehStuckProc_Tumble_Update(struct Thread *thread, struct Driver *driver)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800680d0-0x80068150.
 void VehStuckProc_Tumble_PhysLinear(struct Thread *thread, struct Driver *driver)
 {
-	driver->NoInputTimer = (s16)CTR_MipsSubLo((u16)driver->NoInputTimer, (u16)sdata->gGT->elapsedTimeMS);
+	driver->NoInputTimer = (s16)CTR_MipsSubLo((u16)driver->NoInputTimer, (u16)P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS);
 
 	if (driver->NoInputTimer < 0)
 	{
@@ -1298,7 +1298,7 @@ void VehStuckProc_Tumble_PhysLinear(struct Thread *thread, struct Driver *driver
 void VehStuckProc_Tumble_PhysAngular(struct Thread *thread, struct Driver *driver)
 {
 	(void)thread;
-	int elapsedTimeMS = sdata->gGT->elapsedTimeMS;
+	int elapsedTimeMS = P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS;
 
 	driver->numFramesSpentSteering = VEH_TUMBLE_STEERING_FRAME_SENTINEL;
 
@@ -1372,17 +1372,17 @@ void VehStuckProc_Tumble_Init(struct Thread *thread, struct Driver *driver)
 	driver->kartState = KS_BLASTED;
 	driver->turbo_MeterRoomLeft = 0;
 
-	if (LOAD_IsOpen_RacingOrBattle() && ((sdata->gGT->gameMode1 & ADVENTURE_ARENA) == 0))
+	if (LOAD_IsOpen_RacingOrBattle() && ((P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 & ADVENTURE_ARENA) == 0))
 	{
 		RB_Player_ModifyWumpa(driver, -VEH_TUMBLE_WUMPA_PENALTY);
 	}
 
-	driver->instSelf->animIndex = 0;
+	P32_GET(struct Instance *, driver->instSelf)->animIndex = 0;
 
-	int numAnimFrames = VehFrameInst_GetNumAnimFrames(driver->instSelf, 0);
+	int numAnimFrames = VehFrameInst_GetNumAnimFrames(P32_GET(struct Instance *, driver->instSelf), 0);
 	int animFrame = VehFrameInst_GetStartFrame(0, numAnimFrames);
 
-	driver->instSelf->animFrame = (s16)animFrame;
+	P32_GET(struct Instance *, driver->instSelf)->animFrame = (s16)animFrame;
 
 	int rng = MixRNG_Scramble();
 	driver->KartStates.Blasted.boolPlayBackwards = rng & VEH_TUMBLE_BACKWARDS_RNG_MASK;
@@ -1400,7 +1400,7 @@ void VehStuckProc_Tumble_Init(struct Thread *thread, struct Driver *driver)
 
 	for (int i = 0; i < DRIVER_FUNC_COUNT; i++)
 	{
-		driver->funcPtrs[i] = PlayerBlastedFuncTable[i];
+		P32_SET(driver->funcPtrs[i], PlayerBlastedFuncTable[i]);
 	}
 
 	GAMEPAD_JogCon1(driver, rumbleStrength, VEH_TUMBLE_RUMBLE_DURATION);
@@ -1541,7 +1541,7 @@ void VehStuckProc_Warp_MoveDustPuff(s16 *points, int span, int radius, s16 *jitt
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800685b0-0x80068644.
 void VehStuckProc_Warp_AddDustPuff1(struct ScratchpadStruct *sps)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// if even frame don't spawn
 	if (CTR_RETAIL_FRAME_INDEX(gGT->timer) & VEH_WARP_DUST_SPAWN_TIMER_BIT)
@@ -1551,7 +1551,7 @@ void VehStuckProc_Warp_AddDustPuff1(struct ScratchpadStruct *sps)
 
 	// Warp_PhysAngular only runs on the last rendered frame of each 30 FPS frame.
 	PARTICLE_SPAWN_UNGATED_BEGIN();
-	struct Particle *p = Particle_Init(0, gGT->iconGroup[1], &data.emSet_Warppad[0]);
+	struct Particle *p = Particle_Init(0, P32_GET(struct IconGroup *, gGT->iconGroup[1]), &data.emSet_Warppad[0]);
 	PARTICLE_SPAWN_UNGATED_END();
 
 	if (p == NULL)
@@ -1671,7 +1671,7 @@ static int VehWarpDust_SubmitNative(u32 **primCursor, struct PushBuffer *pb, u32
 	view.width = (float)pb->rect.w;
 	view.height = (float)pb->rect.h;
 	// Warp geometry is submitted by game logic, before the render mirror phase.
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	view.mirror = gNativeMirrorModeEnabled && !gGT->boolDemoMode &&
 	    !(gGT->gameMode1 & (GAME_CUTSCENE | MAIN_MENU | LOADING)) &&
 	    gGT->levelID >= DINGO_CANYON && gGT->levelID < INTRO_RACE_TODAY &&
@@ -1711,7 +1711,7 @@ static void VehWarpDust_EmitSegment(u32 **primCursor, struct PushBuffer *pb, con
                                     const SVECTOR *prevPoint, const SVECTOR *currPoint, int offsetX, int offsetY, int offsetZ)
 {
 	struct VehWarpDustPacket *packet = (struct VehWarpDustPacket *)*primCursor;
-	u32 *ot = pb->ptrOT + CTR_MipsSra((s32)curr->depth, VEH_WARP_DUST_OT_DEPTH_SHIFT);
+	u32 *ot = P32_GET(uint32_t *, pb->ptrOT) + CTR_MipsSra((s32)curr->depth, VEH_WARP_DUST_OT_DEPTH_SHIFT);
 #if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
 	if (VehWarpDust_SubmitNative(primCursor, pb, ot, prevPoint, currPoint, offsetX, offsetY, offsetZ)) return;
 #else
@@ -1745,10 +1745,10 @@ static void VehWarpDust_EmitSegment(u32 **primCursor, struct PushBuffer *pb, con
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80068644-0x80068be8.
 void VehStuckProc_Warp_AddDustPuff2(struct Driver *d, struct DriverWarpState *warp)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	struct PushBuffer *pb = &gGT->pushBuffer[d->driverID];
-	struct DB *backBuffer = gGT->backBuffer;
-	u32 *prim = backBuffer->primMem.cursor;
+	struct DB *backBuffer = P32_GET(struct DB *, gGT->backBuffer);
+	u32 *prim = P32_GET(void *, backBuffer->primMem.cursor);
 	struct VehWarpDustScratch *scratch = CTR_SCRATCHPAD_PTR(struct VehWarpDustScratch, 0);
 	SVECTOR *points = scratch->points;
 	SVECTOR *endpoint = &points[VEH_WARP_DUST_SEGMENTS];
@@ -1768,7 +1768,7 @@ void VehStuckProc_Warp_AddDustPuff2(struct Driver *d, struct DriverWarpState *wa
 	offsetY = CTR_MipsSra(pb->matrix_CameraTranspose.m[1][0], VEH_WARP_DUST_CAMERA_OFFSET_SHIFT);
 	offsetZ = CTR_MipsSra(pb->matrix_CameraTranspose.m[2][0], VEH_WARP_DUST_CAMERA_OFFSET_SHIFT);
 
-	if ((d->instSelf->flags & HIDE_MODEL) != 0)
+	if ((P32_GET(struct Instance *, d->instSelf)->flags & HIDE_MODEL) != 0)
 	{
 		endpoint->vx = (s16)CTR_MipsSra(d->posCurr.x, VEH_WARP_DUST_POSITION_SHIFT);
 		endpoint->vy = (s16)CTR_MipsSra(warp->beamHeight, VEH_WARP_DUST_POSITION_SHIFT);
@@ -1792,7 +1792,7 @@ void VehStuckProc_Warp_AddDustPuff2(struct Driver *d, struct DriverWarpState *wa
 		endpoint->vy = (s16)CTR_MipsSra(warp->beamHeight, VEH_WARP_DUST_POSITION_SHIFT);
 		endpoint->vz = (s16)CTR_MipsSra(d->posCurr.z, VEH_WARP_DUST_POSITION_SHIFT);
 
-		if ((d->instSelf->flags & HIDE_MODEL) == 0)
+		if ((P32_GET(struct Instance *, d->instSelf)->flags & HIDE_MODEL) == 0)
 		{
 			points[0].vx = VehWarpDust_AddHalf(points[0].vx, CTR_MipsNegLo(CTR_MipsSra(MATH_Sin(baseAngle), VEH_WARP_DUST_VISIBLE_BASE_OFFSET_SHIFT)));
 			points[0].vz = VehWarpDust_AddHalf(points[0].vz, CTR_MipsNegLo(CTR_MipsSra(MATH_Cos(baseAngle), VEH_WARP_DUST_VISIBLE_BASE_OFFSET_SHIFT)));
@@ -1827,7 +1827,7 @@ void VehStuckProc_Warp_AddDustPuff2(struct Driver *d, struct DriverWarpState *wa
 		}
 	}
 
-	backBuffer->primMem.cursor = prim;
+	P32_SET(backBuffer->primMem.cursor, prim);
 }
 
 
@@ -1844,7 +1844,7 @@ void VehStuckProc_Warp_PhysAngular(struct Thread *th, struct Driver *d)
 	SVec4 flarePos;
 
 	// get instance from driver object
-	struct Instance *inst = d->instSelf;
+	struct Instance *inst = P32_GET(struct Instance *, d->instSelf);
 
 	// if driver is visible
 	if ((inst->flags & HIDE_MODEL) == 0)
@@ -1965,10 +1965,10 @@ void VehStuckProc_Warp_Init(struct Thread *th, struct Driver *d)
 	EngineAudio_Stop((engine * VEH_WARP_ENGINE_AUDIO_STRIDE) + playerID);
 
 	// CameraDC, freecam mode
-	sdata->gGT->cameraDC[playerID].cameraMode = CAMERA_MODE_FREECAM;
+	P32_GET(struct GameTracker *, sdata->gGT)->cameraDC[playerID].cameraMode = CAMERA_MODE_FREECAM;
 
 	// driver -> instSelf
-	struct Instance *inst = d->instSelf;
+	struct Instance *inst = P32_GET(struct Instance *, d->instSelf);
 
 	// instance flags, now reflective
 	inst->flags |= REFLECTIVE;
@@ -1982,19 +1982,19 @@ void VehStuckProc_Warp_Init(struct Thread *th, struct Driver *d)
 	d->speed = 0;
 	d->speedApprox = 0;
 
-	d->funcPtrs[DRIVER_FUNC_INIT] = NULL;
-	d->funcPtrs[DRIVER_FUNC_UPDATE] = NULL;
-	d->funcPtrs[DRIVER_FUNC_PHYS_LINEAR] = NULL;
-	d->funcPtrs[DRIVER_FUNC_AUDIO] = VehPhysProc_Driving_Audio;
-	d->funcPtrs[DRIVER_FUNC_PHYS_ANGULAR] = VehStuckProc_Warp_PhysAngular;
-	d->funcPtrs[DRIVER_FUNC_APPLY_FORCES] = NULL;
-	d->funcPtrs[DRIVER_FUNC_COLL_MOVED] = NULL;
-	d->funcPtrs[DRIVER_FUNC_COLLIDE_DRIVERS] = NULL;
-	d->funcPtrs[DRIVER_FUNC_COLL_FIXED] = NULL;
-	d->funcPtrs[DRIVER_FUNC_JUMP_FRICTION] = NULL;
-	d->funcPtrs[DRIVER_FUNC_TRANSLATE_MATRIX] = VehPhysForce_TranslateMatrix;
-	d->funcPtrs[DRIVER_FUNC_ANIMATE] = VehFrameProc_Driving;
-	d->funcPtrs[DRIVER_FUNC_PARTICLES] = VehEmitter_DriverMain;
+	P32_SET(d->funcPtrs[DRIVER_FUNC_INIT], NULL);
+	P32_SET(d->funcPtrs[DRIVER_FUNC_UPDATE], NULL);
+	P32_SET(d->funcPtrs[DRIVER_FUNC_PHYS_LINEAR], NULL);
+	P32_SET(d->funcPtrs[DRIVER_FUNC_AUDIO], VehPhysProc_Driving_Audio);
+	P32_SET(d->funcPtrs[DRIVER_FUNC_PHYS_ANGULAR], VehStuckProc_Warp_PhysAngular);
+	P32_SET(d->funcPtrs[DRIVER_FUNC_APPLY_FORCES], NULL);
+	P32_SET(d->funcPtrs[DRIVER_FUNC_COLL_MOVED], NULL);
+	P32_SET(d->funcPtrs[DRIVER_FUNC_COLLIDE_DRIVERS], NULL);
+	P32_SET(d->funcPtrs[DRIVER_FUNC_COLL_FIXED], NULL);
+	P32_SET(d->funcPtrs[DRIVER_FUNC_JUMP_FRICTION], NULL);
+	P32_SET(d->funcPtrs[DRIVER_FUNC_TRANSLATE_MATRIX], VehPhysForce_TranslateMatrix);
+	P32_SET(d->funcPtrs[DRIVER_FUNC_ANIMATE], VehFrameProc_Driving);
+	P32_SET(d->funcPtrs[DRIVER_FUNC_PARTICLES], VehEmitter_DriverMain);
 
 	// driver is warping
 	d->actionsFlagSet |= ACTION_WARP;

@@ -75,31 +75,31 @@ int VehFrameInst_GetStartFrame(int animIndex, int numFrames)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8005b0f4-0x8005b178.
 u32 VehFrameInst_GetNumAnimFrames(struct Instance *inst, int animIndex)
 {
-	if (inst->model == NULL)
+	if (P32_GET(struct Model *, inst->model) == NULL)
 	{
 		return 0;
 	}
-	if (inst->model->numHeaders <= 0)
+	if (P32_GET(struct Model *, inst->model)->numHeaders <= 0)
 	{
 		return 0;
 	}
-	if (inst->model->headers == NULL)
+	if (P32_GET(struct ModelHeader *, P32_GET(struct Model *, inst->model)->headers) == NULL)
 	{
 		return 0;
 	}
 
-	struct ModelHeader *mh = inst->model->headers;
+	struct ModelHeader *mh = P32_GET(struct ModelHeader *, P32_GET(struct Model *, inst->model)->headers);
 
 	if (animIndex >= (int)mh->numAnimations)
 	{
 		return 0;
 	}
-	if (mh->ptrAnimations == NULL)
+	if (P32_GET(struct ModelAnim **, mh->ptrAnimations) == NULL)
 	{
 		return 0;
 	}
 
-	struct ModelAnim *anim = mh->ptrAnimations[animIndex];
+	struct ModelAnim *anim = P32_GET(struct ModelAnim **, mh->ptrAnimations)[animIndex];
 
 	if (anim == NULL)
 	{
@@ -133,12 +133,12 @@ static u8 VehFrame_MatrixIndex(struct Instance *inst)
 
 static void VehFrameProc_Driving_SpawnBurnSmoke(struct Driver *d)
 {
-	struct Particle *p = Particle_Init(0, sdata->gGT->iconGroup[VEH_FRAME_BURN_SMOKE_ICON_GROUP], &data.emSet_BurnSmoke[0]);
+	struct Particle *p = Particle_Init(0, P32_GET(struct IconGroup *, P32_GET(struct GameTracker *, sdata->gGT)->iconGroup[VEH_FRAME_BURN_SMOKE_ICON_GROUP]), &data.emSet_BurnSmoke[0]);
 
 	if (p != NULL)
 	{
-		p->otIndexOffset = d->instSelf->depthBiasNormal;
-		p->driverInst = d->instSelf;
+		p->otIndexOffset = P32_GET(struct Instance *, d->instSelf)->depthBiasNormal;
+		P32_SET(p->driverInst, P32_GET(struct Instance *, d->instSelf));
 		p->driverID = d->driverID;
 	}
 }
@@ -146,10 +146,10 @@ static void VehFrameProc_Driving_SpawnBurnSmoke(struct Driver *d)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8005b178-0x8005b510
 void VehFrameProc_Driving(struct Thread *t, struct Driver *d)
 {
-	struct Instance *inst = t->inst;
+	struct Instance *inst = P32_GET(struct Instance *, t->inst);
 	u8 desiredAnim = VEH_FRAME_ANIM_DRIVE;
 
-	if ((d->instTntRecv == NULL) && (d->kartState != KS_WARP_PAD))
+	if ((P32_GET(struct Instance *, d->instTntRecv) == NULL) && (d->kartState != KS_WARP_PAD))
 	{
 		if (d->fireSpeed < 0)
 		{
@@ -230,7 +230,7 @@ void VehFrameProc_Driving(struct Thread *t, struct Driver *d)
 	{
 		int targetFrame = numFrames >> 1;
 
-		if (d->instTntRecv == NULL)
+		if (P32_GET(struct Instance *, d->instTntRecv) == NULL)
 		{
 			s16 burnTimer = d->burnTimer;
 
@@ -301,7 +301,7 @@ void VehFrameProc_Driving(struct Thread *t, struct Driver *d)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8005b510-0x8005b5fc.
 void VehFrameProc_Spinning(struct Thread *t, struct Driver *d)
 {
-	struct Instance *inst = t->inst;
+	struct Instance *inst = P32_GET(struct Instance *, t->inst);
 	int numFrames = VehFrameInst_GetNumAnimFrames(inst, inst->animIndex);
 	int targetFrame;
 
@@ -350,7 +350,7 @@ void VehFrameProc_Spinning(struct Thread *t, struct Driver *d)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8005b5fc-0x8005b6b8.
 void VehFrameProc_LastSpin(struct Thread *t, struct Driver *d)
 {
-	struct Instance *inst = t->inst;
+	struct Instance *inst = P32_GET(struct Instance *, t->inst);
 
 	if (inst->animIndex != VEH_FRAME_ANIM_DRIVE)
 	{

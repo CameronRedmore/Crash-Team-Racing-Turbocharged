@@ -188,7 +188,7 @@ union VehEmitterWallScratch
 struct VehGroundSkidsScratch
 {
 	SVECTOR projected[3];
-	struct PushBuffer *pushBuffer;
+	P32(struct PushBuffer *) pushBuffer;
 	u32 colorNear;
 	u32 colorFar;
 	union
@@ -705,8 +705,8 @@ struct MetaPhys
 
 struct Turbo
 {
-	struct Instance *inst;
-	struct Driver *driver;
+	P32(struct Instance *) inst;
+	P32(struct Driver *) driver;
 
 	// 0x8
 	// Index for the animation frame of the exhaust fire
@@ -790,7 +790,7 @@ struct BotData
 	int reserved_0x5a0;
 
 	// 0x5a4, offset in `struct BotData` == 0xc
-	struct NavFrame *botNavFrame;
+	P32(struct NavFrame *) botNavFrame;
 
 	// 0x5a8
 	int navProgressRemainder;
@@ -862,7 +862,7 @@ struct BotData
 	};
 
 	// 0x620
-	struct MaskHeadWeapon *maskObj;
+	P32(struct MaskHeadWeapon *) maskObj;
 
 	// 0x624
 	s16 weaponCooldown;
@@ -879,7 +879,7 @@ struct BotData
 struct Driver
 {
 	// 0x0
-	struct Icon **wheelSprites;
+	P32(struct Icon **) wheelSprites;
 	// 0x4
 	u16 wheelSize;
 
@@ -897,18 +897,18 @@ struct Driver
 	// 0xE
 	s16 hazardTimer;
 	// 0x10
-	struct Instance *instBombThrow;
+	P32(struct Instance *) instBombThrow;
 	// 0x14
-	struct Instance *instBubbleHold;
+	P32(struct Instance *) instBubbleHold;
 	// 0x18
-	struct Instance *instTntRecv; // on your head
+	P32(struct Instance *) instTntRecv; // on your head
 	// 0x1C
-	struct Instance *instSelf;
+	P32(struct Instance *) instSelf;
 
 // Not in Aug Review
 #if BUILD >= SepReview
 	// 0x20
-	struct Instance *instTntSend; // on the ground
+	P32(struct Instance *) instTntSend; // on the ground
 #endif
 
 	// 0x24
@@ -1001,7 +1001,7 @@ struct Driver
 	// 0x7C - VehPhysForce_TranslateMatrix (pos, rot, scale)
 	// 0x80 - OnAnimate
 	// 0x84 - OnParticles
-	DriverFunc funcPtrs[DRIVER_FUNC_COUNT];
+	P32(DriverFunc) funcPtrs[DRIVER_FUNC_COUNT];
 
 	// 0x88
 	Vec3 velocity;
@@ -1011,7 +1011,7 @@ struct Driver
 
 	// 0xA0 - quadblock currently touched,
 	// it is zero while airborne
-	struct QuadBlock *currBlockTouching;
+	P32(struct QuadBlock *) currBlockTouching;
 
 	// 0xA4
 	SVec3 normalVecUP;
@@ -1142,19 +1142,19 @@ struct Driver
 	// 0x350
 	// continues updating while driver is airborne,
 	// used for VisMem (sometimes?)
-	struct QuadBlock *underDriver;
+	P32(struct QuadBlock *) underDriver;
 
 	// 0x354
 	// last "valid" quadblock the driver touched
 	// used for mask grab if next block is invalid
-	struct QuadBlock *lastValid;
+	P32(struct QuadBlock *) lastValid;
 
 	// 0x358
 	// is it ice, gravel, or what?
-	struct Terrain *terrainMeta1;
+	P32(struct Terrain *) terrainMeta1;
 
 	// 0x35C
-	struct Terrain *terrainMeta2;
+	P32(struct Terrain *) terrainMeta2;
 
 	// each normalVec is 8 bytes apart,
 	// used as an array of vec4s, with
@@ -1616,23 +1616,23 @@ struct Driver
 	u16 engineVol;
 
 	// 0x498
-	struct Instance *instBigNum;
+	P32(struct Instance *) instBigNum;
 
 	// 0x49c
-	struct Instance *instFruitDisp;
+	P32(struct Instance *) instFruitDisp;
 
 	// 0x4a0
 	// raincloud when you hit red potion
-	struct Thread *thCloud;
+	P32(struct Thread *) thCloud;
 
 	// 0x4a4
 	// pointer Tracking thread that
 	// is chasing this driver (missile/warpball)
-	struct Thread *thTrackingMe;
+	P32(struct Thread *) thTrackingMe;
 
 	// 0x4a8
 	// Papu pyramid plants, see 231.c
-	struct Thread *plantEatingMe;
+	P32(struct Thread *) plantEatingMe;
 
 	// 0x4ac
 	int damageColorTimer;
@@ -1722,7 +1722,7 @@ struct Driver
 	s16 quip4;
 
 	// 0x4f8
-	struct Instance *wakeInst;
+	P32(struct Instance *) wakeInst;
 
 	// 0x4fc
 	s16 wakeScale;
@@ -1735,7 +1735,7 @@ struct Driver
 	u8 pendingDamageType;
 
 	// 0x500
-	struct Driver *pendingDamageAttacker;
+	P32(struct Driver *) pendingDamageAttacker;
 
 	// 0x504
 	u8 pendingDamageReasonByte;
@@ -1856,7 +1856,7 @@ struct Driver
 	// characterID "Crash Bandicoot"
 
 	// 0x56c
-	s16 *EndOfRaceComment_ptrQuip;
+	P32(s16 *) EndOfRaceComment_ptrQuip;
 
 	// 0x570
 	int EndOfRaceComment_characterID;
@@ -1917,7 +1917,7 @@ struct Driver
 		{
 			// 0x580
 			// object connected to thread
-			struct MaskHeadWeapon *maskObj;
+			P32(struct MaskHeadWeapon *) maskObj;
 
 			// == Needs More Research ==
 
@@ -1952,7 +1952,7 @@ struct Driver
 		{
 			// 0x580
 			// object connected to thread
-			struct MaskHeadWeapon *maskObj;
+			P32(struct MaskHeadWeapon *) maskObj;
 
 			// 0x584
 			SVec3 AngleAxis_NormalVec;
@@ -2006,7 +2006,7 @@ struct Driver
 	// 0x62C - 0x670 reserved for ghost
 
 	// 0x62C
-	struct GhostTape *ghostTape;
+	P32(struct GhostTape *) ghostTape;
 
 	// 0x630
 	s16 ghostID;

@@ -8,10 +8,10 @@ void RB_TNT_ThTick_ThrowOffHead(struct Thread *t)
 	struct Instance *inst;
 	struct MineWeapon *mw;
 
-	inst = t->inst;
+	inst = P32_GET(struct Instance *, t->inst);
 
 	//  object (tnt)
-	mw = t->object;
+	mw = P32_GET(void *, t->object);
 
 	// do NOT use parenthesis
 	inst->matrix.t[1] += Timer_ScaleByElapsed(mw->velocity.y, 5);
@@ -19,12 +19,12 @@ void RB_TNT_ThTick_ThrowOffHead(struct Thread *t)
 #if defined(CTR_NATIVE)
 	// NOTE(aalhendi): Retail reads through driverTarget blindly here. Boss-thrown TNT can have
 	// no target, and native cannot mirror PS1 low-memory null reads.
-	if ((mw->stopFallAtY == 0x3fff) && (mw->driverTarget != NULL))
+	if ((mw->stopFallAtY == 0x3fff) && (P32_GET(struct Driver *, mw->driverTarget) != NULL))
 	{
 #else
 	if (mw->stopFallAtY == 0x3fff)
 #endif
-		mw->stopFallAtY = mw->driverTarget->instSelf->matrix.t[1];
+		mw->stopFallAtY = P32_GET(struct Instance *, P32_GET(struct Driver *, mw->driverTarget)->instSelf)->matrix.t[1];
 	}
 
 	if (inst->matrix.t[1] <= mw->stopFallAtY)
@@ -48,10 +48,10 @@ void RB_TNT_ThTick_ThrowOffHead(struct Thread *t)
 #if defined(CTR_NATIVE)
 		// NOTE(aalhendi) Retail writes through driverTarget blindly; boss-thrown TNT has no
 		// driver-owned instTntRecv slot to clear.
-		if (mw->driverTarget != NULL)
+		if (P32_GET(struct Driver *, mw->driverTarget) != NULL)
 		{
 #endif
-			mw->driverTarget->instTntRecv = 0;
+			P32_SET(P32_GET(struct Driver *, mw->driverTarget)->instTntRecv, 0);
 		}
 	}
 
@@ -84,19 +84,19 @@ void RB_TNT_ThTick_SitOnHead(struct Thread *t)
 	u16 scaleXZ;
 	int rng;
 
-	inst = t->inst;
+	inst = P32_GET(struct Instance *, t->inst);
 
 	// object (tnt)
-	mw = t->object;
+	mw = P32_GET(void *, t->object);
 
 	// CopyMatrix
 	// To: TNT instance
 	// From: obj->driverWhoHitMe->instance
 	// Delta: TNT -> 0x1c (position relative to driver)
-	LHMatrix_Parent(inst, mw->driverTarget->instSelf, &mw->deltaPos);
+	LHMatrix_Parent(inst, P32_GET(struct Instance *, P32_GET(struct Driver *, mw->driverTarget)->instSelf), &mw->deltaPos);
 
 	// Get Kart State
-	state = mw->driverTarget->kartState;
+	state = P32_GET(struct Driver *, mw->driverTarget)->kartState;
 
 	if ((state == KS_CRASHING) || (state == KS_MASK_GRABBED) || (state == KS_SPINNING))
 	{
@@ -118,7 +118,7 @@ void RB_TNT_ThTick_SitOnHead(struct Thread *t)
 		// this thread is now dead
 		t->flags |= THREAD_FLAG_DEAD;
 
-		mw->driverTarget->instTntRecv = 0;
+		P32_SET(P32_GET(struct Driver *, mw->driverTarget)->instTntRecv, 0);
 
 		return;
 	}
@@ -137,10 +137,10 @@ void RB_TNT_ThTick_SitOnHead(struct Thread *t)
 	}
 
 	// if this driver is not an AI
-	if ((mw->driverTarget->actionsFlagSet & ACTION_BOT) == 0)
+	if ((P32_GET(struct Driver *, mw->driverTarget)->actionsFlagSet & ACTION_BOT) == 0)
 	{
 		// if player did not start jumping this frame
-		if ((mw->driverTarget->actionsFlagSet & ACTION_JUMP_STARTED) == 0)
+		if ((P32_GET(struct Driver *, mw->driverTarget)->actionsFlagSet & ACTION_JUMP_STARTED) == 0)
 		{
 			goto LAB_800ad5f8;
 		}
@@ -166,7 +166,7 @@ void RB_TNT_ThTick_SitOnHead(struct Thread *t)
 	inst->scale.y = 0x800;
 	inst->scale.z = 0x800;
 
-	mw->driverTarget->instTntRecv = 0;
+	P32_SET(P32_GET(struct Driver *, mw->driverTarget)->instTntRecv, 0);
 
 	mw->velocity.x = 0;
 	mw->velocity.y = 0x30;
@@ -213,10 +213,10 @@ LAB_800ad5f8:
 	{
 		// Blow up
 
-		RB_Hazard_HurtDriver(mw->driverTarget, 2, mw->instParent->thread->object, 0);
+		RB_Hazard_HurtDriver(P32_GET(struct Driver *, mw->driverTarget), 2, P32_GET(void *, P32_GET(struct Thread *, P32_GET(struct Instance *, mw->instParent)->thread)->object), 0);
 
 		// icon damage timer, draw icon as red
-		mw->driverTarget->damageColorTimer = 0x1e;
+		P32_GET(struct Driver *, mw->driverTarget)->damageColorTimer = 0x1e;
 
 		// play 3D sound for TNT explosion
 		PlaySound3D(0x3d, inst);
@@ -226,7 +226,7 @@ LAB_800ad5f8:
 		// this thread is now dead
 		t->flags |= THREAD_FLAG_DEAD;
 
-		mw->driverTarget->instTntRecv = NULL;
+		P32_SET(P32_GET(struct Driver *, mw->driverTarget)->instTntRecv, NULL);
 		return;
 	}
 
@@ -253,10 +253,10 @@ void RB_TNT_ThTick_ThrowOnHead(struct Thread *t)
 	// temporary rotation matrix
 	MATRIX localMatrix;
 
-	inst = t->inst;
+	inst = P32_GET(struct Instance *, t->inst);
 
 	// object
-	mw = inst->thread->object;
+	mw = P32_GET(void *, P32_GET(struct Thread *, inst->thread)->object);
 
 	// alter height of TNT as it flies onto a driver's head,
 	// do NOT use parenthesis
@@ -267,7 +267,7 @@ void RB_TNT_ThTick_ThrowOnHead(struct Thread *t)
 	{
 		array = (s16 *)s_tntThrowHeadY;
 
-		distHead = array[data.characterIDs[mw->driverTarget->driverID]];
+		distHead = array[data.characterIDs[P32_GET(struct Driver *, mw->driverTarget)->driverID]];
 
 		// if TNT landed on head
 		if ((mw->deltaPos.y < distHead) && (mw->deltaPos.y = distHead, inst->scale.x == 0x800))
@@ -281,8 +281,8 @@ void RB_TNT_ThTick_ThrowOnHead(struct Thread *t)
 			// play sound that you hit a TNT
 			PlaySound3D(0x51, inst);
 
-			inst->depthBiasNormal = mw->driverTarget->instSelf->depthBiasNormal + -1;
-			inst->depthBiasSecondary = mw->driverTarget->instSelf->depthBiasSecondary + -1;
+			inst->depthBiasNormal = P32_GET(struct Instance *, P32_GET(struct Driver *, mw->driverTarget)->instSelf)->depthBiasNormal + -1;
+			inst->depthBiasSecondary = P32_GET(struct Instance *, P32_GET(struct Driver *, mw->driverTarget)->instSelf)->depthBiasSecondary + -1;
 
 			// assign
 			ThTick_SetAndExec(t, RB_TNT_ThTick_SitOnHead);
@@ -291,7 +291,7 @@ void RB_TNT_ThTick_ThrowOnHead(struct Thread *t)
 	}
 
 	// CopyMatrix
-	LHMatrix_Parent(inst, mw->driverTarget->instSelf, &mw->deltaPos);
+	LHMatrix_Parent(inst, P32_GET(struct Instance *, P32_GET(struct Driver *, mw->driverTarget)->instSelf), &mw->deltaPos);
 
 	// rotation
 	rot.x = 0;

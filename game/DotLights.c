@@ -85,7 +85,7 @@ void DotLights_Video(struct GameTracker *gGT, s32 red1, s32 red2, s32 red3, s32 
 			scale = DOT_LIGHT_SCALE_2P;
 		}
 
-		struct Icon *icon = gGT->trafficLightIcon[0];
+		struct Icon *icon = P32_GET(struct Icon *, gGT->trafficLightIcon[0]);
 		s32 sizeX = FP_Mult(icon->texLayout.u1 - icon->texLayout.u0, scale);
 
 		s32 newPosX = (pb->rect.w - (sizeX * DOT_LIGHT_COUNT)) / 2;
@@ -94,7 +94,7 @@ void DotLights_Video(struct GameTracker *gGT, s32 red1, s32 red2, s32 red3, s32 
 		for (s32 lightIndex = 0; lightIndex < DOT_LIGHT_COUNT; lightIndex++)
 		{
 			s32 iconIndex = iconState[lightIndex] + (DOT_LIGHT_GREEN_ICON_OFFSET * (lightIndex == DOT_LIGHT_GREEN_INDEX));
-			DecalHUD_DrawPolyFT4(gGT->trafficLightIcon[iconIndex], newPosX + (sizeX * lightIndex), newPosY, &gGT->backBuffer->primMem, pb->ptrOT, 0, scale);
+			DecalHUD_DrawPolyFT4(P32_GET(struct Icon *, gGT->trafficLightIcon[iconIndex]), newPosX + (sizeX * lightIndex), newPosY, &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, pb->ptrOT), 0, scale);
 		}
 	}
 }

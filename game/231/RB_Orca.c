@@ -79,12 +79,12 @@ static void RB_Orca_SpawnSplash(struct Instance *orcaInst)
 	struct GameTracker *gGT;
 	int i;
 
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	PARTICLE_SPAWN_UNGATED_BEGIN();
 	for (i = 0; i < 0xF; i++)
 	{
-		particle = Particle_Init(0, gGT->iconGroup[1], &emSet_OrcaSplash[0]);
+		particle = Particle_Init(0, P32_GET(struct IconGroup *, gGT->iconGroup[1]), &emSet_OrcaSplash[0]);
 
 		if (particle == 0)
 		{
@@ -110,8 +110,8 @@ void RB_Orca_ThTick(struct Thread *t)
 	int nextFrame;
 	s16 direction;
 
-	orcaObj = (struct Orca *)t->object;
-	orcaInst = t->inst;
+	orcaObj = (struct Orca *)P32_GET(void *, t->object);
+	orcaInst = P32_GET(struct Instance *, t->inst);
 
 	if (orcaObj->cooldown != 0)
 	{
@@ -168,7 +168,7 @@ void RB_Orca_ThTick(struct Thread *t)
 
 	if (nextFrame < orcaObj->numFrames)
 	{
-		gGT = sdata->gGT;
+		gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 		if ((gGT->numPlyrCurrGame < 2) && ((nextFrame == INSTANCE_ScaleAnimFrames(orcaInst, 0, 5)) || (nextFrame == INSTANCE_ScaleAnimFrames(orcaInst, 0, 0x31))))
 		{
@@ -215,7 +215,7 @@ void RB_Orca_LInB(struct Instance *inst)
 	s16 *metaArray;
 	int orcaID;
 
-	if (inst->thread != 0)
+	if (P32_GET(struct Thread *, inst->thread) != 0)
 	{
 		return;
 	}
@@ -234,31 +234,31 @@ void RB_Orca_LInB(struct Instance *inst)
 		return;
 	}
 
-	inst->thread = t;
-	t->funcThCollide = (void *)RB_Orca_ThCollide;
-	t->inst = inst;
+	P32_SET(inst->thread, t);
+	P32_SET(t->funcThCollide, (void *)RB_Orca_ThCollide);
+	P32_SET(t->inst, inst);
 
 	inst->scale.x = 0xC00;
 	inst->scale.y = 0xC00;
 	inst->scale.z = 0xC00;
 	inst->flags |= DRAW_HUGE;
 
-	orcaObj = (struct Orca *)t->object;
+	orcaObj = (struct Orca *)P32_GET(void *, t->object);
 	orcaObj->animIndex = INSTANCE_ScaleAnimFrames(inst, 0, -10);
 	orcaObj->direction = 1;
-	orcaObj->instDefRot.x = inst->instDef->rot.x;
-	orcaObj->instDefRot.y = inst->instDef->rot.y;
-	orcaObj->instDefRot.z = inst->instDef->rot.z;
+	orcaObj->instDefRot.x = P32_GET(struct InstDef *, inst->instDef)->rot.x;
+	orcaObj->instDefRot.y = P32_GET(struct InstDef *, inst->instDef)->rot.y;
+	orcaObj->instDefRot.z = P32_GET(struct InstDef *, inst->instDef)->rot.z;
 
 	orcaID = inst->name[strlen(inst->name) - 1] - '0';
 	orcaObj->orcaID = orcaID;
 
-	if (sdata->gGT->level1->numSpawnType2 != 0)
+	if (P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->numSpawnType2 != 0)
 	{
-		spawnType2 = &sdata->gGT->level1->ptrSpawnType2[orcaID + 4];
+		spawnType2 = &P32_GET(struct SpawnType2 *, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->ptrSpawnType2)[orcaID + 4];
 
-		orcaObj->startPos = spawnType2->positions[0];
-		orcaObj->endPos = spawnType2->positions[1];
+		orcaObj->startPos = P32_GET(SVec3 *, spawnType2->positions)[0];
+		orcaObj->endPos = P32_GET(SVec3 *, spawnType2->positions)[1];
 	}
 
 	orcaObj->pathDelta.x = orcaObj->startPos.x - orcaObj->endPos.x;
@@ -267,7 +267,7 @@ void RB_Orca_LInB(struct Instance *inst)
 
 	orcaObj->numFrames = INSTANCE_GetNumAnimFrames(inst, 0);
 
-	if (sdata->gGT->level1->ptrSpawnType1->count <= 0)
+	if (P32_GET(struct SpawnType1 *, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->ptrSpawnType1)->count <= 0)
 	{
 		return;
 	}

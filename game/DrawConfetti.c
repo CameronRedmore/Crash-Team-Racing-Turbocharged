@@ -145,7 +145,7 @@ static void DrawConfetti_LinkPrimitive(POLY_F4 *poly, uint32_t *ot)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80069ffc-0x8006a4c4
 void DrawConfetti(struct PushBuffer *pb, struct PrimMem *primMem, struct GameTrackerConfetti *confetti, int frameTimer, int gameMode1)
 {
-	POLY_F4 *prim = primMem->cursor;
+	POLY_F4 *prim = P32_GET(void *, primMem->cursor);
 	struct DrawConfettiScratch *scratch = CTR_SCRATCHPAD_PTR(struct DrawConfettiScratch, 0x30);
 	struct TrigPair cameraTrig;
 	u32 screenBounds;
@@ -220,7 +220,7 @@ void DrawConfetti(struct PushBuffer *pb, struct PrimMem *primMem, struct GameTra
 	}
 
 	screenBounds = DrawConfetti_ReadWord(pb, 0x20);
-	otBase = pb->ptrOT;
+	otBase = P32_GET(uint32_t *, pb->ptrOT);
 	timer = (u32)frameTimer;
 	baseX = -pb->pos.x + centerX;
 	baseY = (s32)((u32)confetti->velY * timer - (u32)(s32)pb->pos.y);
@@ -234,7 +234,7 @@ void DrawConfetti(struct PushBuffer *pb, struct PrimMem *primMem, struct GameTra
 	particleCount = currentParticles;
 	int nativeLayer = -1;
 #if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
-	if (NATIVE_DRAW3D_ACTIVE() && (u8 *)prim + sizeof(DR_PSYX_DRAW3D) <= (u8 *)primMem->guardEnd)
+	if (NATIVE_DRAW3D_ACTIVE() && (u8 *)prim + sizeof(DR_PSYX_DRAW3D) <= (u8 *)P32_GET(void *, primMem->guardEnd))
 	{
 		NativeDraw3DView view = {0};
 		double rotation[9], translation[3];
@@ -401,12 +401,12 @@ void DrawConfetti(struct PushBuffer *pb, struct PrimMem *primMem, struct GameTra
 		NativeDraw3D_EndLayer(nativeLayer);
 		DR_PSYX_DRAW3D *marker = (DR_PSYX_DRAW3D *)prim;
 		NativeDraw3D_SetMarker(marker, nativeLayer);
-		AddPrim(&pb->ptrOT[0x3fc], marker);
-		primMem->cursor = marker + 1;
+		AddPrim(&P32_GET(uint32_t *, pb->ptrOT)[0x3fc], marker);
+		P32_SET(primMem->cursor, marker + 1);
 		return;
 	}
 #else
 	(void)nativeLayer;
 #endif
-	primMem->cursor = prim;
+	P32_SET(primMem->cursor, prim);
 }

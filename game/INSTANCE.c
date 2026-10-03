@@ -6,7 +6,7 @@ void INSTANCE_Birth(struct Instance *inst, struct Model *model, const char *name
 	int i;
 	struct GameTracker *gGT;
 
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// copy name
 #ifdef CTR_NATIVE
@@ -33,28 +33,28 @@ void INSTANCE_Birth(struct Instance *inst, struct Model *model, const char *name
 	inst->animIndex = 0;
 	inst->specLightX = 1;
 
-	inst->model = model;
+	P32_SET(inst->model, model);
 
 	inst->scale = (SVec3){{0x1000, 0x1000, 0x1000}};
 
 	inst->alphaScale = 0;
 	inst->colorRGBA = 0;
 	inst->flags = flags;
-	inst->instDef = 0;
+	P32_SET(inst->instDef, 0);
 
 	inst->animFrame = 0;
 	inst->vertSplit = 0;
 	inst->reflectionRGBA = 0x7f7f7f;
 
-	inst->thread = th;
+	P32_SET(inst->thread, th);
 	inst->compressedNormalAndDriverIndex = 0;
 
 	struct InstDrawPerPlayer *idpp = INST_GETIDPP(inst);
 
 	for (i = 0; i < gGT->numPlyrCurrGame; i++)
 	{
-		idpp[i].pushBuffer = &gGT->pushBuffer[i];
-		idpp[i].mh = 0;
+		P32_SET(idpp[i].pushBuffer, &gGT->pushBuffer[i]);
+		P32_SET(idpp[i].mh, 0);
 		idpp[i].instFlags = 0;
 	}
 }
@@ -63,7 +63,7 @@ void INSTANCE_Birth(struct Instance *inst, struct Model *model, const char *name
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8003086c-0x800308e4.
 struct Instance *INSTANCE_Birth3D(struct Model *model, const char *name, struct Thread *th)
 {
-	struct Instance *inst = (struct Instance *)JitPool_Add(&sdata->gGT->JitPools.instance);
+	struct Instance *inst = (struct Instance *)JitPool_Add(&P32_GET(struct GameTracker *, sdata->gGT)->JitPools.instance);
 
 	if (inst != 0)
 	{
@@ -77,7 +77,7 @@ struct Instance *INSTANCE_Birth3D(struct Model *model, const char *name, struct 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800308e4-0x800309a4.
 struct Instance *INSTANCE_Birth2D(struct Model *model, const char *name, struct Thread *th)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	struct Instance *inst;
 	struct InstDrawPerPlayer *idpp;
 	int i;
@@ -90,11 +90,11 @@ struct Instance *INSTANCE_Birth2D(struct Model *model, const char *name, struct 
 	}
 
 	idpp = INST_GETIDPP(inst);
-	idpp[0].pushBuffer = &gGT->pushBuffer_UI;
+	P32_SET(idpp[0].pushBuffer, &gGT->pushBuffer_UI);
 
 	for (i = 1; i < gGT->numPlyrCurrGame; i++)
 	{
-		idpp[i].pushBuffer = 0;
+		P32_SET(idpp[i].pushBuffer, 0);
 	}
 
 	return inst;
@@ -109,9 +109,9 @@ struct Instance *INSTANCE_BirthWithThread(int modelID, const char *name, int poo
 	struct Thread *t;
 	struct Instance *inst;
 
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
-	m = gGT->modelPtr[modelID];
+	m = P32_GET(struct Model *, gGT->modelPtr[modelID]);
 
 	if (m == NULL)
 	{
@@ -170,7 +170,7 @@ struct Instance *INSTANCE_BirthWithThread(int modelID, const char *name, int poo
 
 	*/
 
-	t->inst = inst;
+	P32_SET(t->inst, inst);
 
 	return inst;
 }
@@ -189,7 +189,7 @@ struct Instance *INSTANCE_BirthWithThread_Stack(int *spArr)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80030aa8-0x80030ad4.
 void INSTANCE_Death(struct Instance *inst)
 {
-	JitPool_Remove(&sdata->gGT->JitPools.instance, (struct Item *)inst);
+	JitPool_Remove(&P32_GET(struct GameTracker *, sdata->gGT)->JitPools.instance, (struct Item *)inst);
 }
 
 
@@ -202,7 +202,7 @@ void INSTANCE_LevInitAll(struct InstDef *levInstDef, int numInst)
 	int *src;
 	struct Instance *inst;
 	struct MetaDataMODEL *meta;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	for (int i = 0; i < numInst; i++)
 	{
@@ -212,7 +212,7 @@ void INSTANCE_LevInitAll(struct InstDef *levInstDef, int numInst)
 		// NOT writing to model
 		// InstDef + 0x10 + 0x1c
 		// InstDef -> 0x2C = ptrInstance
-		levInstDef->ptrInstance = inst;
+		P32_SET(levInstDef->ptrInstance, inst);
 
 		// if allocation failed
 		if (inst == NULL)
@@ -257,7 +257,7 @@ void INSTANCE_LevInitAll(struct InstDef *levInstDef, int numInst)
 
 		// instace -> instDef
 		// the two are now linked on both ends
-		inst->instDef = levInstDef;
+		P32_SET(inst->instDef, levInstDef);
 
 		inst->vertSplit = 0;
 		inst->specLightX = 1;
@@ -269,17 +269,17 @@ void INSTANCE_LevInitAll(struct InstDef *levInstDef, int numInst)
 		// instance posX and posY
 		CTR_COPY_VEC3(inst->matrix.t, levInstDef->pos.v);
 
-		inst->thread = NULL;
+		P32_SET(inst->thread, NULL);
 		struct InstDrawPerPlayer *idpp = INST_GETIDPP(inst);
 
 		// loop through InstDrawPerPlayer
 		for (s32 j = 0; j < gGT->numPlyrCurrGame; j++)
 		{
-			idpp[j].mh = 0;
-			idpp[j].pushBuffer = &gGT->pushBuffer[j];
+			P32_SET(idpp[j].mh, 0);
+			P32_SET(idpp[j].pushBuffer, &gGT->pushBuffer[j]);
 		}
 
-		modelID = levInstDef->model->id;
+		modelID = P32_GET(struct Model *, levInstDef->model)->id;
 
 		// can be -1
 		if ((s16)modelID > 0)
@@ -290,10 +290,10 @@ void INSTANCE_LevInitAll(struct InstDef *levInstDef, int numInst)
 			{
 				meta = COLL_LevModelMeta(modelID);
 
-				if (meta->LInB != NULL)
+				if (P32_GET(void (*)(struct Instance *), meta->LInB) != NULL)
 				{
 					// call funcLevInstDefBirth, make thread for this instance
-					meta->LInB(inst);
+					P32_GET(void (*)(struct Instance *), meta->LInB)(inst);
 				}
 			}
 		}
@@ -366,11 +366,11 @@ void INSTANCE_LevDelayedLInBs(struct InstDef *instDef, int numInstances)
 {
 	for (int i = 0; i < numInstances; i++)
 	{
-		struct MetaDataMODEL *meta = COLL_LevModelMeta(instDef->model->id);
+		struct MetaDataMODEL *meta = COLL_LevModelMeta(P32_GET(struct Model *, instDef->model)->id);
 
-		if ((meta != NULL) && (meta->LInB != NULL))
+		if ((meta != NULL) && (P32_GET(void (*)(struct Instance *), meta->LInB) != NULL))
 		{
-			meta->LInB(instDef->ptrInstance);
+			P32_GET(void (*)(struct Instance *), meta->LInB)(P32_GET(struct Instance *, instDef->ptrInstance));
 		}
 
 		instDef++;
@@ -380,26 +380,26 @@ void INSTANCE_LevDelayedLInBs(struct InstDef *instDef, int numInstances)
 
 b32 INSTANCE_Use60FpsAnimation(struct Instance *inst)
 {
-	if (!CTR_NATIVE_60FPS_ACTIVE || (inst == NULL) || (inst->model == NULL) || (inst->model->numHeaders <= 0) || (inst->model->headers == NULL))
+	if (!CTR_NATIVE_60FPS_ACTIVE || (inst == NULL) || (P32_GET(struct Model *, inst->model) == NULL) || (P32_GET(struct Model *, inst->model)->numHeaders <= 0) || (P32_GET(struct ModelHeader *, P32_GET(struct Model *, inst->model)->headers) == NULL))
 	{
 		return false;
 	}
 
-	if (memcmp(inst->model->headers[0].name, "big1", 4) == 0)
+	if (memcmp(P32_GET(struct ModelHeader *, P32_GET(struct Model *, inst->model)->headers)[0].name, "big1", 4) == 0)
 	{
 		return false;
 	}
 
-	if (inst->model->id == DYNAMIC_FIREBALL)
+	if (P32_GET(struct Model *, inst->model)->id == DYNAMIC_FIREBALL)
 	{
 		return false;
 	}
 
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	if ((gGT != NULL) && (gGT->overlayIndex_Threads == OVERLAY_INDEX_PODIUMS))
 	{
-		struct Driver *driver = gGT->drivers[0];
-		return (driver != NULL) && (driver->instSelf == inst);
+		struct Driver *driver = P32_GET(struct Driver *, gGT->drivers[0]);
+		return (driver != NULL) && (P32_GET(struct Instance *, driver->instSelf) == inst);
 	}
 
 	return true;
@@ -415,13 +415,13 @@ b32 INSTANCE_AnimFramesScaled(struct Instance *inst, int animIndex)
 		return false;
 	}
 
-	struct ModelHeader *header = inst->model->headers;
-	if ((header->ptrAnimations == NULL) || (animIndex < 0) || (animIndex >= (int)header->numAnimations))
+	struct ModelHeader *header = P32_GET(struct ModelHeader *, P32_GET(struct Model *, inst->model)->headers);
+	if ((P32_GET(struct ModelAnim **, header->ptrAnimations) == NULL) || (animIndex < 0) || (animIndex >= (int)header->numAnimations))
 	{
 		return false;
 	}
 
-	struct ModelAnim *anim = header->ptrAnimations[animIndex];
+	struct ModelAnim *anim = P32_GET(struct ModelAnim **, header->ptrAnimations)[animIndex];
 	return (anim != NULL) && ((anim->numFrames & 0x8000) == 0);
 }
 
@@ -444,22 +444,22 @@ u16 INSTANCE_GetNumAnimFrames(struct Instance *pInstance, int animIndex)
 	struct ModelAnim *pAnim;
 
 	// get model from instance and validate
-	if (pModel = pInstance->model, pModel != NULL)
+	if (pModel = P32_GET(struct Model *, pInstance->model), pModel != NULL)
 	{
 		// if model got headers
 		if (pModel->numHeaders > 0)
 		{
 			// get first header ptr and validate
-			if (pHeader = pModel->headers, pHeader != NULL)
+			if (pHeader = P32_GET(struct ModelHeader *, pModel->headers), pHeader != NULL)
 			{
 				// if header got animations
-				if (pHeader->ptrAnimations != NULL)
+				if (P32_GET(struct ModelAnim **, pHeader->ptrAnimations) != NULL)
 				{
 					// validate anim index param
 					if (animIndex < (int)pHeader->numAnimations)
 					{
 						// get proper animation ptr and validate
-						if (pAnim = *(pHeader->ptrAnimations + animIndex), pAnim != NULL)
+						if (pAnim = *(P32_GET(struct ModelAnim **, pHeader->ptrAnimations) + animIndex), pAnim != NULL)
 						{
 							// we're finally there, get number of frames
 							// remember it's masked due to interp flag

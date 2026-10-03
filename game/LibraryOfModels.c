@@ -17,7 +17,7 @@ void LibraryOfModels_Store(struct GameTracker *gGT, u32 numModels, struct Model 
 		}
 		if (m->id != -1)
 		{
-			gGT->modelPtr[m->id] = m;
+			P32_SET(gGT->modelPtr[m->id], m);
 		}
 		numModels--;
 		ptrModelArray++;
@@ -29,6 +29,6 @@ void LibraryOfModels_Clear(struct GameTracker *gGT)
 {
 	for (s32 i = 0; i < LIBRARY_OF_MODELS_CLEAR_COUNT; i++)
 	{
-		gGT->modelPtr[i] = 0;
+		P32_SET(gGT->modelPtr[i], 0);
 	}
 }

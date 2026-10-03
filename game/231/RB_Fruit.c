@@ -36,8 +36,8 @@ void RB_Fruit_ThTick(struct Thread *fruitTh)
 {
 	struct Instance *fruitInst;
 
-	fruitInst = fruitTh->inst;
-	fruitInst->thread = NULL;
+	fruitInst = P32_GET(struct Instance *, fruitTh->inst);
+	P32_SET(fruitInst->thread, NULL);
 	fruitTh->flags |= THREAD_FLAG_DEAD;
 }
 
@@ -52,9 +52,9 @@ int RB_Fruit_ThCollide(struct Thread *fruitTh, struct Thread *driverTh, void *fu
 	struct Fruit *fruitObj;
 	int modelID;
 
-	fruitObj = fruitTh->object;
+	fruitObj = P32_GET(void *, fruitTh->object);
 	modelID = sps->Input1.modelID;
-	fruitInst = fruitTh->inst;
+	fruitInst = P32_GET(struct Instance *, fruitTh->inst);
 
 	// wumpa fruit can be grabbed by players and robotcars
 	if ((modelID != DYNAMIC_PLAYER) && (modelID != DYNAMIC_ROBOT_CAR))
@@ -62,10 +62,10 @@ int RB_Fruit_ThCollide(struct Thread *fruitTh, struct Thread *driverTh, void *fu
 		return 0;
 	}
 
-	driver = driverTh->object;
+	driver = P32_GET(void *, driverTh->object);
 	if (modelID == DYNAMIC_PLAYER)
 	{
-		pb = &sdata->gGT->pushBuffer[driver->driverID];
+		pb = &P32_GET(struct GameTracker *, sdata->gGT)->pushBuffer[driver->driverID];
 		RB_Fruit_GetScreenCoords(pb, fruitInst, &posScreen[0]);
 
 		driver->PickupWumpaHUD.startX = pb->rect.x + posScreen[0];
@@ -74,11 +74,11 @@ int RB_Fruit_ThCollide(struct Thread *fruitTh, struct Thread *driverTh, void *fu
 		driver->PickupWumpaHUD.numCollected++;
 	}
 
-	fruitObj->driver = driver;
+	P32_SET(fruitObj->driver, driver);
 
 	CTR_WriteU32LE(&fruitInst->scale.x, 0);
 	fruitInst->scale.z = 0;
-	fruitInst->thread = NULL;
+	P32_SET(fruitInst->thread, NULL);
 
 #if defined(__vita__)
 	if (!NativeAdhoc_IsConnected() || (modelID != DYNAMIC_PLAYER) || NativeAdhoc_ShouldPresentDriver(driver->driverID))
@@ -104,7 +104,7 @@ int RB_Fruit_LInC(struct Instance *fruitInst, struct Thread *driverTh, struct Sc
 {
 	struct Thread *fruitTh;
 
-	fruitTh = fruitInst->thread;
+	fruitTh = P32_GET(struct Thread *, fruitInst->thread);
 	if (fruitTh == NULL)
 	{
 		fruitTh = PROC_BirthWithObject(
@@ -116,18 +116,18 @@ int RB_Fruit_LInC(struct Instance *fruitInst, struct Thread *driverTh, struct Sc
 		    0                // thread relative
 		);
 
-		fruitInst->thread = fruitTh;
+		P32_SET(fruitInst->thread, fruitTh);
 		if (fruitTh == NULL)
 		{
 			return 0;
 		}
 
-		fruitTh->inst = fruitInst;
-		fruitTh->funcThCollide = (void *)RB_Fruit_ThCollide;
-		fruitTh = fruitInst->thread;
+		P32_SET(fruitTh->inst, fruitInst);
+		P32_SET(fruitTh->funcThCollide, (void *)RB_Fruit_ThCollide);
+		fruitTh = P32_GET(struct Thread *, fruitInst->thread);
 	}
 
-	if ((fruitTh == NULL) || (fruitTh->funcThCollide == NULL))
+	if ((fruitTh == NULL) || (P32_GET(void *, fruitTh->funcThCollide) == NULL))
 	{
 		return 0;
 	}
@@ -137,5 +137,5 @@ int RB_Fruit_LInC(struct Instance *fruitInst, struct Thread *driverTh, struct Sc
 		return 0;
 	}
 
-	return ((ThreadScratchCollideFunc)fruitTh->funcThCollide)(fruitTh, driverTh, fruitTh->funcThCollide, sps);
+	return ((ThreadScratchCollideFunc)P32_GET(void *, fruitTh->funcThCollide))(fruitTh, driverTh, P32_GET(void *, fruitTh->funcThCollide), sps);
 }

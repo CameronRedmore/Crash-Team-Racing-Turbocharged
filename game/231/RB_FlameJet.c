@@ -230,9 +230,9 @@ void RB_FlameJet_Particles(struct Instance *inst, struct FlameJet *fjObj)
 	int result;
 	struct Particle *particle1;
 	struct Particle *particle2;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
-	particle1 = Particle_Init(0, gGT->iconGroup[0xA], &emSet_fjFire[0]);
+	particle1 = Particle_Init(0, P32_GET(struct IconGroup *, gGT->iconGroup[0xA]), &emSet_fjFire[0]);
 
 	// fire particle
 	if (particle1 != 0)
@@ -316,10 +316,10 @@ void RB_FlameJet_ThTick(struct Thread *t)
 	struct Instance *hitInst;
 	struct Driver *hitDriver;
 
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
-	fjInst = t->inst;
-	fjObj = (struct FlameJet *)t->object;
+	fjInst = P32_GET(struct Instance *, t->inst);
+	fjObj = (struct FlameJet *)P32_GET(void *, t->object);
 
 	// NOTE(aalhendi): ASM-verified audio/lifecycle path for NTSC-U 926 0x800b6728-0x800b6938.
 	if (fjObj->cooldown != 0)
@@ -340,31 +340,31 @@ void RB_FlameJet_ThTick(struct Thread *t)
 
 		// === Collision ===
 
-		fjBoxDesc.inst = fjInst;
-		fjBoxDesc.thread = t;
+		P32_SET(fjBoxDesc.inst, fjInst);
+		P32_SET(fjBoxDesc.thread, t);
 
-		fjBoxDesc.bucket = gGT->threadBuckets[PLAYER].thread;
+		P32_SET(fjBoxDesc.bucket, P32_GET(struct Thread *, gGT->threadBuckets[PLAYER].thread));
 		hitInst = LinkedCollide_Hitbox_Desc(&fjBoxDesc);
 
 		// no PLAYER
 		if (hitInst == 0)
 		{
-			fjBoxDesc.bucket = gGT->threadBuckets[ROBOT].thread;
+			P32_SET(fjBoxDesc.bucket, P32_GET(struct Thread *, gGT->threadBuckets[ROBOT].thread));
 			hitInst = LinkedCollide_Hitbox_Desc(&fjBoxDesc);
 
 			// no ROBOT
 			if (hitInst == 0)
 			{
-				fjBoxDesc.bucket = gGT->threadBuckets[MINE].thread;
+				P32_SET(fjBoxDesc.bucket, P32_GET(struct Thread *, gGT->threadBuckets[MINE].thread));
 				hitInst = LinkedCollide_Hitbox_Desc(&fjBoxDesc);
 
 				// hit MINE
 				if (hitInst != 0)
 				{
-					struct Thread *threadHit = hitInst->thread;
+					struct Thread *threadHit = P32_GET(struct Thread *, hitInst->thread);
 
-					fjBoxDesc.threadHit = threadHit;
-					fjBoxDesc.funcThCollide = threadHit->funcThCollide;
+					P32_SET(fjBoxDesc.threadHit, threadHit);
+					P32_SET(fjBoxDesc.funcThCollide, P32_GET(void *, threadHit->funcThCollide));
 
 					// optimization
 					RB_Hazard_ThCollide_Generic(threadHit);
@@ -379,7 +379,7 @@ void RB_FlameJet_ThTick(struct Thread *t)
 		// === Hit Player or Robot ===
 
 		// get driver from instance
-		hitDriver = (struct Driver *)hitInst->thread->object;
+		hitDriver = (struct Driver *)P32_GET(void *, P32_GET(struct Thread *, hitInst->thread)->object);
 		RB_Hazard_HurtDriver(hitDriver, 4, 0, 0);
 	}
 
@@ -401,7 +401,7 @@ void RB_FlameJet_ThTick(struct Thread *t)
 EndFjThTick:
 
 	fjObj->cycleTimer++;
-	Vector_SpecLightNoSpin3D(fjInst, &fjInst->instDef->rot, &fjLightDir);
+	Vector_SpecLightNoSpin3D(fjInst, &P32_GET(struct InstDef *, fjInst->instDef)->rot, &fjLightDir);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b6938-0x800b6d58.
@@ -418,7 +418,7 @@ void RB_FlameJet_LInB(struct Instance *inst)
 	// yellow
 	inst->flags |= (DRAW_TRANSPARENT | USE_SPECULAR_LIGHT);
 
-	if (inst->thread != 0)
+	if (P32_GET(struct Thread *, inst->thread) != 0)
 	{
 		return;
 	}
@@ -436,10 +436,10 @@ void RB_FlameJet_LInB(struct Instance *inst)
 	{
 		return;
 	}
-	inst->thread = t;
-	t->inst = inst;
+	P32_SET(inst->thread, t);
+	P32_SET(t->inst, inst);
 
-	fjObj = (struct FlameJet *)t->object;
+	fjObj = (struct FlameJet *)P32_GET(void *, t->object);
 	fjObj->cycleTimer = 0;
 	fjObj->cooldown = 0;
 	fjObj->dirX = inst->matrix.m[0][2] * -0x4b >> 5;
@@ -453,7 +453,7 @@ void RB_FlameJet_LInB(struct Instance *inst)
 	fjBoxDesc.bbox.max.y = 0x80;
 	fjBoxDesc.bbox.max.z = 0x140;
 
-	if (sdata->gGT->level1->ptrSpawnType1->count > 0)
+	if (P32_GET(struct SpawnType1 *, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->ptrSpawnType1)->count > 0)
 	{
 		// put on separate cycles
 		void **pointers = ST1_GETPOINTERS(sdata->gGT->level1->ptrSpawnType1);

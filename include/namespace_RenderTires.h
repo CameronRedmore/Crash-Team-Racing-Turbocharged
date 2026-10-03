@@ -33,7 +33,7 @@ struct DrawTiresScratch
 	u32 savedRegs[12];
 	s32 numPlyr;
 	s32 playerCounter;
-	struct Icon **wheelSprites;
+	P32(struct Icon **) wheelSprites;
 	u32 tireColor;
 	s32 otRangeNormal;
 	s32 otRangeSecondary;

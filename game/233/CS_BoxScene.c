@@ -4,11 +4,11 @@
 void CS_BoxScene_InstanceSplitLines(void)
 {
 	s16 split = D233.VertSplitLine;
-	struct Thread *t = sdata->gGT->threadBuckets[GHOST].thread;
+	struct Thread *t = P32_GET(struct Thread *, P32_GET(struct GameTracker *, sdata->gGT)->threadBuckets[GHOST].thread);
 
 	while (t != NULL)
 	{
-		t->inst->vertSplit = split;
-		t = t->siblingThread;
+		P32_GET(struct Instance *, t->inst)->vertSplit = split;
+		t = P32_GET(struct Thread *, t->siblingThread);
 	}
 }

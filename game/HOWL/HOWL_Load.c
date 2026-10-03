@@ -62,22 +62,22 @@ void howl_ParseHeader(struct HowlHeader *hh)
 {
 	u32 addr = (u32)hh;
 
-	sdata->ptrHowlHeader = (struct HowlHeader *)addr;
+	P32_SET(sdata->ptrHowlHeader, (struct HowlHeader *)addr);
 	addr += sizeof(struct HowlHeader);
 
-	sdata->howl_spuAddrs = (struct SpuAddrEntry *)addr;
+	P32_SET(sdata->howl_spuAddrs, (struct SpuAddrEntry *)addr);
 	addr += sizeof(struct SpuAddrEntry) * hh->numSpuAddrs;
 
-	sdata->howl_metaOtherFX = (struct OtherFX *)addr;
+	P32_SET(sdata->howl_metaOtherFX, (struct OtherFX *)addr);
 	addr += sizeof(struct OtherFX) * hh->numOtherFX;
 
-	sdata->howl_metaEngineFX = (struct EngineFX *)addr;
+	P32_SET(sdata->howl_metaEngineFX, (struct EngineFX *)addr);
 	addr += sizeof(struct EngineFX) * hh->numEngineFX;
 
-	sdata->howl_bankOffsets = (u16 *)addr;
+	P32_SET(sdata->howl_bankOffsets, (u16 *)addr);
 	addr += sizeof(s16) * hh->numBanks;
 
-	sdata->howl_songOffsets = (u16 *)addr;
+	P32_SET(sdata->howl_songOffsets, (u16 *)addr);
 	addr += sizeof(s16) * hh->numSequences;
 
 	sdata->howl_endOfHowl = addr;
@@ -88,21 +88,21 @@ void howl_ParseCseqHeader(struct CseqHeader *ch)
 {
 	u32 addr = (u32)ch;
 
-	sdata->ptrCseqHeader = (struct CseqHeader *)addr;
+	P32_SET(sdata->ptrCseqHeader, (struct CseqHeader *)addr);
 	addr += sizeof(struct CseqHeader);
 
-	sdata->ptrCseqLongSamples = (struct SampleInstrument *)addr;
+	P32_SET(sdata->ptrCseqLongSamples, (struct SampleInstrument *)addr);
 	addr += sizeof(struct SampleInstrument) * ch->numLongSamples;
 
-	sdata->ptrCseqShortSamples = (struct SampleDrums *)addr;
+	P32_SET(sdata->ptrCseqShortSamples, (struct SampleDrums *)addr);
 	addr += sizeof(struct SampleDrums) * ch->numShortSamples;
 
-	sdata->ptrCseqSongStartOffset = (s16 *)addr;
+	P32_SET(sdata->ptrCseqSongStartOffset, (s16 *)addr);
 	addr += sizeof(s16) * ch->numSongs;
 
 	addr = (addr + 3) & ~3;
 
-	sdata->ptrCseqSongData = (char *)addr;
+	P32_SET(sdata->ptrCseqSongData, (char *)addr);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80029b2c-0x80029c40
@@ -178,7 +178,7 @@ int howl_SetSong(int songID)
 	// Stage 0: Start Loading
 	sdata->songLoadStage = 0;
 
-	sdata->songSectorOffset = sdata->howl_songOffsets[songID & 0xffff];
+	sdata->songSectorOffset = P32_GET(u16 *, sdata->howl_songOffsets)[songID & 0xffff];
 	return 1;
 }
 
@@ -259,7 +259,7 @@ int howl_LoadSong()
 void howl_ErasePtrCseqHeader()
 {
 	// can not play a song anymore
-	sdata->ptrCseqHeader = 0;
+	P32_SET(sdata->ptrCseqHeader, 0);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80029dcc-0x80029e18

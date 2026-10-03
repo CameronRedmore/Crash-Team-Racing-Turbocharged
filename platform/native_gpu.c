@@ -3010,19 +3010,19 @@ internal u32 NativeGpu_ReadPacketWordForLog(uintptr_t packet, int wordIndex)
 
 internal void NativeGpu_FormatPointerRegion(char *dst, size_t dstSize, uintptr_t ptr)
 {
-	if ((sdata == NULL) || (sdata->gGT == NULL))
+	if ((sdata == NULL) || (P32_GET(struct GameTracker *, sdata->gGT) == NULL))
 	{
 		snprintf(dst, dstSize, "no-gGT");
 		return;
 	}
 
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	for (int playerIndex = 0; playerIndex < 4; playerIndex++)
 	{
 		struct PushBuffer *pb = &gGT->pushBuffer[playerIndex];
-		const uintptr_t start = (uintptr_t)pb->ptrOT;
-		const uintptr_t end = (uintptr_t)pb->renderBucketOTRangeEnd;
+		const uintptr_t start = (uintptr_t)P32_GET(uint32_t *, pb->ptrOT);
+		const uintptr_t end = (uintptr_t)P32_GET(uint32_t *, pb->renderBucketOTRangeEnd);
 		if ((start != 0) && (end != 0) && (ptr >= start) && (ptr <= end))
 		{
 			snprintf(dst, dstSize, "pb%d.ot+0x%zx", playerIndex, (size_t)(ptr - start));
@@ -3031,8 +3031,8 @@ internal void NativeGpu_FormatPointerRegion(char *dst, size_t dstSize, uintptr_t
 	}
 
 	struct PushBuffer *uiPB = &gGT->pushBuffer_UI;
-	const uintptr_t uiStart = (uintptr_t)uiPB->ptrOT;
-	const uintptr_t uiEnd = (uintptr_t)uiPB->renderBucketOTRangeEnd;
+	const uintptr_t uiStart = (uintptr_t)P32_GET(uint32_t *, uiPB->ptrOT);
+	const uintptr_t uiEnd = (uintptr_t)P32_GET(uint32_t *, uiPB->renderBucketOTRangeEnd);
 	if ((uiStart != 0) && (uiEnd != 0) && (ptr >= uiStart) && (ptr <= uiEnd))
 	{
 		snprintf(dst, dstSize, "ui.ot+0x%zx", (size_t)(ptr - uiStart));
@@ -3042,16 +3042,16 @@ internal void NativeGpu_FormatPointerRegion(char *dst, size_t dstSize, uintptr_t
 	for (int dbIndex = 0; dbIndex < 2; dbIndex++)
 	{
 		struct DB *db = &gGT->db[dbIndex];
-		const uintptr_t primStart = (uintptr_t)db->primMem.start;
-		const uintptr_t primEnd = (uintptr_t)db->primMem.end;
+		const uintptr_t primStart = (uintptr_t)P32_GET(void *, db->primMem.start);
+		const uintptr_t primEnd = (uintptr_t)P32_GET(void *, db->primMem.end);
 		if ((primStart != 0) && (ptr >= primStart) && (ptr < primEnd))
 		{
 			snprintf(dst, dstSize, "db%d.prim+0x%zx", dbIndex, (size_t)(ptr - primStart));
 			return;
 		}
 
-		const uintptr_t otStart = (uintptr_t)db->otMem.start;
-		const uintptr_t otEnd = (uintptr_t)db->otMem.end;
+		const uintptr_t otStart = (uintptr_t)P32_GET(uint32_t *, db->otMem.start);
+		const uintptr_t otEnd = (uintptr_t)P32_GET(uint32_t *, db->otMem.end);
 		if ((otStart != 0) && (ptr >= otStart) && (ptr < otEnd))
 		{
 			snprintf(dst, dstSize, "db%d.ot+0x%zx", dbIndex, (size_t)(ptr - otStart));

@@ -122,7 +122,7 @@ struct CsParticleConfigSpawn
 
 struct CsParticleConfig
 {
-	struct ParticleEmitter *emitter;
+	P32(struct ParticleEmitter *) emitter;
 	struct CsParticleConfigMeta meta;
 	struct CsParticleConfigSpawn spawn;
 };
@@ -135,7 +135,7 @@ union CsOpcodeArg
 {
 	int i;
 	u32 u;
-	char *ptr;
+	P32(char *) ptr;
 };
 
 union CsOpcodeMeta
@@ -277,7 +277,7 @@ struct Ovr233InitMatrixTableEntry;
 struct CutsceneObj
 {
 	// 0x0
-	struct IconGroup *ptrIcons;
+	P32(struct IconGroup *) ptrIcons;
 	// 0x4
 	s16 unk4;
 	// 0x6
@@ -296,9 +296,9 @@ struct CutsceneObj
 	// 0x10
 	union
 	{
-		int *metadata;
-		union CsOpcodeMeta *metadataMeta;
-		s16 *metadataShorts;
+		P32(int *) metadata;
+		P32(union CsOpcodeMeta *) metadataMeta;
+		P32(s16 *) metadataShorts;
 	};
 
 	// 0x14
@@ -343,9 +343,9 @@ struct CutsceneObj
 
 
 	// 0x38
-	char *currOpcode[2];
+	P32(char *) currOpcode[2];
 	// 0x40
-	char *prevOpcode;
+	P32(char *) prevOpcode;
 
 	// 0x44
 	char particleID;
@@ -354,7 +354,7 @@ struct CutsceneObj
 	u8 animIndex;
 
 	// 0x48
-	struct Ovr233InitMatrixTableEntry *frameOverrideRoot;
+	P32(struct Ovr233InitMatrixTableEntry *) frameOverrideRoot;
 
 	// 0x4c
 	union CsOpcodeMeta decodedOpcode;
@@ -416,7 +416,7 @@ struct BossCutsceneData
 	int modelIndex_unused;
 
 	// 0x10
-	char *opcode;
+	P32(char *) opcode;
 
 	// 0x14
 	SVec3 camPos;
@@ -455,7 +455,7 @@ CTR_STATIC_ASSERT(sizeof(struct CsInitMatrixEntry) == 0x20);
 
 struct Ovr233InitMatrixTableEntry
 {
-	struct CsInitMatrixEntry *data;
+	P32(struct CsInitMatrixEntry *) data;
 	int count;
 };
 
@@ -555,26 +555,26 @@ struct OverlayRDATA_233
 	char script_dingofire[0x38];
 
 	// 800b2e78
-	char *danceFirstScripts[0x10];
+	P32(char *) danceFirstScripts[0x10];
 
 	// 800b2eb8
 	char danceOtherOpcodeData[0x12d4];
 
 	// 800b418c
-	char *danceOtherScripts[0x10];
+	P32(char *) danceOtherScripts[0x10];
 
 	// 800b41cc
 	char introModelOpcodeData[0x3b0];
 
 	// 800b457c
-	char *introModelScripts[0x10];
+	P32(char *) introModelScripts[0x10];
 
 	// 800b45bc
 	char introCutsceneOpcodeData[0x11c];
 
 	// 800b46d8
 	// NOTE(aalhendi): Retail PTR_DAT_800b45bc_800b46d8.
-	char *introCutsceneOpcodes[9];
+	P32(char *) introCutsceneOpcodes[9];
 
 	// 800b46fc
 	char introEndingOpcodeData[0x50];
@@ -584,7 +584,7 @@ struct OverlayRDATA_233
 
 	// 800b4928
 	// NOTE(aalhendi): Retail PTR_DAT_800b474c_800b4928.
-	char *creditsCutsceneOpcodes[20];
+	P32(char *) creditsCutsceneOpcodes[20];
 
 	// 800b4978
 	// ND crate intro script starts at offset 0x18.
@@ -595,17 +595,17 @@ struct OverlayRDATA_233
 
 	// 800b5a7c
 	// NOTE(aalhendi): Retail PTR_DAT_800b49b8_800b5a7c.
-	char *boxModelScripts[0x2b];
+	P32(char *) boxModelScripts[0x2b];
 
 	// 800b5b28
 	// NOTE(aalhendi): Retail PTR_DAT_800b4fe4_800b5b28.
-	char *advCharSelectSelectOpcodes[8];
+	P32(char *) advCharSelectSelectOpcodes[8];
 
 	// 800b5b48
 	// NOTE(aalhendi): Retail PTR_DAT_800b5024_800b5b48.
-	char *advCharSelectDeselectOpcodes[8];
+	P32(char *) advCharSelectDeselectOpcodes[8];
 
-	char *boxAndAdvCharSelectExtraOpcodes[2];
+	P32(char *) boxAndAdvCharSelectExtraOpcodes[2];
 
 	// 800b5b70
 	struct CsInitMatrixEntry cs_initMatrixData[190];
@@ -653,8 +653,8 @@ struct OverlayRDATA_233
 	CutscenePhase cutsceneState;
 
 	// 800b7778
-	struct Model *ptrModelBossHead;
-	struct Model *ptrModelBossBody;
+	P32(struct Model *) ptrModelBossHead;
+	P32(struct Model *) ptrModelBossBody;
 
 	// 800b7780
 };
@@ -678,8 +678,8 @@ struct OverlayDATA_233
 	s16 audioVolumeBackupPad;
 	int podiumPrizeDropReady;
 	CutscenePhase cutsceneState;
-	struct Model *ptrModelBossHead;
-	struct Model *ptrModelBossBody;
+	P32(struct Model *) ptrModelBossHead;
+	P32(struct Model *) ptrModelBossBody;
 	struct CsInitMatrixEntry cs_initMatrixData[190];
 	struct Ovr233InitMatrixTableEntry cs_initMatrixTable[4];
 };
@@ -902,10 +902,10 @@ enum CreditsConstants
 struct CreditsObj
 {
 	// 800b94bc (000)
-	struct Model *creditGhostModel[CS_CREDITS_GHOST_COUNT]; // duplicates
+	P32(struct Model *) creditGhostModel[CS_CREDITS_GHOST_COUNT]; // duplicates
 
 	// 800b94d0 (014)
-	struct Instance *creditGhostInst[CS_CREDITS_GHOST_COUNT];
+	P32(struct Instance *) creditGhostInst[CS_CREDITS_GHOST_COUNT];
 
 	// 800b94e4 (028)
 	struct ModelHeader creditGhostHeaders[CS_CREDITS_GHOST_COUNT][2];
@@ -923,7 +923,7 @@ struct CreditsObj
 	int unused_324;
 
 	// 800b97e4 (328)
-	struct Instance *creditDanceInst; // base for copies
+	P32(struct Instance *) creditDanceInst; // base for copies
 
 	// 800b97e8 (32c)
 	s16 creditsPosY;
@@ -932,13 +932,13 @@ struct CreditsObj
 	s16 unused_32e;
 
 	// 800b97ec (330)
-	char *creditsTopString;
+	P32(char *) creditsTopString;
 
 	// 800b97f0 (334)
-	char *epilogueTopString;
+	P32(char *) epilogueTopString;
 
 	// 800b97f4 (338)
-	char *epilogueNextString;
+	P32(char *) epilogueNextString;
 
 	// 800b97f8 (33c)
 	s16 epilogueFramesLeft;
@@ -968,13 +968,13 @@ struct Ovr233_Credits_BSS
 	int creditTextPosX;
 
 	// 800b949c
-	struct Thread *creditThread;
+	P32(struct Thread *) creditThread;
 
 	// 800b94a0
-	struct Thread *dancerThread;
+	P32(struct Thread *) dancerThread;
 
 	// 800b94a4
-	struct Instance *dancerInst_invisible;
+	P32(struct Instance *) dancerInst_invisible;
 
 	// 800b94a8
 	s16 numStrings;
@@ -983,7 +983,7 @@ struct Ovr233_Credits_BSS
 	s16 unused_94aa;
 
 	// 800b94ac
-	char **ptrStrings;
+	P32(char **) ptrStrings;
 
 	// 800b94b0
 	s16 boolAllBlue;

@@ -15,15 +15,15 @@ static double NativeCar_DistanceSq(NativePhysicsVec a, NativePhysicsVec b)
 void NativeCollision_CarSearch(struct Driver *d, struct Thread *first, struct BucketSearchParams *search)
 {
 	NativePhysicsVec position=NativeCar_Position(d);
-	double best=search->th ? NativeCar_DistanceSq(position,NativeCar_Position(search->th->object)) : 2147483647.0;
-	for (struct Thread *th=first;th;th=th->siblingThread)
+	double best=P32_GET(struct Thread *, search->th) ? NativeCar_DistanceSq(position,NativeCar_Position(P32_GET(void *, P32_GET(struct Thread *, search->th)->object))) : 2147483647.0;
+	for (struct Thread *th=first;th;th=P32_GET(struct Thread *, th->siblingThread))
 	{
-		if (th->object==d || th->object==NULL || (th->flags & (THREAD_FLAG_DEAD | THREAD_FLAG_DISABLE_COLLISION))) continue;
-		NativePhysicsVec other=NativeCar_Position(th->object);
+		if (P32_GET(void *, th->object)==d || P32_GET(void *, th->object)==NULL || (th->flags & (THREAD_FLAG_DEAD | THREAD_FLAG_DISABLE_COLLISION))) continue;
+		NativePhysicsVec other=NativeCar_Position(P32_GET(void *, th->object));
 		double distance=NativeCar_DistanceSq(position,other);
 		if (distance>=best) continue;
 		best=distance;
-		search->th=th;
+		P32_SET(search->th, th);
 		search->bestDistSq=(s32)fmin(2147483647.0,ceil(distance));
 		search->dist=(SVec3){.x=(s16)round(position.x-other.x),.y=(s16)round(position.y-other.y),.z=(s16)round(position.z-other.z)};
 	}
@@ -44,8 +44,8 @@ static void NativeCar_Apply(struct Driver *d, NativePhysicsVec v)
 	if (!(d->actionsFlagSet & ACTION_BOT)) { NativePhysics_ConvertVecToSpeed(d,v); return; }
 	// Project onto the AI nav tangent in floating point; path and damage flags
 	// continue to use the original game state machine.
-	double pitch=d->botData.botNavFrame->rot[0]*(6.2831853071795864769/256.0);
-	double yaw=d->botData.botNavFrame->rot[1]*(6.2831853071795864769/256.0);
+	double pitch=P32_GET(struct NavFrame *, d->botData.botNavFrame)->rot[0]*(6.2831853071795864769/256.0);
+	double yaw=P32_GET(struct NavFrame *, d->botData.botNavFrame)->rot[1]*(6.2831853071795864769/256.0);
 	NativePhysicsVec forward={sin(yaw)*cos(pitch),-sin(pitch),cos(yaw)*cos(pitch)};
 	double speed=forward.x*v.x+forward.y*v.y+forward.z*v.z;
 	NATIVE_PHYSICS_WRITE(d,botData.aiPhysics.speedLinear,speed);
@@ -66,8 +66,8 @@ static NativePhysicsVec NativeCar_Bounce(NativePhysicsVec v, NativePhysicsVec ce
 }
 void NativeCollision_Cars(struct Thread *thread, struct DriverCollisionSearch *search, Vec3 *output)
 {
-	struct Thread *otherThread=search->bucket.th;
-	struct Driver *self=thread->object,*other=otherThread->object;
+	struct Thread *otherThread=P32_GET(struct Thread *, search->bucket.th);
+	struct Driver *self=P32_GET(void *, thread->object),*other=P32_GET(void *, otherThread->object);
 	NativePhysicsVec a=NativeCar_Position(self),b=NativeCar_Position(other);
 	double distance=sqrt(NativeCar_DistanceSq(a,b));
 	double strength=thread->driverHitRadius+otherThread->driverHitRadius-distance;
@@ -89,7 +89,7 @@ void NativeCollision_Cars(struct Thread *thread, struct DriverCollisionSearch *s
 		if (other->actionsFlagSet & ACTION_BOT) BOTS_CollideWithOtherAI(self,other);
 		return;
 	}
-	u32 feedback=((u32)CTR_MipsSubLo(sdata->gGT->frameTimer_MainFrame_ResetDB,sdata->audioDefaults[8])>=VEH_PHYS_CRASH_FEEDBACK_COOLDOWN_FRAMES);
+	u32 feedback=((u32)CTR_MipsSubLo(P32_GET(struct GameTracker *, sdata->gGT)->frameTimer_MainFrame_ResetDB,sdata->audioDefaults[8])>=VEH_PHYS_CRASH_FEEDBACK_COOLDOWN_FRAMES);
 	VehPhysCrash_PlayHumanFeedback(thread,otherThread,self,other,feedback);
 	int attack=VehPhysCrash_Attack(self,other,feedback,0);
 	VehPhysCrash_Attack(other,self,attack,1);

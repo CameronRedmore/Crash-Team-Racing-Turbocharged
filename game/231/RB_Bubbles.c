@@ -18,7 +18,7 @@ void RB_Bubbles_RoosTubes()
 	int i;
 
 	// 1P mode Roo's Tubes only
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	if (gGT->numPlyrCurrGame > 1)
 	{
 		return;
@@ -28,15 +28,15 @@ void RB_Bubbles_RoosTubes()
 		return;
 	}
 
-	level1 = gGT->level1;
+	level1 = P32_GET(struct Level *, gGT->level1);
 	if (level1->numSpawnType2 < 2)
 	{
 		return;
 	}
 
 	// Roo's Tubes bubble spawn path
-	spawnType2 = &level1->ptrSpawnType2[1];
-	d = gGT->drivers[0];
+	spawnType2 = &P32_GET(struct SpawnType2 *, level1->ptrSpawnType2)[1];
+	d = P32_GET(struct Driver *, gGT->drivers[0]);
 
 	int timer = gGT->timer;
 #if CTR_NATIVE_60FPS
@@ -53,7 +53,7 @@ void RB_Bubbles_RoosTubes()
 	for (
 	    // initializer, skip one cause level geometry
 	    // covers the particles (see #ctr-early-content)
-	    numSpawnPosCoords = spawnType2->numCoords - 1, spawnPos = &spawnType2->positions[1], numFreeParticles = gGT->JitPools.particle.free.count;
+	    numSpawnPosCoords = spawnType2->numCoords - 1, spawnPos = &P32_GET(SVec3 *, spawnType2->positions)[1], numFreeParticles = gGT->JitPools.particle.free.count;
 
 	    // end condition
 	    (numSpawnPosCoords > 0) && (numFreeParticles >= 0x14);
@@ -95,7 +95,7 @@ void RB_Bubbles_RoosTubes()
 			sdata->UnusedPadding1 = 1;
 		}
 #endif
-		p = Particle_Init(0, gGT->iconGroup[7], &emSet_TubeBubbles[0]);
+		p = Particle_Init(0, P32_GET(struct IconGroup *, gGT->iconGroup[7]), &emSet_TubeBubbles[0]);
 #if CTR_NATIVE_60FPS
 		if (CTR_NATIVE_60FPS_ACTIVE)
 		{

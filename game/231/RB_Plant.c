@@ -31,8 +31,8 @@ void RB_Plant_ThTick_Eat(struct Thread *t)
 	struct Instance *plantInst;
 	struct Plant *plantObj;
 
-	plantInst = t->inst;
-	plantObj = (struct Plant *)t->object;
+	plantInst = P32_GET(struct Instance *, t->inst);
+	plantObj = (struct Plant *)P32_GET(void *, t->object);
 
 	if (plantInst->animIndex == PlantAnim_StartEat)
 	{
@@ -117,15 +117,15 @@ void RB_Plant_ThTick_Eat(struct Thread *t)
 				for (i = 0; i < 4; i++)
 				{
 					// spit tires
-					particle = Particle_Init(0, sdata->gGT->iconGroup[0], &emSet_PlantTires[0]);
+					particle = Particle_Init(0, P32_GET(struct IconGroup *, P32_GET(struct GameTracker *, sdata->gGT)->iconGroup[0]), &emSet_PlantTires[0]);
 
 					if (particle == 0)
 					{
 						continue;
 					}
 
-					particle->funcPtr = Particle_FuncPtr_SpitTire;
-					particle->plantInst = plantInst;
+					P32_SET(particle->funcPtr, Particle_FuncPtr_SpitTire);
+					P32_SET(particle->plantInst, plantInst);
 
 					particle->axis[0].startVal += (plantInst->matrix.t[0] + (plantInst->matrix.m[0][2] * 9 >> 7)) * 0x100;
 
@@ -174,13 +174,13 @@ void RB_Plant_ThTick_Grab(struct Thread *t)
 
 	struct Instance *hitInst;
 	struct Thread *threadHit;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
-	plantInst = t->inst;
+	plantInst = P32_GET(struct Instance *, t->inst);
 
 	plantBoxDescLocal = plantBoxDesc;
-	plantBoxDescLocal.inst = plantInst;
-	plantBoxDescLocal.thread = t;
+	P32_SET(plantBoxDescLocal.inst, plantInst);
+	P32_SET(plantBoxDescLocal.thread, t);
 
 	if (plantInst->animIndex == PlantAnim_GrabDriver)
 	{
@@ -190,15 +190,15 @@ void RB_Plant_ThTick_Grab(struct Thread *t)
 			// increment frame
 			plantInst->animFrame = plantInst->animFrame + 1;
 
-			plantBoxDescLocal.bucket = gGT->threadBuckets[MINE].thread;
+			P32_SET(plantBoxDescLocal.bucket, P32_GET(struct Thread *, gGT->threadBuckets[MINE].thread));
 			hitInst = LinkedCollide_Hitbox_Desc(&plantBoxDescLocal);
 
 			if (hitInst != 0)
 			{
-				threadHit = hitInst->thread;
+				threadHit = P32_GET(struct Thread *, hitInst->thread);
 
-				plantBoxDescLocal.threadHit = threadHit;
-				plantBoxDescLocal.funcThCollide = threadHit->funcThCollide;
+				P32_SET(plantBoxDescLocal.threadHit, threadHit);
+				P32_SET(plantBoxDescLocal.funcThCollide, P32_GET(void *, threadHit->funcThCollide));
 
 				RB_Hazard_ThCollide_Generic_Alt(&threadHit);
 			}
@@ -230,7 +230,7 @@ void RB_Plant_ThTick_Grab(struct Thread *t)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b8650-0x800b86b4.
 void RB_Plant_ThTick_Transition_HungryToRest(struct Thread *t)
 {
-	struct Instance *plantInst = t->inst;
+	struct Instance *plantInst = P32_GET(struct Instance *, t->inst);
 
 	// if animation is not over (backwards)
 	if ((plantInst->animFrame - 1) > 0)
@@ -260,10 +260,10 @@ void RB_Plant_ThTick_Hungry(struct Thread *t)
 	struct Instance *hitInst;
 	struct Driver *hitDriver;
 
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
-	plantInst = t->inst;
-	plantObj = (struct Plant *)t->object;
+	plantInst = P32_GET(struct Instance *, t->inst);
+	plantObj = (struct Plant *)P32_GET(void *, t->object);
 	plantBoxDescLocal = plantBoxDesc;
 
 	// if animIndex == PlantAnim_Hungry
@@ -298,16 +298,16 @@ void RB_Plant_ThTick_Hungry(struct Thread *t)
 
 	// === collision ===
 
-	plantBoxDescLocal.inst = plantInst;
-	plantBoxDescLocal.thread = t;
+	P32_SET(plantBoxDescLocal.inst, plantInst);
+	P32_SET(plantBoxDescLocal.thread, t);
 
-	plantBoxDescLocal.bucket = gGT->threadBuckets[PLAYER].thread;
+	P32_SET(plantBoxDescLocal.bucket, P32_GET(struct Thread *, gGT->threadBuckets[PLAYER].thread));
 	hitInst = LinkedCollide_Hitbox_Desc(&plantBoxDescLocal);
 
 	if (hitInst != 0)
 	{
 		// get driver from instance
-		hitDriver = (struct Driver *)hitInst->thread->object;
+		hitDriver = (struct Driver *)P32_GET(void *, P32_GET(struct Thread *, hitInst->thread)->object);
 
 		// attempt to harm driver (eat)
 		int didHit = RB_Hazard_HurtDriver(hitDriver, 5, 0, 0);
@@ -324,7 +324,7 @@ void RB_Plant_ThTick_Hungry(struct Thread *t)
 			plantInst->animIndex = PlantAnim_GrabDriver;
 
 			plantObj->cycleCount = 0;
-			hitDriver->plantEatingMe = t;
+			P32_SET(hitDriver->plantEatingMe, t);
 
 			ThTick_SetAndExec(t, RB_Plant_ThTick_Grab);
 		}
@@ -340,13 +340,13 @@ void RB_Plant_ThTick_Hungry(struct Thread *t)
 		return;
 	}
 
-	plantBoxDescLocal.bucket = gGT->threadBuckets[ROBOT].thread;
+	P32_SET(plantBoxDescLocal.bucket, P32_GET(struct Thread *, gGT->threadBuckets[ROBOT].thread));
 	hitInst = LinkedCollide_Hitbox_Desc(&plantBoxDescLocal);
 
 	if (hitInst != 0)
 	{
 		// get driver from instance
-		hitDriver = (struct Driver *)hitInst->thread->object;
+		hitDriver = (struct Driver *)P32_GET(void *, P32_GET(struct Thread *, hitInst->thread)->object);
 
 		RB_Hazard_HurtDriver(hitDriver, 5, 0, 0);
 
@@ -362,8 +362,8 @@ void RB_Plant_ThTick_Rest(struct Thread *t)
 	struct Instance *plantInst;
 	struct Plant *plantObj;
 
-	plantInst = t->inst;
-	plantObj = (struct Plant *)t->object;
+	plantInst = P32_GET(struct Instance *, t->inst);
+	plantObj = (struct Plant *)P32_GET(void *, t->object);
 
 	if (plantObj->cooldown != 0)
 	{
@@ -424,7 +424,7 @@ void RB_Plant_LInB(struct Instance *inst)
 	int plantID;
 	struct Thread *t;
 
-	if (inst->thread != NULL)
+	if (P32_GET(struct Thread *, inst->thread) != NULL)
 	{
 		return;
 	}
@@ -437,13 +437,13 @@ void RB_Plant_LInB(struct Instance *inst)
 	    0                     // thread relative
 	);
 
-	inst->thread = t;
+	P32_SET(inst->thread, t);
 	if (t == 0)
 	{
 		return;
 	}
 
-	t->inst = inst;
+	P32_SET(t->inst, inst);
 
 	inst->scale.x = 0x2800;
 	inst->scale.y = 0x2800;
@@ -451,7 +451,7 @@ void RB_Plant_LInB(struct Instance *inst)
 	inst->animFrame = 0;
 	inst->animIndex = PlantAnim_Rest;
 
-	plantObj = ((struct Plant *)t->object);
+	plantObj = ((struct Plant *)P32_GET(void *, t->object));
 	plantObj->cycleCount = 0;
 	plantObj->cooldown = 0;
 	plantObj->boolEatingPlayer = 0;
@@ -463,7 +463,7 @@ void RB_Plant_LInB(struct Instance *inst)
 	plantBoxDesc.bbox.max.y = 0x80;
 	plantBoxDesc.bbox.max.z = 0x1e0;
 
-	ptrSpawnType1 = sdata->gGT->level1->ptrSpawnType1;
+	ptrSpawnType1 = P32_GET(struct SpawnType1 *, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->ptrSpawnType1);
 	if (ptrSpawnType1->count > 0)
 	{
 		// puts plants on separate cycles

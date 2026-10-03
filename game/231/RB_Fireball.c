@@ -138,11 +138,11 @@ void RB_Fireball_ThTick(struct Thread *t)
 	struct GameTracker *gGT;
 	int elapsedTimeMS;
 
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	elapsedTimeMS = gGT->elapsedTimeMS;
 
-	fireInst = t->inst;
-	fireObj = t->object;
+	fireInst = P32_GET(struct Instance *, t->inst);
+	fireObj = P32_GET(void *, t->object);
 
 	if (fireObj->cooldown != 0)
 	{
@@ -159,7 +159,7 @@ void RB_Fireball_ThTick(struct Thread *t)
 	fireInst->flags |= HIDE_MODEL;
 
 	oldVelY = 0;
-	resetPosY = fireInst->instDef->pos.y - 0x440;
+	resetPosY = P32_GET(struct InstDef *, fireInst->instDef)->pos.y - 0x440;
 
 	// if fireball isn't below the lava,
 	// handle all particle spawning
@@ -192,13 +192,13 @@ void RB_Fireball_ThTick(struct Thread *t)
 			}
 			else
 			{
-				particle = Particle_Init(0, gGT->iconGroup[0xA], &emSet_Fireball[0]);
+				particle = Particle_Init(0, P32_GET(struct IconGroup *, gGT->iconGroup[0xA]), &emSet_Fireball[0]);
 			}
 			sdata->UnusedPadding1 = 0;
 		}
 		else
 		{
-			particle = Particle_Init(0, gGT->iconGroup[0xA], &emSet_Fireball[0]);
+			particle = Particle_Init(0, P32_GET(struct IconGroup *, gGT->iconGroup[0xA]), &emSet_Fireball[0]);
 		}
 #else
 		particle = Particle_Init(0, gGT->iconGroup[0xA], &emSet_Fireball[0]);
@@ -284,7 +284,7 @@ void RB_Fireball_LInB(struct Instance *inst)
 	struct Thread *t;
 	int fireballID;
 
-	if (inst->thread != 0)
+	if (P32_GET(struct Thread *, inst->thread) != 0)
 	{
 		return;
 	}
@@ -302,9 +302,9 @@ void RB_Fireball_LInB(struct Instance *inst)
 	{
 		return;
 	}
-	inst->thread = t;
-	t->inst = inst;
-	t->funcThCollide = (void *)RB_Fireball_ThCollide;
+	P32_SET(inst->thread, t);
+	P32_SET(t->inst, inst);
+	P32_SET(t->funcThCollide, (void *)RB_Fireball_ThCollide);
 
 	inst->scale.x = 0x4000;
 	inst->scale.y = 0x4000;
@@ -313,7 +313,7 @@ void RB_Fireball_LInB(struct Instance *inst)
 	inst->animFrame = 0;
 	inst->animIndex = 0;
 
-	fireObj = ((struct Fireball *)t->object);
+	fireObj = ((struct Fireball *)P32_GET(void *, t->object));
 	fireObj->cycleTimer = 0;
 	fireObj->cooldown = 0;
 	fireObj->rot_unused.x = 0;

@@ -18,15 +18,15 @@ void RB_Warpball_FadeAway(struct Thread *t)
 	struct Driver *d;
 	struct GameTracker *gGT;
 
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
-	tw = t->object;
-	inst = t->inst;
+	tw = P32_GET(void *, t->object);
+	inst = P32_GET(struct Instance *, t->inst);
 	frameId = tw->fadeFrame;
 
 	if (frameId > 5)
 	{
-		d = tw->driverTarget;
+		d = P32_GET(struct Driver *, tw->driverTarget);
 
 		if (d != NULL)
 		{
@@ -64,16 +64,16 @@ void RB_Warpball_Death(struct Thread *t)
 {
 	struct TrackerWeapon *tw;
 
-	tw = t->object;
-	if (tw->ptrParticle != NULL)
+	tw = P32_GET(void *, t->object);
+	if (P32_GET(struct Particle *, tw->ptrParticle) != NULL)
 	{
-		tw->ptrParticle->framesLeftInLife = 0;
-		tw->ptrParticle = NULL;
+		P32_GET(struct Particle *, tw->ptrParticle)->framesLeftInLife = 0;
+		P32_SET(tw->ptrParticle, NULL);
 	}
 	tw->fadeFrame = 0;
 
 	// play sound of warpball death
-	struct Instance *inst = t->inst;
+	struct Instance *inst = P32_GET(struct Instance *, t->inst);
 	tw->distFromGround = inst->matrix.t[1];
 	PlaySound3D(0x4f, inst);
 
@@ -87,14 +87,14 @@ void RB_Warpball_Death(struct Thread *t)
 // NOTE(aalhendi): ASM-verified against NTSC-U 926 overlay 231 0x800ae668-0x800ae778.
 struct CheckpointNode *RB_Warpball_NewPathNode(struct CheckpointNode *cn, struct Driver *d)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	u8 pathIndex;
 	u8 targetIndex;
 	int foundLeftPath;
 
 	if (d == NULL)
 	{
-		return &gGT->level1->ptr_restart_points[cn->nextIndex_forward];
+		return &P32_GET(struct CheckpointNode *, P32_GET(struct Level *, gGT->level1)->ptr_restart_points)[cn->nextIndex_forward];
 	}
 
 	foundLeftPath = 0;
@@ -103,7 +103,7 @@ struct CheckpointNode *RB_Warpball_NewPathNode(struct CheckpointNode *cn, struct
 
 	if (targetIndex == pathIndex)
 	{
-		return &gGT->level1->ptr_restart_points[pathIndex];
+		return &P32_GET(struct CheckpointNode *, P32_GET(struct Level *, gGT->level1)->ptr_restart_points)[pathIndex];
 	}
 
 	if (pathIndex != 0xff)
@@ -121,7 +121,7 @@ struct CheckpointNode *RB_Warpball_NewPathNode(struct CheckpointNode *cn, struct
 				pathIndex = currNode->nextIndex_left;
 			}
 
-			currNode = &gGT->level1->ptr_restart_points[pathIndex];
+			currNode = &P32_GET(struct CheckpointNode *, P32_GET(struct Level *, gGT->level1)->ptr_restart_points)[pathIndex];
 
 			if (targetIndex == currNode->nextIndex_forward)
 			{
@@ -133,33 +133,33 @@ struct CheckpointNode *RB_Warpball_NewPathNode(struct CheckpointNode *cn, struct
 
 	if (foundLeftPath)
 	{
-		return &gGT->level1->ptr_restart_points[cn->nextIndex_left];
+		return &P32_GET(struct CheckpointNode *, P32_GET(struct Level *, gGT->level1)->ptr_restart_points)[cn->nextIndex_left];
 	}
 
-	return &gGT->level1->ptr_restart_points[cn->nextIndex_forward];
+	return &P32_GET(struct CheckpointNode *, P32_GET(struct Level *, gGT->level1)->ptr_restart_points)[cn->nextIndex_forward];
 }
 
 // NOTE(aalhendi): ASM-verified against NTSC-U 926 overlay 231 0x800ae778-0x800ae7dc.
 void RB_Warpball_Start(struct TrackerWeapon *tw)
 {
-	tw->ptrNodeCurr = RB_Warpball_NewPathNode(tw->ptrNodeCurr, tw->driverTarget);
-	tw->ptrNodeNext = RB_Warpball_NewPathNode(tw->ptrNodeCurr, tw->driverTarget);
+	P32_SET(tw->ptrNodeCurr, RB_Warpball_NewPathNode(P32_GET(struct CheckpointNode *, tw->ptrNodeCurr), P32_GET(struct Driver *, tw->driverTarget)));
+	P32_SET(tw->ptrNodeNext, RB_Warpball_NewPathNode(P32_GET(struct CheckpointNode *, tw->ptrNodeCurr), P32_GET(struct Driver *, tw->driverTarget)));
 	return;
 }
 
 // NOTE(aalhendi): ASM-verified against NTSC-U 926 overlay 231 0x800ae7dc-0x800aeaac.
 struct Driver *RB_Warpball_GetDriverTarget(struct TrackerWeapon *tw, struct Instance *inst)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	struct Driver *bestDriver = NULL;
 
 	if ((tw->flags & TRACKER_FLAG_POWERED_UP) == 0)
 	{
 		for (int i = 0; i < 8; i++)
 		{
-			struct Driver *driver = gGT->driversInRaceOrder[i];
+			struct Driver *driver = P32_GET(struct Driver *, gGT->driversInRaceOrder[i]);
 
-			if ((driver != NULL) && (driver != tw->driverParent) && ((driver->actionsFlagSet & ACTION_RACE_FINISHED) == 0))
+			if ((driver != NULL) && (driver != P32_GET(struct Driver *, tw->driverParent)) && ((driver->actionsFlagSet & ACTION_RACE_FINISHED) == 0))
 			{
 				return driver;
 			}
@@ -168,8 +168,8 @@ struct Driver *RB_Warpball_GetDriverTarget(struct TrackerWeapon *tw, struct Inst
 		return bestDriver;
 	}
 
-	struct CheckpointNode *nodes = gGT->level1->ptr_restart_points;
-	struct CheckpointNode *node1 = &nodes[tw->ptrNodeCurr->nextIndex_forward];
+	struct CheckpointNode *nodes = P32_GET(struct CheckpointNode *, P32_GET(struct Level *, gGT->level1)->ptr_restart_points);
+	struct CheckpointNode *node1 = &nodes[P32_GET(struct CheckpointNode *, tw->ptrNodeCurr)->nextIndex_forward];
 	struct CheckpointNode *node2 = &nodes[node1->nextIndex_forward];
 	int trackDistance = nodes[0].distToFinish << 3;
 	SVec3 pathVector;
@@ -193,7 +193,7 @@ struct Driver *RB_Warpball_GetDriverTarget(struct TrackerWeapon *tw, struct Inst
 
 	for (int i = 0; i < 8; i++)
 	{
-		struct Driver *driver = gGT->drivers[i];
+		struct Driver *driver = P32_GET(struct Driver *, gGT->drivers[i]);
 
 		if ((driver != NULL) && ((tw->driversHit & (1u << (i & 0x1f))) == 0) && ((driver->actionsFlagSet & ACTION_RACE_FINISHED) == 0) &&
 		    (driver->kartState != KS_MASK_GRABBED))
@@ -219,15 +219,15 @@ struct Driver *RB_Warpball_GetDriverTarget(struct TrackerWeapon *tw, struct Inst
 // NOTE(aalhendi): ASM-verified against NTSC-U 926 overlay 231 0x800aeaac-0x800aece0.
 void RB_Warpball_SetTargetDriver(struct TrackerWeapon *tw)
 {
-	struct GameTracker *gGT = sdata->gGT;
-	struct Driver *target = tw->driverTarget;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct Driver *target = P32_GET(struct Driver *, tw->driverTarget);
 
 	if (target == NULL)
 	{
 		return;
 	}
 
-	struct CheckpointNode *nodes = gGT->level1->ptr_restart_points;
+	struct CheckpointNode *nodes = P32_GET(struct CheckpointNode *, P32_GET(struct Level *, gGT->level1)->ptr_restart_points);
 	struct CheckpointNode *targetNode = &nodes[target->checkpoint.currentIndex];
 	struct CheckpointNode *prevNode = targetNode;
 	int targetDistance = target->distanceToFinish_curr;
@@ -235,7 +235,7 @@ void RB_Warpball_SetTargetDriver(struct TrackerWeapon *tw)
 	while ((((int)targetNode->distToFinish << 3) >= targetDistance) && (targetNode != nodes))
 	{
 		prevNode = targetNode;
-		targetNode = RB_Warpball_NewPathNode(targetNode, tw->driverTarget);
+		targetNode = RB_Warpball_NewPathNode(targetNode, P32_GET(struct Driver *, tw->driverTarget));
 	}
 	targetNode = prevNode;
 
@@ -245,7 +245,7 @@ void RB_Warpball_SetTargetDriver(struct TrackerWeapon *tw)
 	{
 		struct CheckpointNode *pathStarts[2];
 
-		pathStarts[0] = tw->ptrNodeCurr;
+		pathStarts[0] = P32_GET(struct CheckpointNode *, tw->ptrNodeCurr);
 		pathStarts[1] = rightPathNode;
 
 		for (int i = 0; (i < 2) && ((tw->flags & TRACKER_FLAG_WARPBALL_TARGET_PATH) == 0); i++)
@@ -276,7 +276,7 @@ void RB_Warpball_SetTargetDriver(struct TrackerWeapon *tw)
 		}
 	}
 
-	struct CheckpointNode *pathNode = tw->ptrNodeCurr;
+	struct CheckpointNode *pathNode = P32_GET(struct CheckpointNode *, tw->ptrNodeCurr);
 
 	for (int i = 0; i < 3; i++)
 	{
@@ -286,7 +286,7 @@ void RB_Warpball_SetTargetDriver(struct TrackerWeapon *tw)
 			return;
 		}
 
-		pathNode = RB_Warpball_NewPathNode(pathNode, tw->driverTarget);
+		pathNode = RB_Warpball_NewPathNode(pathNode, P32_GET(struct Driver *, tw->driverTarget));
 	}
 }
 
@@ -304,7 +304,7 @@ void RB_Warpball_SeekDriver(struct TrackerWeapon *tw, u32 checkpointIndex, struc
 		return;
 	}
 
-	struct CheckpointNode *first = &sdata->gGT->level1->ptr_restart_points[0];
+	struct CheckpointNode *first = &P32_GET(struct CheckpointNode *, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->ptr_restart_points)[0];
 
 	// pointer to path node
 	struct CheckpointNode *cn = &first[checkpointIndex];
@@ -314,7 +314,7 @@ void RB_Warpball_SeekDriver(struct TrackerWeapon *tw, u32 checkpointIndex, struc
 	       // node is not first node
 	       (cn != first))
 	{
-		cn = RB_Warpball_NewPathNode(cn, tw->driverTarget);
+		cn = RB_Warpball_NewPathNode(cn, P32_GET(struct Driver *, tw->driverTarget));
 	}
 
 	// path index = pathPtr2 - pathPtr1
@@ -331,8 +331,8 @@ void RB_Warpball_TurnAround(struct Thread *t)
 	TrackerWeaponFlags flags;
 	s16 rot;
 
-	tw = t->object;
-	inst = t->inst;
+	tw = P32_GET(void *, t->object);
+	inst = P32_GET(struct Instance *, t->inst);
 	flags = tw->flags;
 
 	if (
@@ -340,7 +340,7 @@ void RB_Warpball_TurnAround(struct Thread *t)
 	    ((flags & TRACKER_FLAG_WARPBALL_TURN_AROUND) != 0) ||
 
 	    // if no driver is being chased
-	    (tw->driverTarget == NULL))
+	    (P32_GET(struct Driver *, tw->driverTarget) == NULL))
 	{
 		if ((flags & TRACKER_FLAG_WARPBALL_TARGET_PATH) != 0)
 		{
@@ -364,9 +364,9 @@ void RB_Warpball_TurnAround(struct Thread *t)
 
 		    // pointer to driver being chased,
 		    // is null, so warpball is chasing nobody
-		    (tw->driverTarget == 0))
+		    (P32_GET(struct Driver *, tw->driverTarget) == 0))
 		{
-			tw->driverParent->instBombThrow = 0;
+			P32_SET(P32_GET(struct Driver *, tw->driverParent)->instBombThrow, 0);
 
 			// play sound warpball death
 			PlaySound3D(0x4f, inst);
@@ -377,15 +377,15 @@ void RB_Warpball_TurnAround(struct Thread *t)
 		// if attempted to turn around 3 times
 		if ((tw->turnAroundFrames & 3) == 0)
 		{
-			tw->ptrNodeNext = tw->ptrNodeCurr;
+			P32_SET(tw->ptrNodeNext, P32_GET(struct CheckpointNode *, tw->ptrNodeCurr));
 
-			struct CheckpointNode *first = &sdata->gGT->level1->ptr_restart_points[0];
+			struct CheckpointNode *first = &P32_GET(struct CheckpointNode *, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->ptr_restart_points)[0];
 
 			// set new end to 10 path indices ahead of current
-			tw->ptrNodeCurr = &first[tw->ptrNodeCurr->nextIndex_backward];
+			P32_SET(tw->ptrNodeCurr, &first[P32_GET(struct CheckpointNode *, tw->ptrNodeCurr)->nextIndex_backward]);
 		}
 
-		struct CheckpointNode *cn = tw->ptrNodeCurr;
+		struct CheckpointNode *cn = P32_GET(struct CheckpointNode *, tw->ptrNodeCurr);
 
 		// rotation
 		rot = ratan2(cn->pos.x - inst->matrix.t[0], cn->pos.z - inst->matrix.t[2]);
@@ -416,9 +416,9 @@ static int RB_Warpball_NodeDeltaLength(struct CheckpointNode *curr, struct Check
 
 static void RB_Warpball_SetQuadblockIndex(struct TrackerWeapon *tw, struct ScratchpadStruct *sps)
 {
-	if (sps->hit.ptrQuadblock->checkpointIndex != 0xff)
+	if (P32_GET(struct QuadBlock *, sps->hit.ptrQuadblock)->checkpointIndex != 0xff)
 	{
-		tw->nodeNextIndex = sps->hit.ptrQuadblock->checkpointIndex;
+		tw->nodeNextIndex = P32_GET(struct QuadBlock *, sps->hit.ptrQuadblock)->checkpointIndex;
 	}
 }
 
@@ -439,9 +439,9 @@ void RB_Warpball_ThTick(struct Thread *t)
 	int distZ;
 	int distXZ;
 
-	gGT = sdata->gGT;
-	inst = t->inst;
-	tw = t->object;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	inst = P32_GET(struct Instance *, t->inst);
+	tw = P32_GET(void *, t->object);
 
 	CTR_WriteU16LE(&tw->savedPosXY, (u16)inst->matrix.t[0]);
 	CTR_WriteU16LE((u8 *)&tw->savedPosXY + 2, (u16)inst->matrix.t[1]);
@@ -456,31 +456,31 @@ void RB_Warpball_ThTick(struct Thread *t)
 		inst->animFrame = 0;
 	}
 
-	if (tw->driverTarget != NULL)
+	if (P32_GET(struct Driver *, tw->driverTarget) != NULL)
 	{
-		if ((tw->driverTarget->kartState == KS_MASK_GRABBED) && ((tw->flags & TRACKER_FLAG_WARPBALL_TARGET_PATH) != 0))
+		if ((P32_GET(struct Driver *, tw->driverTarget)->kartState == KS_MASK_GRABBED) && ((tw->flags & TRACKER_FLAG_WARPBALL_TARGET_PATH) != 0))
 		{
-			struct CheckpointNode *nodes = gGT->level1->ptr_restart_points;
+			struct CheckpointNode *nodes = P32_GET(struct CheckpointNode *, P32_GET(struct Level *, gGT->level1)->ptr_restart_points);
 
 			tw->flags = (tw->flags & ~TRACKER_FLAG_WARPBALL_TARGET_PATH) | TRACKER_FLAG_WARPBALL_FALLBACK_PATH | TRACKER_FLAG_WARPBALL_MASK_REPATH;
-			tw->ptrNodeCurr = &nodes[tw->nodeNextIndex];
-			tw->ptrNodeNext = RB_Warpball_NewPathNode(tw->ptrNodeCurr, tw->driverTarget);
-			tw->driverTarget = RB_Warpball_GetDriverTarget(tw, inst);
+			P32_SET(tw->ptrNodeCurr, &nodes[tw->nodeNextIndex]);
+			P32_SET(tw->ptrNodeNext, RB_Warpball_NewPathNode(P32_GET(struct CheckpointNode *, tw->ptrNodeCurr), P32_GET(struct Driver *, tw->driverTarget)));
+			P32_SET(tw->driverTarget, RB_Warpball_GetDriverTarget(tw, inst));
 			RB_Warpball_SetTargetDriver(tw);
 		}
 
 		if ((tw->flags & TRACKER_FLAG_WARPBALL_TARGET_REFRESH_BLOCKED) == 0)
 		{
-			tw->driverTarget = RB_Warpball_GetDriverTarget(tw, inst);
+			P32_SET(tw->driverTarget, RB_Warpball_GetDriverTarget(tw, inst));
 
-			if (tw->driverTarget != NULL)
+			if (P32_GET(struct Driver *, tw->driverTarget) != NULL)
 			{
 				RB_Warpball_SetTargetDriver(tw);
 			}
 		}
 	}
 
-	target = tw->driverTarget;
+	target = P32_GET(struct Driver *, tw->driverTarget);
 	tw->flags &= ~TRACKER_FLAG_WARPBALL_BACKTRACKING;
 
 	if (target != NULL)
@@ -490,7 +490,7 @@ void RB_Warpball_ThTick(struct Thread *t)
 		distY = (target->posCurr.y >> 8) - inst->matrix.t[1];
 		distXZ = (distX * distX) + (distZ * distZ);
 		tw->distanceToTarget = distXZ;
-		target->thTrackingMe = RB_GetThread_ClosestTracker(target);
+		P32_SET(target->thTrackingMe, RB_GetThread_ClosestTracker(target));
 
 		if ((tw->flags & TRACKER_FLAG_WARPBALL_PATH_MODE) != 0)
 		{
@@ -498,7 +498,7 @@ void RB_Warpball_ThTick(struct Thread *t)
 
 			if ((tw->flags & TRACKER_FLAG_WARPBALL_TARGET_PATH) == 0)
 			{
-				struct CheckpointNode *pathNode = tw->ptrNodeCurr;
+				struct CheckpointNode *pathNode = P32_GET(struct CheckpointNode *, tw->ptrNodeCurr);
 
 				distX = pathNode->pos.x - inst->matrix.t[0];
 				distZ = pathNode->pos.z - inst->matrix.t[2];
@@ -569,8 +569,8 @@ void RB_Warpball_ThTick(struct Thread *t)
 		}
 		else
 		{
-			struct CheckpointNode *curr = tw->ptrNodeCurr;
-			struct CheckpointNode *next = tw->ptrNodeNext;
+			struct CheckpointNode *curr = P32_GET(struct CheckpointNode *, tw->ptrNodeCurr);
+			struct CheckpointNode *next = P32_GET(struct CheckpointNode *, tw->ptrNodeNext);
 			int segmentLength = RB_Warpball_NodeDeltaLength(curr, next, &distX, &distY, &distZ);
 			int progress = tw->pathProgress + Timer_ScaleByElapsed(0x70, 5);
 			int fraction;
@@ -584,7 +584,7 @@ void RB_Warpball_ThTick(struct Thread *t)
 					int keepAdvancing;
 
 					curr = next;
-					next = RB_Warpball_NewPathNode(curr, tw->driverTarget);
+					next = RB_Warpball_NewPathNode(curr, P32_GET(struct Driver *, tw->driverTarget));
 					segmentLength = RB_Warpball_NodeDeltaLength(curr, next, &distX, &distY, &distZ);
 					keepAdvancing = segmentLength <= progress;
 					progress -= segmentLength;
@@ -599,8 +599,8 @@ void RB_Warpball_ThTick(struct Thread *t)
 			}
 
 			tw->pathProgress = progress;
-			tw->ptrNodeCurr = curr;
-			tw->ptrNodeNext = next;
+			P32_SET(tw->ptrNodeCurr, curr);
+			P32_SET(tw->ptrNodeNext, next);
 
 			if (segmentLength == 0)
 			{
@@ -645,7 +645,7 @@ void RB_Warpball_ThTick(struct Thread *t)
 		sps->Union.QuadBlockColl.searchFlags = COLL_SEARCH_TEST_INSTANCES | COLL_SEARCH_HIGH_LOD | COLL_SEARCH_FORCE_INSTANCE_HIT;
 	}
 
-	sps->ptr_mesh_info = gGT->level1->ptr_mesh_info;
+	P32_SET(sps->ptr_mesh_info, P32_GET(struct mesh_info *, P32_GET(struct Level *, gGT->level1)->ptr_mesh_info));
 	COLL_SearchBSP_CallbackQUADBLK(&posTop, &posBottom, sps, 0);
 	RB_MakeInstanceReflective(sps, inst);
 
@@ -673,7 +673,7 @@ void RB_Warpball_ThTick(struct Thread *t)
 		if (((tw->flags & TRACKER_FLAG_WARPBALL_PATH_MODE) != 0) && (inst->matrix.t[1] < sps->hit.hitPos.y))
 		{
 			inst->matrix.t[1] = sps->hit.hitPos.y;
-			inst->depthBiasNormal = sps->hit.ptrQuadblock->draw_order_low - 1;
+			inst->depthBiasNormal = P32_GET(struct QuadBlock *, sps->hit.ptrQuadblock)->draw_order_low - 1;
 		}
 	}
 	else
@@ -689,15 +689,15 @@ void RB_Warpball_ThTick(struct Thread *t)
 			RB_Warpball_SetQuadblockIndex(tw, sps);
 		}
 
-		if ((sps->boolDidTouchQuadblock == 0) && (((tw->flags & TRACKER_FLAG_WARPBALL_PATH_MODE) != 0) || (tw->driverTarget == NULL)))
+		if ((sps->boolDidTouchQuadblock == 0) && (((tw->flags & TRACKER_FLAG_WARPBALL_PATH_MODE) != 0) || (P32_GET(struct Driver *, tw->driverTarget) == NULL)))
 		{
 			RB_Warpball_TurnAround(t);
 		}
 	}
 
-	if ((s_warpballParticleHeight != 0) && (tw->ptrParticle != NULL))
+	if ((s_warpballParticleHeight != 0) && (P32_GET(struct Particle *, tw->ptrParticle) != NULL))
 	{
-		struct Particle *p = tw->ptrParticle;
+		struct Particle *p = P32_GET(struct Particle *, tw->ptrParticle);
 
 		p->axis[0].startVal = inst->matrix.t[0] << 8;
 		p->axis[1].startVal = (inst->matrix.t[1] + s_warpballParticleHeight) << 8;
@@ -709,26 +709,26 @@ void RB_Warpball_ThTick(struct Thread *t)
 		p->framesLeftInLife = -1;
 	}
 
-	hitInst = RB_Hazard_CollideWithDrivers(inst, tw->parentSafetyFrames, 0x9000, tw->instParent);
+	hitInst = RB_Hazard_CollideWithDrivers(inst, tw->parentSafetyFrames, 0x9000, P32_GET(struct Instance *, tw->instParent));
 
 	if (hitInst != NULL)
 	{
-		struct Driver *hitDriver = hitInst->thread->object;
+		struct Driver *hitDriver = P32_GET(void *, P32_GET(struct Thread *, hitInst->thread)->object);
 
-		if (hitDriver != tw->driverParent)
+		if (hitDriver != P32_GET(struct Driver *, tw->driverParent))
 		{
 			TrackerWeaponFlags hadTargetPathFlag = tw->flags & TRACKER_FLAG_WARPBALL_TARGET_PATH;
 			TrackerWeaponFlags flagsBeforeHit;
 
-			RB_Hazard_HurtDriver(hitDriver, 2, tw->driverParent, 0);
+			RB_Hazard_HurtDriver(hitDriver, 2, P32_GET(struct Driver *, tw->driverParent), 0);
 			hitDriver->damageColorTimer = 0x1e;
 
 			flagsBeforeHit = tw->flags | TRACKER_FLAG_WARPBALL_HIT_DRIVER;
 			tw->flags = flagsBeforeHit;
 
-			if ((((flagsBeforeHit & TRACKER_FLAG_POWERED_UP) == 0) && (tw->driverTarget == hitDriver)) || (hitDriver->driverRank == 0))
+			if ((((flagsBeforeHit & TRACKER_FLAG_POWERED_UP) == 0) && (P32_GET(struct Driver *, tw->driverTarget) == hitDriver)) || (hitDriver->driverRank == 0))
 			{
-				tw->driverParent->instBombThrow = NULL;
+				P32_SET(P32_GET(struct Driver *, tw->driverParent)->instBombThrow, NULL);
 				RB_Warpball_Death(t);
 				return;
 			}
@@ -737,7 +737,7 @@ void RB_Warpball_ThTick(struct Thread *t)
 
 			for (int rank = hitDriver->driverRank; rank < 8; rank++)
 			{
-				struct Driver *rankDriver = gGT->driversInRaceOrder[rank];
+				struct Driver *rankDriver = P32_GET(struct Driver *, gGT->driversInRaceOrder[rank]);
 
 				if (rankDriver != NULL)
 				{
@@ -745,14 +745,14 @@ void RB_Warpball_ThTick(struct Thread *t)
 				}
 			}
 
-			if (tw->driverTarget == hitDriver)
+			if (P32_GET(struct Driver *, tw->driverTarget) == hitDriver)
 			{
 				tw->flags &= ~TRACKER_FLAG_WARPBALL_TARGET_PATH;
-				tw->driverTarget = RB_Warpball_GetDriverTarget(tw, inst);
+				P32_SET(tw->driverTarget, RB_Warpball_GetDriverTarget(tw, inst));
 
-				if (tw->driverTarget == NULL)
+				if (P32_GET(struct Driver *, tw->driverTarget) == NULL)
 				{
-					tw->driverParent->instBombThrow = NULL;
+					P32_SET(P32_GET(struct Driver *, tw->driverParent)->instBombThrow, NULL);
 					RB_Warpball_Death(t);
 				}
 				else
@@ -769,10 +769,10 @@ void RB_Warpball_ThTick(struct Thread *t)
 				{
 					if (tw->nodeCurrIndex != 0xff)
 					{
-						struct CheckpointNode *nodes = gGT->level1->ptr_restart_points;
+						struct CheckpointNode *nodes = P32_GET(struct CheckpointNode *, P32_GET(struct Level *, gGT->level1)->ptr_restart_points);
 
-						tw->ptrNodeCurr = &nodes[tw->nodeCurrIndex];
-						tw->ptrNodeNext = RB_Warpball_NewPathNode(tw->ptrNodeCurr, tw->driverTarget);
+						P32_SET(tw->ptrNodeCurr, &nodes[tw->nodeCurrIndex]);
+						P32_SET(tw->ptrNodeNext, RB_Warpball_NewPathNode(P32_GET(struct CheckpointNode *, tw->ptrNodeCurr), P32_GET(struct Driver *, tw->driverTarget)));
 					}
 
 					tw->flags |= TRACKER_FLAG_WARPBALL_FALLBACK_PATH;
@@ -782,13 +782,13 @@ void RB_Warpball_ThTick(struct Thread *t)
 	}
 	else
 	{
-		hitInst = RB_Hazard_CollideWithBucket(inst, t, gGT->threadBuckets[MINE].thread, tw->parentSafetyFrames, 0x2400, tw->instParent);
+		hitInst = RB_Hazard_CollideWithBucket(inst, t, P32_GET(struct Thread *, gGT->threadBuckets[MINE].thread), tw->parentSafetyFrames, 0x2400, P32_GET(struct Instance *, tw->instParent));
 
 		if (hitInst != NULL)
 		{
-			struct Thread *hitTh = hitInst->thread;
+			struct Thread *hitTh = P32_GET(struct Thread *, hitInst->thread);
 
-			((ThreadSimpleCollideFunc)hitTh->funcThCollide)(hitTh);
+			((ThreadSimpleCollideFunc)P32_GET(void *, hitTh->funcThCollide))(hitTh);
 		}
 	}
 

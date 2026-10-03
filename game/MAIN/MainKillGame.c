@@ -4,7 +4,7 @@
 void MainKillGame_StopCTR(void)
 {
 	EnterCriticalSection();
-	DrawSyncCallback((void (*)(void))sdata->MainDrawCb_DrawSyncPtr);
+	DrawSyncCallback((void (*)(void))P32_GET(void *, sdata->MainDrawCb_DrawSyncPtr));
 	ExitCriticalSection();
 	StopCallback();
 

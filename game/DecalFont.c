@@ -3,11 +3,11 @@
 static void DecalFont_DrawGlyph(struct Icon *icon, s16 posX, s16 posY, struct PrimMem *primMem, u32 *ot, u32 color0, u32 color1, u32 color2, u32 color3,
                                 char transparency, s16 scale)
 {
-	POLY_GT4 *p = primMem->cursor;
+	POLY_GT4 *p = P32_GET(void *, primMem->cursor);
 	DecalHUD_DrawPolyGT4(icon, posX, posY, primMem, ot, color0, color1, color2, color3, transparency, scale);
 
 #if CTR_NATIVE_WIDESCREEN
-	if ((icon != NULL) && (primMem->cursor == p + 1))
+	if ((icon != NULL) && (P32_GET(void *, primMem->cursor) == p + 1))
 	{
 		const int sourceWidth = FP_Mult(icon->texLayout.u1 - icon->texLayout.u0, scale);
 		const int targetWidth = (sourceWidth * 34 + 44) / 45;
@@ -119,7 +119,7 @@ int DecalFont_GetLineWidth(char *str, s16 fontType)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800224fc-0x80022878 for the retail path.
 void DecalFont_DrawLineStrlen(char *str, s16 len, int posX, s16 posY, s16 fontType, int flags)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// text is justified left by default
 	if (flags & (JUSTIFY_CENTER | JUSTIFY_RIGHT))
@@ -169,7 +169,7 @@ void DecalFont_DrawLineStrlen(char *str, s16 len, int posX, s16 posY, s16 fontTy
 
 #endif
 
-		u32 *ptrColor = data.ptrColor[flags];
+		u32 *ptrColor = P32_GET(u32 *, data.ptrColor[flags]);
 
 #if BUILD >= JpnTrial
 
@@ -206,7 +206,7 @@ void DecalFont_DrawLineStrlen(char *str, s16 len, int posX, s16 posY, s16 fontTy
 			charWidth = data.font_charPixWidth[fontType] + data.font_buttonPixWidth[fontType];
 
 			// use neutral vertex color for button characters
-			ptrColor = data.ptrColor[GRAY];
+			ptrColor = P32_GET(u32 *, data.ptrColor[GRAY]);
 
 #else
 
@@ -477,11 +477,11 @@ void DecalFont_DrawLineStrlen(char *str, s16 len, int posX, s16 posY, s16 fontTy
 
 // NOTE(aalhendi): Native can boot before every retail icon group is loaded.
 #ifdef CTR_NATIVE
-			if (gGT->iconGroup[iconGroupID] != 0)
+			if (P32_GET(struct IconGroup *, gGT->iconGroup[iconGroupID]) != 0)
 			{
 #endif
 
-				if (iconID < gGT->iconGroup[iconGroupID]->numIcons)
+				if (iconID < P32_GET(struct IconGroup *, gGT->iconGroup[iconGroupID])->numIcons)
 				{
 					struct Icon **iconPtrArray = ICONGROUP_GETICONS(gGT->iconGroup[iconGroupID]);
 
@@ -489,7 +489,7 @@ void DecalFont_DrawLineStrlen(char *str, s16 len, int posX, s16 posY, s16 fontTy
 
 					                     DECAL_FONT_DRAW_X(pixWidthExtra), posY + pixHeightExtra,
 
-					                     &gGT->backBuffer->primMem, gGT->pushBuffer_UI.ptrOT,
+					                     &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT),
 
 					                     ptrColor[0], ptrColor[1], ptrColor[2], ptrColor[3],
 
@@ -577,19 +577,19 @@ void DecalFont_DrawLineOT(char *str, int posX, int posY, s16 fontType, int flags
 	struct GameTracker *gGT;
 	uint32_t *backupOT;
 
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// backup
-	backupOT = gGT->pushBuffer_UI.ptrOT;
+	backupOT = P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT);
 
 	// alter
-	gGT->pushBuffer_UI.ptrOT = ot;
+	P32_SET(gGT->pushBuffer_UI.ptrOT, ot);
 
 	// draw
 	DecalFont_DrawLine(str, (s16)posX, (s16)posY, fontType, (s16)flags);
 
 	// reset
-	gGT->pushBuffer_UI.ptrOT = backupOT;
+	P32_SET(gGT->pushBuffer_UI.ptrOT, backupOT);
 }
 
 

@@ -17,14 +17,14 @@ static void MainFrame_RegisterGpuLinkRanges(struct GameTracker *gGT)
 	for (int i = 0; i < 2; i++)
 	{
 		struct DB *db = &gGT->db[i];
-		NativeGpuLinks_RegisterRangeChecked(primLabels[i], db->primMem.start, db->primMem.capacityBytes);
-		NativeGpuLinks_RegisterRangeChecked(otLabels[i], db->otMem.start, db->otMem.capacityBytes);
+		NativeGpuLinks_RegisterRangeChecked(primLabels[i], P32_GET(void *, db->primMem.start), db->primMem.capacityBytes);
+		NativeGpuLinks_RegisterRangeChecked(otLabels[i], P32_GET(uint32_t *, db->otMem.start), db->otMem.capacityBytes);
 	}
 
 	u32 swapchainOTBytes = ((u32)gGT->numPlyrCurrGame << 12) | 0x18u;
 	for (int i = 0; i < 2; i++)
 	{
-		NativeGpuLinks_RegisterRangeChecked(swapchainLabels[i], gGT->otSwapchainDB[i], swapchainOTBytes);
+		NativeGpuLinks_RegisterRangeChecked(swapchainLabels[i], P32_GET(void *, gGT->otSwapchainDB[i]), swapchainOTBytes);
 	}
 }
 #endif
@@ -85,20 +85,20 @@ void MainFrame_ResetDB(struct GameTracker *gGT)
 
 	// check if new adv hub should be loaded,
 	// this was a random place for ND to put it
-	LOAD_Hub_Main(sdata->ptrBigfile1);
+	LOAD_Hub_Main(P32_GET(struct BigHeader *, sdata->ptrBigfile1));
 
 	gGT->swapchainIndex = 1 - gGT->swapchainIndex;
 
-	gGT->backBuffer = &gGT->db[gGT->swapchainIndex];
+	P32_SET(gGT->backBuffer, &gGT->db[gGT->swapchainIndex]);
 	gGT->frameTimer_MainFrame_ResetDB++;
 
-	otSwapchainDB = (int)gGT->otSwapchainDB[gGT->swapchainIndex];
+	otSwapchainDB = (int)P32_GET(void *, gGT->otSwapchainDB[gGT->swapchainIndex]);
 
-	db = gGT->backBuffer;
+	db = P32_GET(struct DB *, gGT->backBuffer);
 	db->blurCameraMask = 0;
-	db->primMem.cursor = db->primMem.start;
+	P32_SET(db->primMem.cursor, P32_GET(void *, db->primMem.start));
 	db->primMem.primitiveCount = 0;
-	db->otMem.cursor = db->otMem.start;
+	P32_SET(db->otMem.cursor, P32_GET(uint32_t *, db->otMem.start));
 
 #if defined(CTR_NATIVE)
 	// Start native storage alongside the OT arena, before game-logic effects
@@ -110,22 +110,22 @@ void MainFrame_ResetDB(struct GameTracker *gGT)
 	CTR_EmptyFunc_MainFrame_ResetDB();
 	DecalGlobal_EmptyFunc_MainFrame_ResetDB();
 
-	ClearOTagR((u32 *)otSwapchainDB, sdata->gGT->numPlyrCurrGame << 10 | 6);
+	ClearOTagR((u32 *)otSwapchainDB, P32_GET(struct GameTracker *, sdata->gGT)->numPlyrCurrGame << 10 | 6);
 
-	for (iVar4 = 0; iVar4 < sdata->gGT->numPlyrCurrGame; iVar4++)
+	for (iVar4 = 0; iVar4 < P32_GET(struct GameTracker *, sdata->gGT)->numPlyrCurrGame; iVar4++)
 	{
-		gGT->pushBuffer[iVar4].ptrOT = (uint32_t *)((int)otSwapchainDB + (sdata->gGT->numPlyrCurrGame - iVar4 - 1) * 0x1000 + 0x18);
+		P32_SET(gGT->pushBuffer[iVar4].ptrOT, (uint32_t *)((int)otSwapchainDB + (P32_GET(struct GameTracker *, sdata->gGT)->numPlyrCurrGame - iVar4 - 1) * 0x1000 + 0x18));
 	}
 
 	for (; iVar4 < 4; iVar4++)
 	{
 		// but why?
-		gGT->pushBuffer[iVar4].ptrOT = (uint32_t *)((int)otSwapchainDB + 3 * 0x1000 + 0x18);
+		P32_SET(gGT->pushBuffer[iVar4].ptrOT, (uint32_t *)((int)otSwapchainDB + 3 * 0x1000 + 0x18));
 	}
 
 	puVar3 = (uint32_t *)((int)otSwapchainDB + 4);
-	gGT->pushBuffer_UI.ptrOT = puVar3;
-	db->otMem.uiOT = puVar3;
+	P32_SET(gGT->pushBuffer_UI.ptrOT, puVar3);
+	P32_SET(db->otMem.uiOT, puVar3);
 
 #if defined(CTR_NATIVE)
 	if (sdata->ptrPushBufferUI != 0)
@@ -135,8 +135,8 @@ void MainFrame_ResetDB(struct GameTracker *gGT)
 		// NOTE(aalhendi): Retail stores PS1 RAM OT addresses here. Native stores
 		// host pointers, so reset the fake UI pushbuffer to the current backbuffer
 		// before RenderBucket can publish this frame's range metadata.
-		wumpaPushBuffer->ptrOT = gGT->pushBuffer_UI.ptrOT;
-		wumpaPushBuffer->renderBucketOTRangeEnd = NULL;
+		P32_SET(wumpaPushBuffer->ptrOT, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT));
+		P32_SET(wumpaPushBuffer->renderBucketOTRangeEnd, NULL);
 		wumpaPushBuffer->renderBucketOTByteOffset = 0;
 	}
 #endif
@@ -167,9 +167,9 @@ void MainFrame_GameLogic(struct GameTracker *gGT, struct GamepadSystem *gGamepad
 	{
 		wasPausedAtFrameStart = false;
 		pushBuffer = gGT->pushBuffer;
-		for (psVar12 = gGT->threadBuckets[0].thread; psVar12 != 0; psVar12 = psVar12->siblingThread)
+		for (psVar12 = P32_GET(struct Thread *, gGT->threadBuckets[0].thread); psVar12 != 0; psVar12 = P32_GET(struct Thread *, psVar12->siblingThread))
 		{
-			psVar9 = (struct Driver *)psVar12->object;
+			psVar9 = (struct Driver *)P32_GET(void *, psVar12->object);
 
 			if (psVar9->clockSend)
 			{
@@ -297,16 +297,16 @@ void MainFrame_GameLogic(struct GameTracker *gGT, struct GamepadSystem *gGamepad
 			gGT->elapsedEventTime = 0;
 		}
 
-		CTR_CycleTex_AllModels(-1, (struct Model **)sdata->PLYROBJECTLIST, gGT->timer);
-		CTR_CycleTex_AllModels(gGT->level1->numModels, gGT->level1->ptrModelsPtrArray, gGT->timer);
+		CTR_CycleTex_AllModels(-1, (struct Model **)P32_GET(int **, sdata->PLYROBJECTLIST), gGT->timer);
+		CTR_CycleTex_AllModels(P32_GET(struct Level *, gGT->level1)->numModels, P32_GET(struct Model **, P32_GET(struct Level *, gGT->level1)->ptrModelsPtrArray), gGT->timer);
 
 		psVar8 = 0;
 		psVar9 = 0;
 
 #if defined(CTR_NATIVE)
-		for (psVar12 = gGT->threadBuckets[0].thread; psVar12 != 0; psVar12 = psVar12->siblingThread)
+		for (psVar12 = P32_GET(struct Thread *, gGT->threadBuckets[0].thread); psVar12 != 0; psVar12 = P32_GET(struct Thread *, psVar12->siblingThread))
 		{
-			struct Driver *currentDriver = psVar12->object;
+			struct Driver *currentDriver = P32_GET(void *, psVar12->object);
 
 			if (currentDriver->driverID == 0)
 			{
@@ -343,13 +343,13 @@ void MainFrame_GameLogic(struct GameTracker *gGT, struct GamepadSystem *gGamepad
 			if ((((gGT->gameMode1 & DEBUG_MENU) == 0) || ((gGT->threadBuckets[iVar4].boolCantPause & 1) != 0)) &&
 
 			    // if threads exist
-			    (gGT->threadBuckets[iVar4].thread != 0))
+			    (P32_GET(struct Thread *, gGT->threadBuckets[iVar4].thread) != 0))
 			{
 				if (iVar4 == 0)
 				{
-					for (psVar12 = gGT->threadBuckets[iVar4].thread; psVar12 != 0; psVar12 = psVar12->siblingThread)
+					for (psVar12 = P32_GET(struct Thread *, gGT->threadBuckets[iVar4].thread); psVar12 != 0; psVar12 = P32_GET(struct Thread *, psVar12->siblingThread))
 					{
-						VehPickupItem_ShootOnCirclePress((struct Driver *)psVar12->object);
+						VehPickupItem_ShootOnCirclePress((struct Driver *)P32_GET(void *, psVar12->object));
 					}
 
 					// run all driver funcPtrs,
@@ -357,18 +357,18 @@ void MainFrame_GameLogic(struct GameTracker *gGT, struct GamepadSystem *gGamepad
 					// at the same time, that's why the stages exist
 					for (iVar11 = 0; iVar11 < DRIVER_FUNC_COUNT; iVar11++)
 					{
-						for (psVar12 = gGT->threadBuckets[iVar4].thread; psVar12 != 0; psVar12 = psVar12->siblingThread)
+						for (psVar12 = P32_GET(struct Thread *, gGT->threadBuckets[iVar4].thread); psVar12 != 0; psVar12 = P32_GET(struct Thread *, psVar12->siblingThread))
 						{
 							// if PLYR converted to robotcar at end of race,
 							// dont run funcPtrs from inside driver struct
-							if (psVar12->funcThTick != 0)
+							if (P32_GET(ThreadFunc, psVar12->funcThTick) != 0)
 							{
 								continue;
 							}
 
-							psVar9 = (struct Driver *)psVar12->object;
+							psVar9 = (struct Driver *)P32_GET(void *, psVar12->object);
 
-							pcVar5 = psVar9->funcPtrs[iVar11];
+							pcVar5 = P32_GET(DriverFunc, psVar9->funcPtrs[iVar11]);
 
 							if (pcVar5 != 0)
 							{
@@ -378,7 +378,7 @@ void MainFrame_GameLogic(struct GameTracker *gGT, struct GamepadSystem *gGamepad
 					}
 				}
 
-				ThTick_RunBucket(gGT->threadBuckets[iVar4].thread);
+				ThTick_RunBucket(P32_GET(struct Thread *, gGT->threadBuckets[iVar4].thread));
 			}
 		}
 
@@ -393,8 +393,8 @@ void MainFrame_GameLogic(struct GameTracker *gGT, struct GamepadSystem *gGamepad
 #if CTR_NATIVE_60FPS
 		if (CTR_NATIVE_60FPS_ACTIVE)
 		{
-			Particle_RescaleNewParticles(gGT->particleList_ordinary);
-			Particle_RescaleNewParticles(gGT->particleList_heatWarp);
+			Particle_RescaleNewParticles(P32_GET(struct Particle *, gGT->particleList_ordinary));
+			Particle_RescaleNewParticles(P32_GET(struct Particle *, gGT->particleList_heatWarp));
 		}
 #endif
 
@@ -404,7 +404,7 @@ void MainFrame_GameLogic(struct GameTracker *gGT, struct GamepadSystem *gGamepad
 	}
 	else
 	{
-		psVar12 = gGT->threadBuckets[AKUAKU].thread;
+		psVar12 = P32_GET(struct Thread *, gGT->threadBuckets[AKUAKU].thread);
 		if (psVar12 != 0)
 		{
 			ThTick_RunBucket(psVar12);
@@ -420,7 +420,7 @@ void MainFrame_GameLogic(struct GameTracker *gGT, struct GamepadSystem *gGamepad
 			RB_Bubbles_RoosTubes();
 		}
 #endif
-		if (gGT->threadBuckets[BURST].thread != 0)
+		if (P32_GET(struct Thread *, gGT->threadBuckets[BURST].thread) != 0)
 		{
 			RB_Burst_DrawAll(gGT);
 		}
@@ -443,7 +443,7 @@ void MainFrame_GameLogic(struct GameTracker *gGT, struct GamepadSystem *gGamepad
 		{
 			if (gGT->cooldownfromPauseUntilUnpause == 0)
 			{
-				if (((sdata->ptrActiveMenu != &data.menuRacingWheelConfig) && (sdata->ptrActiveMenu != &D232.menuHintMenu) // in 232
+				if (((P32_GET(struct RectMenu *, sdata->ptrActiveMenu) != &data.menuRacingWheelConfig) && (P32_GET(struct RectMenu *, sdata->ptrActiveMenu) != &D232.menuHintMenu) // in 232
 				     ) &&
 				    ((sdata->AnyPlayerTap & BTN_START) != 0))
 				{
@@ -457,7 +457,7 @@ void MainFrame_GameLogic(struct GameTracker *gGT, struct GamepadSystem *gGamepad
 					MainFreeze_SafeAdvDestroy();
 					ElimBG_Deactivate(gGT);
 
-					RECTMENU_Hide(sdata->ptrActiveMenu);
+					RECTMENU_Hide(P32_GET(struct RectMenu *, sdata->ptrActiveMenu));
 					gGT->cooldownFromUnpauseUntilPause = FPS_DOUBLE(5);
 				}
 			}
@@ -470,7 +470,7 @@ void MainFrame_GameLogic(struct GameTracker *gGT, struct GamepadSystem *gGamepad
 		{
 			if ((uVar3 & (GAME_CUTSCENE | END_OF_RACE | MAIN_MENU)) == 0)
 			{
-				if (sdata->ptrActiveMenu == 0)
+				if (P32_GET(struct RectMenu *, sdata->ptrActiveMenu) == 0)
 				{
 					if (sdata->AkuAkuHintState == 0)
 					{
@@ -610,7 +610,7 @@ b32 MainFrame_HaveAllPads(s16 numPlyrNextGame)
 	// if game is not loading
 	if (sdata->Loading.stage == LOAD_IDLE)
 	{
-		struct GamepadBuffer *gb = &sdata->gGamepads->gamepad[0];
+		struct GamepadBuffer *gb = &P32_GET(struct GamepadSystem *, sdata->gGamepads)->gamepad[0];
 #if defined(__vita__)
 		int adhocRemotePlayer = -1;
 		if (NativeAdhoc_IsActive() && (numPlyrNextGame == 2))
@@ -634,7 +634,7 @@ b32 MainFrame_HaveAllPads(s16 numPlyrNextGame)
 			}
 		#endif
 
-			struct ControllerPacket *packet = gb->ptrControllerPacket;
+			struct ControllerPacket *packet = P32_GET(struct ControllerPacket *, gb->ptrControllerPacket);
 
 			if (packet == NULL)
 			{
@@ -680,7 +680,7 @@ static void MainFrame_OrPackedVisList(int *dst, void *src, int byteCount)
 
 static int MainFrame_VisMemHasQuad(const int *visFaceList, const struct QuadBlock *quad, const struct mesh_info *mesh)
 {
-	int quadIndex = (int)(quad - mesh->ptrQuadBlockArray);
+	int quadIndex = (int)(quad - P32_GET(struct QuadBlock *const, mesh->ptrQuadBlockArray));
 
 	return (visFaceList[quadIndex >> 5] & (1 << (quadIndex & 0x1f))) != 0;
 }
@@ -688,9 +688,9 @@ static int MainFrame_VisMemHasQuad(const int *visFaceList, const struct QuadBloc
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80035684-0x800357b8, unnamed in syms926.
 static void MainFrame_VisMemAddDriverPVS(struct GameTracker *gGT, int playerIndex, int visIndex)
 {
-	struct Driver *driver = gGT->drivers[playerIndex];
-	struct mesh_info *mesh = gGT->level1->ptr_mesh_info;
-	struct QuadBlock *quad = driver->underDriver;
+	struct Driver *driver = P32_GET(struct Driver *, gGT->drivers[playerIndex]);
+	struct mesh_info *mesh = P32_GET(struct mesh_info *, P32_GET(struct Level *, gGT->level1)->ptr_mesh_info);
+	struct QuadBlock *quad = P32_GET(struct QuadBlock *, driver->underDriver);
 	struct PVS *pvs;
 
 	if (quad == NULL)
@@ -698,20 +698,20 @@ static void MainFrame_VisMemAddDriverPVS(struct GameTracker *gGT, int playerInde
 		return;
 	}
 
-	pvs = quad->pvs;
+	pvs = P32_GET(struct PVS *, quad->pvs);
 	if (pvs == NULL)
 	{
 		return;
 	}
 
-	if (pvs->visLeafSrc != NULL)
+	if (P32_GET(int *, pvs->visLeafSrc) != NULL)
 	{
-		MainFrame_OrPackedVisList(gGT->visMem1->visLeafList[visIndex], pvs->visLeafSrc, ((mesh->numBspNodes + 0x1f) >> 5) << 2);
+		MainFrame_OrPackedVisList(P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visLeafList[visIndex]), P32_GET(int *, pvs->visLeafSrc), ((mesh->numBspNodes + 0x1f) >> 5) << 2);
 	}
 
-	if (pvs->visFaceSrc != NULL)
+	if (P32_GET(int *, pvs->visFaceSrc) != NULL)
 	{
-		MainFrame_OrPackedVisList(gGT->visMem1->visFaceList[visIndex], pvs->visFaceSrc, ((mesh->numQuadBlock + 0x1f) >> 5) << 2);
+		MainFrame_OrPackedVisList(P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visFaceList[visIndex]), P32_GET(int *, pvs->visFaceSrc), ((mesh->numQuadBlock + 0x1f) >> 5) << 2);
 	}
 }
 
@@ -724,7 +724,7 @@ void MainFrame_VisMemFullFrame(struct GameTracker *gGT, struct Level *level)
 	int playerStart;
 	int playerEnd;
 
-	visMem = gGT->visMem1;
+	visMem = P32_GET(struct VisMem *, gGT->visMem1);
 	if (visMem == NULL)
 	{
 		return;
@@ -740,7 +740,7 @@ void MainFrame_VisMemFullFrame(struct GameTracker *gGT, struct Level *level)
 		return;
 	}
 
-	mesh = level->ptr_mesh_info;
+	mesh = P32_GET(struct mesh_info *, level->ptr_mesh_info);
 
 	playerStart = 0;
 	playerEnd = gGT->numPlyrCurrGame;
@@ -763,46 +763,46 @@ void MainFrame_VisMemFullFrame(struct GameTracker *gGT, struct Level *level)
 		}
 #endif
 		struct CameraDC *camDC = &gGT->cameraDC[playerIndex];
-		struct Driver *driver = gGT->drivers[playerIndex];
-		struct QuadBlock *driverQuad = driver->underDriver;
+		struct Driver *driver = P32_GET(struct Driver *, gGT->drivers[playerIndex]);
+		struct QuadBlock *driverQuad = P32_GET(struct QuadBlock *, driver->underDriver);
 		struct PVS *driverPVS = NULL;
 
 		if (driverQuad != NULL)
 		{
-			driverPVS = driverQuad->pvs;
+			driverPVS = P32_GET(struct PVS *, driverQuad->pvs);
 		}
 
 		camDC->flags &= ~0x4000;
 
-		if (camDC->visLeafSrc == NULL)
+		if (P32_GET(int *, camDC->visLeafSrc) == NULL)
 		{
-			if ((driverPVS != NULL) && (driverPVS->visLeafSrc != NULL))
+			if ((driverPVS != NULL) && (P32_GET(int *, driverPVS->visLeafSrc) != NULL))
 			{
-				visMem->visLeafSrc[visIndex] = driverPVS->visLeafSrc;
-				MainFrame_ReplacePackedVisList(visMem->visLeafList[visIndex], driverPVS->visLeafSrc, ((mesh->numBspNodes + 0x1f) >> 5) << 2);
+				P32_SET(visMem->visLeafSrc[visIndex], P32_GET(int *, driverPVS->visLeafSrc));
+				MainFrame_ReplacePackedVisList(P32_GET(int *, visMem->visLeafList[visIndex]), P32_GET(int *, driverPVS->visLeafSrc), ((mesh->numBspNodes + 0x1f) >> 5) << 2);
 			}
 		}
-		else if (visMem->visLeafSrc[visIndex] != camDC->visLeafSrc)
+		else if (P32_GET(int *, visMem->visLeafSrc[visIndex]) != P32_GET(int *, camDC->visLeafSrc))
 		{
-			visMem->visLeafSrc[visIndex] = camDC->visLeafSrc;
-			MainFrame_ReplacePackedVisList(visMem->visLeafList[visIndex], camDC->visLeafSrc, ((mesh->numBspNodes + 0x1f) >> 5) << 2);
+			P32_SET(visMem->visLeafSrc[visIndex], P32_GET(int *, camDC->visLeafSrc));
+			MainFrame_ReplacePackedVisList(P32_GET(int *, visMem->visLeafList[visIndex]), P32_GET(int *, camDC->visLeafSrc), ((mesh->numBspNodes + 0x1f) >> 5) << 2);
 		}
 
-		if (camDC->visFaceSrc == NULL)
+		if (P32_GET(int *, camDC->visFaceSrc) == NULL)
 		{
-			if ((driverPVS != NULL) && (driverPVS->visFaceSrc != NULL))
+			if ((driverPVS != NULL) && (P32_GET(int *, driverPVS->visFaceSrc) != NULL))
 			{
-				visMem->visFaceSrc[visIndex] = driverPVS->visFaceSrc;
-				MainFrame_ReplacePackedVisList(visMem->visFaceList[visIndex], driverPVS->visFaceSrc, ((mesh->numQuadBlock + 0x1f) >> 5) << 2);
+				P32_SET(visMem->visFaceSrc[visIndex], P32_GET(int *, driverPVS->visFaceSrc));
+				MainFrame_ReplacePackedVisList(P32_GET(int *, visMem->visFaceList[visIndex]), P32_GET(int *, driverPVS->visFaceSrc), ((mesh->numQuadBlock + 0x1f) >> 5) << 2);
 			}
 		}
-		else if (visMem->visFaceSrc[visIndex] != camDC->visFaceSrc)
+		else if (P32_GET(int *, visMem->visFaceSrc[visIndex]) != P32_GET(int *, camDC->visFaceSrc))
 		{
-			visMem->visFaceSrc[visIndex] = camDC->visFaceSrc;
-			MainFrame_ReplacePackedVisList(visMem->visFaceList[visIndex], camDC->visFaceSrc, ((mesh->numQuadBlock + 0x1f) >> 5) << 2);
+			P32_SET(visMem->visFaceSrc[visIndex], P32_GET(int *, camDC->visFaceSrc));
+			MainFrame_ReplacePackedVisList(P32_GET(int *, visMem->visFaceList[visIndex]), P32_GET(int *, camDC->visFaceSrc), ((mesh->numQuadBlock + 0x1f) >> 5) << 2);
 
-			if ((driverPVS == NULL) || (driverPVS->visLeafSrc == NULL) || (driverPVS->visFaceSrc == NULL) || (driverPVS->visInstSrc == NULL) ||
-			    MainFrame_VisMemHasQuad(visMem->visFaceList[visIndex], driverQuad, mesh))
+			if ((driverPVS == NULL) || (P32_GET(int *, driverPVS->visLeafSrc) == NULL) || (P32_GET(int *, driverPVS->visFaceSrc) == NULL) || (P32_GET(struct Instance **, driverPVS->visInstSrc) == NULL) ||
+			    MainFrame_VisMemHasQuad(P32_GET(int *, visMem->visFaceList[visIndex]), driverQuad, mesh))
 			{
 				camDC->flags &= ~0x2000;
 			}
@@ -826,16 +826,16 @@ void MainFrame_VisMemFullFrame(struct GameTracker *gGT, struct Level *level)
 
 		if (nativeWide2PSplitPvs)
 		{
-			void *leafSrc = camDC->visLeafSrc;
-			void *faceSrc = camDC->visFaceSrc;
+			void *leafSrc = P32_GET(int *, camDC->visLeafSrc);
+			void *faceSrc = P32_GET(int *, camDC->visFaceSrc);
 
 			if ((leafSrc == NULL) && (driverPVS != NULL))
 			{
-				leafSrc = driverPVS->visLeafSrc;
+				leafSrc = P32_GET(int *, driverPVS->visLeafSrc);
 			}
 			if ((faceSrc == NULL) && (driverPVS != NULL))
 			{
-				faceSrc = driverPVS->visFaceSrc;
+				faceSrc = P32_GET(int *, driverPVS->visFaceSrc);
 			}
 
 			// Rebase the packed lists every frame before merging the driver's PVS.
@@ -843,24 +843,24 @@ void MainFrame_VisMemFullFrame(struct GameTracker *gGT, struct Level *level)
 			// visibility bits accumulated from earlier frames.
 			if (leafSrc != NULL)
 			{
-				visMem->visLeafSrc[visIndex] = leafSrc;
-				MainFrame_ReplacePackedVisList(visMem->visLeafList[visIndex], leafSrc, ((mesh->numBspNodes + 0x1f) >> 5) << 2);
+				P32_SET(visMem->visLeafSrc[visIndex], leafSrc);
+				MainFrame_ReplacePackedVisList(P32_GET(int *, visMem->visLeafList[visIndex]), leafSrc, ((mesh->numBspNodes + 0x1f) >> 5) << 2);
 			}
 			if (faceSrc != NULL)
 			{
-				visMem->visFaceSrc[visIndex] = faceSrc;
-				MainFrame_ReplacePackedVisList(visMem->visFaceList[visIndex], faceSrc, ((mesh->numQuadBlock + 0x1f) >> 5) << 2);
+				P32_SET(visMem->visFaceSrc[visIndex], faceSrc);
+				MainFrame_ReplacePackedVisList(P32_GET(int *, visMem->visFaceList[visIndex]), faceSrc, ((mesh->numQuadBlock + 0x1f) >> 5) << 2);
 			}
 
 			if (driverPVS != NULL)
 			{
-				if ((driverPVS->visLeafSrc != NULL) && (driverPVS->visLeafSrc != leafSrc))
+				if ((P32_GET(int *, driverPVS->visLeafSrc) != NULL) && (P32_GET(int *, driverPVS->visLeafSrc) != leafSrc))
 				{
-					MainFrame_OrPackedVisList(visMem->visLeafList[visIndex], driverPVS->visLeafSrc, ((mesh->numBspNodes + 0x1f) >> 5) << 2);
+					MainFrame_OrPackedVisList(P32_GET(int *, visMem->visLeafList[visIndex]), P32_GET(int *, driverPVS->visLeafSrc), ((mesh->numBspNodes + 0x1f) >> 5) << 2);
 				}
-				if ((driverPVS->visFaceSrc != NULL) && (driverPVS->visFaceSrc != faceSrc))
+				if ((P32_GET(int *, driverPVS->visFaceSrc) != NULL) && (P32_GET(int *, driverPVS->visFaceSrc) != faceSrc))
 				{
-					MainFrame_OrPackedVisList(visMem->visFaceList[visIndex], driverPVS->visFaceSrc, ((mesh->numQuadBlock + 0x1f) >> 5) << 2);
+					MainFrame_OrPackedVisList(P32_GET(int *, visMem->visFaceList[visIndex]), P32_GET(int *, driverPVS->visFaceSrc), ((mesh->numQuadBlock + 0x1f) >> 5) << 2);
 				}
 			}
 		}
@@ -872,9 +872,9 @@ void MainFrame_VisMemFullFrame(struct GameTracker *gGT, struct Level *level)
 		{
 			int hadDriverPVS = (camDC->flags & 0x2000) != 0;
 			int needsDriverPVS =
-			    (driverPVS != NULL) && (driverPVS->visLeafSrc != NULL) && (driverPVS->visFaceSrc != NULL) && (driverPVS->visInstSrc != NULL) &&
-			    (camDC->visLeafSrc != NULL) && (camDC->visFaceSrc != NULL) &&
-			    ((camDC->visLeafSrc != driverPVS->visLeafSrc) || (camDC->visFaceSrc != driverPVS->visFaceSrc));
+			    (driverPVS != NULL) && (P32_GET(int *, driverPVS->visLeafSrc) != NULL) && (P32_GET(int *, driverPVS->visFaceSrc) != NULL) && (P32_GET(struct Instance **, driverPVS->visInstSrc) != NULL) &&
+			    (P32_GET(int *, camDC->visLeafSrc) != NULL) && (P32_GET(int *, camDC->visFaceSrc) != NULL) &&
+			    ((P32_GET(int *, camDC->visLeafSrc) != P32_GET(int *, driverPVS->visLeafSrc)) || (P32_GET(int *, camDC->visFaceSrc) != P32_GET(int *, driverPVS->visFaceSrc)));
 
 			if (needsDriverPVS)
 			{
@@ -886,25 +886,25 @@ void MainFrame_VisMemFullFrame(struct GameTracker *gGT, struct Level *level)
 
 				if (hadDriverPVS)
 				{
-					void *leafSrc = camDC->visLeafSrc;
-					void *faceSrc = camDC->visFaceSrc;
+					void *leafSrc = P32_GET(int *, camDC->visLeafSrc);
+					void *faceSrc = P32_GET(int *, camDC->visFaceSrc);
 
 					if ((leafSrc == NULL) && (driverPVS != NULL))
 					{
-						leafSrc = driverPVS->visLeafSrc;
+						leafSrc = P32_GET(int *, driverPVS->visLeafSrc);
 					}
 					if ((faceSrc == NULL) && (driverPVS != NULL))
 					{
-						faceSrc = driverPVS->visFaceSrc;
+						faceSrc = P32_GET(int *, driverPVS->visFaceSrc);
 					}
 
 					if (leafSrc != NULL)
 					{
-						MainFrame_ReplacePackedVisList(visMem->visLeafList[visIndex], leafSrc, ((mesh->numBspNodes + 0x1f) >> 5) << 2);
+						MainFrame_ReplacePackedVisList(P32_GET(int *, visMem->visLeafList[visIndex]), leafSrc, ((mesh->numBspNodes + 0x1f) >> 5) << 2);
 					}
 					if (faceSrc != NULL)
 					{
-						MainFrame_ReplacePackedVisList(visMem->visFaceList[visIndex], faceSrc, ((mesh->numQuadBlock + 0x1f) >> 5) << 2);
+						MainFrame_ReplacePackedVisList(P32_GET(int *, visMem->visFaceList[visIndex]), faceSrc, ((mesh->numQuadBlock + 0x1f) >> 5) << 2);
 					}
 				}
 			}
@@ -922,49 +922,49 @@ void MainFrame_VisMemFullFrame(struct GameTracker *gGT, struct Level *level)
 			MainFrame_VisMemAddDriverPVS(gGT, playerIndex, visIndex);
 		}
 
-		if ((camDC->cameraMode == 0) && ((camDC->flags & 0x2000) != 0) && (driverPVS != NULL) && (driverPVS->visInstSrc != NULL))
+		if ((camDC->cameraMode == 0) && ((camDC->flags & 0x2000) != 0) && (driverPVS != NULL) && (P32_GET(struct Instance **, driverPVS->visInstSrc) != NULL))
 		{
-			camDC->visInstSrc = driverPVS->visInstSrc;
+			P32_SET(camDC->visInstSrc, P32_GET(struct Instance **, driverPVS->visInstSrc));
 		}
 
 		if ((level->configFlags & 4) == 0)
 		{
-			if (visMem->visOVertSrc[visIndex] != camDC->visOVertSrc)
+			if (P32_GET(int *, visMem->visOVertSrc[visIndex]) != P32_GET(int *, camDC->visOVertSrc))
 			{
-				visMem->visOVertSrc[visIndex] = camDC->visOVertSrc;
+				P32_SET(visMem->visOVertSrc[visIndex], P32_GET(int *, camDC->visOVertSrc));
 
-				if (camDC->visOVertSrc != NULL)
+				if (P32_GET(int *, camDC->visOVertSrc) != NULL)
 				{
-					MainFrame_ReplacePackedVisList(visMem->visOVertList[visIndex], camDC->visOVertSrc, ((level->numWaterVertices + 0x1f) >> 5) << 2);
+					MainFrame_ReplacePackedVisList(P32_GET(int *, visMem->visOVertList[visIndex]), P32_GET(int *, camDC->visOVertSrc), ((level->numWaterVertices + 0x1f) >> 5) << 2);
 				}
 				else
 				{
-					memcpy(visMem->visOVertList[visIndex], level->visOVertSrc, ((level->numWaterVertices + 0x1f) >> 5) << 2);
+					memcpy(P32_GET(int *, visMem->visOVertList[visIndex]), P32_GET(int *, level->visOVertSrc), ((level->numWaterVertices + 0x1f) >> 5) << 2);
 				}
 			}
-			else if (visMem->visOVertSrc[visIndex] == NULL)
+			else if (P32_GET(int *, visMem->visOVertSrc[visIndex]) == NULL)
 			{
-				memcpy(visMem->visOVertList[visIndex], level->visOVertSrc, ((level->numWaterVertices + 0x1f) >> 5) << 2);
+				memcpy(P32_GET(int *, visMem->visOVertList[visIndex]), P32_GET(int *, level->visOVertSrc), ((level->numWaterVertices + 0x1f) >> 5) << 2);
 			}
 		}
 		else
 		{
-			if (visMem->visSCVertSrc[visIndex] != camDC->visSCVertSrc)
+			if (P32_GET(int *, visMem->visSCVertSrc[visIndex]) != P32_GET(int *, camDC->visSCVertSrc))
 			{
-				visMem->visSCVertSrc[visIndex] = camDC->visSCVertSrc;
+				P32_SET(visMem->visSCVertSrc[visIndex], P32_GET(int *, camDC->visSCVertSrc));
 
-				if (camDC->visSCVertSrc != NULL)
+				if (P32_GET(int *, camDC->visSCVertSrc) != NULL)
 				{
-					MainFrame_ReplacePackedVisList(visMem->visSCVertList[visIndex], camDC->visSCVertSrc, ((level->numSCVert + 0x1f) >> 5) << 2);
+					MainFrame_ReplacePackedVisList(P32_GET(int *, visMem->visSCVertList[visIndex]), P32_GET(int *, camDC->visSCVertSrc), ((level->numSCVert + 0x1f) >> 5) << 2);
 				}
 				else
 				{
-					memcpy(visMem->visSCVertList[visIndex], level->visSCVertSrc, ((level->numSCVert + 0x1f) >> 5) << 2);
+					memcpy(P32_GET(int *, visMem->visSCVertList[visIndex]), P32_GET(int *, level->visSCVertSrc), ((level->numSCVert + 0x1f) >> 5) << 2);
 				}
 			}
-			else if (visMem->visSCVertSrc[visIndex] == NULL)
+			else if (P32_GET(int *, visMem->visSCVertSrc[visIndex]) == NULL)
 			{
-				memcpy(visMem->visSCVertList[visIndex], level->visSCVertSrc, ((level->numSCVert + 0x1f) >> 5) << 2);
+				memcpy(P32_GET(int *, visMem->visSCVertList[visIndex]), P32_GET(int *, level->visSCVertSrc), ((level->numSCVert + 0x1f) >> 5) << 2);
 			}
 		}
 	}
@@ -992,13 +992,13 @@ void MainFrame_VisMemFullFrame(struct GameTracker *gGT, struct Level *level)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80035e20-0x80035e70.
 void MainFrame_RequestMaskHint(s16 hintId, s16 interruptWarpPad)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	if (((gGT->gameMode1 & PAUSE_ALL) == 0) && (sdata->AkuHint_RequestedHint == -1))
 	{
 		sdata->AkuAkuHintState = 1;
 
-		gGT->drivers[0]->funcPtrs[DRIVER_FUNC_INIT] = VehPhysProc_FreezeEndEvent_Init;
+		P32_SET(P32_GET(struct Driver *, gGT->drivers[0])->funcPtrs[DRIVER_FUNC_INIT], VehPhysProc_FreezeEndEvent_Init);
 
 		sdata->AkuHint_RequestedHint = hintId;
 		sdata->AkuHint_boolInterruptWarppad = interruptWarpPad;

@@ -4,7 +4,7 @@
 void MainStats_ClearBattleVS(void)
 {
 	int i;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// 4 players, 3 ranks (1st, 2nd, 3rd)
 	for (i = 0; i < 12; i++)
@@ -24,11 +24,11 @@ void MainStats_RestartRaceCountLoss(void)
 	int gameMode1;
 	struct GameTracker *gGT;
 
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	gameMode1 = gGT->gameMode1;
 
 	// Turn off HUD
-	sdata->gGT->hudFlags &= HUD_FLAG_CLEAR_RACE_HUD_MASK;
+	P32_GET(struct GameTracker *, sdata->gGT)->hudFlags &= HUD_FLAG_CLEAR_RACE_HUD_MASK;
 
 	// Reset team points
 	for (int i = 0; i < 4; i++)
@@ -65,7 +65,7 @@ void MainStats_RestartRaceCountLoss(void)
 	}
 
 	// only count loss if you rage-quit on lap 3
-	if (gGT->drivers[0]->lapIndex != 2)
+	if (P32_GET(struct Driver *, gGT->drivers[0])->lapIndex != 2)
 	{
 		return;
 	}

@@ -13,14 +13,14 @@ void RB_Snowball_ThTick(struct Thread *t)
 	struct SpawnType2 *ptrSpawnType2;
 	const struct SpawnPosRot *frame;
 
-	snowInst = t->inst;
-	snowObj = (struct Snowball *)t->object;
+	snowInst = P32_GET(struct Instance *, t->inst);
+	snowObj = (struct Snowball *)P32_GET(void *, t->object);
 
-	modelID = snowInst->model->id;
+	modelID = P32_GET(struct Model *, snowInst->model)->id;
 
-	if (sdata->gGT->level1->numSpawnType2_PosRot != 0)
+	if (P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->numSpawnType2_PosRot != 0)
 	{
-		ptrSpawnType2 = &sdata->gGT->level1->ptrSpawnType2_PosRot[snowObj->snowID];
+		ptrSpawnType2 = &P32_GET(struct SpawnType2 *, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->ptrSpawnType2_PosRot)[snowObj->snowID];
 
 		// Retail checks DYNAMIC_SNOWBALL, but Blizzard Bluff uses TEMP_SNOWBALL.
 		if (modelID == DYNAMIC_SNOWBALL)
@@ -44,7 +44,7 @@ void RB_Snowball_ThTick(struct Thread *t)
 			pointIndex = (snowObj->numPoints * 2) - pointIndex;
 		}
 
-		frame = &ptrSpawnType2->posRot[pointIndex];
+		frame = &P32_GET(struct SpawnPosRot *, ptrSpawnType2->posRot)[pointIndex];
 
 		SVec3 pos = frame->pos;
 		SVec3 rot = frame->rot;
@@ -57,8 +57,8 @@ void RB_Snowball_ThTick(struct Thread *t)
 				pointIndex = (snowObj->numPoints * 2) - pointIndex;
 			}
 
-			const struct SpawnPosRot *nextFrame = &ptrSpawnType2->posRot[pointIndex];
-			int fraction = (int)(((u32)sdata->gGT->timer * 30ull) % CTR_FRAMES_PER_SECOND);
+			const struct SpawnPosRot *nextFrame = &P32_GET(struct SpawnPosRot *, ptrSpawnType2->posRot)[pointIndex];
+			int fraction = (int)(((u32)P32_GET(struct GameTracker *, sdata->gGT)->timer * 30ull) % CTR_FRAMES_PER_SECOND);
 			for (int axis = 0; axis < 3; axis++)
 			{
 				pos.v[axis] = (s16)(((s32)pos.v[axis] * (CTR_FRAMES_PER_SECOND - fraction) + (s32)nextFrame->pos.v[axis] * fraction) / CTR_FRAMES_PER_SECOND);
@@ -89,7 +89,7 @@ void RB_Snowball_LInB(struct Instance *inst)
 	struct Snowball *snowObj;
 	struct Thread *t;
 
-	if (inst->thread != 0)
+	if (P32_GET(struct Thread *, inst->thread) != 0)
 	{
 		return;
 	}
@@ -107,16 +107,16 @@ void RB_Snowball_LInB(struct Instance *inst)
 	{
 		return;
 	}
-	inst->thread = t;
-	t->inst = inst;
+	P32_SET(inst->thread, t);
+	P32_SET(t->inst, inst);
 
-	snowObj = ((struct Snowball *)t->object);
+	snowObj = ((struct Snowball *)P32_GET(void *, t->object));
 	snowObj->pointIndex = 0;
 	snowObj->rot_unused.x = 0;
 
 	snowObj->snowID = inst->name[strlen(inst->name) - 1] - '0';
 
-	snowObj->numPoints = sdata->gGT->level1->ptrSpawnType2_PosRot[snowObj->snowID].numCoords - 1;
+	snowObj->numPoints = P32_GET(struct SpawnType2 *, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->ptrSpawnType2_PosRot)[snowObj->snowID].numCoords - 1;
 
 	inst->scale.x = 0x1000;
 	inst->scale.y = 0x1000;

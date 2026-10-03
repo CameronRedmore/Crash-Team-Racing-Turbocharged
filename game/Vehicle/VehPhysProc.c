@@ -172,7 +172,7 @@ void VehPhysProc_Driving_PhysLinear(struct Thread *thread, struct Driver *driver
 	int centeredStick;
 	int driverSpeedCopy;
 
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	gameMode2 = gGT->gameMode2;
 
 	// If race timer is not supposed to stop for this racer
@@ -227,8 +227,8 @@ void VehPhysProc_Driving_PhysLinear(struct Thread *thread, struct Driver *driver
 		if (driver->invisibleTimer <= 0)
 		{
 			driver->invisibleTimer = 0;
-			driver->instSelf->flags = driver->instFlagsBackup;
-			driver->instSelf->alphaScale = 0;
+			P32_GET(struct Instance *, driver->instSelf)->flags = driver->instFlagsBackup;
+			P32_GET(struct Instance *, driver->instSelf)->alphaScale = 0;
 			OtherFX_Play(VEH_PHYS_PROC_INVISIBLE_REAPPEAR_FX, 1);
 		}
 	}
@@ -262,9 +262,9 @@ void VehPhysProc_Driving_PhysLinear(struct Thread *thread, struct Driver *driver
 	rainCloudEffect = RAIN_CLOUD_EFFECT_NONE;
 
 	// if you have a raincloud over your head from potion
-	if (driver->thCloud != 0)
+	if (P32_GET(struct Thread *, driver->thCloud) != 0)
 	{
-		rainCloudEffect = ((struct RainCloud *)driver->thCloud->object)->effect;
+		rainCloudEffect = ((struct RainCloud *)P32_GET(void *, P32_GET(struct Thread *, driver->thCloud)->object))->effect;
 	}
 
 	// get approximate speed
@@ -512,7 +512,7 @@ void VehPhysProc_Driving_PhysLinear(struct Thread *thread, struct Driver *driver
 
 
 	actionsFlagSetCopy = actionsFlagSetNext;
-	driverItemThread = thread->childThread;
+	driverItemThread = P32_GET(struct Thread *, thread->childThread);
 	while (driverItemThread != 0)
 	{
 		// If thread->modelIndex is Aku or Uka
@@ -524,7 +524,7 @@ void VehPhysProc_Driving_PhysLinear(struct Thread *thread, struct Driver *driver
 		}
 
 		// check next player in linked list
-		driverItemThread = driverItemThread->siblingThread;
+		driverItemThread = P32_GET(struct Thread *, driverItemThread->siblingThread);
 	}
 
 
@@ -532,7 +532,7 @@ void VehPhysProc_Driving_PhysLinear(struct Thread *thread, struct Driver *driver
 
 
 	// pointer to gamepad input of current player (driver)
-	ptrgamepad = &sdata->gGamepads->gamepad[(u32)driver->driverID];
+	ptrgamepad = &P32_GET(struct GamepadSystem *, sdata->gGamepads)->gamepad[(u32)driver->driverID];
 
 	// no hold, no tap
 	buttonsHeld = 0;
@@ -560,25 +560,25 @@ void VehPhysProc_Driving_PhysLinear(struct Thread *thread, struct Driver *driver
 	     ((kartState == KS_NORMAL) || (kartState == KS_DRIFTING) || (kartState == KS_ANTIVSHIFT))) &&
 
 	    // if there is no tnt on your head
-	    (driver->instTntRecv == 0))
+	    (P32_GET(struct Instance *, driver->instTntRecv) == 0))
 	{
 		// If there is a Bomb Pointer
-		if (driver->instBombThrow != 0)
+		if (P32_GET(struct Instance *, driver->instBombThrow) != 0)
 		{
 			// Detonate the bomb
-			bomb = (struct TrackerWeapon *)driver->instBombThrow->thread->object;
+			bomb = (struct TrackerWeapon *)P32_GET(void *, P32_GET(struct Thread *, P32_GET(struct Instance *, driver->instBombThrow)->thread)->object);
 			bomb->flags |= 2;
-			driver->instBombThrow = NULL;
+			P32_SET(driver->instBombThrow, NULL);
 			goto CheckJumpButtons;
 		}
 
 		// If there is a Bubble Pointer
-		if (driver->instBubbleHold != 0)
+		if (P32_GET(struct Instance *, driver->instBubbleHold) != 0)
 		{
 			// Shoot the bubble
-			shield = (struct Shield *)driver->instBubbleHold->thread->object;
+			shield = (struct Shield *)P32_GET(void *, P32_GET(struct Thread *, P32_GET(struct Instance *, driver->instBubbleHold)->thread)->object);
 			shield->flags |= SHIELD_FLAG_SHOOT;
-			driver->instBubbleHold = NULL;
+			P32_SET(driver->instBubbleHold, NULL);
 			goto CheckJumpButtons;
 		}
 
@@ -1022,7 +1022,7 @@ CheckJumpButtons:
 	// brakes
 	if ((actionsFlagSetNext & (ACTION_MASK_WEAPON | ACTION_BRAKE_WITH_ACCEL)) == 0)
 	{
-		scratchValue = driver->terrainMeta2->speedMultiplier;
+		scratchValue = P32_GET(struct Terrain *, driver->terrainMeta2)->speedMultiplier;
 
 		if (scratchValue != VEH_PHYS_PROC_TERRAIN_SPEED_NEUTRAL)
 		{
@@ -1103,7 +1103,7 @@ CheckJumpButtons:
 UseTurnRate:
 
 	// Steer, based on strength, and LeftStickX
-	steerStrength = VehPhysJoystick_GetStrengthAbsolute(scratchValue, steerStrength, ptrgamepad->rwd);
+	steerStrength = VehPhysJoystick_GetStrengthAbsolute(scratchValue, steerStrength, P32_GET(struct RacingWheelData *, ptrgamepad->rwd));
 
 	// no desired steer
 	if (CTR_MipsNegLo(steerStrength) == 0)
@@ -1141,7 +1141,7 @@ SkipSetSteer:
 	driver->simpTurnState = (s8)CTR_MipsNegLo(steerStrength);
 
 	// Change wheel rotation based on StickLX
-	scratchValue = VehPhysJoystick_GetStrengthAbsolute(scratchValue, VEH_PHYS_PROC_WHEEL_ROTATION_STRENGTH, ptrgamepad->rwd);
+	scratchValue = VehPhysJoystick_GetStrengthAbsolute(scratchValue, VEH_PHYS_PROC_WHEEL_ROTATION_STRENGTH, P32_GET(struct RacingWheelData *, ptrgamepad->rwd));
 	driverBaseSpeedUshort = VehCalc_InterpBySpeed((int)driver->wheelRotation, CTR_FRAME_STEP(VEH_PHYS_PROC_WHEEL_ROTATION_INTERP_STEP, sdata->gGT->timer), CTR_MipsNegLo(scratchValue));
 	driver->wheelRotation = (s16)driverBaseSpeedUshort;
 
@@ -1230,7 +1230,7 @@ void VehPhysProc_Driving_Update(struct Thread *t, struct Driver *d)
 		                  VEH_PHYS_PROC_HALF_SPEED_SHIFT) < simpTurnState) &&
 
 		     // player has jump buttons held
-		     ((sdata->gGamepads->gamepad[d->driverID].buttonsHeldCurrFrame) & d->buttonUsedToStartDrift) != 0) &&
+		     ((P32_GET(struct GamepadSystem *, sdata->gGamepads)->gamepad[d->driverID].buttonsHeldCurrFrame) & d->buttonUsedToStartDrift) != 0) &&
 
 		    // player is not in accel prevention or braking and
 		    ((d->actionsFlagSet & ACTION_ACCEL_PREVENTION) == 0) && (CTR_MipsSra(d->const_Speed_ClassStat, 1) <= d->speedApprox))
@@ -1273,7 +1273,7 @@ extern DriverFunc PlayerDrivingFuncTable[DRIVER_FUNC_COUNT];
 void VehPhysProc_Driving_Init(struct Thread *t, struct Driver *d)
 {
 	(void)t;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	if (((u32)(gGT->levelID - GEM_STONE_VALLEY) >= 5) || LOAD_IsOpen_AdvHub())
 	{
@@ -1287,7 +1287,7 @@ void VehPhysProc_Driving_Init(struct Thread *t, struct Driver *d)
 
 		for (int i = 0; i < DRIVER_FUNC_COUNT; i++)
 		{
-			d->funcPtrs[i] = PlayerDrivingFuncTable[i];
+			P32_SET(d->funcPtrs[i], PlayerDrivingFuncTable[i]);
 		}
 
 		if (((gGT->gameMode1 & BATTLE_MODE) != 0) && (d->kartState == KS_BLASTED))
@@ -1359,7 +1359,7 @@ void VehPhysProc_FreezeEndEvent_Init(struct Thread *t, struct Driver *d)
 
 	for (int i = 0; i < DRIVER_FUNC_COUNT; i++)
 	{
-		d->funcPtrs[i] = PlayerFreezeFuncTable[i];
+		P32_SET(d->funcPtrs[i], PlayerFreezeFuncTable[i]);
 	}
 }
 
@@ -1448,7 +1448,7 @@ void VehPhysProc_FreezeVShift_Init(struct Thread *t, struct Driver *d)
 
 	for (int i = 0; i < DRIVER_FUNC_COUNT; i++)
 	{
-		d->funcPtrs[i] = PlayerAntiVShiftFuncTable[i];
+		P32_SET(d->funcPtrs[i], PlayerAntiVShiftFuncTable[i]);
 	}
 }
 
@@ -1480,7 +1480,7 @@ void VehPhysProc_PowerSlide_PhysAngular(struct Thread *th, struct Driver *driver
 #endif
 
 	(void)th;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	int axisAngleDelta = CTR_MipsSubLo(ANG_MODULO_TWO_PI(CTR_MipsAddLo(CTR_MipsSubLo(driver->axisRotationX, driver->angle), ANG_PI)), ANG_PI);
 	if (axisAngleDelta != 0)
@@ -1925,7 +1925,7 @@ void PhysLerpRot(struct Driver *driver, int targetRotW)
 	{
 		if (CTR_FRAMES_PER_SECOND > 60)
 			lerpStep = CTR_FRAME_STEP(CTR_MipsSra(remainingRot, 3), sdata->gGT->timer);
-		else if ((sdata->gGT->timer & 1) != 0)
+		else if ((P32_GET(struct GameTracker *, sdata->gGT)->timer & 1) != 0)
 			lerpStep = CTR_MipsSra(remainingRot, 4);
 		else
 			lerpStep = CTR_MipsSra((remainingRot * 16) / 15, 3);
@@ -1953,7 +1953,7 @@ void PhysLerpRot(struct Driver *driver, int targetRotW)
 	driver->rotPrev.w = VehCalc_InterpBySpeed((int)driver->rotPrev.w, 8, maxLerpStep);
 
 	// Interpolate rotation by speed
-	driver->rotCurr.w = VehCalc_InterpBySpeed((int)driver->rotCurr.w, CTR_MipsSra(CTR_MipsMulLo(driver->rotPrev.w, sdata->gGT->elapsedTimeMS), 5), targetRotW);
+	driver->rotCurr.w = VehCalc_InterpBySpeed((int)driver->rotCurr.w, CTR_MipsSra(CTR_MipsMulLo(driver->rotPrev.w, P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS), 5), targetRotW);
 }
 
 void PhysTerrainSlope(struct Driver *driver)
@@ -1979,7 +1979,7 @@ void VehPhysProc_PowerSlide_Finalize(struct Driver *d)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8006364c-0x800638d4.
 void VehPhysProc_PowerSlide_Update(struct Thread *t, struct Driver *d)
 {
-	struct GamepadBuffer *pad = &sdata->gGamepads->gamepad[d->driverID];
+	struct GamepadBuffer *pad = &P32_GET(struct GamepadSystem *, sdata->gGamepads)->gamepad[d->driverID];
 
 	// This is the distance remaining that can be filled
 	int meterLeft = d->turbo_MeterRoomLeft;
@@ -2001,7 +2001,7 @@ void VehPhysProc_PowerSlide_Update(struct Thread *t, struct Driver *d)
 		else
 		{
 			// decreaes the amoutn of room remaining, by elapsed milliseconds per frame, ~32
-			meterLeft = (s16)CTR_MipsSubLo((u16)meterLeft, (u16)sdata->gGT->elapsedTimeMS);
+			meterLeft = (s16)CTR_MipsSubLo((u16)meterLeft, (u16)P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS);
 
 			// if the bar goes beyond full
 			if (meterLeft < 0)
@@ -2148,7 +2148,7 @@ void VehPhysProc_PowerSlide_PhysLinear(struct Thread *thread, struct Driver *dri
 {
 	VehPhysProc_Driving_PhysLinear(thread, driver);
 	driver->actionsFlagSet |= ACTION_BACK_SKID | ACTION_FRONT_SKID;
-	driver->timeSpentDrifting = CTR_MipsAddLo(driver->timeSpentDrifting, sdata->gGT->elapsedTimeMS);
+	driver->timeSpentDrifting = CTR_MipsAddLo(driver->timeSpentDrifting, P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS);
 }
 
 
@@ -2156,8 +2156,8 @@ void VehPhysProc_PowerSlide_PhysLinear(struct Thread *thread, struct Driver *dri
 void VehPhysProc_PowerSlide_InitSetUpdate(struct Thread *t, struct Driver *d)
 {
 	(void)t;
-	d->funcPtrs[DRIVER_FUNC_INIT] = 0;
-	d->funcPtrs[DRIVER_FUNC_UPDATE] = VehPhysProc_PowerSlide_Update;
+	P32_SET(d->funcPtrs[DRIVER_FUNC_INIT], 0);
+	P32_SET(d->funcPtrs[DRIVER_FUNC_UPDATE], VehPhysProc_PowerSlide_Update);
 }
 
 
@@ -2199,7 +2199,7 @@ void VehPhysProc_PowerSlide_Init(struct Thread *t, struct Driver *d)
 
 	for (int i = 0; i < DRIVER_FUNC_COUNT; i++)
 	{
-		d->funcPtrs[i] = PlayerDriftingFuncTable[i];
+		P32_SET(d->funcPtrs[i], PlayerDriftingFuncTable[i]);
 	}
 }
 
@@ -2224,7 +2224,7 @@ DriverFunc PlayerDriftingFuncTable[DRIVER_FUNC_COUNT] = {
 void VehPhysProc_SlamWall_PhysAngular(struct Thread *t, struct Driver *d)
 {
 	(void)t;
-	int elapsedTimeMS = sdata->gGT->elapsedTimeMS;
+	int elapsedTimeMS = P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS;
 
 	d->angle = (s16)(CTR_MipsAddLo((u16)d->angle, CTR_MipsSra(CTR_MipsMulLo(d->ampTurnState, elapsedTimeMS), VEH_PHYS_PROC_ANGLE_INTEGRATION_SHIFT)) &
 	                 (ANG_TWO_PI - 1));
@@ -2260,7 +2260,7 @@ void VehPhysProc_SlamWall_PhysLinear(struct Thread *t, struct Driver *d)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80063b2c-0x80063bd4.
 void VehPhysProc_SlamWall_Animate(struct Thread *t, struct Driver *d)
 {
-	struct Instance *inst = t->inst;
+	struct Instance *inst = P32_GET(struct Instance *, t->inst);
 
 #if CTR_NATIVE_60FPS
 	// The crash-fall anim is half-rate: animFrame counts 30 FPS frames, so it
@@ -2300,7 +2300,7 @@ void VehPhysProc_SlamWall_Animate(struct Thread *t, struct Driver *d)
 	}
 #endif
 
-	d->funcPtrs[DRIVER_FUNC_INIT] = VehPhysProc_Driving_Init;
+	P32_SET(d->funcPtrs[DRIVER_FUNC_INIT], VehPhysProc_Driving_Init);
 }
 
 
@@ -2329,7 +2329,7 @@ void VehPhysProc_SlamWall_Init(struct Thread *t, struct Driver *d)
 	(void)t;
 	int i;
 	struct Instance *inst;
-	inst = d->instSelf;
+	inst = P32_GET(struct Instance *, d->instSelf);
 
 	// NOTE(aalhendi): Retail only writes X/Y scale here.
 	inst->scale.x = VEH_PHYS_PROC_CRASH_SCALE_XY;
@@ -2370,7 +2370,7 @@ void VehPhysProc_SlamWall_Init(struct Thread *t, struct Driver *d)
 
 	for (i = 0; i < DRIVER_FUNC_COUNT; i++)
 	{
-		d->funcPtrs[i] = PlayerCrashingFuncTable[i];
+		P32_SET(d->funcPtrs[i], PlayerCrashingFuncTable[i]);
 	}
 }
 
@@ -2406,7 +2406,7 @@ void VehPhysProc_SpinFirst_Update(struct Thread *t, struct Driver *d)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80063d44-0x80063dc8.
 void VehPhysProc_SpinFirst_PhysLinear(struct Thread *t, struct Driver *d)
 {
-	int elapsedTimeMS = sdata->gGT->elapsedTimeMS;
+	int elapsedTimeMS = P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS;
 
 	d->NoInputTimer = (s16)CTR_MipsSubLo((u16)d->NoInputTimer, (u16)elapsedTimeMS);
 	if (d->NoInputTimer < 0)
@@ -2429,7 +2429,7 @@ void VehPhysProc_SpinFirst_PhysLinear(struct Thread *t, struct Driver *d)
 void VehPhysProc_SpinFirst_PhysAngular(struct Thread *t, struct Driver *d)
 {
 	(void)t;
-	int elapsedTimeMS = sdata->gGT->elapsedTimeMS;
+	int elapsedTimeMS = P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS;
 
 	d->numFramesSpentSteering = VEH_PHYS_PROC_STEER_RESET_FRAMES;
 
@@ -2461,8 +2461,8 @@ void VehPhysProc_SpinFirst_PhysAngular(struct Thread *t, struct Driver *d)
 void VehPhysProc_SpinFirst_InitSetUpdate(struct Thread *t, struct Driver *d)
 {
 	(void)t;
-	d->funcPtrs[DRIVER_FUNC_INIT] = 0;
-	d->funcPtrs[DRIVER_FUNC_UPDATE] = VehPhysProc_SpinFirst_Update;
+	P32_SET(d->funcPtrs[DRIVER_FUNC_INIT], 0);
+	P32_SET(d->funcPtrs[DRIVER_FUNC_UPDATE], VehPhysProc_SpinFirst_Update);
 }
 
 
@@ -2492,7 +2492,7 @@ void VehPhysProc_SpinFirst_Init(struct Thread *t, struct Driver *d)
 	d->turnAngleLerpVel = 0;
 	d->turbo_MeterRoomLeft = 0;
 
-	if (LOAD_IsOpen_RacingOrBattle() && ((sdata->gGT->gameMode1 & ADVENTURE_ARENA) == 0))
+	if (LOAD_IsOpen_RacingOrBattle() && ((P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 & ADVENTURE_ARENA) == 0))
 	{
 		RB_Player_ModifyWumpa(d, -1);
 	}
@@ -2504,7 +2504,7 @@ void VehPhysProc_SpinFirst_Init(struct Thread *t, struct Driver *d)
 	{
 		Voiceline_RequestPlayDriver(VEH_PHYS_PROC_SPIN_VOICELINE_ID, d->driverID, VEH_PHYS_PROC_SPIN_VOICELINE_PRIORITY);
 	}
-	d->pendingDamageAttacker = NULL;
+	P32_SET(d->pendingDamageAttacker, NULL);
 
 	// if spinning left
 	d->KartStates.Spinning.spinDir = 1;
@@ -2529,7 +2529,7 @@ void VehPhysProc_SpinFirst_Init(struct Thread *t, struct Driver *d)
 
 	for (i = 0; i < DRIVER_FUNC_COUNT; i++)
 	{
-		d->funcPtrs[i] = PlayerSpinningFuncTable[i];
+		P32_SET(d->funcPtrs[i], PlayerSpinningFuncTable[i]);
 	}
 
 	GAMEPAD_JogCon1(d, feedback, VEH_PHYS_PROC_SPIN_FEEDBACK_TIMER);
@@ -2570,7 +2570,7 @@ void VehPhysProc_SpinLast_PhysLinear(struct Thread *t, struct Driver *d)
 void VehPhysProc_SpinLast_PhysAngular(struct Thread *t, struct Driver *d)
 {
 	(void)t;
-	int elapsedTimeMS = sdata->gGT->elapsedTimeMS;
+	int elapsedTimeMS = P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS;
 	int driftAngleCurr;
 	driftAngleCurr = d->turnAngleCurr;
 
@@ -2663,7 +2663,7 @@ void VehPhysProc_SpinLast_Init(struct Thread *t, struct Driver *d)
 
 	for (i = 0; i < DRIVER_FUNC_COUNT; i++)
 	{
-		d->funcPtrs[i] = PlayerLastSpinFuncTable[i];
+		P32_SET(d->funcPtrs[i], PlayerLastSpinFuncTable[i]);
 	}
 }
 
@@ -2690,7 +2690,7 @@ void VehPhysProc_SpinStop_PhysLinear(struct Thread *t, struct Driver *d)
 void VehPhysProc_SpinStop_PhysAngular(struct Thread *t, struct Driver *d)
 {
 	(void)t;
-	int elapsedTimeMS = sdata->gGT->elapsedTimeMS;
+	int elapsedTimeMS = P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS;
 
 	d->angle = (s16)(CTR_MipsAddLo((u16)d->angle, CTR_MipsSra(CTR_MipsMulLo(d->ampTurnState, elapsedTimeMS), VEH_PHYS_PROC_ANGLE_INTEGRATION_SHIFT)) &
 	                 (ANG_TWO_PI - 1));
@@ -2708,7 +2708,7 @@ void VehPhysProc_SpinStop_PhysAngular(struct Thread *t, struct Driver *d)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800643d4-0x800644d0.
 void VehPhysProc_SpinStop_Animate(struct Thread *t, struct Driver *d)
 {
-	struct Instance *inst = t->inst;
+	struct Instance *inst = P32_GET(struct Instance *, t->inst);
 
 	int numFrames = VehFrameInst_GetNumAnimFrames(inst, inst->animIndex);
 
@@ -2753,7 +2753,7 @@ void VehPhysProc_SpinStop_Animate(struct Thread *t, struct Driver *d)
 		}
 	}
 
-	d->funcPtrs[DRIVER_FUNC_INIT] = VehPhysProc_Driving_Init;
+	P32_SET(d->funcPtrs[DRIVER_FUNC_INIT], VehPhysProc_Driving_Init);
 }
 
 
@@ -2761,19 +2761,19 @@ void VehPhysProc_SpinStop_Animate(struct Thread *t, struct Driver *d)
 void VehPhysProc_SpinStop_Init(struct Thread *t, struct Driver *d)
 {
 	(void)t;
-	d->funcPtrs[DRIVER_FUNC_INIT] = NULL;
-	d->funcPtrs[DRIVER_FUNC_UPDATE] = VehPhysProc_SpinStop_Update;
-	d->funcPtrs[DRIVER_FUNC_PHYS_LINEAR] = VehPhysProc_SpinStop_PhysLinear;
-	d->funcPtrs[DRIVER_FUNC_AUDIO] = VehPhysProc_Driving_Audio;
-	d->funcPtrs[DRIVER_FUNC_PHYS_ANGULAR] = VehPhysProc_SpinStop_PhysAngular;
-	d->funcPtrs[DRIVER_FUNC_APPLY_FORCES] = VehPhysForce_OnApplyForces;
+	P32_SET(d->funcPtrs[DRIVER_FUNC_INIT], NULL);
+	P32_SET(d->funcPtrs[DRIVER_FUNC_UPDATE], VehPhysProc_SpinStop_Update);
+	P32_SET(d->funcPtrs[DRIVER_FUNC_PHYS_LINEAR], VehPhysProc_SpinStop_PhysLinear);
+	P32_SET(d->funcPtrs[DRIVER_FUNC_AUDIO], VehPhysProc_Driving_Audio);
+	P32_SET(d->funcPtrs[DRIVER_FUNC_PHYS_ANGULAR], VehPhysProc_SpinStop_PhysAngular);
+	P32_SET(d->funcPtrs[DRIVER_FUNC_APPLY_FORCES], VehPhysForce_OnApplyForces);
 
-	d->funcPtrs[DRIVER_FUNC_COLL_MOVED] = COLL_MOVED_PlayerSearch;
-	d->funcPtrs[DRIVER_FUNC_COLLIDE_DRIVERS] = VehPhysForce_CollideDrivers;
+	P32_SET(d->funcPtrs[DRIVER_FUNC_COLL_MOVED], COLL_MOVED_PlayerSearch);
+	P32_SET(d->funcPtrs[DRIVER_FUNC_COLLIDE_DRIVERS], VehPhysForce_CollideDrivers);
 
-	d->funcPtrs[DRIVER_FUNC_COLL_FIXED] = COLL_FIXED_PlayerSearch;
-	d->funcPtrs[DRIVER_FUNC_JUMP_FRICTION] = VehPhysGeneral_JumpAndFriction;
-	d->funcPtrs[DRIVER_FUNC_TRANSLATE_MATRIX] = VehPhysForce_TranslateMatrix;
-	d->funcPtrs[DRIVER_FUNC_ANIMATE] = VehPhysProc_SpinStop_Animate;
-	d->funcPtrs[DRIVER_FUNC_PARTICLES] = VehEmitter_DriverMain;
+	P32_SET(d->funcPtrs[DRIVER_FUNC_COLL_FIXED], COLL_FIXED_PlayerSearch);
+	P32_SET(d->funcPtrs[DRIVER_FUNC_JUMP_FRICTION], VehPhysGeneral_JumpAndFriction);
+	P32_SET(d->funcPtrs[DRIVER_FUNC_TRANSLATE_MATRIX], VehPhysForce_TranslateMatrix);
+	P32_SET(d->funcPtrs[DRIVER_FUNC_ANIMATE], VehPhysProc_SpinStop_Animate);
+	P32_SET(d->funcPtrs[DRIVER_FUNC_PARTICLES], VehEmitter_DriverMain);
 }

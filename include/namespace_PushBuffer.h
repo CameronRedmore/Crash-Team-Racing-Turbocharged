@@ -140,11 +140,11 @@ struct PushBuffer
 	// 0xF4
 	// NOTE(aalhendi): Retail RenderBucket_QueueDraw reuses this field as
 	// PUSHBUFFER_EXISTS OT range-start metadata after DecalMP seeds ptrOT.
-	uint32_t *ptrOT;
+	P32(uint32_t *) ptrOT;
 
 	// 0xF8
 	// RenderBucket PUSHBUFFER_EXISTS range end metadata.
-	uint32_t *renderBucketOTRangeEnd;
+	P32(uint32_t *) renderBucketOTRangeEnd;
 
 	// 0xFC
 	int renderBucketOTByteOffset;

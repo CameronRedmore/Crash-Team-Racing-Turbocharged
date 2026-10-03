@@ -101,9 +101,9 @@ u32 *DISPLAY_Blur_SubFunc(u32 *prim, struct DisplayBlurTile *tile)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80023d4c-0x80023ffc
 void DISPLAY_Blur_Main(struct PushBuffer *pb, int strength)
 {
-	struct GameTracker *gGT = sdata->gGT;
-	struct DB *backBuffer = gGT->backBuffer;
-	u32 *prim = backBuffer->primMem.cursor;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct DB *backBuffer = P32_GET(struct DB *, gGT->backBuffer);
+	u32 *prim = P32_GET(void *, backBuffer->primMem.cursor);
 	u32 *nextPrim;
 	s8 cameraID;
 	uint32_t *ot;
@@ -128,7 +128,7 @@ void DISPLAY_Blur_Main(struct PushBuffer *pb, int strength)
 		packet->xy3 = CTR_PackS16Pair(x + w, y + h);
 		packet->colorAndCode = (strength < 0) ? 0x2affffff : 0x2a000000;
 
-		ot = gGT->otSwapchainDB[gGT->swapchainIndex];
+		ot = P32_GET(void *, gGT->otSwapchainDB[gGT->swapchainIndex]);
 		CtrGpu_LinkPacket24(ot, &packet->tag, packet, 0x09000000);
 		nextPrim = (u32 *)(packet + 1);
 	}
@@ -160,7 +160,7 @@ void DISPLAY_Blur_Main(struct PushBuffer *pb, int strength)
 			blur = (blur * strength) >> 12;
 		}
 
-		ot = gGT->otSwapchainDB[gGT->swapchainIndex];
+		ot = P32_GET(void *, gGT->otSwapchainDB[gGT->swapchainIndex]);
 		oldTag = *ot;
 		*ot = (uint32_t)CtrGpu_PrimToOTLink24(prim);
 
@@ -181,7 +181,7 @@ void DISPLAY_Blur_Main(struct PushBuffer *pb, int strength)
 		((POLY_FT4 *)nextPrim - 1)->tag = CtrGpu_PackOTTag(oldTag, 0x09000000);
 	}
 
-	backBuffer->primMem.cursor = nextPrim;
+	P32_SET(backBuffer->primMem.cursor, nextPrim);
 	backBuffer->blurCameraMask |= (u8)(1 << (cameraID & 0x1f));
 }
 
@@ -192,7 +192,7 @@ void DISPLAY_Swap(void)
 	struct GameTracker *gGT;
 	struct DB *db;
 
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// get pointer to the "new" frontBufferDB, which is current backBuffer
 	db = &gGT->db[gGT->swapchainIndex];
@@ -201,7 +201,7 @@ void DISPLAY_Swap(void)
 	gGT->swapchainIndex = 1 - gGT->swapchainIndex;
 
 	// Set value of frontBuffer DB
-	gGT->frontBuffer = db;
+	P32_SET(gGT->frontBuffer, db);
 
 	// frontBuffer->dispEnv
 	PutDispEnv(&db->dispEnv);

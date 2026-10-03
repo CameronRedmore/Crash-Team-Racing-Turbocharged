@@ -207,14 +207,14 @@ void PushBuffer_SetDrawEnv_DecalMP(void *ot, struct DB *backBuffer, RECT *viewpo
 	// isbg (always 0)
 	newDrawEnv.isbg = isbg;
 
-	p = backBuffer->primMem.cursor;
+	p = P32_GET(void *, backBuffer->primMem.cursor);
 	void *prim = NULL;
 
 	// cursor < guardEnd
-	if (p <= backBuffer->primMem.guardEnd)
+	if (p <= P32_GET(void *, backBuffer->primMem.guardEnd))
 	{
 		// advance curr
-		backBuffer->primMem.cursor = (void *)((u32)backBuffer->primMem.cursor + 0x40);
+		P32_SET(backBuffer->primMem.cursor, (void *)((u32)P32_GET(void *, backBuffer->primMem.cursor) + 0x40));
 
 		prim = p;
 	}
@@ -271,10 +271,10 @@ void PushBuffer_SetDrawEnv_Normal(void *ot, struct PushBuffer *pb, struct DB *ba
 
 	newDrawEnv.isbg = isbg;
 
-	void *p = backBuffer->primMem.cursor;
-	if (p <= backBuffer->primMem.guardEnd)
+	void *p = P32_GET(void *, backBuffer->primMem.cursor);
+	if (p <= P32_GET(void *, backBuffer->primMem.guardEnd))
 	{
-		backBuffer->primMem.cursor = (void *)((u32)backBuffer->primMem.cursor + 0x40);
+		P32_SET(backBuffer->primMem.cursor, (void *)((u32)P32_GET(void *, backBuffer->primMem.cursor) + 0x40));
 
 		SetDrawEnv(p, &newDrawEnv);
 
@@ -932,7 +932,7 @@ void PushBuffer_FadeOneWindow(struct PushBuffer *pb)
 	int fadeStrength;
 	multiCmdPacket *p = NULL;
 
-	struct DB *backBuffer = sdata->gGT->backBuffer;
+	struct DB *backBuffer = P32_GET(struct DB *, P32_GET(struct GameTracker *, sdata->gGT)->backBuffer);
 
 	s16 currValue = pb->fadeFromBlack_currentValue;
 
@@ -940,7 +940,7 @@ void PushBuffer_FadeOneWindow(struct PushBuffer *pb)
 	// some amount of fading
 	if (currValue != 0x1000)
 	{
-		p = (multiCmdPacket *)backBuffer->primMem.cursor;
+		p = (multiCmdPacket *)P32_GET(void *, backBuffer->primMem.cursor);
 
 		setlen(p, 7);
 		p->f4.tag = 0;
@@ -982,10 +982,10 @@ void PushBuffer_FadeOneWindow(struct PushBuffer *pb)
 		p->f4.y2 = pb->rect.h;
 		p->f4.x3 = pb->rect.w;
 		p->f4.y3 = pb->rect.h;
-		AddPrim(pb->ptrOT, p);
+		AddPrim(P32_GET(uint32_t *, pb->ptrOT), p);
 
 		// move pointer after writing polygons
-		backBuffer->primMem.cursor = p + 1;
+		P32_SET(backBuffer->primMem.cursor, p + 1);
 	}
 
 	// alter the fade value by the fade velocity
@@ -1021,7 +1021,7 @@ void PushBuffer_FadeOneWindow(struct PushBuffer *pb)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80043ab8-0x80043b30.
 void PushBuffer_FadeAllWindows()
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	for (int i = 0; i < gGT->numPlyrCurrGame; i++)
 	{

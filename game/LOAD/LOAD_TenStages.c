@@ -118,13 +118,13 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 			MEMPACK_PopToState(sdata->bookmarkID);
 		}
 
-		gGT->level1 = 0;
-		gGT->level2 = 0;
+		P32_SET(gGT->level1, 0);
+		P32_SET(gGT->level2, 0);
 #if defined(__vita__)
 		int nativeAdhocRacePrepared = NativeAdhoc_EnforcePreparedRaceConfig(gGT);
 #endif
 		gGT->numPlyrCurrGame = gGT->numPlyrNextGame;
-		strcpy(gGT->levelName, data.metaDataLEV[levelID].name_Debug);
+		strcpy(gGT->levelName, P32_GET(char *, data.metaDataLEV[levelID].name_Debug));
 
 		// pop back here for every load, after first load,
 		// this permanently reserves LNG, bigfile header, etc
@@ -138,8 +138,8 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 		gGT->renderFlags &= RENDER_FLAG_CHECKERED_FLAG;
 		gGT->overlayTransition = 0;
 		gGT->Debug_ToggleNormalSpawn = 1;
-		gGT->visMem1 = 0;
-		gGT->visMem2 = 0;
+		P32_SET(gGT->visMem1, 0);
+		P32_SET(gGT->visMem2, 0);
 
 		// Required for Scrapbook "Press Start",
 		// may also be required for other edge-cases
@@ -351,7 +351,7 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 		// Clear driver extras
 		for (int i = 0; i < LOAD_DRIVER_MODEL_EXTRA_COUNT; i++)
 		{
-			data.driverModelExtras[i].fileBase = NULL;
+			P32_SET(data.driverModelExtras[i].fileBase, NULL);
 		}
 
 		// NOTE(aalhendi): Retail gates stage advancement until the driver MPK callback sets ptrMPK.
@@ -364,10 +364,10 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 		// clear and reset
 		LibraryOfModels_Clear(gGT);
 
-		sdata->PLYROBJECTLIST = (int **)((u32)sdata->ptrMPK + 4);
+		P32_SET(sdata->PLYROBJECTLIST, (int **)((u32)sdata->ptrMPK + 4));
 		if (sdata->ptrMPK == 0)
 		{
-			sdata->PLYROBJECTLIST = 0;
+			P32_SET(sdata->PLYROBJECTLIST, 0);
 		}
 
 		LOAD_GlobalModelPtrs_MPK();
@@ -413,9 +413,9 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 		// NOTE(aalhendi): ASM-verified NTSC-U 926 0x80033f1c-0x80033f44; retail converts driver DRAM file headers to model payload pointers here.
 		for (int i = 0; i < LOAD_DRIVER_MODEL_EXTRA_COUNT; i++)
 		{
-			if (data.driverModelExtras[i].fileBase != NULL)
+			if (P32_GET(void *, data.driverModelExtras[i].fileBase) != NULL)
 			{
-				data.driverModelExtras[i].model = (struct Model *)((u8 *)data.driverModelExtras[i].fileBase + LOAD_MODEL_FILE_HEADER_BYTES);
+				P32_SET(data.driverModelExtras[i].model, (struct Model *)((u8 *)P32_GET(void *, data.driverModelExtras[i].fileBase) + LOAD_MODEL_FILE_HEADER_BYTES));
 			}
 		}
 
@@ -442,7 +442,7 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 
 			// Allocate room for LEV swapping
 			u8 *hubAlloc = MEMPACK_AllocMem(firstSubpackSize + secondSubpackSize); // "HUB ALLOC"
-			sdata->ptrHubAlloc = hubAlloc;
+			P32_SET(sdata->ptrHubAlloc, hubAlloc);
 
 			// Change active allocation system to #2
 			// pack = [hubAlloc, hubAlloc+size1]
@@ -486,7 +486,7 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 			MEMPACK_SwapPacks(LOAD_MAIN_PACK_INDEX);
 
 			sdata->PatchMem_Size = MEMPACK_GetFreeBytes();
-			sdata->PatchMem_Ptr = MEMPACK_AllocHighMem(sdata->PatchMem_Size); //, "Patch Table Memory");
+			P32_SET(sdata->PatchMem_Ptr, MEMPACK_AllocHighMem(sdata->PatchMem_Size)); //, "Patch Table Memory");
 
 			// For Oxide-Intro and Credits, set active pack
 			MEMPACK_SwapPacks(gGT->activeMempackIndex);
@@ -505,24 +505,24 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 		if (((u32)(levelID - GEM_STONE_VALLEY) < LOAD_PTR_MAP_ADV_LEVEL_COUNT) || ((u32)(levelID - CREDITS_CRASH) < LOAD_PTR_MAP_CREDIT_LEVEL_COUNT))
 		{
 			// add PTR file to loading queue
-			LOAD_AppendQueue(bigfile, LT_SETADDR, LOAD_GetBigfileIndex(gGT->levelID, sdata->levelLOD, LVI_PTR), sdata->PatchMem_Ptr, LOAD_Callback_PatchMem);
+			LOAD_AppendQueue(bigfile, LT_SETADDR, LOAD_GetBigfileIndex(gGT->levelID, sdata->levelLOD, LVI_PTR), P32_GET(void *, sdata->PatchMem_Ptr), LOAD_Callback_PatchMem);
 		}
 		break;
 	}
 	case 7:
 	{
 		// get level pointer
-		struct Level *lev = sdata->ptrLevelFile;
+		struct Level *lev = P32_GET(struct Level *, sdata->ptrLevelFile);
 
-		gGT->level1 = lev;
-		gGT->visMem1 = lev->visMem;
+		P32_SET(gGT->level1, lev);
+		P32_SET(gGT->visMem1, P32_GET(struct VisMem *, lev->visMem));
 #if defined(CTR_NATIVE)
 		NativeReverseTrack_ApplyToLevel(lev);
 #endif
 
 		if (lev != 0)
 		{
-			DecalGlobal_Store(gGT, lev->levTexLookup);
+			DecalGlobal_Store(gGT, P32_GET(struct LevTexLookup *, lev->levTexLookup));
 		}
 
 		DebugFont_Init(gGT);
@@ -530,7 +530,7 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 		// if level is not nullptr
 		if (lev != 0)
 		{
-			LibraryOfModels_Store(gGT, lev->numModels, lev->ptrModelsPtrArray);
+			LibraryOfModels_Store(gGT, lev->numModels, P32_GET(struct Model **, lev->ptrModelsPtrArray));
 
 			gGT->ptrCircle = (u32)DecalGlobal_FindInLEV(lev, rdata.s_circle);
 			gGT->ptrClod = (u32)DecalGlobal_FindInLEV(lev, rdata.s_clod);
@@ -544,10 +544,10 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 		{
 			u32 *mpkIconList = (u32 *)*(u32 *)(gGT->mpkIcons + 4);
 
-			gGT->trafficLightIcon[0] = (struct Icon *)DecalGlobal_FindInMPK(mpkIconList, rdata.s_lightredoff);
-			gGT->trafficLightIcon[1] = (struct Icon *)DecalGlobal_FindInMPK(mpkIconList, rdata.s_lightredon);
-			gGT->trafficLightIcon[2] = (struct Icon *)DecalGlobal_FindInMPK(mpkIconList, rdata.s_lightgreenoff);
-			gGT->trafficLightIcon[3] = (struct Icon *)DecalGlobal_FindInMPK(mpkIconList, rdata.s_lightgreenon);
+			P32_SET(gGT->trafficLightIcon[0], (struct Icon *)DecalGlobal_FindInMPK(mpkIconList, rdata.s_lightredoff));
+			P32_SET(gGT->trafficLightIcon[1], (struct Icon *)DecalGlobal_FindInMPK(mpkIconList, rdata.s_lightredon));
+			P32_SET(gGT->trafficLightIcon[2], (struct Icon *)DecalGlobal_FindInMPK(mpkIconList, rdata.s_lightgreenoff));
+			P32_SET(gGT->trafficLightIcon[3], (struct Icon *)DecalGlobal_FindInMPK(mpkIconList, rdata.s_lightgreenon));
 		}
 
 		gGT->gameMode1_prevFrame = 1;
@@ -683,7 +683,7 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 					continue;
 				}
 
-				gGT->modelPtr[m->id] = m;
+				P32_SET(gGT->modelPtr[m->id], m);
 			}
 
 #if defined(CTR_NATIVE)

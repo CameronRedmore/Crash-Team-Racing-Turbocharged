@@ -1041,10 +1041,10 @@ void NativeCustomRacer_CaptureRetailSharedVram(const void *fileData, u32 fileSiz
 
 internal void NativeCustomRacer_CacheRetailTemplatePortraits(void)
 {
-	if ((sdata == NULL) || (sdata->gGT == NULL))
+	if ((sdata == NULL) || (P32_GET(struct GameTracker *, sdata->gGT) == NULL))
 		return;
 
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	u32 cachedTemplates = 0;
 	for (int racerIndex = 0; racerIndex < s_nativeCustomRacerCount; racerIndex++)
 	{
@@ -1055,7 +1055,7 @@ internal void NativeCustomRacer_CacheRetailTemplatePortraits(void)
 
 		cachedTemplates |= characterBit;
 		const int iconID = data.MetaDataCharacters[characterID].iconID;
-		struct Icon *icon = gGT->ptrIcons[iconID];
+		struct Icon *icon = P32_GET(struct Icon *, gGT->ptrIcons[iconID]);
 		if (icon != NULL)
 			NativeCustomRacer_GetRetailPortraitTexture(characterID, icon, NULL, NULL);
 	}
@@ -1063,10 +1063,10 @@ internal void NativeCustomRacer_CacheRetailTemplatePortraits(void)
 
 internal void NativeCustomRacer_RestoreRetailTemplatePortraitsVram(void)
 {
-	if ((sdata == NULL) || (sdata->gGT == NULL))
+	if ((sdata == NULL) || (P32_GET(struct GameTracker *, sdata->gGT) == NULL))
 		return;
 
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	u32 restoredTemplates = 0;
 	for (int racerIndex = 0; racerIndex < s_nativeCustomRacerCount; racerIndex++)
 	{
@@ -1077,7 +1077,7 @@ internal void NativeCustomRacer_RestoreRetailTemplatePortraitsVram(void)
 		restoredTemplates |= characterBit;
 
 		const int iconID = data.MetaDataCharacters[characterID].iconID;
-		struct Icon *icon = gGT->ptrIcons[iconID];
+		struct Icon *icon = P32_GET(struct Icon *, gGT->ptrIcons[iconID]);
 		if (icon == NULL)
 			continue;
 
@@ -1195,7 +1195,7 @@ int NativeCustomRacer_InitSampledVoiceChannelAttr(int racerIndex, int soundID, s
 	attr->pitch = pitch;
 	attr->ad = 0x80ff;
 	attr->sr = 0x1fc2;
-	attr->spuStartAddr = (void *)(uintptr_t)racer->sampledVoiceSpuAddr[sampleIndex];
+	P32_SET(attr->spuStartAddr, (void *)(uintptr_t)racer->sampledVoiceSpuAddr[sampleIndex]);
 	return 1;
 }
 
@@ -1264,7 +1264,7 @@ int NativeCustomRacer_PlayDriverSampledVoice(int driverID, int voiceType, int ch
 	channel->LR = LR;
 	channel->timeLeft = sample->duration;
 	channel->soundID = (CountSounds() << 0x10) | (soundID & 0xffff);
-	channel->startFrame = sdata->gGT->frameTimer_MainFrame_ResetDB;
+	channel->startFrame = P32_GET(struct GameTracker *, sdata->gGT)->frameTimer_MainFrame_ResetDB;
 	if (soundIDCount != NULL)
 		*soundIDCount = channel->soundID;
 	Smart_ExitCriticalSection();
@@ -1471,7 +1471,7 @@ int NativeCustomRacer_LoadQueueSlot(struct LoadQueueSlot *slot)
 {
 	if (slot == NULL)
 		return 0;
-	struct NativeCustomRacerEntry *racer = NativeCustomRacer_FindByBigHeader(slot->ptrBigfileCdPos_UNUSED);
+	struct NativeCustomRacerEntry *racer = NativeCustomRacer_FindByBigHeader(P32_GET(struct BigHeader *, slot->ptrBigfileCdPos_UNUSED));
 	if ((racer == NULL) || (slot->subfileIndex >= NATIVE_CUSTOM_RACER_ASSET_COUNT))
 		return 0;
 
@@ -1484,10 +1484,10 @@ int NativeCustomRacer_LoadQueueSlot(struct LoadQueueSlot *slot)
 	}
 
 	void **setPointerTarget = NULL;
-	void *destination = slot->ptrDestination;
-	if ((slot->type_UNUSED == LT_DRAM) && (slot->callbackFuncPtr == LOAD_QUEUE_CALLBACK_SET_POINTER))
+	void *destination = P32_GET(void *, slot->ptrDestination);
+	if ((slot->type_UNUSED == LT_DRAM) && (P32_GET(void (*)(struct LoadQueueSlot *), slot->callbackFuncPtr) == LOAD_QUEUE_CALLBACK_SET_POINTER))
 	{
-		setPointerTarget = (void **)slot->ptrDestination;
+		setPointerTarget = (void **)P32_GET(void *, slot->ptrDestination);
 		destination = NULL;
 	}
 	if (destination == NULL)
@@ -1510,7 +1510,7 @@ int NativeCustomRacer_LoadQueueSlot(struct LoadQueueSlot *slot)
 	}
 
 	printf("[CTR Native] Loading custom racer %s asset=%d size=%u\n", racer->disk.name, assetIndex, size);
-	slot->ptrDestination = destination;
+	P32_SET(slot->ptrDestination, destination);
 	slot->size_UNUSED = size;
 	slot->flags &= ~LT_MEMPACK;
 
@@ -1546,19 +1546,19 @@ int NativeCustomRacer_LoadQueueSlot(struct LoadQueueSlot *slot)
 	}
 
 	free(destination);
-	slot->ptrDestination = NULL;
+	P32_SET(slot->ptrDestination, NULL);
 	sdata->queueReady = 1;
 	return 0;
 }
 
 void NativeCustomRacer_FinishQueueSlot(struct LoadQueueSlot *slot)
 {
-	if ((slot == NULL) || !NativeCustomRacer_IsBigHeader(slot->ptrBigfileCdPos_UNUSED))
+	if ((slot == NULL) || !NativeCustomRacer_IsBigHeader(P32_GET(struct BigHeader *, slot->ptrBigfileCdPos_UNUSED)))
 		return;
-	if ((slot->type_UNUSED == LT_VRAM) && (slot->ptrDestination != NULL))
+	if ((slot->type_UNUSED == LT_VRAM) && (P32_GET(void *, slot->ptrDestination) != NULL))
 	{
-		free(slot->ptrDestination);
-		slot->ptrDestination = NULL;
+		free(P32_GET(void *, slot->ptrDestination));
+		P32_SET(slot->ptrDestination, NULL);
 	}
 }
 
@@ -1603,12 +1603,12 @@ internal int NativeCustomRacer_LoadModelNow(int racerIndex, void **storageSlot, 
 	}
 
 	struct LoadQueueSlot slot = {0};
-	slot.ptrBigfileCdPos_UNUSED = &racer->bigfile.header;
+	P32_SET(slot.ptrBigfileCdPos_UNUSED, &racer->bigfile.header);
 	slot.type_UNUSED = LT_DRAM;
 	slot.subfileIndex = NATIVE_CUSTOM_RACER_ASSET_MODEL_HI;
-	slot.ptrDestination = storage;
+	P32_SET(slot.ptrDestination, storage);
 	slot.size_UNUSED = size;
-	slot.callbackFuncPtr = LOAD_QUEUE_CALLBACK_SET_POINTER;
+	P32_SET(slot.callbackFuncPtr, LOAD_QUEUE_CALLBACK_SET_POINTER);
 
 	const int oldQueueReady = sdata->queueReady;
 	LOAD_DramFileCallback(&slot);
@@ -1680,9 +1680,9 @@ struct Model *NativeCustomRacer_GetLoadedPlayerModel(int playerIndex)
 void NativeCustomRacer_QueueSharedVramForSelections(struct BigHeader *retailBigfile)
 {
 	int racerIndex = -1;
-	if (NativeCustomRacer_IsRosterEnabled() && sdata != NULL && sdata->gGT != NULL)
+	if (NativeCustomRacer_IsRosterEnabled() && sdata != NULL && P32_GET(struct GameTracker *, sdata->gGT) != NULL)
 	{
-		for (int playerIndex = 0; playerIndex < sdata->gGT->numPlyrNextGame; playerIndex++)
+		for (int playerIndex = 0; playerIndex < P32_GET(struct GameTracker *, sdata->gGT)->numPlyrNextGame; playerIndex++)
 		{
 			const int selected = NativeCustomRacer_GetPlayerSelection(playerIndex);
 			if ((selected >= 0) && (selected < s_nativeCustomRacerCount) &&

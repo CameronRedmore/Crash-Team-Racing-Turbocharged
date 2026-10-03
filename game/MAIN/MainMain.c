@@ -73,10 +73,10 @@ u32 main(void)
 	u32 uVar12;
 
 	struct GameTracker *gGT;
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	struct GamepadSystem *gGS;
-	gGS = sdata->gGamepads;
+	gGS = P32_GET(struct GamepadSystem *, sdata->gGamepads);
 
 #ifdef CTR_NATIVE
 	int nativeAdhocRunSimulation = 1;
@@ -253,7 +253,7 @@ u32 main(void)
 
 			// ignore threads, because we PopState,
 			// so the threadpool will reset anyway
-			LevInstDef_RePack(gGT->level1->ptr_mesh_info, 0);
+			LevInstDef_RePack(P32_GET(struct mesh_info *, P32_GET(struct Level *, gGT->level1)->ptr_mesh_info), 0);
 
 			sdata->mainGameState = 1;
 			break;
@@ -352,7 +352,7 @@ u32 main(void)
 				// if something is being loaded
 				else
 				{
-					sdata->Loading.stage = LOAD_TenStages(gGT, iVar8, sdata->ptrBigfile1);
+					sdata->Loading.stage = LOAD_TenStages(gGT, iVar8, P32_GET(struct BigHeader *, sdata->ptrBigfile1));
 
 					// If just finished loading stage 9
 					if (sdata->Loading.stage == LOAD_FINISHED)
@@ -425,8 +425,8 @@ u32 main(void)
 							return 0;
 						}
 						NativeSaveState_BeginFrame();
-						gGT = sdata->gGT;
-						gGS = sdata->gGamepads;
+						gGT = P32_GET(struct GameTracker *, sdata->gGT);
+						gGS = P32_GET(struct GamepadSystem *, sdata->gGamepads);
 						nativeReplayFrameActive = 1;
 					}
 #endif
@@ -518,7 +518,7 @@ u32 main(void)
 							uVar12 = 100;
 						}
 
-						DecalFont_DrawMultiLine(sdata->lngStrings[LNG_DEMO_MODE_PRESS_ANY_BUTTON_TO_EXIT], 0x100, uVar12, 0x200, 2, 0xffff8000);
+						DecalFont_DrawMultiLine(P32_GET(char **, sdata->lngStrings)[LNG_DEMO_MODE_PRESS_ANY_BUTTON_TO_EXIT], 0x100, uVar12, 0x200, 2, 0xffff8000);
 					}
 
 					if ((gGT->gameMode1 & LOADING) == 0
@@ -638,10 +638,10 @@ void StateZero()
 	u32 vramSize;
 
 	struct GameTracker *gGT;
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	struct GamepadSystem *gGS;
-	gGS = sdata->gGamepads;
+	gGS = P32_GET(struct GamepadSystem *, sdata->gGamepads);
 
 	memset(gGT, 0, sizeof(*gGT));
 
@@ -721,7 +721,7 @@ void StateZero()
 #endif
 
 	// Get CD Position fo BIGFILE
-	sdata->ptrBigfile1 = LOAD_ReadDirectory(BIGPATH);
+	P32_SET(sdata->ptrBigfile1, LOAD_ReadDirectory(BIGPATH));
 
 // Defrag to save heap space,
 // required because MEMPACK_Init moves heap
@@ -745,7 +745,7 @@ void StateZero()
 #ifdef CTR_NATIVE
 	// Load PAL English on native so the boot language selector can use the
 	// localized language-name strings shared by the PAL language files.
-	LOAD_LangFile((int)sdata->ptrBigfile1, cfg_language);
+	LOAD_LangFile((int)P32_GET(struct BigHeader *, sdata->ptrBigfile1), cfg_language);
 #else
 	// English=1
 	// PAL SCES02105 calls it multiple times
@@ -768,7 +768,7 @@ void StateZero()
 	Vector_BakeMatrixTable();
 
 	gGT->swapchainIndex = 0;
-	gGT->backBuffer = &gGT->db[0];
+	P32_SET(gGT->backBuffer, &gGT->db[0]);
 
 	gGT->overlayIndex_EndOfRace = 0xff;
 	gGT->overlayIndex_LOD = OVERLAY_INDEX_NONE;
@@ -779,7 +779,7 @@ void StateZero()
 	DrawSync(0);
 
 	// Load Intro TIM for "SCEA Presents" from VRAM file
-	LOAD_VramFile(sdata->ptrBigfile1, 0x1fd, NULL, &vramSize, -1);
+	LOAD_VramFile(P32_GET(struct BigHeader *, sdata->ptrBigfile1), 0x1fd, NULL, &vramSize, -1);
 	MainInit_VRAMDisplay();
 
 	// \SOUNDS\KART.HWL;1
@@ -817,7 +817,7 @@ void StateZero()
 
 	// This loads UI textures (shared.vrm)
 	// This includes traffic lights, font, and more
-	LOAD_VramFile(sdata->ptrBigfile1, 0x102, NULL, &vramSize, -1);
+	LOAD_VramFile(P32_GET(struct BigHeader *, sdata->ptrBigfile1), 0x102, NULL, &vramSize, -1);
 
 	sdata->mainGameState = 3;
 

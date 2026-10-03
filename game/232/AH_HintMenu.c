@@ -27,7 +27,7 @@ void AH_HintMenu_FiveArrows(int posY, s16 rotation)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b351c-0x800b3594.
 void AH_HintMenu_MaskPosRot(void)
 {
-	struct Instance *mask = sdata->instMaskHints3D;
+	struct Instance *mask = P32_GET(struct Instance *, sdata->instMaskHints3D);
 
 	ConvertRotToMatrix(&mask->matrix, &D232.maskRot);
 
@@ -37,7 +37,7 @@ void AH_HintMenu_MaskPosRot(void)
 	mask->matrix.t[2] = D232.maskPos.z;
 
 	// Apply the default mask model scale from D232.
-	((struct MaskHint *)mask->thread->object)->scale = D232.maskScale;
+	((struct MaskHint *)P32_GET(void *, P32_GET(struct Thread *, mask->thread)->object))->scale = D232.maskScale;
 
 	return;
 }
@@ -45,7 +45,7 @@ void AH_HintMenu_MaskPosRot(void)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 overlay 232 0x800b3594-0x800b3dd8.
 void AH_HintMenu_MenuProc(struct RectMenu *menu)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	b32 shouldClose = false;
 	RECT box;
 	char hintsFound[AH_HINTMENU_HINT_STRING_COUNT];
@@ -107,12 +107,12 @@ void AH_HintMenu_MenuProc(struct RectMenu *menu)
 			VehTalkMask_End();
 		}
 
-		DecalFont_DrawLine(sdata->lngStrings[lngIndex + 0], 0x100, 0x2c, 1, 0xffff8000);
+		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[lngIndex + 0], 0x100, 0x2c, 1, 0xffff8000);
 
 		// height of multiLine
-		int textHeight = DecalFont_DrawMultiLine(sdata->lngStrings[lngIndex + 1], 0x96, 0x3f, 0x14e, 2, 0);
+		int textHeight = DecalFont_DrawMultiLine(P32_GET(char **, sdata->lngStrings)[lngIndex + 1], 0x96, 0x3f, 0x14e, 2, 0);
 
-		char *strExit = sdata->lngStrings[LNG_HINT_EXIT];
+		char *strExit = P32_GET(char **, sdata->lngStrings)[LNG_HINT_EXIT];
 
 		DecalFont_DrawLine(strExit, 0x100, textHeight + 0x4f, 1, 0xffff8000);
 
@@ -124,7 +124,7 @@ void AH_HintMenu_MenuProc(struct RectMenu *menu)
 		box.y = (s16)textHeight + 0x4e;
 		box.h = 0x11;
 
-		uint32_t *ot = gGT->backBuffer->otMem.uiOT;
+		uint32_t *ot = P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT);
 		CTR_Box_DrawClearBox(&box, &sdata->menuRowHighlight_Normal, TRANS_50_DECAL, ot);
 
 		box.y = 0x3c;
@@ -189,24 +189,24 @@ void AH_HintMenu_MenuProc(struct RectMenu *menu)
 					// If there is no loading in progress
 					if ((sdata->load_inProgress == 0) && (sdata->XA_State == 0))
 					{
-						sdata->instMaskHints3D = VehTalkMask_Init();
+						P32_SET(sdata->instMaskHints3D, VehTalkMask_Init());
 
 						D232.maskCooldown = AH_HINTMENU_VIEW_COOLDOWN_FRAMES;
 
-						VehTalkMask_PlayXA(sdata->instMaskHints3D, (lngIndex - AH_HINTMENU_HINT_LNG_FIRST) / 2);
+						VehTalkMask_PlayXA(P32_GET(struct Instance *, sdata->instMaskHints3D), (lngIndex - AH_HINTMENU_HINT_LNG_FIRST) / 2);
 
 						AH_HintMenu_MaskPosRot();
 
 						// talking mask instance
-						struct Instance *inst = sdata->instMaskHints3D;
+						struct Instance *inst = P32_GET(struct Instance *, sdata->instMaskHints3D);
 						inst->flags |= SCREENSPACE_INSTANCE;
 
 						struct InstDrawPerPlayer *idpp = INST_GETIDPP(inst);
 
-						idpp[0].pushBuffer = &gGT->pushBuffer_UI;
+						P32_SET(idpp[0].pushBuffer, &gGT->pushBuffer_UI);
 						for (int j = 1; j < gGT->numPlyrCurrGame; j++)
 						{
-							idpp[j].pushBuffer = 0;
+							P32_SET(idpp[j].pushBuffer, 0);
 						}
 
 						// now viewing a hint
@@ -254,10 +254,10 @@ void AH_HintMenu_MenuProc(struct RectMenu *menu)
 
 LAB_800b38cc:
 
-	isGoodMask = VehPickupItem_MaskBoolGoodGuy(gGT->drivers[0]);
+	isGoodMask = VehPickupItem_MaskBoolGoodGuy(P32_GET(struct Driver *, gGT->drivers[0]));
 
 	// Draw the "Hints" string
-	DecalFont_DrawLine(sdata->lngStrings[LNG_AKU_AKU_HINTS_MENU + (isGoodMask == 0)], 0x100, 0x2c, 1, 0xffff8000);
+	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_AKU_AKU_HINTS_MENU + (isGoodMask == 0)], 0x100, 0x2c, 1, 0xffff8000);
 
 	if (D232.hintMenu_scrollIndex + AH_HINTMENU_VISIBLE_ROWS <= menu->rowSelected)
 	{
@@ -300,7 +300,7 @@ LAB_800b38cc:
 			menuHeight = menuHeight + 0x10;
 
 			// "EXIT"
-			DecalFont_DrawLine(sdata->lngStrings[rowLngIndex], 0x100, rowPosY, 1, 0xffff8000);
+			DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[rowLngIndex], 0x100, rowPosY, 1, 0xffff8000);
 
 			visibleRowIndex = visibleRowIndex + 1;
 		} while (visibleRowIndex < visibleRows);
@@ -316,7 +316,7 @@ LAB_800b38cc:
 	box.y = (menu->rowSelected - D232.hintMenu_scrollIndex) * 0x10 + 0x4f;
 	box.h = 0x11;
 
-	uint32_t *ot = gGT->backBuffer->otMem.uiOT;
+	uint32_t *ot = P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT);
 	CTR_Box_DrawClearBox(&box, &sdata->menuRowHighlight_Normal, TRANS_50_DECAL, ot);
 
 	box.y = 0x3c;
@@ -340,7 +340,7 @@ LAB_800b38cc:
 	    ((sdata->buttonTapPerPlayer[0] & AH_HINTMENU_INPUT_CLOSE) != 0))
 	{
 		RECTMENU_ClearInput();
-		sdata->ptrDesiredMenu = MainFreeze_GetMenuPtr();
+		P32_SET(sdata->ptrDesiredMenu, MainFreeze_GetMenuPtr());
 	}
 	return;
 }

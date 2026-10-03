@@ -119,7 +119,7 @@ void MM_NativeLapSelect_Prepare(struct RectMenu *menu)
 
 	s16 row = MM_NativeLapSelect_ClampRow((s16)sdata->uselessLapRowCopy);
 	sdata->uselessLapRowCopy = row;
-	menu->rows = s_nativeLapRows;
+	P32_SET(menu->rows, s_nativeLapRows);
 	menu->rowSelected = row;
 }
 
@@ -252,17 +252,17 @@ void MM_TrackSelect_Video_State(b32 resetPreview)
 
 static void MM_TrackSelect_Video_DrawNativePreview(RECT *r, u32 texture, int textureWidth, int textureHeight)
 {
-	struct GameTracker *gGT = sdata->gGT;
-	DR_PSYX_TEX *setTexture = (DR_PSYX_TEX *)gGT->backBuffer->primMem.cursor;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	DR_PSYX_TEX *setTexture = (DR_PSYX_TEX *)P32_GET(void *, P32_GET(struct DB *, gGT->backBuffer)->primMem.cursor);
 	POLY_FT4 *poly = (POLY_FT4 *)(setTexture + 1);
 	DR_PSYX_TEX *resetTexture = (DR_PSYX_TEX *)(poly + 1);
-	u32 *ot = gGT->pushBuffer_UI.ptrOT;
+	u32 *ot = P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT);
 	u32 oldTag = (u32)*ot;
 	const u8 srcX = MM_TRACK_VIDEO_FRAME_SRC_OFFSET_X;
 	const u8 srcY = MM_TRACK_VIDEO_FRAME_SRC_OFFSET_Y;
 	const u8 srcRight = (u8)(srcX + MM_TRACK_VIDEO_FRAME_WIDTH);
 	const u8 srcBottom = (u8)(srcY + MM_TRACK_VIDEO_FRAME_HEIGHT);
-	struct Icon *videoIcon = gGT->ptrIcons[MM_TRACK_VIDEO_ICON_INDEX];
+	struct Icon *videoIcon = P32_GET(struct Icon *, gGT->ptrIcons[MM_TRACK_VIDEO_ICON_INDEX]);
 	struct Icon nativeIcon = *videoIcon;
 	const u16 iconTpage = videoIcon->texLayout.tpage;
 	const u8 iconU = videoIcon->texLayout.u0;
@@ -289,26 +289,26 @@ static void MM_TrackSelect_Video_DrawNativePreview(RECT *r, u32 texture, int tex
 	nativeIcon.texLayout.tpage = getTPage(TEXPAGE_COLOR_15BIT, TRANS_50, (u32)oldVramX, (u32)oldVramY);
 
 	SetPsyXTexture(setTexture, texture, textureWidth, textureHeight);
-	gGT->backBuffer->primMem.cursor = poly;
+	P32_SET(P32_GET(struct DB *, gGT->backBuffer)->primMem.cursor, poly);
 	DecalHUD_DrawPolyFT4(&nativeIcon,
 	                     (s16)(r->x + MM_TRACK_VIDEO_FRAME_SRC_OFFSET_X),
 	                     (s16)(r->y + MM_TRACK_VIDEO_FRAME_SRC_OFFSET_Y),
-	                     &gGT->backBuffer->primMem, ot, 0, FP(1.0));
+	                     &P32_GET(struct DB *, gGT->backBuffer)->primMem, ot, 0, FP(1.0));
 
 	SetPsyXTexture(resetTexture, 0, 0, 0);
 	setTexture->tag = CtrGpu_PackOTTag(CtrGpu_PrimToOTLink24(poly), 0x02000000);
 	poly->tag = CtrGpu_PackOTTag(CtrGpu_PrimToOTLink24(resetTexture), 0x09000000);
 	resetTexture->tag = CtrGpu_PackOTTag(oldTag, 0x02000000);
 	*ot = (u32)CtrGpu_PrimToOTLink24(setTexture);
-	gGT->backBuffer->primMem.cursor = resetTexture + 1;
+	P32_SET(P32_GET(struct DB *, gGT->backBuffer)->primMem.cursor, resetTexture + 1);
 }
 #endif
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800afaf0-0x800aff58 PSX path.
 void MM_TrackSelect_Video_Draw(RECT *r, struct MainMenu_LevelRow *selectMenu, int trackIndex, int stopVideo, u16 rectFlags)
 {
-	struct GameTracker *gGT = sdata->gGT;
-	struct BigHeader *bh = sdata->ptrBigfileCdPos_2;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct BigHeader *bh = P32_GET(struct BigHeader *, sdata->ptrBigfileCdPos_2);
 	struct BigEntry *entry = BIG_GETENTRY(bh);
 
 	selectMenu = &selectMenu[trackIndex];
@@ -413,8 +413,8 @@ void MM_TrackSelect_Video_Draw(RECT *r, struct MainMenu_LevelRow *selectMenu, in
 	if (D230.trackSelect.videoStateCurr != MM_TRACK_VIDEO_PLAYING)
 	{
 		// Draw Video icon
-		RECTMENU_DrawPolyGT4(gGT->ptrIcons[selectMenu->videoThumbnail], (r->x + MM_TRACK_VIDEO_FRAME_SRC_OFFSET_X), (r->y + MM_TRACK_VIDEO_FRAME_SRC_OFFSET_Y),
-		                     &gGT->backBuffer->primMem, gGT->pushBuffer_UI.ptrOT, D230.videoCol.self, D230.videoCol.self, D230.videoCol.self,
+		RECTMENU_DrawPolyGT4(P32_GET(struct Icon *, gGT->ptrIcons[selectMenu->videoThumbnail]), (r->x + MM_TRACK_VIDEO_FRAME_SRC_OFFSET_X), (r->y + MM_TRACK_VIDEO_FRAME_SRC_OFFSET_Y),
+		                     &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), D230.videoCol.self, D230.videoCol.self, D230.videoCol.self,
 		                     D230.videoCol.self, 0, FP(1.0));
 	}
 
@@ -476,7 +476,7 @@ void MM_TrackSelect_Video_Draw(RECT *r, struct MainMenu_LevelRow *selectMenu, in
 	const s16 scaledFrameWidth = (s16)CTR_WIDESCREEN_SCALE_X(MM_TRACK_VIDEO_FRAME_WIDTH);
 	videoRect.x += (MM_TRACK_VIDEO_FRAME_WIDTH - scaledFrameWidth) / 2;
 	videoRect.w = scaledFrameWidth + MM_TRACK_VIDEO_FRAME_SRC_OFFSET_X * 2;
-	RECTMENU_DrawInnerRect(&videoRect, (s16)(rectFlags | 1), gGT->backBuffer->otMem.uiOT);
+	RECTMENU_DrawInnerRect(&videoRect, (s16)(rectFlags | 1), P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT));
 #else
 	RECTMENU_DrawInnerRect(r, (s16)(rectFlags | 1), gGT->backBuffer->otMem.uiOT);
 #endif
@@ -499,7 +499,7 @@ b32 MM_TrackSelect_boolTrackOpen(struct MainMenu_LevelRow *menuSelect)
 
 	if (flag == MM_TRACK_UNLOCK_1P_ONLY)
 	{
-		return sdata->gGT->numPlyrNextGame == 1;
+		return P32_GET(struct GameTracker *, sdata->gGT)->numPlyrNextGame == 1;
 	}
 
 	if (flag < 0)
@@ -533,7 +533,7 @@ void MM_TrackSelect_Init(void)
 	D230.trackSelect.transition.frame = FPS_DOUBLE(MM_TRACK_SELECT_TRANSITION_FRAMES);
 
 	// Set menu and num of tracks based on game mode
-	if ((sdata->gGT->gameMode1 & BATTLE_MODE) != 0)
+	if ((P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 & BATTLE_MODE) != 0)
 	{
 		selectMenu = D230.battleTracks;
 		numTracks = MM_TRACK_SELECT_BATTLE_TRACK_COUNT;
@@ -564,7 +564,7 @@ void MM_TrackSelect_Init(void)
 
 void MM_TrackSelect_MenuProc(struct RectMenu *menu)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	s16 elapsedFrames = D230.trackSelect.transition.frame;
 
 	// NOTE(aalhendi): ASM-verified NTSC-U 926 overlay 230 0x800b00d4-0x800b02b0.
@@ -624,7 +624,7 @@ void MM_TrackSelect_MenuProc(struct RectMenu *menu)
 						return;
 					}
 					// return to character selection
-					sdata->ptrDesiredMenu = &D230.menuCharacterSelect;
+					P32_SET(sdata->ptrDesiredMenu, &D230.menuCharacterSelect);
 					MM_Characters_RestoreIDs();
 					return;
 				}
@@ -635,7 +635,7 @@ void MM_TrackSelect_MenuProc(struct RectMenu *menu)
 				if ((gGT->gameMode1 & BATTLE_MODE) != 0)
 				{
 					// open weapon selection menu
-					sdata->ptrDesiredMenu = &D230.menuBattleWeapons;
+					P32_SET(sdata->ptrDesiredMenu, &D230.menuBattleWeapons);
 					MM_Battle_Init();
 					return;
 				}
@@ -647,9 +647,9 @@ void MM_TrackSelect_MenuProc(struct RectMenu *menu)
 				    ((gNativeRelicRaceMode != 0) && ((gGT->gameMode1 & RELIC_RACE) != 0)))
 				{
 					// allocate room at the end of RAM for ghosts
-					sdata->ptrGhostTapePlaying = MEMPACK_AllocHighMem(MM_TRACK_SELECT_GHOST_TAPE_ALLOC_SIZE /*, R230.s_loaded_ghost_data*/);
+					P32_SET(sdata->ptrGhostTapePlaying, MEMPACK_AllocHighMem(MM_TRACK_SELECT_GHOST_TAPE_ALLOC_SIZE /*, R230.s_loaded_ghost_data*/));
 
-					memset(sdata->ptrGhostTapePlaying, 0, MM_TRACK_SELECT_GHOST_TAPE_CLEAR_SIZE);
+					memset(P32_GET(struct GhostHeader *, sdata->ptrGhostTapePlaying), 0, MM_TRACK_SELECT_GHOST_TAPE_CLEAR_SIZE);
 
 					// by default, dont show ghost in race
 					sdata->boolReplayHumanGhost = 0;
@@ -657,13 +657,13 @@ void MM_TrackSelect_MenuProc(struct RectMenu *menu)
 					SelectProfile_ToggleMode(SELECT_PROFILE_SCREEN_GHOST);
 
 					// open the ghost selection menu
-					sdata->ptrDesiredMenu = &data.menuGhostSelection;
+					P32_SET(sdata->ptrDesiredMenu, &data.menuGhostSelection);
 					return;
 				}
 
 				// passthrough Menu for the function
 				// QueueLoadTrack
-				sdata->ptrDesiredMenu = &data.menuQueueLoadTrack;
+				P32_SET(sdata->ptrDesiredMenu, &data.menuQueueLoadTrack);
 
 				// make error message posY appear
 				// near middle of screen
@@ -797,7 +797,7 @@ void MM_TrackSelect_MenuProc(struct RectMenu *menu)
 				if (MM_TrackSelect_CanChooseReverse(gGT, physicalLevelId))
 				{
 					OtherFX_Play(1, 1);
-					s_reverseVariantMenu.rows = (physicalLevelId == TIGER_TEMPLE) ? s_tigerTempleVariantRows : s_reverseVariantRows;
+					P32_SET(s_reverseVariantMenu.rows, (physicalLevelId == TIGER_TEMPLE) ? s_tigerTempleVariantRows : s_reverseVariantRows);
 					s_reverseVariantMenu.rowSelected = 0;
 					s_reverseVariantOpen = true;
 					break;
@@ -1002,7 +1002,7 @@ void MM_TrackSelect_MenuProc(struct RectMenu *menu)
 				if (((timeTrialFlags >> D230.timeTrialStars.beatenFlagBit[starIndex]) & 1) != 0)
 				{
 					// pointer to color data of star
-					u32 *starColor = data.ptrColor[D230.timeTrialStars.colorIndex[starIndex]];
+					u32 *starColor = P32_GET(u32 *, data.ptrColor[D230.timeTrialStars.colorIndex[starIndex]]);
 
 					struct Icon **iconPtrArray = ICONGROUP_GETICONS(gGT->iconGroup[MM_TRACK_SELECT_TT_STAR_ICON_GROUP]);
 
@@ -1010,10 +1010,10 @@ void MM_TrackSelect_MenuProc(struct RectMenu *menu)
 					                     (int)rowY + starIndex * MM_TRACK_SELECT_STAR_Y_STEP + MM_TRACK_SELECT_STAR_Y_OFFSET,
 
 					                     // pointer to PrimMem struct
-					                     &gGT->backBuffer->primMem,
+					                     &P32_GET(struct DB *, gGT->backBuffer)->primMem,
 
 					                     // pointer to OT mem
-					                     gGT->pushBuffer_UI.ptrOT,
+					                     P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT),
 
 					                     // color data
 					                     starColor[0], starColor[1], starColor[2], starColor[3],
@@ -1029,7 +1029,7 @@ void MM_TrackSelect_MenuProc(struct RectMenu *menu)
 		}
 
 		// Draw string
-		DecalFont_DrawLine(sdata->lngStrings[data.metaDataLEV[selectMenu[currTrack].levID].name_LNG], (rowX + MM_TRACK_SELECT_ROW_NAME_X_OFFSET),
+		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[data.metaDataLEV[selectMenu[currTrack].levID].name_LNG], (rowX + MM_TRACK_SELECT_ROW_NAME_X_OFFSET),
 		                   (rowBaseY + MM_TRACK_SELECT_ROW_NAME_Y_OFFSET), FONT_BIG, ORANGE);
 
 		if ((D230.trackSelect.trackChangeFrames == 0) && ((s16)rowIndex == MM_TRACK_SELECT_CENTER_ROW))
@@ -1056,7 +1056,7 @@ void MM_TrackSelect_MenuProc(struct RectMenu *menu)
 						ghostTextFlags = (JUSTIFY_CENTER | PERIWINKLE);
 					}
 
-					DecalFont_DrawLine(sdata->lngStrings[LNG_GHOST_DATA_EXISTS],
+					DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_GHOST_DATA_EXISTS],
 					                   (rowX + MM_TRACK_SELECT_ROW_NAME_X_OFFSET + MM_TRACK_SELECT_GHOST_TEXT_FROM_NAME_X),
 					                   (rowBaseY + MM_TRACK_SELECT_GHOST_TEXT_Y_OFFSET), FONT_SMALL, ghostTextFlags);
 				}
@@ -1067,11 +1067,11 @@ void MM_TrackSelect_MenuProc(struct RectMenu *menu)
 			highlightRect.w = rowRect.w - MM_TRACK_SELECT_HIGHLIGHT_W_SHRINK;
 			highlightRect.h = rowRect.h - MM_TRACK_SELECT_HIGHLIGHT_H_SHRINK;
 
-			CTR_Box_DrawClearBox(&highlightRect, &sdata->menuRowHighlight_Normal, TRANS_50_DECAL, gGT->backBuffer->otMem.uiOT);
+			CTR_Box_DrawClearBox(&highlightRect, &sdata->menuRowHighlight_Normal, TRANS_50_DECAL, P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT));
 		}
 
 		// Draw 2D Menu rectangle background
-		RECTMENU_DrawInnerRect(&rowRect, 0, gGT->backBuffer->otMem.uiOT);
+		RECTMENU_DrawInnerRect(&rowRect, 0, P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT));
 
 		b32 trackOpen;
 
@@ -1117,10 +1117,10 @@ void MM_TrackSelect_MenuProc(struct RectMenu *menu)
 			// Keep the preview area clear while either the lap or Reverse chooser is open.
 			if (!rightSideMenuOpen)
 			{
-				DecalFont_DrawLine(sdata->lngStrings[LNG_SELECT_LEVEL_SELECT], (D230.trackSelect_titleTransition.currX + MM_TRACK_SELECT_TITLE_X),
+				DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_SELECT_LEVEL_SELECT], (D230.trackSelect_titleTransition.currX + MM_TRACK_SELECT_TITLE_X),
 				                   (D230.trackSelect_titleTransition.currY + (u32)previewRect.y), FONT_BIG, (JUSTIFY_CENTER | ORANGE));
 
-				DecalFont_DrawLine(sdata->lngStrings[LNG_LEVEL], (D230.trackSelect_titleTransition.currX + MM_TRACK_SELECT_TITLE_X),
+				DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_LEVEL], (D230.trackSelect_titleTransition.currX + MM_TRACK_SELECT_TITLE_X),
 				                   (D230.trackSelect_titleTransition.currY + (u32)previewRect.y + MM_TRACK_SELECT_LEVEL_TEXT_Y_STEP), FONT_BIG,
 				                   (JUSTIFY_CENTER | ORANGE));
 			}
@@ -1135,8 +1135,8 @@ void MM_TrackSelect_MenuProc(struct RectMenu *menu)
 			    !rightSideMenuOpen)
 			{
 				s32 mapID = selectMenu[menu->rowSelected].mapTextureID;
-				struct Icon *iconMap0 = gGT->ptrIcons[mapID + 0];
-				struct Icon *iconMap1 = gGT->ptrIcons[mapID + 1];
+				struct Icon *iconMap0 = P32_GET(struct Icon *, gGT->ptrIcons[mapID + 0]);
+				struct Icon *iconMap1 = P32_GET(struct Icon *, gGT->ptrIcons[mapID + 1]);
 
 				// icon data
 				u8 mapTopV2 = iconMap0->texLayout.v2;
@@ -1174,10 +1174,10 @@ void MM_TrackSelect_MenuProc(struct RectMenu *menu)
 					        (MM_TRACK_SELECT_MAP_BOX_H >> 1) + (mapHeight >> 1),
 
 					    // pointer to PrimMem struct
-					    &gGT->backBuffer->primMem,
+					    &P32_GET(struct DB *, gGT->backBuffer)->primMem,
 
 					    // pointer to OT mem
-					    gGT->pushBuffer_UI.ptrOT,
+					    P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT),
 
 					    // 1 = draw map with regular color (white) - used for the main layer of the minimap in the track select screen
 					    // 2 = draw map blue - used for the outline of the minimap in the track select screen

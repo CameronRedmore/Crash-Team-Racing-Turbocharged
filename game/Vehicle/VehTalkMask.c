@@ -37,27 +37,27 @@ CTR_STATIC_ASSERT(ADV_MASK_HINT_UKA_UKA_XA_OFFSET == 0x1f);
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80068f90-0x80069178.
 void VehTalkMask_ThTick(struct Thread *t)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
-	struct MaskHint *mhObj = t->object;
-	struct Instance *mhInst = t->inst;
+	struct MaskHint *mhObj = P32_GET(void *, t->object);
+	struct Instance *mhInst = P32_GET(struct Instance *, t->inst);
 
 	s32 modelScale = TALK_MASK_3D_MODEL_SCALE;
 
-	if (sdata->modelMaskHints3D != 0)
+	if (P32_GET(struct Model *, sdata->modelMaskHints3D) != 0)
 	{
-		mhInst->model = sdata->modelMaskHints3D;
+		P32_SET(mhInst->model, P32_GET(struct Model *, sdata->modelMaskHints3D));
 	}
 	else
 	{
 		modelScale = TALK_MASK_STATIC_MODEL_SCALE;
 
-		if (gGT->drivers[0] != 0)
+		if (P32_GET(struct Driver *, gGT->drivers[0]) != 0)
 		{
-			b32 boolGoodGuy = VehPickupItem_MaskBoolGoodGuy(gGT->drivers[0]);
+			b32 boolGoodGuy = VehPickupItem_MaskBoolGoodGuy(P32_GET(struct Driver *, gGT->drivers[0]));
 
 			s32 modelID = STATIC_UKAUKA - boolGoodGuy;
-			mhInst->model = gGT->modelPtr[modelID];
+			P32_SET(mhInst->model, P32_GET(struct Model *, gGT->modelPtr[modelID]));
 		}
 	}
 
@@ -163,10 +163,10 @@ struct Instance *VehTalkMask_Init(void)
 
 	struct Instance *mhInst = INSTANCE_BirthWithThread(TALK_MASK_INIT_MODEL, sdata->s_head, SMALL, AKUAKU, VehTalkMask_ThTick, TALK_MASK_INIT_OBJECT_SIZE, 0);
 
-	struct Thread *mhTh = mhInst->thread;
-	mhTh->funcThDestroy = PROC_DestroyInstance;
+	struct Thread *mhTh = P32_GET(struct Thread *, mhInst->thread);
+	P32_SET(mhTh->funcThDestroy, PROC_DestroyInstance);
 
-	((struct MaskHint *)mhTh->object)->scale = 0;
+	((struct MaskHint *)P32_GET(void *, mhTh->object))->scale = 0;
 
 	return mhInst;
 }
@@ -175,7 +175,7 @@ struct Instance *VehTalkMask_Init(void)
 void VehTalkMask_PlayXA(struct Instance *i, s32 id)
 {
 	(void)i;
-	struct Driver *d = sdata->gGT->drivers[0];
+	struct Driver *d = P32_GET(struct Driver *, P32_GET(struct GameTracker *, sdata->gGT)->drivers[0]);
 
 	if (d != 0)
 	{

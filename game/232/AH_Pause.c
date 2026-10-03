@@ -119,7 +119,7 @@ void AH_Pause_Destroy(void)
 	s32 i;
 
 	// global -> register
-	struct PauseObject *ptrPauseObject = D232.ptrPauseObject;
+	struct PauseObject *ptrPauseObject = P32_GET(struct PauseObject *, D232.ptrPauseObject);
 
 	// check register
 	if (ptrPauseObject == 0)
@@ -131,12 +131,12 @@ void AH_Pause_Destroy(void)
 	for (i = 0; i < AH_PAUSE_MEMBER_COUNT; i++)
 	{
 		struct AHPauseMember *member = &ptrPauseObject->members[i];
-		INSTANCE_Death(member->inst);
+		INSTANCE_Death(P32_GET(struct Instance *, member->inst));
 	}
 
 	// kill thread
-	D232.ptrPauseObject = 0;
-	ptrPauseObject->t->flags |= THREAD_FLAG_DEAD;
+	P32_SET(D232.ptrPauseObject, 0);
+	P32_GET(struct Thread *, ptrPauseObject->t)->flags |= THREAD_FLAG_DEAD;
 }
 
 void AH_Pause_Draw(s32 pageID, s32 posX)
@@ -153,7 +153,7 @@ void AH_Pause_Draw(s32 pageID, s32 posX)
 		lngIndex = data.metaDataLEV[levelID].name_LNG;
 	}
 
-	char *titleString = sdata->lngStrings[lngIndex];
+	char *titleString = P32_GET(char **, sdata->lngStrings)[lngIndex];
 
 	DecalFont_DrawLine(titleString, posX + AH_PAUSE_TITLE_CENTER_X, AH_PAUSE_TITLE_Y, FONT_BIG, 0xffff8000);
 
@@ -168,17 +168,17 @@ void AH_Pause_Draw(s32 pageID, s32 posX)
 		colorIndex = AH_PAUSE_ARROW_COLOR_SECONDARY;
 	}
 
-	u32 *arrowColor = data.ptrColor[colorIndex];
+	u32 *arrowColor = P32_GET(u32 *, data.ptrColor[colorIndex]);
 
-	struct GameTracker *gGT = sdata->gGT;
-	struct PrimMem *primMem = &gGT->backBuffer->primMem;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct PrimMem *primMem = &P32_GET(struct DB *, gGT->backBuffer)->primMem;
 
 	struct Icon **iconPtrArray = ICONGROUP_GETICONS(gGT->iconGroup[AH_PAUSE_ICON_GROUP_HUD]);
 
 	// Draw arrow pointing Left
 	DecalHUD_Arrow2D(iconPtrArray[AH_PAUSE_HUD_ICON_PAGE_ARROW], (posX - titleHalfWidth) + AH_PAUSE_ARROW_LEFT_X_OFFSET, AH_PAUSE_ARROW_Y,
 
-	                 primMem, gGT->pushBuffer_UI.ptrOT,
+	                 primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT),
 
 	                 arrowColor[0], arrowColor[1], arrowColor[2], arrowColor[3],
 
@@ -187,13 +187,13 @@ void AH_Pause_Draw(s32 pageID, s32 posX)
 	// Draw arrow pointing Right
 	DecalHUD_Arrow2D(iconPtrArray[AH_PAUSE_HUD_ICON_PAGE_ARROW], (posX + titleHalfWidth) + AH_PAUSE_ARROW_RIGHT_X_OFFSET, AH_PAUSE_ARROW_Y,
 
-	                 primMem, gGT->pushBuffer_UI.ptrOT,
+	                 primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT),
 
 	                 arrowColor[0], arrowColor[1], arrowColor[2], arrowColor[3],
 
 	                 0, AH_PAUSE_ARROW_SCALE, 0);
 
-	struct PauseObject *ptrPauseObject = D232.ptrPauseObject;
+	struct PauseObject *ptrPauseObject = P32_GET(struct PauseObject *, D232.ptrPauseObject);
 
 	// loop through 14 instances
 	for (s32 i = 0; i < AH_PAUSE_MEMBER_COUNT; i++)
@@ -244,14 +244,14 @@ void AH_Pause_Draw(s32 pageID, s32 posX)
 			s32 rowY = rowBase + rowIndex * AH_PAUSE_ROW_STEP_Y;
 			rowIndex++;
 
-			DecalFont_DrawLine(sdata->lngStrings[mdLev->name_LNG], posX + textX, rowY + AH_PAUSE_ROW_TEXT_Y, FONT_BIG, 0);
+			DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[mdLev->name_LNG], posX + textX, rowY + AH_PAUSE_ROW_TEXT_Y, FONT_BIG, 0);
 
 			if (hubID != 0)
 			{
 				for (s32 j = 0; j < AH_PAUSE_HUB_REWARD_ICON_COUNT; j++)
 				{
 					struct AHPauseMember *member = &ptrPauseObject->members[pauseIndex + j];
-					struct Instance *inst = member->inst;
+					struct Instance *inst = P32_GET(struct Instance *, member->inst);
 
 					// Remove SelectProfile with regular UI variant
 					inst->matrix.t[0] = UI_ConvertX_2(posX + iconX + j * AH_PAUSE_ROW_ICON_STEP_X, AH_PAUSE_UI_COORD_SCALE);
@@ -267,7 +267,7 @@ void AH_Pause_Draw(s32 pageID, s32 posX)
 			else
 			{
 				struct AHPauseMember *member = &ptrPauseObject->members[pauseIndex];
-				struct Instance *inst = member->inst;
+				struct Instance *inst = P32_GET(struct Instance *, member->inst);
 
 				// Remove SelectProfile with regular UI variant
 				inst->matrix.t[0] = UI_ConvertX_2(posX + iconX + AH_PAUSE_ROW_ICON_STEP_X, AH_PAUSE_UI_COORD_SCALE);
@@ -307,7 +307,7 @@ void AH_Pause_Draw(s32 pageID, s32 posX)
 		s32 bossRowY = rowBase + rowIndex * AH_PAUSE_ROW_STEP_Y;
 		s32 bossID = D232.advPausePages[pageID].characterID_Boss;
 
-		DecalFont_DrawLine(sdata->lngStrings[data.MetaDataCharacters[bossID].name_LNG_long], posX + textX, bossRowY + AH_PAUSE_ROW_TEXT_Y, FONT_BIG, WHITE);
+		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[data.MetaDataCharacters[bossID].name_LNG_long], posX + textX, bossRowY + AH_PAUSE_ROW_TEXT_Y, FONT_BIG, WHITE);
 
 		if (hubID == 0)
 		{
@@ -322,7 +322,7 @@ void AH_Pause_Draw(s32 pageID, s32 posX)
 				bossStarColor = AH_PAUSE_BOSS_STAR_UNLOCKED_COLOR;
 			}
 
-			u32 *starColor = data.ptrColor[bossStarColor];
+			u32 *starColor = P32_GET(u32 *, data.ptrColor[bossStarColor]);
 
 			struct Icon **iconPtrArray = ICONGROUP_GETICONS(gGT->iconGroup[AH_PAUSE_ICON_GROUP_MISC]);
 
@@ -330,7 +330,7 @@ void AH_Pause_Draw(s32 pageID, s32 posX)
 
 			                     posX + iconX + AH_PAUSE_BOSS_STAR_X_OFFSET, bossRowY + AH_PAUSE_BOSS_STAR_Y_OFFSET,
 
-			                     &gGT->backBuffer->primMem, gGT->pushBuffer_UI.ptrOT,
+			                     &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT),
 
 			                     starColor[0], starColor[1], starColor[2], starColor[3],
 
@@ -341,7 +341,7 @@ void AH_Pause_Draw(s32 pageID, s32 posX)
 			for (s32 i = 0; i < AH_PAUSE_GEM_ICON_COUNT; i++)
 			{
 				struct AHPauseMember *member = &ptrPauseObject->members[pauseIndex + i];
-				struct Instance *inst = member->inst;
+				struct Instance *inst = P32_GET(struct Instance *, member->inst);
 
 				// Remove SelectProfile with regular UI variant
 				inst->matrix.t[0] = UI_ConvertX_2(posX + AH_PAUSE_TITLE_CENTER_X + (i - AH_PAUSE_GEM_PAGE_CENTER_INDEX) * AH_PAUSE_GEM_PAGE_ICON_SPACING_X,
@@ -359,7 +359,7 @@ void AH_Pause_Draw(s32 pageID, s32 posX)
 		else
 		{
 			struct AHPauseMember *member = &ptrPauseObject->members[pauseIndex];
-			struct Instance *inst = member->inst;
+			struct Instance *inst = P32_GET(struct Instance *, member->inst);
 
 			// Remove SelectProfile with regular UI variant
 			inst->matrix.t[0] = UI_ConvertX_2(posX + iconX + AH_PAUSE_ROW_ICON_STEP_X, AH_PAUSE_UI_COORD_SCALE);
@@ -375,10 +375,10 @@ void AH_Pause_Draw(s32 pageID, s32 posX)
 				struct MetaDataLEV *mdLev = &data.metaDataLEV[crystalID];
 				s32 crystalRowY = bossRowY + AH_PAUSE_ROW_STEP_Y;
 
-				DecalFont_DrawLine(sdata->lngStrings[mdLev->name_LNG], posX + textX, crystalRowY + AH_PAUSE_ROW_TEXT_Y, FONT_BIG, PERIWINKLE);
+				DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[mdLev->name_LNG], posX + textX, crystalRowY + AH_PAUSE_ROW_TEXT_Y, FONT_BIG, PERIWINKLE);
 
 				member = &ptrPauseObject->members[pauseIndex];
-				inst = member->inst;
+				inst = P32_GET(struct Instance *, member->inst);
 
 				// Remove SelectProfile with regular UI variant
 				inst->matrix.t[0] = UI_ConvertX_2(posX + iconX + AH_PAUSE_ROW_ICON_STEP_X, AH_PAUSE_UI_COORD_SCALE);
@@ -421,7 +421,7 @@ void AH_Pause_Draw(s32 pageID, s32 posX)
 			member->iconIndex = AH_PAUSE_ICON_FIRST_TOKEN + i;
 			member->unlockFlags |= AH_PAUSE_MEMBER_UNLOCKED;
 
-			struct Instance *inst = member->inst;
+			struct Instance *inst = P32_GET(struct Instance *, member->inst);
 
 			// Remove SelectProfile with regular UI variant
 			inst->matrix.t[0] = UI_ConvertX_2(instPosX, AH_PAUSE_UI_COORD_SCALE);
@@ -467,7 +467,7 @@ void AH_Pause_Draw(s32 pageID, s32 posX)
 			member->iconIndex = AH_PAUSE_ICON_SAPPHIRE_RELIC + i;
 			member->unlockFlags |= AH_PAUSE_MEMBER_UNLOCKED;
 
-			struct Instance *inst = member->inst;
+			struct Instance *inst = P32_GET(struct Instance *, member->inst);
 
 			// Remove SelectProfile with regular UI variant
 			inst->matrix.t[0] = UI_ConvertX_2(instPosX, AH_PAUSE_UI_COORD_SCALE);
@@ -482,7 +482,7 @@ void AH_Pause_Draw(s32 pageID, s32 posX)
 
 		relicTotal = relicTotals[0] + relicTotals[1] + relicTotals[2];
 
-		sprintf(totalString, "%s %d", sdata->lngStrings[LNG_TOTAL], relicTotal);
+		sprintf(totalString, "%s %d", P32_GET(char **, sdata->lngStrings)[LNG_TOTAL], relicTotal);
 
 		DecalFont_DrawLine(totalString, posX + AH_PAUSE_TITLE_CENTER_X, AH_PAUSE_TOTAL_TEXT_Y, FONT_BIG, 0xffff8000);
 	}
@@ -504,7 +504,7 @@ void AH_Pause_Draw(s32 pageID, s32 posX)
 
 	Color color;
 	color.self = sdata->battleSetup_Color_UI_1;
-	u32 *ot = gGT->backBuffer->otMem.uiOT;
+	u32 *ot = P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT);
 	RECTMENU_DrawOuterRect_Edge(&r, color, AH_PAUSE_OUTER_EDGE_ALPHA, ot);
 
 	r.x = AH_PAUSE_INNER_RECT_CENTER_X - titleHalfWidth;
@@ -520,7 +520,7 @@ void AH_Pause_Draw(s32 pageID, s32 posX)
 		struct AHPauseMember *member = &ptrPauseObject->members[i];
 		s32 index = member->iconIndex;
 
-		struct Instance *inst = member->inst;
+		struct Instance *inst = P32_GET(struct Instance *, member->inst);
 		SVec3 *rot = &member->rot;
 
 		if (index < 0)
@@ -565,7 +565,7 @@ void AH_Pause_Draw(s32 pageID, s32 posX)
 
 			s32 modelID = D232.advPauseInst[index].modelID;
 
-			inst->model = gGT->modelPtr[modelID];
+			P32_SET(inst->model, P32_GET(struct Model *, gGT->modelPtr[modelID]));
 
 			ConvertRotToMatrix(&inst->matrix, rot);
 
@@ -592,9 +592,9 @@ void AH_Pause_Draw(s32 pageID, s32 posX)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b3144-0x800b344c.
 void AH_Pause_Update(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
-	if (D232.ptrPauseObject == 0)
+	if (P32_GET(struct PauseObject *, D232.ptrPauseObject) == 0)
 	{
 		struct PauseObject *ptrPauseObject = &D232.pauseObject;
 
@@ -608,16 +608,16 @@ void AH_Pause_Update(void)
 		// 0xd = "other" thread bucket
 		struct Thread *t = PROC_BirthWithObject(SIZE_RELATIVE_POOL_BUCKET(0, NONE, SMALL, OTHER), 0, R232.s_PAUSE, 0);
 
-		D232.ptrPauseObject = ptrPauseObject;
-		ptrPauseObject->t = t;
+		P32_SET(D232.ptrPauseObject, ptrPauseObject);
+		P32_SET(ptrPauseObject->t, t);
 
 		for (s32 i = 0; i < AH_PAUSE_MEMBER_COUNT; i++)
 		{
 			struct AHPauseMember *member = &ptrPauseObject->members[i];
-			struct Instance *inst = INSTANCE_Birth3D(gGT->modelPtr[STATIC_GEM], R232.s_pause, t);
+			struct Instance *inst = INSTANCE_Birth3D(P32_GET(struct Model *, gGT->modelPtr[STATIC_GEM]), R232.s_pause, t);
 
 			member->iconIndex = AH_PAUSE_ICON_NONE;
-			member->inst = inst;
+			P32_SET(member->inst, inst);
 			member->rot.x = 0;
 			member->rot.y = 0;
 			member->rot.z = 0;
@@ -626,10 +626,10 @@ void AH_Pause_Update(void)
 
 			struct InstDrawPerPlayer *idpp = INST_GETIDPP(inst);
 
-			idpp[0].pushBuffer = &gGT->pushBuffer_UI;
+			P32_SET(idpp[0].pushBuffer, &gGT->pushBuffer_UI);
 			for (s32 j = 1; j < gGT->numPlyrCurrGame; j++)
 			{
-				idpp[j].pushBuffer = 0;
+				P32_SET(idpp[j].pushBuffer, 0);
 			}
 
 			CTR_MatrixSetRotIdentity(&inst->matrix);

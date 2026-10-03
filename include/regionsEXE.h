@@ -90,8 +90,8 @@ CTR_STATIC_ASSERT(sizeof(struct SoundFadeInput) == 0x10);
 
 typedef union DriverModelExtraSlot
 {
-	void *fileBase;
-	struct Model *model;
+	P32(void *) fileBase;
+	P32(struct Model *) model;
 } DriverModelExtraSlot;
 
 CTR_STATIC_ASSERT(sizeof(DriverModelExtraSlot) == sizeof(void *));
@@ -131,7 +131,7 @@ struct Scrub
 	// see FUN_80020c58
 
 	// 0x0
-	char *name;
+	P32(char *) name;
 
 	// 0x4
 	ScrubFlags flags;
@@ -149,7 +149,7 @@ struct Scrub
 struct Terrain
 {
 	// 0
-	char *name;
+	P32(char *) name;
 
 	// 4
 	TerrainFlags flags;
@@ -171,10 +171,10 @@ struct Terrain
 	int turnLeanScale;
 
 	// 0x18
-	struct ParticleEmitter *em_OddFrame;
+	P32(struct ParticleEmitter *) em_OddFrame;
 
 	// 0x1C
-	struct ParticleEmitter *em_EvenFrame;
+	P32(struct ParticleEmitter *) em_EvenFrame;
 
 	// 0x20
 	// Scales local-X/Z ground friction; 0x100 is neutral.
@@ -233,7 +233,7 @@ struct MetaDataLEV
 	// 0x4
 	// debug name of level
 	// "hub1", "hub2", etc
-	char *name_Debug;
+	P32(char *) name_Debug;
 
 	// 0x8
 	// lng index of level,
@@ -272,17 +272,17 @@ struct MetaDataLEV
 struct MetaDataMODEL
 {
 	// debug
-	char *name;
+	P32(char *) name;
 
 	// Level Instance Birth
 	// callback after converting
 	// Lev InstDef to Lev Instance
-	void (*LInB)(struct Instance *inst);
+	P32_FNPTR(void, LInB, (struct Instance *inst));
 
 	// Level Instance Collision
 	// callback after detecting
 	// Lev BSP hitbox collision
-	int (*LInC)(struct Instance *i, struct Thread *t, struct ScratchpadStruct *sps);
+	P32_FNPTR(int, LInC, (struct Instance *i, struct Thread *t, struct ScratchpadStruct *sps));
 };
 
 enum BossWeaponMetaThrowFlag
@@ -332,7 +332,7 @@ struct MetaDataCHAR
 	// 0
 	// "crash", "pen"
 	// only used for time trial ghost save data in final game
-	char *name_Debug;
+	P32(char *) name_Debug;
 
 	// 4
 	// "Crash Bandicoot", "Penta Penguin"
@@ -389,7 +389,7 @@ struct rData
 	// 8001758c
 	// 800177a0
 	// 8001b678
-	void *jumpPointers1[0x2D];
+	P32(void *) jumpPointers1[0x2D];
 
 	// 800100CC
 	char s_STATIC_GNORMALZ[0x10];
@@ -1068,13 +1068,13 @@ struct rData
 	char s_GhostTape_[0xC];
 
 	// 800110A0
-	void *jumpPointers2[0xB]; // 0x2C bytes
+	P32(void *) jumpPointers2[0xB]; // 0x2C bytes
 
 	// 800110CC
 	char s_LoadSampleBlock[0x14];
 
 	// 800110e0
-	void *jumpPointers3[0x25]; // 0x94 bytes
+	P32(void *) jumpPointers3[0x25]; // 0x94 bytes
 
 #if (BUILD != JpnTrial) && (BUILD != JpnRetail)
 	// 80011174
@@ -1128,7 +1128,7 @@ struct rData
 #endif
 
 	// 800112a4
-	void *LOAD_TenStages_jumpPointers4[0x10];
+	P32(void *) LOAD_TenStages_jumpPointers4[0x10];
 
 	// 800112e4
 	char s_screen18[0xC];
@@ -1229,7 +1229,7 @@ struct rData
 #endif
 
 	// 8001148C
-	void *jumpPointers5[0x65];
+	P32(void *) jumpPointers5[0x65];
 
 	// 80011620
 	char s_timeString[0x14];
@@ -1241,7 +1241,7 @@ struct rData
 	char s_loadsave[0x10];
 
 	// 80011650
-	void *jumpPointers6[0x18]; // 0x60 bytes
+	P32(void *) jumpPointers6[0x18]; // 0x60 bytes
 
 	// 800116B0
 	char s_crystal1[0xC];
@@ -1495,7 +1495,7 @@ struct Data
 	// Might only be 7, but 8th
 	// is always zero, and the
 	// 4 bytes of 8th slot is never used
-	char *xaLanguagePtrs[8];
+	P32(char *) xaLanguagePtrs[8];
 
 	// 80081070
 	struct AudioMeta audioMeta[3];
@@ -1520,12 +1520,12 @@ struct Data
 	// 80080b84 -- JpnTrial
 	// 80082054 -- EurRetail
 	// 80084e94 -- JpnRetail
-	void *ptrRenderedQuadblockDestination_forEachPlayer[4];
+	P32(void *) ptrRenderedQuadblockDestination_forEachPlayer[4];
 
 	// the quadblock destination is in the 80096404 region
 
 	// 80081B30
-	void *ptrRenderedQuadblockDestination_again[4];
+	P32(void *) ptrRenderedQuadblockDestination_again[4];
 
 	// 8007FD00 -- SepReview
 	// 80081B40 -- UsaRetail
@@ -1540,7 +1540,7 @@ struct Data
 	// 80080dd4 -- JpnTrial		0x23
 	// 800822a4 -- EurRetail	0x23
 	// 800850e4 -- JpnRetail	0x23
-	u32 *ptrColor[NUM_COLORS];
+	P32(u32 *) ptrColor[NUM_COLORS];
 
 // 8007FF80 -- SepReview
 // 80081dfc -- UsaRetail
@@ -1729,7 +1729,7 @@ struct Data
 	// 80082130 -- JpnTrial
 	// 8008351c -- EurRetail
 	// 800864c4 -- JpnRetail
-	void (*opcodeFunc[0xb])(struct SongSeq *);
+	P32_FNPTR(void, opcodeFunc[0xb], (struct SongSeq *));
 
 	// 800812ac -- SepReview
 	// 80083030 -- UsaRetail
@@ -1751,7 +1751,7 @@ struct Data
 
 		struct
 		{
-			void *ptr;
+			P32(void *) ptr;
 			int num;
 		} voiceSet
 #if BUILD <= UsaRetail
@@ -1808,22 +1808,22 @@ struct Data
 	DriverModelExtraSlot driverModelExtras[LOAD_DRIVER_MODEL_EXTRA_COUNT];
 
 	// 80083a1c
-	struct Model *podiumModel_firstPlace;
-	struct Model *podiumModel_secondPlace;
-	struct Model *podiumModel_thirdPlace;
-	struct Model *podiumModel_tawna;
+	P32(struct Model *) podiumModel_firstPlace;
+	P32(struct Model *) podiumModel_secondPlace;
+	P32(struct Model *) podiumModel_thirdPlace;
+	P32(struct Model *) podiumModel_tawna;
 
 	// 80083a2c
-	struct Model *podiumModel_unk1;
+	P32(struct Model *) podiumModel_unk1;
 
 	// 80083a30
-	struct Model *podiumModel_dingoFire;
+	P32(struct Model *) podiumModel_dingoFire;
 
 	// 80083a34
-	struct Model *podiumModel_unk2;
+	P32(struct Model *) podiumModel_unk2;
 
 	// 80083a38
-	struct Model *podiumModel_podiumStands;
+	P32(struct Model *) podiumModel_podiumStands;
 
 	// 80083a3c
 	struct LoadQueueSlot currSlot;
@@ -1838,7 +1838,7 @@ struct Data
 	// 231 = 80031a08
 	// 232 = 80031a20
 	// 233 = 80031a38
-	void *overlayCallbackFuncs[4]; // probably `(void(*)(struct LoadQueueSlot*))[4]`
+	P32(void *) overlayCallbackFuncs[4]; // probably `(void(*)(struct LoadQueueSlot*))[4]`
 
 	// 80081CFC -- SepReview
 	// 80083A80 -- UsaRetail
@@ -1923,7 +1923,7 @@ struct Data
 	// 80083128 -- JpnTrial
 	// 80084500 -- EurRetail
 	// 800874bc -- JpnRetail
-	void *PtrClipBuffer[4];
+	P32(void *) PtrClipBuffer[4];
 
 // not in Sep3, after PtrClipBuffer is 0,3,6,9
 #if BUILD >= UsaRetail
@@ -2138,7 +2138,7 @@ struct Data
 	struct MetaDataBOSS BossWeaponPinstripe[3 * 2];
 
 	// 0x800859d0
-	struct MetaDataBOSS *bossWeaponMetaPtr[5];
+	P32(struct MetaDataBOSS *) bossWeaponMetaPtr[5];
 
 #if BUILD == SepReview
 	// Maybe there's more menu structs???
@@ -2410,7 +2410,7 @@ struct Data
 	// [1] = 2P P1
 	// [2] = 4P P1
 	// [3] = 4P P1
-	struct UiElement2D *hudStructPtr[4];
+	P32(struct UiElement2D *) hudStructPtr[4];
 
 	// 8008626c
 	// 8 XY values
@@ -2677,7 +2677,7 @@ struct Data
 	// 0x80087EF4 - pointer to 0x80086e94
 	struct
 	{
-		void *physEntry;
+		P32(void *) physEntry;
 		int numEntries;
 	} bakedGteMath[BAKED_GTE_MATRIX_COUNT];
 
@@ -2809,10 +2809,10 @@ struct sData
 #endif
 
 	// 0x8008CF70
-	s16 *arcade_difficultyParams;
+	P32(s16 *) arcade_difficultyParams;
 
 	// 0x8008CF74
-	s16 *cup_difficultyParams;
+	P32(s16 *) cup_difficultyParams;
 
 	// 0x8008CF78
 	// path index for each AI
@@ -2896,7 +2896,7 @@ struct sData
 	// 8008d018
 	// 6 four-byte pointers for pause/unpause,
 	// all relative to gGT->DB[0,1].primMem.end
-	char *PausePtrsVRAM[6]; // should maybe be `u32*[]` instead of `char*[]`
+	P32(char *) PausePtrsVRAM[6]; // should maybe be `u32*[]` instead of `char*[]`
 
 	// 8008d030
 	u32 pause_backup_renderFlags;
@@ -2982,14 +2982,14 @@ struct sData
 	// 8008d08c
 	// ptrLEV, stored here during loading,
 	// before passed to gGT for drawing
-	struct Level *ptrLevelFile;
+	P32(struct Level *) ptrLevelFile;
 
 	// 8008b4f0 - Sep3
 	// 8008d090 - UsaRetail
 	// 8008bfe8 - JpnTrial
 	// 8008d424 - EurRetail
 	// 80090498 - JpnRetail
-	void *PatchMem_Ptr;
+	P32(void *) PatchMem_Ptr;
 
 #if BUILD >= UsaRetail
 	// 8008d094 - size of PatchMem
@@ -3005,7 +3005,7 @@ struct sData
 	int bookmarkID;
 
 	// 8008d09c
-	struct BigHeader *ptrBigfileCdPos_2;
+	P32(struct BigHeader *) ptrBigfileCdPos_2;
 
 	// 8008b4fc -- SepReview
 	// 8008d0a0 -- UsaRetail
@@ -3059,7 +3059,7 @@ struct sData
 
 	// 8008d0f0
 	// set to zero to cause LOD bugs
-	struct Model *modelMaskHints3D;
+	P32(struct Model *) modelMaskHints3D;
 
 	// 8008d0f4
 	int mainGameState;
@@ -3175,12 +3175,12 @@ struct sData
 	// 8008c204 -- JpnTrial
 	// 8008D644 -- EurRetail
 	// 800906b8 -- JpnRetail
-	struct GameTracker *gGT; // real ND name
+	P32(struct GameTracker *) gGT; // real ND name
 
 	// 8008d2b0 -- UsaRetail
 	// 8008d648 -- EurRetail
 	// 800906bc -- JpnRetail
-	struct GamepadSystem *gGamepads;
+	P32(struct GamepadSystem *) gGamepads;
 
 	// draw the same frame twice in a row
 	// making 60fps look like 30fps
@@ -3277,10 +3277,10 @@ struct sData
 	char s_PAUS[8];
 
 	// 8008D3F8
-	void *MainDrawCb_DrawSyncPtr;
+	P32(void *) MainDrawCb_DrawSyncPtr;
 
 	// 8008D3FC
-	void *ptrVlcTable;
+	P32(void *) ptrVlcTable;
 
 	// 8008D400
 	int bool_IsLoaded_VlcTable;
@@ -3298,7 +3298,7 @@ struct sData
 	int memcard_stage;
 
 	// 8008d408
-	u8 *memcard_ptrStart;
+	P32(u8 *) memcard_ptrStart;
 
 	// 8008d40c
 	// memcard file descriptor, returned from "open(xxx)"
@@ -3321,7 +3321,7 @@ struct sData
 	// 8008C380 -- JpnTrial
 	// 8008D7C0 -- EurRetail
 	// 80090834 -- JpnRetail
-	struct Mempack *PtrMempack; // all good
+	P32(struct Mempack *) PtrMempack; // all good
 
 	// 8008d424
 	// Used to calculate random numbers, like weapon roulette,
@@ -3422,7 +3422,7 @@ struct sData
 	// 8008c3d0 JpnTrial
 	// 8008d814 EurRetail
 	// 80090884 JpnRetail
-	void *ptrToMemcardBuffer1;
+	P32(void *) ptrToMemcardBuffer1;
 
 	// 8008b8d0 Sep3
 	// 8008d474 UsaRetail
@@ -3430,7 +3430,7 @@ struct sData
 	// 8008d818 EurRetail
 	// 80090888 JpnRetail
 	// pointer to memcard bytes (again?) 800992E4
-	void *ptrToMemcardBuffer2;
+	P32(void *) ptrToMemcardBuffer2;
 
 	// 2 - NULL
 	// 3 - MC_START_SAVE_MAIN
@@ -3709,10 +3709,10 @@ struct sData
 	// whoever leads out of all human drivers,
 	// even if that person is not winning the race,
 	// pointer to that driver goes here
-	struct Driver *bestHumanRank;
+	P32(struct Driver *) bestHumanRank;
 
 	// 8008d678
-	s16 *difficultyParams[2];
+	P32(s16 *) difficultyParams[2];
 
 	// 8008d680
 	// if these are all zero, all AIs
@@ -3724,20 +3724,20 @@ struct sData
 	// 8008c5e0 -- JpnTrial
 	// 8008da3c -- EurRetail
 	// 80090ab0 -- JpnRetail
-	struct NavFrame *nav_ptrFirstPoint;
+	P32(struct NavFrame *) nav_ptrFirstPoint;
 
 	// 8008bad4 -- SepReview
 	// 8008d68c -- UsaRetail
 	// 8008c5e4 -- JpnTrial
 	// 8008da40 -- EurRetail
 	// 80090ab4 -- JpnRetail
-	struct NavFrame *nav_ptrLastPoint;
+	P32(struct NavFrame *) nav_ptrLastPoint;
 
 	// 8008d690
 	// whoever leads out of all AI drivers,
 	// even if that AI is not winning the race,
 	// pointer to that driver goes here
-	struct Driver *bestRobotRank;
+	P32(struct Driver *) bestRobotRank;
 
 	// 8008badc -- SepReview
 	// 8008d694 -- UsaRetail
@@ -3791,10 +3791,10 @@ struct sData
 	int XA_VolumeDeduct;
 
 	// 8008d6cc
-	int *ptrArray_numSongs;
+	P32(int *) ptrArray_numSongs;
 
 	// 8008d6d0
-	int *ptrArray_firstSongIndex;
+	P32(int *) ptrArray_firstSongIndex;
 
 	// 8008d6d4
 	int XA_CurrPos;
@@ -3815,7 +3815,7 @@ struct sData
 
 	// 8008bb30 -- SepReview
 	// 8008d6e8 -- UsaRetail
-	struct XaSize *ptrArray_XaSize;
+	P32(struct XaSize *) ptrArray_XaSize;
 
 #if BUILD >= UsaRetail
 	// 8008d6ec
@@ -3833,7 +3833,7 @@ struct sData
 	int XA_CurrOffset;
 
 	// 8008d6fc
-	int *ptrArray_NumXAs;
+	P32(int *) ptrArray_NumXAs;
 
 	// 8008d700
 	int unused_8008d700;
@@ -3854,11 +3854,11 @@ struct sData
 	int XA_MaxSampleVal;
 
 	// 8008d718
-	int *ptrArray_XaCdPos; // maybe should be `struct XaSize*`?
+	P32(int *) ptrArray_XaCdPos; // maybe should be `struct XaSize*`?
 
 	// 8008bb60 sep3
 	// 8008d71c usaRetail
-	int *ptrArray_firstXaIndex;
+	P32(int *) ptrArray_firstXaIndex;
 
 	// 8008d720
 	// count fails of CdSyncCallback
@@ -3887,7 +3887,7 @@ struct sData
 	} debugFont;
 
 	// 8008d738
-	struct HighScoreEntry *ptrActiveHighScoreEntry;
+	P32(struct HighScoreEntry *) ptrActiveHighScoreEntry;
 
 	// 8008d73C
 	int unk_8008d73C_relatedToRowHighlighted;
@@ -3902,10 +3902,10 @@ struct sData
 	int ghostOverflowTextTimer;
 
 	// 8008d74c
-	struct GhostTape *ptrGhostTape[2];
+	P32(struct GhostTape *) ptrGhostTape[2];
 
 	// 8008d754
-	struct GhostHeader *ptrGhostTapePlaying;
+	P32(struct GhostHeader *) ptrGhostTapePlaying;
 
 	// 8008d758
 	int boolCanSaveGhost;
@@ -3941,13 +3941,13 @@ struct sData
 	int bankFlags;
 
 	// 8008d780
-	struct Bank *ptrLastBank;
+	P32(struct Bank *) ptrLastBank;
 
 	// 8008d784
-	struct SampleBlockHeader *ptrSampleBlock1;
+	P32(struct SampleBlockHeader *) ptrSampleBlock1;
 
 	// 8008d788
-	struct SampleBlockHeader *ptrSampleBlock2;
+	P32(struct SampleBlockHeader *) ptrSampleBlock2;
 
 	// 8008d78c
 	int criticalSectionCount;
@@ -3983,10 +3983,10 @@ struct sData
 	int vol_FX;
 
 	// 8008d7b0
-	struct CseqHeader *ptrCseqHeader;
+	P32(struct CseqHeader *) ptrCseqHeader;
 
 	// 8008d7b4
-	s16 *ptrCseqSongStartOffset;
+	P32(s16 *) ptrCseqSongStartOffset;
 
 	// 8008d7b8
 	int vol_Music;
@@ -3995,39 +3995,39 @@ struct sData
 	int vol_Voice;
 
 	// 8008d7c0
-	struct HowlHeader *ptrHowlHeader;
+	P32(struct HowlHeader *) ptrHowlHeader;
 
 	// 8008d7c4
-	struct SampleDrums *ptrCseqShortSamples;
+	P32(struct SampleDrums *) ptrCseqShortSamples;
 
 	// 8008d7c8
 	// NOTE(aalhendi): Raw byte buffer of parsed CSEQ song data.
 	// Indexed by ptrCseqSongStartOffset[] (byte offsets), then cast to CseqSongHeader* at use sites.
-	char *ptrCseqSongData;
+	P32(char *) ptrCseqSongData;
 
 	// 8008d7cc
 	int boolStereoEnabled;
 
 	// 8008d7d0
-	struct EngineFX *howl_metaEngineFX;
+	P32(struct EngineFX *) howl_metaEngineFX;
 
 	// 8008d7d4
 	int howl_endOfHowl;
 
 	// 8008d7d8
-	struct OtherFX *howl_metaOtherFX;
+	P32(struct OtherFX *) howl_metaOtherFX;
 
 	// 8008d7dc
-	struct SpuAddrEntry *howl_spuAddrs;
+	P32(struct SpuAddrEntry *) howl_spuAddrs;
 
 	// 8008d7e0
-	u16 *howl_songOffsets;
+	P32(u16 *) howl_songOffsets;
 
 	// 8008d7e4
-	u16 *howl_bankOffsets;
+	P32(u16 *) howl_bankOffsets;
 
 	// 8008d7e8
-	struct SampleInstrument *ptrCseqLongSamples;
+	P32(struct SampleInstrument *) ptrCseqLongSamples;
 
 	// 8008bc2c sep3
 	// 8008d7ec usaRetail
@@ -4128,11 +4128,11 @@ struct sData
 	int howlChainParams[4];
 
 	// 8008d854
-	void *ptrHubAlloc;
+	P32(void *) ptrHubAlloc;
 
 // 8008d858
 #if BUILD == UsaRetail || BUILD == JpnTrial // def not SepReview
-	void *lngFile;
+	P32(void *) lngFile;
 #endif
 
 	// 8008bc94 -- SepReview
@@ -4143,11 +4143,11 @@ struct sData
 
 	// Not used in decomp/General,
 	// replaced 3-part callback with 2-part callback
-	void (*callbackCdReadSuccess)(struct LoadQueueSlot *);
+	P32_FNPTR(void, callbackCdReadSuccess, (struct LoadQueueSlot *));
 
 	// 8008d860
 	// lock to zero, mask wont appear to give hints
-	struct Instance *instMaskHints3D;
+	P32(struct Instance *) instMaskHints3D;
 
 	// 8008d864
 	int boolOpenWheelConfig;
@@ -4157,11 +4157,11 @@ struct sData
 
 	// 8008d86C
 	// same as ptrBigfileCdPos_2
-	struct BigHeader *ptrBigfile1;
+	P32(struct BigHeader *) ptrBigfile1;
 
 	// 8008d870
 	// ptr to array of model pointers (real ND name)
-	int **PLYROBJECTLIST; // maybe should be `struct Model**`
+	P32(int **) PLYROBJECTLIST; // maybe should be `struct Model**`
 
 	// 8008d874
 	// activated in FUN_80035e20,
@@ -4176,7 +4176,7 @@ struct sData
 	// 8008c7d0 -- JpnTrial
 	// 8008dc28 -- EurRetail
 	// 80090c9c -- JpnRetail
-	char **lngStrings;
+	P32(char **) lngStrings;
 
 	// 8008d87c -- UsaRetail
 	// 8008dc2c -- EurRetail
@@ -4307,7 +4307,7 @@ struct sData
 	// UsaRetail JpnTrial EurRetail
 #if BUILD >= SepReview && BUILD <= EurRetail
 	int bossWeaponCooldown;
-	struct MetaDataBOSS *bossWeaponMeta;
+	P32(struct MetaDataBOSS *) bossWeaponMeta;
 	char data10_aaaaa[4];
 
 	// 8008d8f0 - Usa
@@ -4347,7 +4347,7 @@ struct sData
 	// 8008c860 -- JpnTrial
 	// 8008dcbc -- EurRetail
 	// 80090d34 -- JpnRetail
-	struct RectMenu *ptrActiveMenu;
+	P32(struct RectMenu *) ptrActiveMenu;
 
 	// 8008d90c
 	// Never used to detect dead menu
@@ -4375,7 +4375,7 @@ struct sData
 	// 8008d924 -- UsaRetail
 	// 8008dcd8 -- EurRetail
 	// Becomes nullptr after ptrActiveMenu is set
-	struct RectMenu *ptrDesiredMenu;
+	P32(struct RectMenu *) ptrDesiredMenu;
 
 	// 8008d928
 	char unk_memcardRelated_8008d928[0x8];
@@ -4430,7 +4430,7 @@ struct sData
 
 	// 8008d954 - UsaRetail
 	// 8008dd08 - EurRetail
-	struct RectMenu *activeSubMenu;
+	P32(struct RectMenu *) activeSubMenu;
 
 	// 8008bd8c -- SepReview
 	// 8008d958 -- UsaRetail
@@ -4508,7 +4508,7 @@ struct sData
 	// 8008c90c -- JpnTrial
 	// 8008dd68 -- EurRetail
 	// 80090de4 -- JpnRetail
-	struct Instance *ptrRelic;
+	P32(struct Instance *) ptrRelic;
 
 #if BUILD == JpnRetail
 	// 80090de8 -- JpnRetail
@@ -4523,26 +4523,26 @@ struct sData
 	int relicTime_1ms;
 
 	// 8008d9bc
-	struct Instance *ptrHudCrystal;
+	P32(struct Instance *) ptrHudCrystal;
 
 	// 8008d9c0
-	struct Instance *ptrMenuCrystal;
+	P32(struct Instance *) ptrMenuCrystal;
 
 	// 8008d9c4
-	struct Instance *ptrHudT;
+	P32(struct Instance *) ptrHudT;
 
 	// 8008d9c8
-	struct Instance *ptrHudR;
+	P32(struct Instance *) ptrHudR;
 
 	// 8008d9cc
-	struct Instance *ptrHudC;
+	P32(struct Instance *) ptrHudC;
 
 	// 8008be04 -- SepReview
 	// 8008d9d0 -- UsaRetail
 	// 8008c928 -- JpnTrial
 	// 8008dd84 -- EurRetail
 	// 80090e08 -- JpnRetail
-	struct Instance *ptrToken;
+	P32(struct Instance *) ptrToken;
 
 	// 8008d9d4
 	int relicTime_10ms;
@@ -4557,7 +4557,7 @@ struct sData
 	// 8008c930 -- JpnTrial
 	// 8008dd8c -- EurRetail
 	// 80090e18 -- JpnRetail
-	struct Instance *ptrTimebox1;
+	P32(struct Instance *) ptrTimebox1;
 
 	// 8008d9dc
 	int WrongWayDirection_bool;
@@ -4643,14 +4643,14 @@ struct sData
 	// 8008ca48 -- JpnTrial
 	// 8008de94 -- EurRetail
 	// 80090f50 -- JpnRetail
-	struct NavFrame *NavPath_ptrNavFrameArray[3];
+	P32(struct NavFrame *) NavPath_ptrNavFrameArray[3];
 
 	// 8008bf20 -- SepReview
 	// 8008daec -- UsaRetail
 	// 8008ca54 -- JpnTrial
 	// 8008dea0 -- EurRetail
 	// 80090f5c -- JpnRetail
-	struct NavHeader *NavPath_ptrHeader[3];
+	P32(struct NavHeader *) NavPath_ptrHeader[3];
 
 	// 8008daf8
 	struct LinkedList navBotList[3];
@@ -4745,20 +4745,20 @@ struct sData
 		// 8008fbf4
 		// Start of entire ghost,
 		// first byte of header
-		struct GhostHeader *ptrGhost;
+		P32(struct GhostHeader *) ptrGhost;
 
 		// 8008fbf8
 		// beginning of recording buffer,
 		// after ghost header
-		char *ptrStartOffset;
+		P32(char *) ptrStartOffset;
 
 		// 8008fbfc
 		// max address a ghost can record to
-		char *ptrEndOffset;
+		P32(char *) ptrEndOffset;
 
 		// 8008fc00
 		// current "end", where you append buffer
-		char *ptrCurrOffset;
+		P32(char *) ptrCurrOffset;
 
 		// DAT_8008fc04
 		// Used to update velocity
@@ -4917,7 +4917,7 @@ struct sData
 #elif BUILD >= UsaRetail
 
 	// 64 quadblocks per player, 256 total
-	struct QuadBlock *quadBlocksRendered[0x100];
+	P32(struct QuadBlock *) quadBlocksRendered[0x100];
 
 #endif
 
@@ -5027,15 +5027,15 @@ struct sData
 	s16 padding8009aa46;
 
 	// 8009aa48
-	char *ghostProfile_fileName;
+	P32(char *) ghostProfile_fileName;
 
 	// 8009aa4c
-	char *ghostProfile_fileIconHeader;
+	P32(char *) ghostProfile_fileIconHeader;
 
 	// 8009aa50
 	// Points to Destination (ghost load)
 	// Points to Source (ghost save)
-	struct GhostHeader *ghostProfile_ptrGhostHeader;
+	P32(struct GhostHeader *) ghostProfile_ptrGhostHeader;
 
 	// 8009aa54 -- Size (saving = 3E00)
 	s16 ghostProfile_size3E00;

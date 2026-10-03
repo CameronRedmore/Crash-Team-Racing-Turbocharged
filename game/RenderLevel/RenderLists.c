@@ -194,7 +194,7 @@ static void RenderLists_LinkBsp(struct BSP *bspRoot, struct BSP *bsp, struct Vis
 
 	node = &bspList[bspIndex];
 
-	node->next = *head;
+	P32_SET(node->next, *head);
 	*head = node;
 }
 

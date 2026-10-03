@@ -135,7 +135,7 @@ void MM_Battle_DrawIcon_Weapon(struct Icon *icon, u32 posX, int posY, struct Pri
 		return;
 	}
 
-	POLY_FT4 *p = (POLY_FT4 *)primMem->cursor;
+	POLY_FT4 *p = (POLY_FT4 *)P32_GET(void *, primMem->cursor);
 
 	u32 uv0 = CTR_ReadU32LE(&icon->texLayout.u0);
 	u32 uv1 = CTR_ReadU32LE(&icon->texLayout.u1);
@@ -200,7 +200,7 @@ void MM_Battle_DrawIcon_Weapon(struct Icon *icon, u32 posX, int posY, struct Pri
 
 	CtrGpu_LinkPacket24(ot, &p->tag, p, BATTLE_GPU_TAG_LENGTH_POLY_FT4);
 
-	primMem->cursor = p + 1;
+	P32_SET(primMem->cursor, p + 1);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b1830-0x800b1848.
@@ -216,13 +216,13 @@ void MM_Battle_MenuProc(struct RectMenu *unused)
 	u16 teamSegmentWidths[BATTLE_TEAM_COUNT];
 	s16 teamPlayerCounts[BATTLE_TEAM_COUNT];
 
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// save all five battle settings,
 	// these are selected rows from all battle options
 	for (s32 settingIndex = 0; settingIndex < BATTLE_SETTINGS_COUNT; settingIndex++)
 	{
-		D230.battleMenuArray[settingIndex]->rowSelected = sdata->battleSettings[settingIndex];
+		P32_GET(struct RectMenu *, D230.battleMenuArray[settingIndex])->rowSelected = sdata->battleSettings[settingIndex];
 	}
 
 	s16 nextTransitionFrames = D230.battleTransition.frame;
@@ -266,14 +266,14 @@ void MM_Battle_MenuProc(struct RectMenu *unused)
 					if (D230.battleTransition.startAfterExit != 0)
 					{
 						// passthrough Menu for funcPtr "QueueLoadTrack"
-						sdata->ptrDesiredMenu = &data.menuQueueLoadTrack;
+						P32_SET(sdata->ptrDesiredMenu, &data.menuQueueLoadTrack);
 						return;
 					}
 
 					// == else goBack ==
 
 					MM_TrackSelect_Init();
-					sdata->ptrDesiredMenu = &D230.menuTrackSelect;
+					P32_SET(sdata->ptrDesiredMenu, &D230.menuTrackSelect);
 
 					return;
 				}
@@ -729,10 +729,10 @@ void MM_Battle_MenuProc(struct RectMenu *unused)
 
 	struct TransitionMeta *tmbattle = D230.transitionMeta_battle;
 
-	DecalFont_DrawLine(sdata->lngStrings[LNG_SETUP_BATTLE], tmbattle[BATTLE_TITLE_META_INDEX].currX + BATTLE_TITLE_X_OFFSET,
+	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_SETUP_BATTLE], tmbattle[BATTLE_TITLE_META_INDEX].currX + BATTLE_TITLE_X_OFFSET,
 	                   tmbattle[BATTLE_TITLE_META_INDEX].currY + BATTLE_TITLE_Y_OFFSET, FONT_BIG, BATTLE_TITLE_TEXT_FLAGS);
 
-	DecalFont_DrawLine(sdata->lngStrings[LNG_TYPE], tmbattle[BATTLE_ROW_TYPE_LABEL_META_INDEX].currX + BATTLE_LABEL_X_OFFSET,
+	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_TYPE], tmbattle[BATTLE_ROW_TYPE_LABEL_META_INDEX].currX + BATTLE_LABEL_X_OFFSET,
 	                   tmbattle[BATTLE_ROW_TYPE_LABEL_META_INDEX].currY + BATTLE_TYPE_ROW_Y_OFFSET, FONT_BIG, BATTLE_LABEL_TEXT_FLAGS);
 
 	D230.menuBattleType.state &= ~(HIDE_ROW_HIGHLIGHT | SHOW_ONLY_HIGHLIT_ROW);
@@ -756,7 +756,7 @@ void MM_Battle_MenuProc(struct RectMenu *unused)
 	s16 lengthRowY = menuHeight + BATTLE_LENGTH_ROW_Y_OFFSET;
 	s16 afterLengthY = lengthRowY;
 
-	DecalFont_DrawLine(sdata->lngStrings[LNG_LENGTH], tmbattle[BATTLE_ROW_LENGTH_LABEL_META_INDEX].currX + BATTLE_LABEL_X_OFFSET,
+	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_LENGTH], tmbattle[BATTLE_ROW_LENGTH_LABEL_META_INDEX].currX + BATTLE_LABEL_X_OFFSET,
 	                   tmbattle[BATTLE_ROW_LENGTH_LABEL_META_INDEX].currY + lengthRowY + BATTLE_LENGTH_LABEL_Y_OFFSET, FONT_BIG, BATTLE_LABEL_TEXT_FLAGS);
 
 	struct RectMenu *lengthMenu;
@@ -841,7 +841,7 @@ LAB_800b25f0:
 
 	teamPanelX = BATTLE_TEAM_PANEL_START_X;
 
-	DecalFont_DrawLine(sdata->lngStrings[LNG_TEAMS], tmbattle[BATTLE_ROW_TEAM_LABEL_META_INDEX].currX + BATTLE_LABEL_X_OFFSET,
+	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_TEAMS], tmbattle[BATTLE_ROW_TEAM_LABEL_META_INDEX].currX + BATTLE_LABEL_X_OFFSET,
 	                   tmbattle[BATTLE_ROW_TEAM_LABEL_META_INDEX].currY + afterLengthY + BATTLE_TEAM_LABEL_Y_OFFSET, FONT_BIG, BATTLE_LABEL_TEXT_FLAGS);
 
 	s32 accumulatedTeamWidth = BATTLE_TEAM_SEGMENT_BASE_WIDTH;
@@ -887,7 +887,7 @@ LAB_800b25f0:
 		}
 	}
 
-	uint32_t *ot = gGT->backBuffer->otMem.uiOT;
+	uint32_t *ot = P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT);
 
 	for (s32 teamIndex = 0; teamIndex < BATTLE_TEAM_COUNT; teamIndex++)
 	{
@@ -902,10 +902,10 @@ LAB_800b25f0:
 				playerIconX = playerIconX + BATTLE_TEAM_PLAYER_WIDTH;
 
 				UI_DrawDriverIconDecalForDriver(playerIndex,
-				    gGT->ptrIcons[data.MetaDataCharacters[data.characterIDs[playerIndex]].iconID],
+				    P32_GET(struct Icon *, gGT->ptrIcons[data.MetaDataCharacters[data.characterIDs[playerIndex]].iconID]),
 				    (int)tmbattle[BATTLE_ROW_TEAM_META_INDEX].currX + (int)iconX,
 				    (int)tmbattle[BATTLE_ROW_TEAM_META_INDEX].currY + (int)afterLengthY + BATTLE_TEAM_PLAYER_ICON_Y_OFFSET,
-				    &gGT->backBuffer->primMem, gGT->pushBuffer_UI.ptrOT, 1, BATTLE_ICON_SCALE);
+				    &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), 1, BATTLE_ICON_SCALE);
 			}
 		}
 
@@ -918,7 +918,7 @@ LAB_800b25f0:
 		teamColorRect.w = teamSegmentWidth;
 
 		Color color;
-		color.self = *data.ptrColor[PLAYER_BLUE + teamIndex];
+		color.self = *P32_GET(u32 *, data.ptrColor[PLAYER_BLUE + teamIndex]);
 		CTR_Box_DrawSolidBox(&teamColorRect, color, ot);
 	}
 
@@ -942,7 +942,7 @@ LAB_800b25f0:
 	// Draw 2D Menu rectangle background
 	RECTMENU_DrawInnerRect(&teamPanelRect, 0, ot);
 
-	DecalFont_DrawLine(sdata->lngStrings[LNG_WEAPONS], tmbattle[BATTLE_ROW_WEAPON_LABEL_META_INDEX].currX + BATTLE_LABEL_X_OFFSET,
+	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_WEAPONS], tmbattle[BATTLE_ROW_WEAPON_LABEL_META_INDEX].currX + BATTLE_LABEL_X_OFFSET,
 	                   tmbattle[BATTLE_ROW_WEAPON_LABEL_META_INDEX].currY + afterLengthY + BATTLE_WEAPON_LABEL_Y_OFFSET, FONT_BIG, BATTLE_LABEL_TEXT_FLAGS);
 
 	// make flashing color for error message
@@ -1009,9 +1009,9 @@ LAB_800b25f0:
 		// BATTLE_ERROR_TEXT_X for halfway on the X-axis,
 		// flashing color
 
-		DecalFont_DrawLine(sdata->lngStrings[errorLine1], BATTLE_ERROR_TEXT_X, afterLengthY + BATTLE_ERROR_TEXT_LINE_1_Y_OFFSET, FONT_BIG,
+		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[errorLine1], BATTLE_ERROR_TEXT_X, afterLengthY + BATTLE_ERROR_TEXT_LINE_1_Y_OFFSET, FONT_BIG,
 		                   (int)flashingErrorColor);
-		DecalFont_DrawLine(sdata->lngStrings[errorLine2], BATTLE_ERROR_TEXT_X, afterLengthY + BATTLE_ERROR_TEXT_LINE_2_Y_OFFSET, FONT_BIG,
+		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[errorLine2], BATTLE_ERROR_TEXT_X, afterLengthY + BATTLE_ERROR_TEXT_LINE_2_Y_OFFSET, FONT_BIG,
 		                   (int)flashingErrorColor);
 	}
 	RECT weaponPanelRect;
@@ -1050,7 +1050,7 @@ LAB_800b25f0:
 			DecalFont_DrawLine(&R230.s_3[0], weaponPosX, weaponPosY, 2, weaponTextColor);
 		}
 
-		MM_Battle_DrawIcon_Weapon(gGT->ptrIcons[weaponItem->iconID], weaponPosX, weaponPosY, &gGT->backBuffer->primMem, (u32 *)gGT->pushBuffer_UI.ptrOT, 1,
+		MM_Battle_DrawIcon_Weapon(P32_GET(struct Icon *, gGT->ptrIcons[weaponItem->iconID]), weaponPosX, weaponPosY, &P32_GET(struct DB *, gGT->backBuffer)->primMem, (u32 *)P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), 1,
 		                          BATTLE_ICON_SCALE, BATTLE_WEAPON_ICON_ROTATE_RIGHT, weaponColor);
 	}
 
@@ -1085,7 +1085,7 @@ LAB_800b25f0:
 	// these are selected rows from all battle options
 	for (s32 settingIndex = 0; settingIndex < BATTLE_SETTINGS_COUNT; settingIndex++)
 	{
-		sdata->battleSettings[settingIndex] = D230.battleMenuArray[settingIndex]->rowSelected;
+		sdata->battleSettings[settingIndex] = P32_GET(struct RectMenu *, D230.battleMenuArray[settingIndex])->rowSelected;
 	}
 	return;
 }

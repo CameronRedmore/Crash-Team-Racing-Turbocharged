@@ -8,7 +8,7 @@ void RB_MinePool_Init(void)
 	LIST_Clear(&D231.minePoolTaken);
 	LIST_Clear(&D231.minePoolFree);
 
-	int gameMode = sdata->gGT->gameMode1;
+	int gameMode = P32_GET(struct GameTracker *, sdata->gGT)->gameMode1;
 
 	// default
 	int numMines = 10;
@@ -23,11 +23,11 @@ void RB_MinePool_Init(void)
 	// boss race
 	if ((gameMode & ADVENTURE_BOSS) != 0)
 	{
-		if (sdata->gGT->levelID == DRAGON_MINES)
+		if (P32_GET(struct GameTracker *, sdata->gGT)->levelID == DRAGON_MINES)
 		{
 			numMines = 3;
 		}
-		if (sdata->gGT->levelID == ROO_TUBES)
+		if (P32_GET(struct GameTracker *, sdata->gGT)->levelID == ROO_TUBES)
 		{
 			numMines = 7;
 		}
@@ -43,7 +43,7 @@ void RB_MinePool_Init(void)
 // NOTE(aalhendi): ASM-verified against NTSC-U 926 overlay 231 0x800ac0e4-0x800ac13c.
 void RB_MinePool_Remove(struct MineWeapon *mw)
 {
-	struct WeaponSlot231 *ws = mw->weaponSlot231;
+	struct WeaponSlot231 *ws = P32_GET(struct WeaponSlot231 *, mw->weaponSlot231);
 
 	if (ws == NULL)
 	{
@@ -55,7 +55,7 @@ void RB_MinePool_Remove(struct MineWeapon *mw)
 	LIST_AddFront(&D231.minePoolFree, (struct Item *)ws);
 
 	mw->boolDestroyed = 1;
-	mw->weaponSlot231 = NULL;
+	P32_SET(mw->weaponSlot231, NULL);
 }
 
 // NOTE(aalhendi): ASM-verified against NTSC-U 926 overlay 231 0x800ac13c-0x800ac1b0.
@@ -65,15 +65,15 @@ void RB_MinePool_Add(struct MineWeapon *mw)
 	if ((&D231.minePoolFree)->count == 0)
 	{
 		// remove oldest mine
-		RB_MinePool_Remove(((struct WeaponSlot231 *)(&D231.minePoolTaken)->last)->mineWeapon);
+		RB_MinePool_Remove(P32_GET(struct MineWeapon *, ((struct WeaponSlot231 *)P32_GET(struct Item *, (&D231.minePoolTaken)->last))->mineWeapon));
 	}
 
 	// LIST_RemoveBack free list
 	struct WeaponSlot231 *ws = (struct WeaponSlot231 *)LIST_RemoveBack(&D231.minePoolFree);
 
 	// link together
-	ws->mineWeapon = mw;
-	mw->weaponSlot231 = ws;
+	P32_SET(ws->mineWeapon, mw);
+	P32_SET(mw->weaponSlot231, ws);
 
 	// LIST_AddFront to taken list
 	LIST_AddFront(&D231.minePoolTaken, (struct Item *)ws);

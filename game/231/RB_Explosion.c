@@ -3,7 +3,7 @@
 // NOTE(aalhendi): ASM-verified against NTSC-U 926 overlay 231 0x800ad92c-0x800ad9ac.
 void RB_Explosion_ThTick(struct Thread *t)
 {
-	struct Instance *inst = t->inst;
+	struct Instance *inst = P32_GET(struct Instance *, t->inst);
 
 	int frame = inst->animFrame;
 	int total = INSTANCE_GetNumAnimFrames(inst, 0);
@@ -43,7 +43,7 @@ void RB_Explosion_InitPotion(struct Instance *inst)
 	shatterColor = STATIC_SHOCKWAVE_GREEN;
 
 	// if red beaker, red explosion
-	if (inst->model->id == STATIC_BEAKER_RED)
+	if (P32_GET(struct Model *, inst->model)->id == STATIC_BEAKER_RED)
 	{
 		shatterColor = STATIC_SHOCKWAVE_RED;
 	}
@@ -54,7 +54,7 @@ void RB_Explosion_InitPotion(struct Instance *inst)
 	shatterInst->flags |= (PIXEL_LOD | CUSTOM_MATRIX);
 
 	// set funcThDestroy to remove instance from instance pool
-	shatterInst->thread->funcThDestroy = PROC_DestroyInstance;
+	P32_SET(P32_GET(struct Thread *, shatterInst->thread)->funcThDestroy, PROC_DestroyInstance);
 
 	// copy position and rotation from one instance to the other
 	CTR_MatrixCopyRot(&shatterInst->matrix, &inst->matrix);
@@ -70,7 +70,7 @@ void RB_Explosion_InitPotion(struct Instance *inst)
 	for (int i = 0; i < 5; i++)
 	{
 		// Create instance in particle pool
-		p = Particle_Init(0, sdata->gGT->iconGroup[1], (struct ParticleEmitter *)s_potionShatterEmitter);
+		p = Particle_Init(0, P32_GET(struct IconGroup *, P32_GET(struct GameTracker *, sdata->gGT)->iconGroup[1]), (struct ParticleEmitter *)s_potionShatterEmitter);
 
 		if (p == NULL)
 		{
@@ -97,7 +97,7 @@ void RB_Explosion_InitPotion(struct Instance *inst)
 
 		p->axis[9].startVal = 1;
 
-		p->funcPtr = Particle_FuncPtr_PotionShatter;
+		P32_SET(p->funcPtr, Particle_FuncPtr_PotionShatter);
 	}
 	PARTICLE_SPAWN_UNGATED_END();
 
@@ -127,7 +127,7 @@ void RB_Explosion_InitGeneric(struct Instance *inst)
 	color = 0x1eac000;
 
 	// instance -> model -> modelID == TNT
-	if ((inst->model->id) == STATIC_CRATE_TNT)
+	if ((P32_GET(struct Model *, inst->model)->id) == STATIC_CRATE_TNT)
 	{
 		// red
 		color = 0xad10000;
@@ -140,6 +140,6 @@ void RB_Explosion_InitGeneric(struct Instance *inst)
 	explosion->alphaScale = 0x1000;
 
 	// set funcThDestroy to remove instance from instance pool
-	explosion->thread->funcThDestroy = PROC_DestroyInstance;
+	P32_SET(P32_GET(struct Thread *, explosion->thread)->funcThDestroy, PROC_DestroyInstance);
 	return;
 }

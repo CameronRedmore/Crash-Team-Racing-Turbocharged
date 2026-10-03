@@ -196,7 +196,7 @@ int CDSYS_SetXAToLang(int lang)
 	sdata->bool_XnfLoaded = 0;
 	CDSYS_SetMode_StreamData();
 
-	xaLang = data.xaLanguagePtrs[lang];
+	xaLang = P32_GET(char *, data.xaLanguagePtrs[lang]);
 	strncpy(&data.s_XA_ENG_XNF[CDSYS_LANGUAGE_CODE_OFFSET], xaLang, CDSYS_LANGUAGE_CODE_LENGTH);
 	strncpy(&data.s_XA_ENG_EXTRA[CDSYS_LANGUAGE_CODE_OFFSET], xaLang, CDSYS_LANGUAGE_CODE_LENGTH);
 	strncpy(&data.s_XA_ENG_GAME[CDSYS_LANGUAGE_CODE_OFFSET], xaLang, CDSYS_LANGUAGE_CODE_LENGTH);
@@ -230,27 +230,27 @@ int CDSYS_SetXAToLang(int lang)
 		return 0;
 	}
 
-	sdata->ptrArray_NumXAs = &xnf->numXA[0];
-	sdata->ptrArray_firstXaIndex = &xnf->firstXaIndex[0];
-	sdata->ptrArray_numSongs = &xnf->numSongs[0];
-	sdata->ptrArray_firstSongIndex = &xnf->firstSongIndex[0];
-	sdata->ptrArray_XaCdPos = XNF_GETXACDPOS(xnf);
-	sdata->ptrArray_XaSize = (struct XaSize *)&sdata->ptrArray_XaCdPos[xnf->numXAs_total];
+	P32_SET(sdata->ptrArray_NumXAs, &xnf->numXA[0]);
+	P32_SET(sdata->ptrArray_firstXaIndex, &xnf->firstXaIndex[0]);
+	P32_SET(sdata->ptrArray_numSongs, &xnf->numSongs[0]);
+	P32_SET(sdata->ptrArray_firstSongIndex, &xnf->firstSongIndex[0]);
+	P32_SET(sdata->ptrArray_XaCdPos, XNF_GETXACDPOS(xnf));
+	P32_SET(sdata->ptrArray_XaSize, (struct XaSize *)&P32_GET(int *, sdata->ptrArray_XaCdPos)[xnf->numXAs_total]);
 
 	for (int categoryID = 0; categoryID < sdata->xa_numTypes; categoryID++)
 	{
 		struct AudioMeta *am = &data.audioMeta[categoryID];
 
-		for (int xaID = 0; xaID < sdata->ptrArray_NumXAs[categoryID]; xaID++)
+		for (int xaID = 0; xaID < P32_GET(int *, sdata->ptrArray_NumXAs)[categoryID]; xaID++)
 		{
-			am->name[(s32)am->stringIndex_char1] = '0' + (xaID / 10);
-			am->name[(s32)am->stringIndex_char2] = '0' + (xaID % 10);
+			P32_GET(char *, am->name)[(s32)am->stringIndex_char1] = '0' + (xaID / 10);
+			P32_GET(char *, am->name)[(s32)am->stringIndex_char2] = '0' + (xaID % 10);
 
-			int firstXaIndex = sdata->ptrArray_firstXaIndex[categoryID];
-			int *returnPtr_xaCdPos = &sdata->ptrArray_XaCdPos[firstXaIndex + xaID];
+			int firstXaIndex = P32_GET(int *, sdata->ptrArray_firstXaIndex)[categoryID];
+			int *returnPtr_xaCdPos = &P32_GET(int *, sdata->ptrArray_XaCdPos)[firstXaIndex + xaID];
 
 			// quit on error to find XA file
-			if (CDSYS_GetFilePosInt(am->name, returnPtr_xaCdPos) == 0)
+			if (CDSYS_GetFilePosInt(P32_GET(char *, am->name), returnPtr_xaCdPos) == 0)
 			{
 				return 0;
 			}
@@ -585,7 +585,7 @@ int CDSYS_XAGetNumTracks(int categoryID)
 		return 0;
 	}
 
-	return sdata->ptrArray_numSongs[categoryID];
+	return P32_GET(int *, sdata->ptrArray_numSongs)[categoryID];
 }
 
 
@@ -623,8 +623,8 @@ int CDSYS_XASeek(b32 boolCdControl, int categoryID, int xaID)
 		CDSYS_SetMode_StreamAudio();
 	}
 
-	struct XaSize *xas = &sdata->ptrArray_XaSize[sdata->ptrArray_firstSongIndex[categoryID] + xaID];
-	int sum = sdata->ptrArray_XaCdPos[sdata->ptrArray_firstXaIndex[categoryID] + xas->XaPrefix];
+	struct XaSize *xas = &P32_GET(struct XaSize *, sdata->ptrArray_XaSize)[P32_GET(int *, sdata->ptrArray_firstSongIndex)[categoryID] + xaID];
+	int sum = P32_GET(int *, sdata->ptrArray_XaCdPos)[P32_GET(int *, sdata->ptrArray_firstXaIndex)[categoryID] + xas->XaPrefix];
 
 	CdIntToPos(sum, &loc);
 
@@ -668,9 +668,9 @@ int CDSYS_XAGetTrackLength(int categoryID, int xaID)
 		return 0;
 	}
 
-	int sizeIndex = sdata->ptrArray_firstSongIndex[categoryID] + xaID;
+	int sizeIndex = P32_GET(int *, sdata->ptrArray_firstSongIndex)[categoryID] + xaID;
 
-	return sdata->ptrArray_XaSize[sizeIndex].XaBytes;
+	return P32_GET(struct XaSize *, sdata->ptrArray_XaSize)[sizeIndex].XaBytes;
 }
 
 
@@ -752,8 +752,8 @@ int CDSYS_XAPlay(int categoryID, int xaID)
 	sdata->XA_Playing_Index = xaID;
 	sdata->XA_Playing_Category = categoryID;
 
-	struct XaSize *xas = &sdata->ptrArray_XaSize[sdata->ptrArray_firstSongIndex[categoryID] + xaID];
-	int sum = sdata->ptrArray_XaCdPos[sdata->ptrArray_firstXaIndex[categoryID] + xas->XaPrefix];
+	struct XaSize *xas = &P32_GET(struct XaSize *, sdata->ptrArray_XaSize)[P32_GET(int *, sdata->ptrArray_firstSongIndex)[categoryID] + xaID];
+	int sum = P32_GET(int *, sdata->ptrArray_XaCdPos)[P32_GET(int *, sdata->ptrArray_firstXaIndex)[categoryID] + xas->XaPrefix];
 
 	buf1[0] = 1;
 	buf1[1] = xas->XaIndex;
@@ -832,7 +832,7 @@ void CDSYS_XAPauseForce()
 		NativeAudio_StopXA();
 		sdata->XA_boolFinished = 0;
 		sdata->XA_State = XA_IDLE;
-		sdata->XA_PauseFrame = sdata->gGT->frameTimer_MainFrame_ResetDB;
+		sdata->XA_PauseFrame = P32_GET(struct GameTracker *, sdata->gGT)->frameTimer_MainFrame_ResetDB;
 #endif
 		return;
 	}
@@ -853,7 +853,7 @@ void CDSYS_XAPauseForce()
 
 	CdControl(CdlPause, 0, 0);
 
-	sdata->XA_PauseFrame = sdata->gGT->frameTimer_MainFrame_ResetDB;
+	sdata->XA_PauseFrame = P32_GET(struct GameTracker *, sdata->gGT)->frameTimer_MainFrame_ResetDB;
 }
 
 
@@ -918,7 +918,7 @@ void CDSYS_XAPauseAtEnd()
 				sdata->XA_State = XA_IDLE;
 				sdata->XA_MaxSampleVal = 0;
 				sdata->XA_MaxSampleValInArr = 0;
-				sdata->XA_PauseFrame = sdata->gGT->frameTimer_MainFrame_ResetDB;
+				sdata->XA_PauseFrame = P32_GET(struct GameTracker *, sdata->gGT)->frameTimer_MainFrame_ResetDB;
 			}
 			else
 			{
@@ -929,7 +929,7 @@ void CDSYS_XAPauseAtEnd()
 		{
 			if (sdata->XA_State != XA_IDLE)
 			{
-				sdata->XA_PauseFrame = sdata->gGT->frameTimer_MainFrame_ResetDB;
+				sdata->XA_PauseFrame = P32_GET(struct GameTracker *, sdata->gGT)->frameTimer_MainFrame_ResetDB;
 			}
 			sdata->XA_State = XA_IDLE;
 			sdata->XA_MaxSampleVal = 0;

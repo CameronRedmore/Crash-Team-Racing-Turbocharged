@@ -362,12 +362,12 @@ static char *RECTMENU_GetString(s16 stringIndex)
 		int volumeType = nativeStringIndex - NATIVE_MENU_STRING_AUDIO_FX;
 		static const s16 volumeLabel[3] = {LNG_FX, LNG_MUSIC, LNG_VOICE};
 		int percent = ((howl_VolumeGet(volumeType) & 0xff) * 100 + 127) / 255;
-		snprintf(audioRow, sizeof(audioRow), "%s %d%%", sdata->lngStrings[volumeLabel[volumeType]], percent);
+		snprintf(audioRow, sizeof(audioRow), "%s %d%%", P32_GET(char **, sdata->lngStrings)[volumeLabel[volumeType]], percent);
 		return audioRow;
 	}
 	case NATIVE_MENU_STRING_AUDIO_MODE:
-		snprintf(audioRow, sizeof(audioRow), "%s %s", sdata->lngStrings[LNG_MODE],
-		         sdata->lngStrings[howl_ModeGet() ? LNG_STEREO : LNG_MONO]);
+		snprintf(audioRow, sizeof(audioRow), "%s %s", P32_GET(char **, sdata->lngStrings)[LNG_MODE],
+		         P32_GET(char **, sdata->lngStrings)[howl_ModeGet() ? LNG_STEREO : LNG_MONO]);
 		return audioRow;
 	case NATIVE_MENU_STRING_DEFAULT_CAMERA:
 		return (char *)defaultCamera[languageRow][gNativeDefaultCameraFar != 0];
@@ -455,7 +455,7 @@ static char *RECTMENU_GetString(s16 stringIndex)
 	case NATIVE_MENU_STRING_TRACK_ALTERNATIVE:
 		return (char *)trackAlternative[languageRow];
 	default:
-		return sdata->lngStrings[stringIndex & MENU_ROW_LNG_MASK];
+		return P32_GET(char **, sdata->lngStrings)[stringIndex & MENU_ROW_LNG_MASK];
 	}
 }
 
@@ -520,11 +520,11 @@ char *RECTMENU_DrawTime(int milliseconds)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80045134-0x80045254.
 void RECTMENU_DrawRwdBlueRect_Subset(s16 *pos, int *color, uint32_t *ot, struct PrimMem *primMem)
 {
-	POLY_G4 *p = (POLY_G4 *)primMem->cursor;
+	POLY_G4 *p = (POLY_G4 *)P32_GET(void *, primMem->cursor);
 
-	if ((u32)p <= (u32)primMem->guardEnd)
+	if ((u32)p <= (u32)P32_GET(void *, primMem->guardEnd))
 	{
-		primMem->cursor = p + 1;
+		P32_SET(primMem->cursor, p + 1);
 
 		CtrGpu_WriteColorCode(&p->r0, (color[0] & 0xffffff) | 0x38000000);
 		CtrGpu_WriteColorCode(&p->r1, color[1] & 0xffffff);
@@ -575,13 +575,13 @@ void RECTMENU_DrawRwdTriangle(s16 *position, char *color, uint32_t *otMem, struc
 	POLY_G4 *p;
 	void *primmemCurr;
 
-	primmemCurr = primMem->cursor;
+	primmemCurr = P32_GET(void *, primMem->cursor);
 	p = 0;
 
-	if (primmemCurr <= primMem->guardEnd)
+	if (primmemCurr <= P32_GET(void *, primMem->guardEnd))
 	{
 		p = primmemCurr;
-		primMem->cursor = p + 1;
+		P32_SET(primMem->cursor, p + 1);
 	}
 
 	if (p != 0)
@@ -688,7 +688,7 @@ void RECTMENU_DrawQuip(char *comment, s16 startX, int startY, u32 sizeX, s16 fon
 	r.y = startY;
 	r.w = sizeX;
 	r.h = sizeY;
-	RECTMENU_DrawInnerRect(&r, boxFlag, sdata->gGT->backBuffer->otMem.uiOT);
+	RECTMENU_DrawInnerRect(&r, boxFlag, P32_GET(uint32_t *, P32_GET(struct DB *, P32_GET(struct GameTracker *, sdata->gGT)->backBuffer)->otMem.uiOT));
 }
 
 
@@ -771,7 +771,7 @@ void RECTMENU_DrawFullRect(struct RectMenu *menu, RECT *inner)
 {
 	u32 *rgb;
 	RECT outer;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// if title text exists
 	if ((-1 < menu->stringIndexTitle) && ((menu->state & ONLY_DRAW_TITLE) == 0))
@@ -800,9 +800,9 @@ void RECTMENU_DrawFullRect(struct RectMenu *menu, RECT *inner)
 
 		Color color;
 		color.self = *rgb;
-		RECTMENU_DrawOuterRect_Edge(&outer, color, (menu->drawStyle | 0x20), gGT->backBuffer->otMem.uiOT);
+		RECTMENU_DrawOuterRect_Edge(&outer, color, (menu->drawStyle | 0x20), P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT));
 	}
-	RECTMENU_DrawInnerRect(inner, menu->drawStyle, gGT->backBuffer->otMem.uiOT);
+	RECTMENU_DrawInnerRect(inner, menu->drawStyle, P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT));
 }
 
 
@@ -832,7 +832,7 @@ static b32 RECTMENU_NativeOptionsHorizontalInput(struct RectMenu *menu)
 		return false;
 	}
 
-	s16 stringIndex = menu->rows[menu->rowSelected].stringIndex & MENU_ROW_LNG_MASK;
+	s16 stringIndex = P32_GET(struct MenuRow *, menu->rows)[menu->rowSelected].stringIndex & MENU_ROW_LNG_MASK;
 	return ((stringIndex >= NATIVE_MENU_STRING_AUDIO_FX) &&
 	        (stringIndex <= NATIVE_MENU_STRING_AUDIO_MODE)) ||
 	       (stringIndex == NATIVE_MENU_STRING_AI_RACERS) ||
@@ -874,7 +874,7 @@ void RECTMENU_GetHeight(struct RectMenu *m, s16 *height, b32 boolCheckSubmenu)
 		if ((m->state & ONLY_DRAW_TITLE) == 0)
 		{
 			// add rows
-			for (row = m->rows; row->stringIndex != -1; row++)
+			for (row = P32_GET(struct MenuRow *, m->rows); row->stringIndex != -1; row++)
 			{
 #if defined(CTR_NATIVE)
 				if (RECTMENU_NativeOptionsSeparatorBeforeRow(m, row))
@@ -922,7 +922,7 @@ void RECTMENU_GetHeight(struct RectMenu *m, s16 *height, b32 boolCheckSubmenu)
 		if ((boolCheckSubmenu & 0xffff) != 0)
 		{
 			// recursively check height for more submenus
-			RECTMENU_GetHeight(m->ptrNextBox_InHierarchy, height, 1);
+			RECTMENU_GetHeight(P32_GET(struct RectMenu *, m->ptrNextBox_InHierarchy), height, 1);
 		}
 	}
 }
@@ -944,7 +944,7 @@ void RECTMENU_GetWidth(struct RectMenu *m, s16 *width, b32 boolCheckSubmenu)
 	}
 
 	// handle rows
-	for (row = m->rows; row->stringIndex != -1; row++)
+	for (row = P32_GET(struct MenuRow *, m->rows); row->stringIndex != -1; row++)
 	{
 		// width of string in each row
 		lineWidth = DecalFont_GetLineWidth(RECTMENU_GetString(row->stringIndex), fontType);
@@ -982,7 +982,7 @@ void RECTMENU_GetWidth(struct RectMenu *m, s16 *width, b32 boolCheckSubmenu)
 		if ((boolCheckSubmenu & 0xffff) != 0)
 		{
 			// recursively check height for more submenus
-			RECTMENU_GetWidth(m->ptrNextBox_InHierarchy, width, 1);
+			RECTMENU_GetWidth(P32_GET(struct RectMenu *, m->ptrNextBox_InHierarchy), width, 1);
 		}
 	}
 
@@ -1023,7 +1023,7 @@ void RECTMENU_DrawSelf(struct RectMenu *menu, int posX, s16 posY, s16 menuWidth)
 	int local_2c;
 	s16 posX_prev;
 	s16 posY_prev;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	uVar8 = 0;
 	local_40 = 0;
@@ -1036,9 +1036,9 @@ void RECTMENU_DrawSelf(struct RectMenu *menu, int posX, s16 posY, s16 menuWidth)
 	if ((menu->state & RECTMENU_DRAW_CALLBACK_FLAGS) == RECTMENU_DRAW_CALLBACK_FLAGS)
 	{
 		menu->funcState = RECTMENU_FUNC_STATE_DRAW;
-		if (menu->funcPtr != NULL)
+		if (P32_GET(void (*)(struct RectMenu *), menu->funcPtr) != NULL)
 		{
-			menu->funcPtr(menu);
+			P32_GET(void (*)(struct RectMenu *), menu->funcPtr)(menu);
 		}
 	}
 	posX_prev = 2;
@@ -1086,9 +1086,9 @@ LAB_80045e94:
 	if (D230.titleMenuState == TITLE_MENU_STATE_IN_MENU)
 	{
 		int displayWidth = 0x200;
-		if (gGT->backBuffer != NULL && gGT->backBuffer->dispEnv.disp.w > 0)
+		if (P32_GET(struct DB *, gGT->backBuffer) != NULL && P32_GET(struct DB *, gGT->backBuffer)->dispEnv.disp.w > 0)
 		{
-			displayWidth = gGT->backBuffer->dispEnv.disp.w;
+			displayWidth = P32_GET(struct DB *, gGT->backBuffer)->dispEnv.disp.w;
 		}
 
 		const int borderLeft = local_40 + posX + menu->posX_prev - 6;
@@ -1104,7 +1104,7 @@ LAB_80045e94:
 	}
 #endif
 	sVar6 = 0;
-	row = &menu->rows[0];
+	row = &P32_GET(struct MenuRow *, menu->rows)[0];
 	index = menu->stringIndexTitle;
 	posY_prev = local_50 + local_38 + offsetY + menu->posY_prev;
 	if ((-1 < index) && ((state & ONLY_DRAW_TITLE) == 0))
@@ -1154,7 +1154,7 @@ LAB_80045e94:
 					};
 					Color separatorColor;
 					separatorColor.self = sdata->battleSetup_Color_UI_1;
-					RECTMENU_DrawOuterRect_Edge(&separator, separatorColor, 0x20, gGT->backBuffer->otMem.uiOT);
+					RECTMENU_DrawOuterRect_Edge(&separator, separatorColor, 0x20, P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT));
 					posY_prev += RECTMENU_NATIVE_OPTIONS_SEPARATOR_GAP;
 				}
 #endif
@@ -1203,7 +1203,7 @@ LAB_80045e94:
 			{
 				for (s16 rowIndex = 0; rowIndex <= menu->rowSelected; rowIndex++)
 				{
-					if (RECTMENU_NativeOptionsSeparatorBeforeRow(menu, &menu->rows[rowIndex]))
+					if (RECTMENU_NativeOptionsSeparatorBeforeRow(menu, &P32_GET(struct MenuRow *, menu->rows)[rowIndex]))
 					{
 						background.y += RECTMENU_NATIVE_OPTIONS_SEPARATOR_GAP;
 					}
@@ -1235,7 +1235,7 @@ LAB_80045e94:
 		}
 		background.w = menuWidth;
 
-		CTR_Box_DrawClearBox(&background, rgb, 1, gGT->backBuffer->otMem.uiOT);
+		CTR_Box_DrawClearBox(&background, rgb, 1, P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT));
 	}
 	if ((menu->state & DRAW_NEXT_MENU_IN_HIERARCHY) != 0)
 	{
@@ -1243,7 +1243,7 @@ LAB_80045e94:
 #if defined(CTR_NATIVE)
 		hierarchyGap += 2;
 #endif
-		RECTMENU_DrawSelf(menu->ptrNextBox_InHierarchy, posX + menu->posX_prev, local_38 + offsetY + menu->posY_prev + sVar7 + hierarchyGap, menuWidth);
+		RECTMENU_DrawSelf(P32_GET(struct RectMenu *, menu->ptrNextBox_InHierarchy), posX + menu->posX_prev, local_38 + offsetY + menu->posY_prev + sVar7 + hierarchyGap, menuWidth);
 	}
 	posX_prev = menu->posX_prev;
 	posY_prev = menu->posY_prev;
@@ -1287,16 +1287,16 @@ void RECTMENU_CollectInput()
 
 	sdata->AnyPlayerTap = 0;
 	sdata->AnyPlayerHold = 0;
-	activeSub = sdata->activeSubMenu;
+	activeSub = P32_GET(struct RectMenu *, sdata->activeSubMenu);
 
-	numListen = sdata->gGT->numPlyrNextGame;
+	numListen = P32_GET(struct GameTracker *, sdata->gGT)->numPlyrNextGame;
 
 	if ((activeSub != NULL) && ((activeSub->state & ALL_PLAYERS_USE_MENU) != 0))
 	{
 		numListen = 4;
 	}
 
-	struct GamepadBuffer *gb = &sdata->gGamepads->gamepad[0];
+	struct GamepadBuffer *gb = &P32_GET(struct GamepadSystem *, sdata->gGamepads)->gamepad[0];
 
 	for (i = 0; i < numListen; i++)
 	{
@@ -1325,9 +1325,9 @@ int RECTMENU_ProcessInput(struct RectMenu *m)
 
 	if (((m->state & ONLY_DRAW_TITLE) == 0) && ((m->state & RECTMENU_DRAW_CALLBACK_FLAGS) != RECTMENU_DRAW_CALLBACK_FLAGS))
 	{
-		if (sdata->activeSubMenu != m)
+		if (P32_GET(struct RectMenu *, sdata->activeSubMenu) != m)
 		{
-			sdata->activeSubMenu = m;
+			P32_SET(sdata->activeSubMenu, m);
 
 			if ((m->state & KEEP_INPUTS_IN_SUBMENU) == 0)
 			{
@@ -1364,7 +1364,7 @@ int RECTMENU_ProcessInput(struct RectMenu *m)
 		oldRow = m->rowSelected;
 		newRow = oldRow;
 
-		currMenuRow = &m->rows[oldRow];
+		currMenuRow = &P32_GET(struct MenuRow *, m->rows)[oldRow];
 
 		// optimized way to check all four button presses:
 		// up, down, left, right, and get new row
@@ -1390,10 +1390,10 @@ int RECTMENU_ProcessInput(struct RectMenu *m)
 #if defined(CTR_NATIVE)
 		if (((button & (BTN_LEFT | BTN_RIGHT)) != 0) &&
 		    RECTMENU_NativeOptionsHorizontalInput(m) &&
-		    (m->funcPtr != 0))
+		    (P32_GET(void (*)(struct RectMenu *), m->funcPtr) != 0))
 		{
 			m->funcState = RECTMENU_FUNC_STATE_INPUT;
-			m->funcPtr(m);
+			P32_GET(void (*)(struct RectMenu *), m->funcPtr)(m);
 		}
 #endif
 
@@ -1420,10 +1420,10 @@ int RECTMENU_ProcessInput(struct RectMenu *m)
 
 				m->rowSelected = -1;
 
-				if (m->funcPtr != 0)
+				if (P32_GET(void (*)(struct RectMenu *), m->funcPtr) != 0)
 				{
 					RECTMENU_ClearInput();
-					m->funcPtr(m);
+					P32_GET(void (*)(struct RectMenu *), m->funcPtr)(m);
 				}
 
 				// Save row
@@ -1435,7 +1435,7 @@ int RECTMENU_ProcessInput(struct RectMenu *m)
 		else
 		{
 			// unlocked row
-			if ((m->rows[m->rowSelected].stringIndex & 0x8000) == 0)
+			if ((P32_GET(struct MenuRow *, m->rows)[m->rowSelected].stringIndex & 0x8000) == 0)
 			{
 				if ((m->state & MUTE_SOUND_OF_MOVING_CURSOR) == 0)
 				{
@@ -1451,10 +1451,10 @@ int RECTMENU_ProcessInput(struct RectMenu *m)
 
 				returnVal = 1;
 
-				if (m->funcPtr != 0)
+				if (P32_GET(void (*)(struct RectMenu *), m->funcPtr) != 0)
 				{
 					RECTMENU_ClearInput();
-					m->funcPtr(m);
+					P32_GET(void (*)(struct RectMenu *), m->funcPtr)(m);
 				}
 			}
 			else if ((m->state & MUTE_SOUND_OF_MOVING_CURSOR) == 0)
@@ -1473,11 +1473,11 @@ int RECTMENU_ProcessInput(struct RectMenu *m)
 	if ((m->state & DRAW_NEXT_MENU_IN_HIERARCHY) != 0)
 	{
 		// store self in the next
-		m->ptrNextBox_InHierarchy->ptrPrevBox_InHierarchy = m;
+		P32_SET(P32_GET(struct RectMenu *, m->ptrNextBox_InHierarchy)->ptrPrevBox_InHierarchy, m);
 
 		// keep going till the bottom hierarchy level is hit,
 		// where m->state&4==0, cause not drawing "only title"
-		returnVal = RECTMENU_ProcessInput(m->ptrNextBox_InHierarchy);
+		returnVal = RECTMENU_ProcessInput(P32_GET(struct RectMenu *, m->ptrNextBox_InHierarchy));
 	}
 
 	return returnVal;
@@ -1492,7 +1492,7 @@ void RECTMENU_ProcessState()
 	int state;
 
 	// check for curr box
-	currMenu = sdata->ptrDesiredMenu;
+	currMenu = P32_GET(struct RectMenu *, sdata->ptrDesiredMenu);
 
 	// unused
 	if (sdata->framesRemainingInMenu != 0)
@@ -1503,16 +1503,16 @@ void RECTMENU_ProcessState()
 	// if you want to change the Menu
 	if (currMenu != 0)
 	{
-		sdata->ptrDesiredMenu = 0;
+		P32_SET(sdata->ptrDesiredMenu, 0);
 
 		// show menu
-		sdata->ptrActiveMenu = currMenu;
+		P32_SET(sdata->ptrActiveMenu, currMenu);
 		currMenu->state &= ~NEEDS_TO_CLOSE;
 
 		// get menu at end of hierarchy, if there is hierarchy
 		while ((currMenu->state & DRAW_NEXT_MENU_IN_HIERARCHY) != 0)
 		{
-			currMenu = (struct RectMenu *)currMenu->ptrNextBox_InHierarchy;
+			currMenu = (struct RectMenu *)P32_GET(struct RectMenu *, currMenu->ptrNextBox_InHierarchy);
 		}
 
 		// remove "draw only title bar" from lowest hierarchy,
@@ -1520,17 +1520,17 @@ void RECTMENU_ProcessState()
 		currMenu->state &= ~ONLY_DRAW_TITLE;
 	}
 
-	currMenu = sdata->ptrActiveMenu;
+	currMenu = P32_GET(struct RectMenu *, sdata->ptrActiveMenu);
 	state = currMenu->state;
 
 	// run funcPtr if it exists
 	if ((state & (EXECUTE_FUNCPTR | DISABLE_INPUT_ALLOW_FUNCPTRS)) != 0)
 	{
 		currMenu->funcState = RECTMENU_FUNC_STATE_UPDATE;
-		currMenu->funcPtr(currMenu);
+		P32_GET(void (*)(struct RectMenu *), currMenu->funcPtr)(currMenu);
 
 		// check if funcPtr changed "state"
-		currMenu = sdata->ptrActiveMenu;
+		currMenu = P32_GET(struct RectMenu *, sdata->ptrActiveMenu);
 		state = currMenu->state;
 	}
 
@@ -1541,7 +1541,7 @@ void RECTMENU_ProcessState()
 		RECTMENU_ProcessInput(currMenu);
 
 		// check if ProcessInput changed "state"
-		currMenu = sdata->ptrActiveMenu;
+		currMenu = P32_GET(struct RectMenu *, sdata->ptrActiveMenu);
 		state = currMenu->state;
 
 		// if Menu border is not invisible
@@ -1556,7 +1556,7 @@ void RECTMENU_ProcessState()
 		}
 	}
 
-	currMenu = sdata->ptrActiveMenu;
+	currMenu = P32_GET(struct RectMenu *, sdata->ptrActiveMenu);
 	state = currMenu->state;
 
 	// not sure what this is
@@ -1567,17 +1567,17 @@ void RECTMENU_ProcessState()
 			RaceFlag_SetCanDraw(1);
 		}
 
-		sdata->gGT->renderFlags |= RENDER_FLAG_RENDER_BUCKET;
+		P32_GET(struct GameTracker *, sdata->gGT)->renderFlags |= RENDER_FLAG_RENDER_BUCKET;
 	}
 
-	currMenu = sdata->ptrActiveMenu;
+	currMenu = P32_GET(struct RectMenu *, sdata->ptrActiveMenu);
 	state = currMenu->state;
 
 	// if menu needs to close
 	if ((state & NEEDS_TO_CLOSE) != 0)
 	{
 		// deactivate
-		sdata->ptrActiveMenu = 0;
+		P32_SET(sdata->ptrActiveMenu, 0);
 	}
 }
 
@@ -1587,7 +1587,7 @@ void RECTMENU_Show(struct RectMenu *m)
 {
 	RECTMENU_ClearInput();
 
-	sdata->ptrActiveMenu = m;
+	P32_SET(sdata->ptrActiveMenu, m);
 
 	m->state &= ~NEEDS_TO_CLOSE;
 }

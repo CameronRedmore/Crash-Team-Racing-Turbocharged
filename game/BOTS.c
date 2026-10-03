@@ -117,11 +117,11 @@ void BOTS_SetGlobalNavData(u16 index)
 {
 	sdata->lastPathIndex = index;
 
-	sdata->nav_NumPointsOnPath = sdata->NavPath_ptrHeader[index]->numPoints;
+	sdata->nav_NumPointsOnPath = P32_GET(struct NavHeader *, sdata->NavPath_ptrHeader[index])->numPoints;
 
-	sdata->nav_ptrFirstPoint = sdata->NavPath_ptrNavFrameArray[index];
+	P32_SET(sdata->nav_ptrFirstPoint, P32_GET(struct NavFrame *, sdata->NavPath_ptrNavFrameArray[index]));
 
-	sdata->nav_ptrLastPoint = &sdata->nav_ptrFirstPoint[sdata->nav_NumPointsOnPath];
+	P32_SET(sdata->nav_ptrLastPoint, &P32_GET(struct NavFrame *, sdata->nav_ptrFirstPoint)[sdata->nav_NumPointsOnPath]);
 
 	return;
 }
@@ -131,7 +131,7 @@ void BOTS_InitNavPath(struct GameTracker *gGT, s16 index)
 {
 	(void)gGT;
 	struct NavHeader *nh = 0;
-	struct NavHeader **LevNavTable = sdata->gGT->level1->LevNavTable;
+	struct NavHeader **LevNavTable = P32_GET(struct NavHeader **, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->LevNavTable);
 
 	if (LevNavTable != 0)
 	{
@@ -143,15 +143,15 @@ void BOTS_InitNavPath(struct GameTracker *gGT, s16 index)
 	if (nh != 0)
 	{
 		// grab the data
-		sdata->NavPath_ptrHeader[index] = nh;
+		P32_SET(sdata->NavPath_ptrHeader[index], nh);
 
-		sdata->NavPath_ptrNavFrameArray[index] = NAVHEADER_GETFRAME(sdata->NavPath_ptrHeader[index]);
+		P32_SET(sdata->NavPath_ptrNavFrameArray[index], NAVHEADER_GETFRAME(sdata->NavPath_ptrHeader[index]));
 
 		// if data is outdated
-		if (sdata->NavPath_ptrHeader[index]->magicNumber != -0x1303)
+		if (P32_GET(struct NavHeader *, sdata->NavPath_ptrHeader[index])->magicNumber != -0x1303)
 		{
 			// never mind then
-			sdata->NavPath_ptrHeader[index]->numPoints = 0;
+			P32_GET(struct NavHeader *, sdata->NavPath_ptrHeader[index])->numPoints = 0;
 		}
 	}
 
@@ -159,24 +159,24 @@ void BOTS_InitNavPath(struct GameTracker *gGT, s16 index)
 	else
 	{
 		// use a template, which cancels AIs
-		sdata->NavPath_ptrHeader[index] = &sdata->blank_NavHeader;
+		P32_SET(sdata->NavPath_ptrHeader[index], &sdata->blank_NavHeader);
 
-		sdata->NavPath_ptrNavFrameArray[index] = NAVHEADER_GETFRAME(&sdata->blank_NavHeader);
+		P32_SET(sdata->NavPath_ptrNavFrameArray[index], NAVHEADER_GETFRAME(&sdata->blank_NavHeader));
 
-		sdata->NavPath_ptrHeader[index]->numPoints = 0;
+		P32_GET(struct NavHeader *, sdata->NavPath_ptrHeader[index])->numPoints = 0;
 	}
 
 	// save number of points
-	sdata->nav_NumPointsOnPath = sdata->NavPath_ptrHeader[index]->numPoints;
+	sdata->nav_NumPointsOnPath = P32_GET(struct NavHeader *, sdata->NavPath_ptrHeader[index])->numPoints;
 
 	// global last point
-	sdata->nav_ptrLastPoint = &sdata->NavPath_ptrNavFrameArray[index][sdata->nav_NumPointsOnPath];
+	P32_SET(sdata->nav_ptrLastPoint, &P32_GET(struct NavFrame *, sdata->NavPath_ptrNavFrameArray[index])[sdata->nav_NumPointsOnPath]);
 
 	// header last point
-	sdata->NavPath_ptrHeader[index]->last = sdata->nav_ptrLastPoint;
+	P32_SET(P32_GET(struct NavHeader *, sdata->NavPath_ptrHeader[index])->last, P32_GET(struct NavFrame *, sdata->nav_ptrLastPoint));
 
 	// global first point
-	sdata->nav_ptrFirstPoint = sdata->NavPath_ptrNavFrameArray[index];
+	P32_SET(sdata->nav_ptrFirstPoint, P32_GET(struct NavFrame *, sdata->NavPath_ptrNavFrameArray[index]));
 
 	return;
 }
@@ -188,8 +188,8 @@ void BOTS_EmptyFunc(void)
 
 internal void BOTS_Adv_LerpDifficulty(s16 *dst, s16 factor)
 {
-	s16 *lo = sdata->difficultyParams[1];
-	s16 *hi = sdata->difficultyParams[0];
+	s16 *lo = P32_GET(s16 *, sdata->difficultyParams[1]);
+	s16 *hi = P32_GET(s16 *, sdata->difficultyParams[0]);
 
 	for (s32 i = 0; i < BOTS_DIFFICULTY_PARAM_COUNT; i++)
 	{
@@ -209,19 +209,19 @@ internal s32 BOTS_GetTrackDistanceToFinish(struct GameTracker *gGT)
 	// NOTE(aalhendi): Menu-storage/wrong-warp can leave stale bot threads in
 	// levels without restart points. Retail blind-loads from low PSX memory;
 	// native uses zero so only stale AI spacing/rubberband math is affected.
-	if ((gGT->level1 == NULL) || (gGT->level1->ptr_restart_points == NULL))
+	if ((P32_GET(struct Level *, gGT->level1) == NULL) || (P32_GET(struct CheckpointNode *, P32_GET(struct Level *, gGT->level1)->ptr_restart_points) == NULL))
 	{
 		return 0;
 	}
 #endif
 
-	return CTR_MipsSll(gGT->level1->ptr_restart_points->distToFinish, 3);
+	return CTR_MipsSll(P32_GET(struct CheckpointNode *, P32_GET(struct Level *, gGT->level1)->ptr_restart_points)->distToFinish, 3);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80012598-0x80013374.
 void BOTS_Adv_AdjustDifficulty(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	u32 gameMode1 = gGT->gameMode1;
 	u32 gameMode2 = gGT->gameMode2;
 	s32 currDifficulty;
@@ -230,13 +230,13 @@ void BOTS_Adv_AdjustDifficulty(void)
 	// NOTE(aalhendi): Retail stores params1 in slot 1 and params2 in slot 0.
 	if ((gameMode1 & ADVENTURE_BOSS) != 0)
 	{
-		sdata->difficultyParams[1] = data.BossDifficulty[gGT->bossID].params1;
-		sdata->difficultyParams[0] = data.BossDifficulty[gGT->bossID].params2;
+		P32_SET(sdata->difficultyParams[1], data.BossDifficulty[gGT->bossID].params1);
+		P32_SET(sdata->difficultyParams[0], data.BossDifficulty[gGT->bossID].params2);
 	}
 	else
 	{
-		sdata->difficultyParams[1] = data.ArcadeDifficulty[gGT->levelID].params1;
-		sdata->difficultyParams[0] = data.ArcadeDifficulty[gGT->levelID].params2;
+		P32_SET(sdata->difficultyParams[1], data.ArcadeDifficulty[gGT->levelID].params1);
+		P32_SET(sdata->difficultyParams[0], data.ArcadeDifficulty[gGT->levelID].params2);
 	}
 
 	if ((gameMode1 & ARCADE_MODE) != 0)
@@ -321,11 +321,11 @@ void BOTS_Adv_AdjustDifficulty(void)
 		currDifficulty = 0;
 	}
 
-	BOTS_Adv_LerpDifficulty(sdata->arcade_difficultyParams, (s16)currDifficulty);
+	BOTS_Adv_LerpDifficulty(P32_GET(s16 *, sdata->arcade_difficultyParams), (s16)currDifficulty);
 
 	if (((gameMode1 & ADVENTURE_CUP) != 0) || ((gameMode2 & CUP_ANY_KIND) != 0))
 	{
-		BOTS_Adv_LerpDifficulty(sdata->cup_difficultyParams, cupDifficulty);
+		BOTS_Adv_LerpDifficulty(P32_GET(s16 *, sdata->cup_difficultyParams), cupDifficulty);
 	}
 
 	sdata->aiCollisionDelayFrameCount = 0;
@@ -528,7 +528,7 @@ static void BOTS_BlueFireSetState(u8 active)
 
 static void BOTS_UpdateBlueFire(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	if ((gGT->gameMode1 & (START_OF_RACE | MAIN_MENU | END_OF_RACE | GAME_CUTSCENE | LOADING)) != 0)
 	{
@@ -543,7 +543,7 @@ static void BOTS_UpdateBlueFire(void)
 		return;
 	}
 
-	struct Driver *driver = gGT->drivers[0];
+	struct Driver *driver = P32_GET(struct Driver *, gGT->drivers[0]);
 	if (driver == NULL)
 	{
 		BOTS_BlueFireSetState(0);
@@ -557,20 +557,20 @@ static void BOTS_UpdateBlueFire(void)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80013374-0x80013444.
 void BOTS_UpdateGlobals(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	if (gGT->numBotsNextGame != 0)
 	{
 		EngineSound_NearestAIs();
 	}
 
-	sdata->bestHumanRank = NULL;
-	sdata->bestRobotRank = NULL;
+	P32_SET(sdata->bestHumanRank, NULL);
+	P32_SET(sdata->bestRobotRank, NULL);
 	struct Driver *worstRobotDriver = NULL;
 
 	for (int i = BOTS_MAX_KARTS - 1; i >= 0; i--)
 	{
-		struct Driver *d = gGT->driversInRaceOrder[i];
+		struct Driver *d = P32_GET(struct Driver *, gGT->driversInRaceOrder[i]);
 
 		if (d == NULL)
 		{
@@ -579,22 +579,22 @@ void BOTS_UpdateGlobals(void)
 
 		if ((d->actionsFlagSet & ACTION_BOT) != 0)
 		{
-			if (sdata->bestRobotRank == 0)
+			if (P32_GET(struct Driver *, sdata->bestRobotRank) == 0)
 			{
 				worstRobotDriver = d;
 			}
 
-			sdata->bestRobotRank = d;
+			P32_SET(sdata->bestRobotRank, d);
 		}
 		else
 		{
-			sdata->bestHumanRank = d;
+			P32_SET(sdata->bestHumanRank, d);
 		}
 	}
 
-	if (sdata->bestHumanRank == NULL)
+	if (P32_GET(struct Driver *, sdata->bestHumanRank) == NULL)
 	{
-		sdata->bestHumanRank = worstRobotDriver;
+		P32_SET(sdata->bestHumanRank, worstRobotDriver);
 	}
 
 	sdata->aiCollisionDelayFrameCount++;
@@ -610,7 +610,7 @@ void BOTS_SetRotation(struct Driver *bot, int useSpawnYaw)
 #if defined(CTR_NATIVE) && !defined(__vita__)
 	NativePhysics_ResetDriver(bot);
 #endif
-	struct NavFrame *nf = bot->botData.botNavFrame;
+	struct NavFrame *nf = P32_GET(struct NavFrame *, bot->botData.botNavFrame);
 
 	CTR_SET_VEC3(bot->botData.aiPhysics.velocity.v, 0, 0, 0);
 
@@ -651,7 +651,7 @@ void BOTS_SetRotation(struct Driver *bot, int useSpawnYaw)
 	}
 	else
 	{
-		bot->botData.estimateRotNav[1] = (u8)CTR_MipsSra(CTR_MipsAddLo(sdata->gGT->level1->DriverSpawn[0].rot.y, BOTS_SPAWN_YAW_OFFSET), BOTS_ROT_BYTE_SHIFT);
+		bot->botData.estimateRotNav[1] = (u8)CTR_MipsSra(CTR_MipsAddLo(P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->DriverSpawn[0].rot.y, BOTS_SPAWN_YAW_OFFSET), BOTS_ROT_BYTE_SHIFT);
 	}
 
 	s16 v = (s16)CTR_MipsSll(bot->botData.estimateRotNav[1], BOTS_ROT_BYTE_SHIFT);
@@ -669,10 +669,10 @@ void BOTS_SetRotation(struct Driver *bot, int useSpawnYaw)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800135d8-0x8001372c.
 void BOTS_LevInstColl(struct Thread *botThread)
 {
-	struct Driver *driver = (struct Driver *)botThread->object;
+	struct Driver *driver = (struct Driver *)P32_GET(void *, botThread->object);
 	struct ScratchpadStruct *sps = CTR_SCRATCHPAD_PTR(struct ScratchpadStruct, 0x108);
 
-	sps->ptr_mesh_info = sdata->gGT->level1->ptr_mesh_info;
+	P32_SET(sps->ptr_mesh_info, P32_GET(struct mesh_info *, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->ptr_mesh_info));
 	sps->Union.QuadBlockColl.searchFlags = COLL_SEARCH_TEST_INSTANCES;
 	sps->Input1.modelID = DYNAMIC_ROBOT_CAR;
 	sps->Union.QuadBlockColl.quadFlagsWanted = 0;
@@ -699,34 +699,34 @@ void BOTS_LevInstColl(struct Thread *botThread)
 
 	sps->Union.QuadBlockColl.searchFlags &= ~COLL_SEARCH_REUSE_NORMALS;
 
-	if ((sps->bspHitbox->flag & BSP_HITBOX_COLLIDABLE) == 0)
+	if ((P32_GET(struct BSP *, sps->bspHitbox)->flag & BSP_HITBOX_COLLIDABLE) == 0)
 	{
 		return;
 	}
 
-	struct InstDef *instDef = sps->bspHitbox->data.hitbox.instDef;
-	struct Instance *inst = instDef->ptrInstance;
+	struct InstDef *instDef = P32_GET(struct InstDef *, P32_GET(struct BSP *, sps->bspHitbox)->data.hitbox.instDef);
+	struct Instance *inst = P32_GET(struct Instance *, instDef->ptrInstance);
 	if (inst == NULL)
 	{
 		return;
 	}
 
 	struct MetaDataMODEL *mdm = COLL_LevModelMeta(instDef->modelID);
-	if ((mdm != NULL) && (mdm->LInC != NULL))
+	if ((mdm != NULL) && (P32_GET(int (*)(struct Instance *, struct Thread *, struct ScratchpadStruct *), mdm->LInC) != NULL))
 	{
-		mdm->LInC(inst, botThread, sps);
+		P32_GET(int (*)(struct Instance *, struct Thread *, struct ScratchpadStruct *), mdm->LInC)(inst, botThread, sps);
 	}
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8001372c-0x80013838.
 void BOTS_ThTick_RevEngine(struct Thread *botThread)
 {
-	struct Driver *botDriver = (struct Driver *)botThread->object;
-	struct MaskHeadWeapon *mask = botDriver->botData.maskObj;
+	struct Driver *botDriver = (struct Driver *)P32_GET(void *, botThread->object);
+	struct MaskHeadWeapon *mask = P32_GET(struct MaskHeadWeapon *, botDriver->botData.maskObj);
 
 	if (botDriver->botData.positionBackup.y < botDriver->posCurr.y)
 	{ // mask grabbed
-		botDriver->posCurr.y = CTR_MipsSubLo(botDriver->posCurr.y, CTR_MipsSra(CTR_MipsSll(sdata->gGT->elapsedTimeMS, 9), 5));
+		botDriver->posCurr.y = CTR_MipsSubLo(botDriver->posCurr.y, CTR_MipsSra(CTR_MipsSll(P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS, 9), 5));
 
 		if (mask != NULL)
 		{
@@ -748,7 +748,7 @@ void BOTS_ThTick_RevEngine(struct Thread *botThread)
 			mask->rot.z &= ~MASK_HEAD_ROT_WORLD_SPACE;
 		}
 
-		botDriver->botData.maskObj = NULL;
+		P32_SET(botDriver->botData.maskObj, NULL);
 		botDriver->kartState = KS_ENGINE_REVVING;
 		botDriver->clockReceive = 0;
 		botDriver->squishTimer = 0;
@@ -760,15 +760,15 @@ void BOTS_ThTick_RevEngine(struct Thread *botThread)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80013838-0x80013a70.
 void BOTS_MaskGrab(struct Thread *botThread)
 {
-	struct Driver *bot = botThread->object;
-	struct NavFrame *frame = bot->botData.botNavFrame;
+	struct Driver *bot = P32_GET(void *, botThread->object);
+	struct NavFrame *frame = P32_GET(struct NavFrame *, bot->botData.botNavFrame);
 	struct NavFrame *nextFrame = frame + 1;
 
 	// if the next nav point is a farther address than last point
-	if (sdata->NavPath_ptrHeader[bot->botData.botPath]->last <= nextFrame)
+	if (P32_GET(struct NavFrame *, P32_GET(struct NavHeader *, sdata->NavPath_ptrHeader[bot->botData.botPath])->last) <= nextFrame)
 	{
 		// set next nav point to first nav point
-		nextFrame = sdata->NavPath_ptrNavFrameArray[bot->botData.botPath];
+		nextFrame = P32_GET(struct NavFrame *, sdata->NavPath_ptrNavFrameArray[bot->botData.botPath]);
 	}
 
 	bot->kartState = KS_MASK_GRABBED;
@@ -833,7 +833,7 @@ void BOTS_MaskGrab(struct Thread *botThread)
 	bot->posCurr.z = bot->botData.positionBackup.z;
 
 	struct MaskHeadWeapon *mask = VehPickupItem_MaskUseWeapon(bot, true);
-	bot->botData.maskObj = mask;
+	P32_SET(bot->botData.maskObj, mask);
 
 	if (mask != 0)
 	{
@@ -850,11 +850,11 @@ void BOTS_MaskGrab(struct Thread *botThread)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80013a70-0x80013c18.
 void BOTS_Killplane(struct Thread *botThread)
 {
-	struct Driver *bot = botThread->object;
+	struct Driver *bot = P32_GET(void *, botThread->object);
 	b32 usingTinyArenaOverride = false;
 
 	// check for Tiny Arena
-	if (strcmp(sdata->gGT->levelName, rdata.s_asphalt2_thisAppearsTwice) == 0)
+	if (strcmp(P32_GET(struct GameTracker *, sdata->gGT)->levelName, rdata.s_asphalt2_thisAppearsTwice) == 0)
 	{
 		// edge-case override?
 		u8 override;
@@ -873,7 +873,7 @@ void BOTS_Killplane(struct Thread *botThread)
 		if (override != 0xff)
 		{
 			// pointer to nav point
-			struct NavFrame *frame = bot->botData.botNavFrame;
+			struct NavFrame *frame = P32_GET(struct NavFrame *, bot->botData.botNavFrame);
 
 			// goBackCount
 			u8 backCount = frame->goBackCount;
@@ -888,16 +888,16 @@ void BOTS_Killplane(struct Thread *botThread)
 				frame -= 1;
 
 				// if this is less than address of first nav point
-				if (frame < sdata->NavPath_ptrNavFrameArray[i])
+				if (frame < P32_GET(struct NavFrame *, sdata->NavPath_ptrNavFrameArray[i]))
 				{
 					// go to last nav point
-					frame = &sdata->NavPath_ptrHeader[i]->last[-1];
+					frame = &P32_GET(struct NavFrame *, P32_GET(struct NavHeader *, sdata->NavPath_ptrHeader[i])->last)[-1];
 				}
 
 				backCount = frame->goBackCount;
 				usingTinyArenaOverride = (backCount < (override - 1));
 			}
-			bot->botData.botNavFrame = frame;
+			P32_SET(bot->botData.botNavFrame, frame);
 			usingTinyArenaOverride = true;
 		}
 	}
@@ -906,7 +906,7 @@ void BOTS_Killplane(struct Thread *botThread)
 	if (!usingTinyArenaOverride)
 	{
 		// pointer to navFrame
-		struct NavFrame *frame = bot->botData.botNavFrame;
+		struct NavFrame *frame = P32_GET(struct NavFrame *, bot->botData.botNavFrame);
 
 		// current nav point (player turned AI)
 		u8 currNav = bot->checkpoint.currentIndex;
@@ -923,16 +923,16 @@ void BOTS_Killplane(struct Thread *botThread)
 			frame -= 1;
 
 			// if you go back to far
-			if (frame < sdata->NavPath_ptrNavFrameArray[i])
+			if (frame < P32_GET(struct NavFrame *, sdata->NavPath_ptrNavFrameArray[i]))
 			{
 				// loop back to last navFrame
-				frame = &sdata->NavPath_ptrHeader[i]->last[-1];
+				frame = &P32_GET(struct NavFrame *, P32_GET(struct NavHeader *, sdata->NavPath_ptrHeader[i])->last)[-1];
 			}
 			backCount = frame->goBackCount;
 			currNav = bot->checkpoint.currentIndex;
 		}
 		// save ptr to nav frame
-		bot->botData.botNavFrame = frame;
+		P32_SET(bot->botData.botNavFrame, frame);
 	}
 
 	BOTS_MaskGrab(botThread);
@@ -944,9 +944,9 @@ void BOTS_Killplane(struct Thread *botThread)
 void BOTS_ThTick_Drive(struct Thread *botThread)
 {
 	struct ScratchpadStruct *sps = CTR_SCRATCHPAD_PTR(struct ScratchpadStruct, 0x108);
-	struct Driver *botDriver = (struct Driver *)botThread->object;     // iVar17
-	struct Instance *botInstance = (struct Instance *)botThread->inst; // iVar22
-	struct GameTracker *gGT = sdata->gGT;
+	struct Driver *botDriver = (struct Driver *)P32_GET(void *, botThread->object);     // iVar17
+	struct Instance *botInstance = (struct Instance *)P32_GET(struct Instance *, botThread->inst); // iVar22
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// local_34 = gGT->elapsedTimeMS;
 
@@ -974,7 +974,7 @@ void BOTS_ThTick_Drive(struct Thread *botThread)
 	}
 	else
 	{
-		BOTS_ChangeState(botDriver, botDriver->pendingDamageType, botDriver->pendingDamageAttacker, botDriver->pendingDamageReasonByte);
+		BOTS_ChangeState(botDriver, botDriver->pendingDamageType, P32_GET(struct Driver *, botDriver->pendingDamageAttacker), botDriver->pendingDamageReasonByte);
 	}
 
 	int elapsedMilliseconds = gGT->elapsedTimeMS; // local_34
@@ -1084,25 +1084,25 @@ UpdateTireColorTimer:
 
 	if ((botDriver->botData.botFlags & BOT_FLAG_ESTIMATE_NAV) == 0)
 	{
-		navFrameCurr = botDriver->botData.botNavFrame;
+		navFrameCurr = P32_GET(struct NavFrame *, botDriver->botData.botNavFrame);
 		navFrameNext = navFrameCurr + 1;
 
 		int pathID = botDriver->botData.botPath;
 
-		if (navFrameNext >= sdata->NavPath_ptrHeader[pathID]->last)
+		if (navFrameNext >= P32_GET(struct NavFrame *, P32_GET(struct NavHeader *, sdata->NavPath_ptrHeader[pathID])->last))
 		{
-			navFrameNext = sdata->NavPath_ptrNavFrameArray[pathID];
+			navFrameNext = P32_GET(struct NavFrame *, sdata->NavPath_ptrNavFrameArray[pathID]);
 		}
 	}
 	else
 	{
-		navFrameNext = botDriver->botData.botNavFrame;
+		navFrameNext = P32_GET(struct NavFrame *, botDriver->botData.botNavFrame);
 	}
 
 	struct DriverCollisionSearch driverSearch;
 	CTR_SET_VEC3(driverSearch.bucket.pos.v, (s16)CTR_MipsSra(botDriver->posCurr.x, FRACTIONAL_BITS_8),
 	             (s16)CTR_MipsSra(botDriver->posCurr.y, FRACTIONAL_BITS_8), (s16)CTR_MipsSra(botDriver->posCurr.z, FRACTIONAL_BITS_8));
-	driverSearch.bucket.th = NULL;
+	P32_SET(driverSearch.bucket.th, NULL);
 	driverSearch.bucket.bestDistSq = 0x7fffffff;
 
 	if ((botThread->flags & (THREAD_FLAG_DEAD | THREAD_FLAG_DISABLE_COLLISION)) == 0)
@@ -1112,28 +1112,28 @@ UpdateTireColorTimer:
 #if defined(CTR_NATIVE) && !defined(__vita__)
 			if (CTR_NATIVE_SMOOTHED_COLLISION_ACTIVE)
 			{
-				NativeCollision_CarSearch(botDriver, botThread->siblingThread, &driverSearch.bucket);
-				NativeCollision_CarSearch(botDriver, gGT->threadBuckets[ROBOT].thread, &driverSearch.bucket);
+				NativeCollision_CarSearch(botDriver, P32_GET(struct Thread *, botThread->siblingThread), &driverSearch.bucket);
+				NativeCollision_CarSearch(botDriver, P32_GET(struct Thread *, gGT->threadBuckets[ROBOT].thread), &driverSearch.bucket);
 			}
 			else
 #endif
 			{
-				PROC_CollidePointWithBucket(botThread->siblingThread, &driverSearch.bucket);
-				PROC_CollidePointWithBucket(gGT->threadBuckets[ROBOT].thread, &driverSearch.bucket);
+				PROC_CollidePointWithBucket(P32_GET(struct Thread *, botThread->siblingThread), &driverSearch.bucket);
+				PROC_CollidePointWithBucket(P32_GET(struct Thread *, gGT->threadBuckets[ROBOT].thread), &driverSearch.bucket);
 			}
 		}
 		else if (botThread->modelIndex == DYNAMIC_ROBOT_CAR)
 		{
 #if defined(CTR_NATIVE) && !defined(__vita__)
 			if (CTR_NATIVE_SMOOTHED_COLLISION_ACTIVE)
-				NativeCollision_CarSearch(botDriver, botThread->siblingThread, &driverSearch.bucket);
+				NativeCollision_CarSearch(botDriver, P32_GET(struct Thread *, botThread->siblingThread), &driverSearch.bucket);
 			else
 #endif
-				PROC_CollidePointWithBucket(botThread->siblingThread, &driverSearch.bucket);
+				PROC_CollidePointWithBucket(P32_GET(struct Thread *, botThread->siblingThread), &driverSearch.bucket);
 		}
 	}
 
-	struct Thread *hitThread = driverSearch.bucket.th;
+	struct Thread *hitThread = P32_GET(struct Thread *, driverSearch.bucket.th);
 	if (hitThread != NULL)
 	{
 		int combinedRadius = CTR_MipsAddLo(botThread->driverHitRadius, hitThread->driverHitRadius);
@@ -1214,12 +1214,12 @@ UpdateTireColorTimer:
 				LIST_RemoveMember(&sdata->navBotList[oldPathID], &botDriver->botData.item);
 				LIST_AddFront(&sdata->navBotList[newPathID], &botDriver->botData.item);
 
-				struct NavFrame *firstNavFrameOnPath = sdata->NavPath_ptrNavFrameArray[newPathID];
-				botDriver->botData.botNavFrame = &firstNavFrameOnPath[newFrameIndex];
+				struct NavFrame *firstNavFrameOnPath = P32_GET(struct NavFrame *, sdata->NavPath_ptrNavFrameArray[newPathID]);
+				P32_SET(botDriver->botData.botNavFrame, &firstNavFrameOnPath[newFrameIndex]);
 
 				BOTS_SetRotation(botDriver, 0);
 
-				navFrameNext = botDriver->botData.botNavFrame;
+				navFrameNext = P32_GET(struct NavFrame *, botDriver->botData.botNavFrame);
 				navFrameCurr = &botDriver->botData.estimateNavFrame;
 			}
 		}
@@ -1246,13 +1246,13 @@ UpdateTireColorTimer:
 
 
 						// Find the signed index difference between nav frames on this path.
-						int iVar13 = (int)(botData->botNavFrame - botDriver->botData.botNavFrame);
+						int iVar13 = (int)(P32_GET(struct NavFrame *, botData->botNavFrame) - P32_GET(struct NavFrame *, botDriver->botData.botNavFrame));
 
 						// if "other" botData driver is behind "this" botDriver driver,
 						if (iVar13 < 0)
 						{
 							// assume number of points "away" is large (add track length)
-							iVar13 = CTR_MipsAddLo(iVar13, sdata->NavPath_ptrHeader[botDriver->botData.botPath]->numPoints);
+							iVar13 = CTR_MipsAddLo(iVar13, P32_GET(struct NavHeader *, sdata->NavPath_ptrHeader[botDriver->botData.botPath])->numPoints);
 						}
 
 						// find closest "other" botData driver
@@ -1295,12 +1295,12 @@ UpdateTireColorTimer:
 								LIST_RemoveMember(&sdata->navBotList[oldPathID], &botDriver->botData.item);
 								LIST_AddFront(&sdata->navBotList[newPathID], &botDriver->botData.item);
 
-								struct NavFrame *firstNavFrameOnPath = sdata->NavPath_ptrNavFrameArray[newPathID];
-								botDriver->botData.botNavFrame = &firstNavFrameOnPath[newFrameIndex & BOTS_PATH_CHANGE_FRAME_MASK];
+								struct NavFrame *firstNavFrameOnPath = P32_GET(struct NavFrame *, sdata->NavPath_ptrNavFrameArray[newPathID]);
+								P32_SET(botDriver->botData.botNavFrame, &firstNavFrameOnPath[newFrameIndex & BOTS_PATH_CHANGE_FRAME_MASK]);
 
 								BOTS_SetRotation(botDriver, 0);
 
-								navFrameNext = botDriver->botData.botNavFrame;
+								navFrameNext = P32_GET(struct NavFrame *, botDriver->botData.botNavFrame);
 								navFrameCurr = &botDriver->botData.estimateNavFrame;
 							}
 						}
@@ -1367,11 +1367,11 @@ UpdateTireColorTimer:
 		{
 			botDriver->actionsFlagSet &= ~ACTION_AIRBORNE;
 
-			struct Driver *bestDriverRank = sdata->bestHumanRank; // iVar4
+			struct Driver *bestDriverRank = P32_GET(struct Driver *, sdata->bestHumanRank); // iVar4
 
 			if ((gGT->gameMode1 & RELIC_RACE) != 0)
 			{
-				bestDriverRank = sdata->bestRobotRank;
+				bestDriverRank = P32_GET(struct Driver *, sdata->bestRobotRank);
 			}
 
 			double botVelocity; // iVar3
@@ -1390,12 +1390,12 @@ UpdateTireColorTimer:
 					isInAdvArcadeOrVSCup = true;
 				}
 
-				if (gGT->drivers[0]->driverRank < botDriver->driverRank)
+				if (P32_GET(struct Driver *, gGT->drivers[0])->driverRank < botDriver->driverRank)
 				{
 					driverRank--;
 				}
 
-				if (1 < gGT->numPlyrCurrGame && gGT->drivers[1]->driverRank <= driverRank)
+				if (1 < gGT->numPlyrCurrGame && P32_GET(struct Driver *, gGT->drivers[1])->driverRank <= driverRank)
 				{
 					driverRank--;
 				}
@@ -1417,17 +1417,17 @@ UpdateTireColorTimer:
 
 				if (bestDriverRank->lapIndex == 0)
 				{
-					difficultyStat = sdata->arcade_difficultyParams[0xB];
+					difficultyStat = P32_GET(s16 *, sdata->arcade_difficultyParams)[0xB];
 				}
 				else
 				{
 					if (bestDriverRank->lapIndex == gGT->numLaps - 1)
 					{
-						difficultyStat = sdata->arcade_difficultyParams[0xD];
+						difficultyStat = P32_GET(s16 *, sdata->arcade_difficultyParams)[0xD];
 					}
 					else
 					{
-						difficultyStat = sdata->arcade_difficultyParams[0xC];
+						difficultyStat = P32_GET(s16 *, sdata->arcade_difficultyParams)[0xC];
 					}
 				}
 
@@ -1451,24 +1451,24 @@ UpdateTireColorTimer:
 				int complexDifficultyStat = CTR_MipsSubLo(
 				    CTR_MipsSubLo(CTR_MipsAddLo(CTR_MipsSubLo(distToFinish, bestDriverRank->distanceToFinish_curr), CTR_MipsMulLo(lapIndex, distToFinish)),
 				                  CTR_MipsAddLo(CTR_MipsSubLo(distToFinish, botDriver->distanceToFinish_curr), CTR_MipsMulLo(botLapIndex, distToFinish))),
-				    CTR_MipsAddLo(sdata->arcade_difficultyParams[driverRank], difficultyStat));
+				    CTR_MipsAddLo(P32_GET(s16 *, sdata->arcade_difficultyParams)[driverRank], difficultyStat));
 
 				int otherDifficultyStat; // iVar13
 				if (isInAdvArcadeOrVSCup && ((driverRank & 0xffff) == 0))
 				{
 					if (complexDifficultyStat < 1)
 					{
-						otherDifficultyStat = sdata->arcade_difficultyParams[0x9];
+						otherDifficultyStat = P32_GET(s16 *, sdata->arcade_difficultyParams)[0x9];
 					}
 					else
 					{
 						if (botDriver->lapIndex < gGT->numLaps - 1)
 						{
-							otherDifficultyStat = sdata->cup_difficultyParams[0x8];
+							otherDifficultyStat = P32_GET(s16 *, sdata->cup_difficultyParams)[0x8];
 						}
 						else
 						{
-							otherDifficultyStat = sdata->cup_difficultyParams[0x8] + sdata->cup_difficultyParams[0xA];
+							otherDifficultyStat = P32_GET(s16 *, sdata->cup_difficultyParams)[0x8] + P32_GET(s16 *, sdata->cup_difficultyParams)[0xA];
 						}
 					}
 				}
@@ -1476,17 +1476,17 @@ UpdateTireColorTimer:
 				{
 					if (complexDifficultyStat < 1)
 					{
-						otherDifficultyStat = sdata->arcade_difficultyParams[0x9];
+						otherDifficultyStat = P32_GET(s16 *, sdata->arcade_difficultyParams)[0x9];
 					}
 					else
 					{
 						if (gGT->numLaps - 1 <= botDriver->lapIndex)
 						{
-							otherDifficultyStat = sdata->arcade_difficultyParams[0x8] + sdata->arcade_difficultyParams[0xA];
+							otherDifficultyStat = P32_GET(s16 *, sdata->arcade_difficultyParams)[0x8] + P32_GET(s16 *, sdata->arcade_difficultyParams)[0xA];
 						}
 						else
 						{
-							otherDifficultyStat = sdata->arcade_difficultyParams[0x8];
+							otherDifficultyStat = P32_GET(s16 *, sdata->arcade_difficultyParams)[0x8];
 						}
 					}
 				}
@@ -1577,7 +1577,7 @@ UpdateTireColorTimer:
 
 			if ((botDriver->botData.botFlags & BOT_FLAG_DAMAGE_ACTIVE) == 0)
 			{
-				if (botDriver->instTntRecv != NULL || botDriver->thCloud != NULL)
+				if (P32_GET(struct Instance *, botDriver->instTntRecv) != NULL || P32_GET(struct Thread *, botDriver->thCloud) != NULL)
 				{
 					int damagedVelocityPenalty = CTR_MipsSra(botDriver->const_DamagedSpeed, 1); // iVar4
 
@@ -1604,7 +1604,7 @@ UpdateTireColorTimer:
 				botVelocity = 0;
 			}
 
-			struct Terrain *botTerrain = botDriver->terrainMeta1; // iVar15
+			struct Terrain *botTerrain = P32_GET(struct Terrain *, botDriver->terrainMeta1); // iVar15
 
 			NATIVE_AI_WRITE(botDriver, botData.aiPhysics.speedLinear, NativeAI_Sub(NATIVE_AI_READ(botDriver, botData.aiPhysics.speedLinear),
 			                  NativeAI_FrameStep(NativeAI_Down(NativeAI_Mul(botDriver->const_PedalFriction_Forward, botTerrain->botFrictionScale), 8), gGT->timer))); // iVar4
@@ -1688,7 +1688,7 @@ UpdateTireColorTimer:
 					}
 				}
 
-				int navFrameIndexOnPath = (int)(navFrameCurr - sdata->NavPath_ptrNavFrameArray[botDriver->botData.botPath]);
+				int navFrameIndexOnPath = (int)(navFrameCurr - P32_GET(struct NavFrame *, sdata->NavPath_ptrNavFrameArray[botDriver->botData.botPath]));
 
 				if ((data.botsThrottle[botPathIndex] <= navFrameIndexOnPath) && (navFrameIndexOnPath < CTR_MipsAddLo(data.botsThrottle[botPathIndex], 0xb)) &&
 				    (9000 < NATIVE_AI_READ(botDriver, botData.aiPhysics.speedLinear)))
@@ -1804,9 +1804,9 @@ UpdateTireColorTimer:
 
 		iVar15 = NativeAI_Sub(iVar15, iVar3);
 
-		if (navFrameNext >= sdata->NavPath_ptrHeader[index]->last)
+		if (navFrameNext >= P32_GET(struct NavFrame *, P32_GET(struct NavHeader *, sdata->NavPath_ptrHeader[index])->last))
 		{
-			navFrameNext = sdata->NavPath_ptrNavFrameArray[index];
+			navFrameNext = P32_GET(struct NavFrame *, sdata->NavPath_ptrNavFrameArray[index]);
 		}
 
 		if ((CTR_MipsSra(NATIVE_AI_READ(botDriver, botData.positionBackup.y), 8) < navFrameNext->pos.y) && ((navFrameCurr->flags & BOTS_NAV_FLAG_KILLPLANE) != 0))
@@ -1880,18 +1880,18 @@ UpdateTireColorTimer:
 
 	struct Terrain *terrain = VehAfterColl_GetTerrain(((uint8_t)navFrameCurr->flags) >> 3);
 
-	botDriver->terrainMeta1 = terrain;
+	P32_SET(botDriver->terrainMeta1, terrain);
 
 	if ((navFrameCurr->specialBits & BOTS_NAV_SPECIAL_REFLECTIVE) != 0)
 	{
 		s16 vertSplit;
 		if ((navFrameCurr->specialBits & BOTS_NAV_SPECIAL_INDEX_MASK) == 0)
 		{
-			vertSplit = gGT->level1->splitLines[0];
+			vertSplit = P32_GET(struct Level *, gGT->level1)->splitLines[0];
 		}
 		else
 		{
-			vertSplit = gGT->level1->splitLines[1];
+			vertSplit = P32_GET(struct Level *, gGT->level1)->splitLines[1];
 		}
 
 		botInstance->vertSplit = vertSplit;
@@ -1986,15 +1986,15 @@ UpdateTireColorTimer:
 
 	if ((botDriver->botData.botFlags & BOT_FLAG_ESTIMATE_NAV) == 0)
 	{
-		botDriver->botData.botNavFrame = navFrameCurr;
+		P32_SET(botDriver->botData.botNavFrame, navFrameCurr);
 
 		s16 botPath = botDriver->botData.botPath;
 
 		navFrameNext = NAVFRAME_GETNEXTFRAME(navFrameCurr);
 
-		if (navFrameNext >= sdata->NavPath_ptrHeader[botPath]->last)
+		if (navFrameNext >= P32_GET(struct NavFrame *, P32_GET(struct NavHeader *, sdata->NavPath_ptrHeader[botPath])->last))
 		{
-			navFrameNext = sdata->NavPath_ptrNavFrameArray[botPath];
+			navFrameNext = P32_GET(struct NavFrame *, sdata->NavPath_ptrNavFrameArray[botPath]);
 		}
 	}
 
@@ -2140,7 +2140,7 @@ UpdateTireColorTimer:
 		    .z = probeZ,
 		};
 
-		sps->ptr_mesh_info = gGT->level1->ptr_mesh_info;
+		P32_SET(sps->ptr_mesh_info, P32_GET(struct mesh_info *, P32_GET(struct Level *, gGT->level1)->ptr_mesh_info));
 		sps->Union.QuadBlockColl.quadFlagsWanted = QUADBLOCK_FLAG_GROUND;
 		sps->Union.QuadBlockColl.quadFlagsIgnored = QUADBLOCK_FLAG_NO_COLLISION_RESPONSE;
 		sps->Union.QuadBlockColl.searchFlags = COLL_SEARCH_HIGH_LOD;
@@ -2151,7 +2151,7 @@ UpdateTireColorTimer:
 		{
 			botDriver->quadBlockHeight = NativeAI_Up(sps->Union.QuadBlockColl.hitPos.y, 8);
 
-			botDriver->botData.ai_quadblock_checkpointIndex = sps->hit.ptrQuadblock->checkpointIndex;
+			botDriver->botData.ai_quadblock_checkpointIndex = P32_GET(struct QuadBlock *, sps->hit.ptrQuadblock)->checkpointIndex;
 
 			VehPhysForce_RotAxisAngle(&botInstance->matrix, sps->hit.plane.normal.v, NATIVE_AI_READ(botDriver, botData.aiRot.y));
 
@@ -2160,7 +2160,7 @@ UpdateTireColorTimer:
 			botInstance->compressedNormalAndDriverIndex =
 			    INST_CompressNormalVectorAndDriverIndex(sps->hit.plane.normal.x, sps->hit.plane.normal.y, sps->hit.plane.normal.z, botDriver->driverID);
 
-			if ((sps->hit.ptrQuadblock->quadFlags & QUADBLOCK_FLAG_KILL_PLANE) != 0)
+			if ((P32_GET(struct QuadBlock *, sps->hit.ptrQuadblock)->quadFlags & QUADBLOCK_FLAG_KILL_PLANE) != 0)
 			{
 				BOTS_Killplane(botThread);
 			}
@@ -2178,7 +2178,7 @@ UpdateTireColorTimer:
 			{
 				if ((botDriver->actionsFlagSet & ACTION_TOUCH_GROUND) == 0)
 				{
-					if (botDriver->instSelf->thread->modelIndex == DYNAMIC_PLAYER)
+					if (P32_GET(struct Thread *, P32_GET(struct Instance *, botDriver->instSelf)->thread)->modelIndex == DYNAMIC_PLAYER)
 					{
 						int mapped = VehCalc_MapToRange(CTR_MipsSubLo(botDriver->jumpHeightCurr, botDriver->jumpHeightPrev), 0x300, 0x1400, 0x4b, 200); // uVar8
 
@@ -2246,7 +2246,7 @@ UpdateTireColorTimer:
 
 				NATIVE_AI_WRITE(botDriver, botData.aiPhysics.speedY, deltaPosThisFrame);
 
-				if ((navFrameFlags & BOTS_NAV_FLAG_JUMP) != 0 || (botDriver->instTntRecv != NULL))
+				if ((navFrameFlags & BOTS_NAV_FLAG_JUMP) != 0 || (P32_GET(struct Instance *, botDriver->instTntRecv) != NULL))
 				{
 					int oldActionsFlags = botDriver->actionsFlagSet;
 
@@ -2456,15 +2456,15 @@ UpdateTireColorTimer:
 				{
 					if (sVar7 == BOTS_DAMAGE_STATE_MASK_GRAB)
 					{
-						struct Thread *plant = botDriver->plantEatingMe;
+						struct Thread *plant = P32_GET(struct Thread *, botDriver->plantEatingMe);
 
-						struct Instance *plantInst = plant->inst;
+						struct Instance *plantInst = P32_GET(struct Instance *, plant->inst);
 
 						if (botDriver->botData.aiPhysics.rotXZ < 0xb40)
 						{
 							SVECTOR v;
 							v.vx = 0xfa;
-							if ((plant->object != NULL) && (((struct Plant *)plant->object)->side != 0))
+							if ((P32_GET(void *, plant->object) != NULL) && (((struct Plant *)P32_GET(void *, plant->object))->side != 0))
 							{
 								v.vx = -0xfa;
 							}
@@ -2673,7 +2673,7 @@ UpdateTireColorTimer:
 		badnessRecieveTimer = botDriver->squishTimer;
 		if (badnessRecieveTimer == 0)
 		{
-			if (botDriver->thCloud != NULL)
+			if (P32_GET(struct Thread *, botDriver->thCloud) != NULL)
 			{
 				badnessRecieveTimer = CTR_MipsSll(gGT->timer, 2);
 
@@ -2891,7 +2891,7 @@ FinishHazardTimerUpdate:
 		VehEmitter_DriverMain(botThread, botDriver);
 	}
 
-	if (botInstance->thread->modelIndex == DYNAMIC_PLAYER)
+	if (P32_GET(struct Thread *, botInstance->thread)->modelIndex == DYNAMIC_PLAYER)
 	{
 		EngineSound_Player(botDriver);
 	}
@@ -2924,7 +2924,7 @@ FinishHazardTimerUpdate:
 		    .z = probeZ,
 		};
 
-		sps->ptr_mesh_info = gGT->level1->ptr_mesh_info;
+		P32_SET(sps->ptr_mesh_info, P32_GET(struct mesh_info *, P32_GET(struct Level *, gGT->level1)->ptr_mesh_info));
 		sps->Union.QuadBlockColl.quadFlagsWanted = QUADBLOCK_FLAG_GROUND;
 		sps->Union.QuadBlockColl.quadFlagsIgnored = 0;
 		sps->Union.QuadBlockColl.searchFlags = COLL_SEARCH_HIGH_LOD;
@@ -2933,7 +2933,7 @@ FinishHazardTimerUpdate:
 
 		if (sps->boolDidTouchQuadblock != 0)
 		{
-			botDriver->underDriver = sps->hit.ptrQuadblock;
+			P32_SET(botDriver->underDriver, P32_GET(struct QuadBlock *, sps->hit.ptrQuadblock));
 		}
 	}
 }
@@ -2993,7 +2993,7 @@ u32 BOTS_ChangeState(struct Driver *driverVictim, int damageType, struct Driver 
 
 		if (damageType == 4)
 		{
-			if (driverVictim->instSelf->thread->modelIndex == DYNAMIC_PLAYER && driverVictim->burnTimer == 0)
+			if (P32_GET(struct Thread *, P32_GET(struct Instance *, driverVictim->instSelf)->thread)->modelIndex == DYNAMIC_PLAYER && driverVictim->burnTimer == 0)
 			{
 				OtherFX_Play(0x69, 1);
 			}
@@ -3038,7 +3038,7 @@ u32 BOTS_ChangeState(struct Driver *driverVictim, int damageType, struct Driver 
 	case 3:
 		driverVictim->botData.aiPhysics.turboMeter = 0;
 
-		if (driverVictim->instSelf->thread->modelIndex == DYNAMIC_PLAYER && driverVictim->botData.aiPhysics.squishCooldown == 0)
+		if (P32_GET(struct Thread *, P32_GET(struct Instance *, driverVictim->instSelf)->thread)->modelIndex == DYNAMIC_PLAYER && driverVictim->botData.aiPhysics.squishCooldown == 0)
 		{
 			OtherFX_Play(0x5a, 1);
 		}
@@ -3060,12 +3060,12 @@ u32 BOTS_ChangeState(struct Driver *driverVictim, int damageType, struct Driver 
 		driverVictim->botData.aiPhysics.speedLinear = 0;
 		driverVictim->botData.aiPhysics.speedY = 0;
 		driverVictim->botData.aiPhysics.reserved_0x5cc = 0;
-		driverVictim->instSelf->flags |= HIDE_MODEL;
+		P32_GET(struct Instance *, driverVictim->instSelf)->flags |= HIDE_MODEL;
 		driverVictim->botData.aiPhysics.rotXZ = 0xd20;
 		driverVictim->botData.aiDamageState = BOTS_DAMAGE_STATE_MASK_GRAB;
 		driverVictim->kartState = KS_MASK_GRABBED;
 		driverVictim->botData.botFlags |= BOT_FLAG_DAMAGE_ACTIVE | BOT_FLAG_DAMAGE_SUPPRESS_EMITTER;
-		driverVictim->instSelf->thread->flags |= THREAD_FLAG_DISABLE_COLLISION;
+		P32_GET(struct Thread *, P32_GET(struct Instance *, driverVictim->instSelf)->thread)->flags |= THREAD_FLAG_DISABLE_COLLISION;
 		break;
 	default:
 		driverVictim->botData.ai_progress_cooldown = 0x3c;
@@ -3111,24 +3111,24 @@ void BOTS_CollideWithOtherAI(struct Driver *robot_1, struct Driver *robot_2)
 		s16 botPathIndex = robot_1->botData.botPath;
 
 		// pointer to navFrame
-		struct NavFrame *navFrameCurr = robot_1->botData.botNavFrame;
+		struct NavFrame *navFrameCurr = P32_GET(struct NavFrame *, robot_1->botData.botNavFrame);
 		struct NavFrame *navFrameNext = navFrameCurr + 1;
 
 		// iVar4
 		navSegmentStartPos = &navFrameCurr->pos;
 
 		// if you go out of bounds
-		if (sdata->NavPath_ptrHeader[botPathIndex]->last <= navFrameNext)
+		if (P32_GET(struct NavFrame *, P32_GET(struct NavHeader *, sdata->NavPath_ptrHeader[botPathIndex])->last) <= navFrameNext)
 		{
 			// loop back to first navFrame
-			navFrameNext = sdata->NavPath_ptrNavFrameArray[botPathIndex];
+			navFrameNext = P32_GET(struct NavFrame *, sdata->NavPath_ptrNavFrameArray[botPathIndex]);
 		}
 		navSegmentEndPos = &navFrameNext->pos;
 	}
 	else
 	{
 		// pointer to nav frame
-		struct NavFrame *navFrameNext = robot_1->botData.botNavFrame;
+		struct NavFrame *navFrameNext = P32_GET(struct NavFrame *, robot_1->botData.botNavFrame);
 
 		// iVar4
 		navSegmentStartPos = &robot_1->botData.estimatePosition;
@@ -3194,7 +3194,7 @@ void BOTS_GotoStartingLine(struct Driver *d)
 	d->botData.navProgressRemainder = 0;
 
 	// current navFrame pointer, first navFrame on path
-	d->botData.botNavFrame = sdata->NavPath_ptrNavFrameArray[d->botData.botPath];
+	P32_SET(d->botData.botNavFrame, P32_GET(struct NavFrame *, sdata->NavPath_ptrNavFrameArray[d->botData.botPath]));
 
 	BOTS_SetRotation(d, 1);
 
@@ -3240,7 +3240,7 @@ struct Driver *BOTS_Driver_Init(int driverID)
 	s8 navPathIndex = initialNavPathIndex;
 	while (1)
 	{
-		s16 navPathPointsCount = sdata->NavPath_ptrHeader[navPathIndex]->numPoints;
+		s16 navPathPointsCount = P32_GET(struct NavHeader *, sdata->NavPath_ptrHeader[navPathIndex])->numPoints;
 		if (1 < navPathPointsCount)
 		{
 			break; // success
@@ -3272,18 +3272,18 @@ struct Driver *BOTS_Driver_Init(int driverID)
 	    0                  // thread relative
 	);
 
-	struct Driver *d = t->object;
+	struct Driver *d = P32_GET(void *, t->object);
 	memset(d, 0x0, DRIVER_NTSC_RETAIL_SIZE);
 	VehBirth_NonGhost(t, driverID);
-	sdata->gGT->drivers[driverID] = d;
+	P32_SET(P32_GET(struct GameTracker *, sdata->gGT)->drivers[driverID], d);
 	t->modelIndex = DYNAMIC_ROBOT_CAR;
 
 	d->botData.botPath = navPathIndex;
-	d->botData.botNavFrame = sdata->NavPath_ptrNavFrameArray[navPathIndex];
+	P32_SET(d->botData.botNavFrame, P32_GET(struct NavFrame *, sdata->NavPath_ptrNavFrameArray[navPathIndex]));
 	d->actionsFlagSet |= ACTION_BOT;
 	LIST_AddFront(&sdata->navBotList[navPathIndex], &d->botData.item);
 
-	sdata->gGT->numBotsNextGame++;
+	P32_GET(struct GameTracker *, sdata->gGT)->numBotsNextGame++;
 	BOTS_GotoStartingLine(d);
 	return d;
 }
@@ -3303,7 +3303,7 @@ void BOTS_Driver_Convert(struct Driver *d)
 	s8 navPathIndex = initialNavPathIndex;
 	while (1)
 	{
-		s16 navPathPointsCount = sdata->NavPath_ptrHeader[navPathIndex]->numPoints;
+		s16 navPathPointsCount = P32_GET(struct NavHeader *, sdata->NavPath_ptrHeader[navPathIndex])->numPoints;
 		if (1 < navPathPointsCount)
 		{
 			break; // success
@@ -3337,7 +3337,7 @@ void BOTS_Driver_Convert(struct Driver *d)
 
 	d->botData.aiPhysics.speedLinear = speedApprox;
 
-	struct NavFrame *firstNavFrame = sdata->NavPath_ptrNavFrameArray[navPathIndex];
+	struct NavFrame *firstNavFrame = P32_GET(struct NavFrame *, sdata->NavPath_ptrNavFrameArray[navPathIndex]);
 
 	d->botData.navProgressRemainder = 0;
 	d->turnAngleCurr = 0;
@@ -3345,11 +3345,11 @@ void BOTS_Driver_Convert(struct Driver *d)
 	d->ampTurnState = 0;
 	d->wallRubTimer = 0;
 
-	d->botData.botNavFrame = firstNavFrame;
+	P32_SET(d->botData.botNavFrame, firstNavFrame);
 
-	d->instSelf->thread->funcThTick = BOTS_ThTick_Drive;
+	P32_SET(P32_GET(struct Thread *, P32_GET(struct Instance *, d->instSelf)->thread)->funcThTick, BOTS_ThTick_Drive);
 
-	if ((sdata->gGT->gameMode1 & BATTLE_MODE) != 0)
+	if ((P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 & BATTLE_MODE) != 0)
 	{ // you are in battle mode
 		struct NavFrame *nf = NAVHEADER_GETFRAME(sdata->NavPath_ptrHeader[navPathIndex]);
 		d->posCurr.x = CTR_MipsSll(nf->pos.x, 8);
@@ -3369,7 +3369,7 @@ void BOTS_Driver_Convert(struct Driver *d)
 
 	if ((oldActionFlagsSet & ACTION_RACE_FINISHED) != 0)
 	{
-		CAM_EndOfRace(&sdata->gGT->cameraDC[d->driverID], d);
+		CAM_EndOfRace(&P32_GET(struct GameTracker *, sdata->gGT)->cameraDC[d->driverID], d);
 	}
 
 	int damageType;

@@ -49,7 +49,7 @@ CTR_STATIC_ASSERT(SUBMIT_NAME_ASCII_BYTE_MARKER == 0x1000);
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8004aa08-0x8004aa60
 void SubmitName_RestoreName(s16 submitNameMode)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// Time Trial or Adventure
 	sdata->selectProfileState.submitNameMode = submitNameMode;
@@ -83,7 +83,7 @@ void SubmitName_UseKeyboard(int key)
 s16 SubmitName_DrawMenu(u16 string)
 {
 	RECT r;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	u32 soundID = 0;
 	s16 selectionResult = 0;
@@ -160,7 +160,7 @@ s16 SubmitName_DrawMenu(u16 string)
 		}
 	}
 
-	DecalFont_DrawLine(sdata->lngStrings[LNG_PLEASE_ENTER_YOUR_NAME], SUBMIT_NAME_TITLE_X, SUBMIT_NAME_TITLE_Y, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
+	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_PLEASE_ENTER_YOUR_NAME], SUBMIT_NAME_TITLE_X, SUBMIT_NAME_TITLE_Y, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
 
 	// player name
 	DecalFont_DrawLine(gGT->currNameEntered, SUBMIT_NAME_TYPED_NAME_X, SUBMIT_NAME_TYPED_NAME_Y, FONT_BIG, WHITE);
@@ -182,7 +182,7 @@ s16 SubmitName_DrawMenu(u16 string)
 	}
 
 	// SAVE button draw
-	DecalFont_DrawLine(sdata->lngStrings[stringCopy], SUBMIT_NAME_ACTION_X, SUBMIT_NAME_ACTION_Y, FONT_BIG, (JUSTIFY_RIGHT | strColorBlink));
+	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[stringCopy], SUBMIT_NAME_ACTION_X, SUBMIT_NAME_ACTION_Y, FONT_BIG, (JUSTIFY_RIGHT | strColorBlink));
 
 	// CANCEL button blink
 	strColorBlink = 0;
@@ -191,7 +191,7 @@ s16 SubmitName_DrawMenu(u16 string)
 		strColorBlink = blinkWhite;
 	}
 
-	DecalFont_DrawLine(sdata->lngStrings[LNG_CANCEL], SUBMIT_NAME_CANCEL_X, SUBMIT_NAME_ACTION_Y, 1, strColorBlink);
+	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_CANCEL], SUBMIT_NAME_CANCEL_X, SUBMIT_NAME_ACTION_Y, 1, strColorBlink);
 
 	// leftX = 32 (256-224)
 	// rightX = 480 (256+224)
@@ -208,11 +208,11 @@ s16 SubmitName_DrawMenu(u16 string)
 	r.h = 2;
 	Color color;
 	color.self = sdata->battleSetup_Color_UI_1;
-	RECTMENU_DrawOuterRect_Edge(&r, color, 0x20, gGT->backBuffer->otMem.uiOT);
+	RECTMENU_DrawOuterRect_Edge(&r, color, 0x20, P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT));
 
 	r.y = SUBMIT_NAME_PANEL_Y;
 	r.h = SUBMIT_NAME_PANEL_H;
-	RECTMENU_DrawInnerRect(&r, 0, gGT->backBuffer->otMem.uiOT);
+	RECTMENU_DrawInnerRect(&r, 0, P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT));
 
 	int tap = sdata->buttonTapPerPlayer[0];
 
@@ -454,7 +454,7 @@ FinishInput:
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8004b144-0x8004b230.
 void SubmitName_MenuProc(struct RectMenu *menu)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	s16 selection = SubmitName_DrawMenu(0x13f);
 	menu->rowSelected = selection;
@@ -473,7 +473,7 @@ void SubmitName_MenuProc(struct RectMenu *menu)
 		{
 			// end of race menu with "Save Ghost" option
 			extern struct RectMenu menu224;
-			sdata->ptrDesiredMenu = &menu224;
+			P32_SET(sdata->ptrDesiredMenu, &menu224);
 		}
 
 		// if hit SAVE
@@ -481,7 +481,7 @@ void SubmitName_MenuProc(struct RectMenu *menu)
 		{
 			// GhostMode
 			SelectProfile_ToggleMode(SELECT_PROFILE_MODE_GHOST_SAVE);
-			sdata->ptrDesiredMenu = &data.menuGhostSelection;
+			P32_SET(sdata->ptrDesiredMenu, &data.menuGhostSelection);
 		}
 	}
 
@@ -492,7 +492,7 @@ void SubmitName_MenuProc(struct RectMenu *menu)
 		if (selection < 0)
 		{
 			// Change active Menu back to Adv char select
-			sdata->ptrDesiredMenu = CS_Garage_GetMenuPtr();
+			P32_SET(sdata->ptrDesiredMenu, CS_Garage_GetMenuPtr());
 			CS_Garage_ZoomOut(1);
 		}
 		else
@@ -502,7 +502,7 @@ void SubmitName_MenuProc(struct RectMenu *menu)
 
 			// AdventureMode
 			SelectProfile_ToggleMode(SELECT_PROFILE_MODE_ADV_SAVE);
-			sdata->ptrDesiredMenu = &data.menuFourAdvProfiles;
+			P32_SET(sdata->ptrDesiredMenu, &data.menuFourAdvProfiles);
 		}
 	}
 }

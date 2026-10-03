@@ -73,7 +73,7 @@ struct NavHeader
 	int posY_firstNode;
 
 	// 8
-	struct NavFrame *last;
+	P32(struct NavFrame *) last;
 
 	// 0xC
 	s16 rampPhys1[0x10]; // speedXZ? driver->0x5d4

@@ -24,19 +24,19 @@ struct Mempack
 	s32 packSize; // end - start, 0x144E10
 
 	// 0x4
-	void *start; // 0x800ba9f0
+	P32(void *) start; // 0x800ba9f0
 
 	// 0x8
-	void *lastFreeByte; // where you can put new data on High-End,
+	P32(void *) lastFreeByte; // where you can put new data on High-End,
 
 	// 0xC
-	void *endOfAllocator; // always 0x801FF800
+	P32(void *) endOfAllocator; // always 0x801FF800
 
 	// 0x10
-	void *endOfMemory; // 0x80200000 (2mb) (never used)
+	P32(void *) endOfMemory; // 0x80200000 (2mb) (never used)
 
 	// 0x14
-	void *firstFreeByte; // where you can put new data on Low-End
+	P32(void *) firstFreeByte; // where you can put new data on Low-End
 
 	// 0x18
 	s32 sizeOfPrevAllocation; // self-explanatory
@@ -45,7 +45,7 @@ struct Mempack
 	s32 numBookmarks; // amount of bookmarks used
 
 	// 0x20
-	void *bookmarks[MEMPACK_BOOKMARK_COUNT]; // address of each bookmark
+	P32(void *) bookmarks[MEMPACK_BOOKMARK_COUNT]; // address of each bookmark
 
 	// 0x60 -- size of struct
 };

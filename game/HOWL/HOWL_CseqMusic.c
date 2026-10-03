@@ -10,12 +10,12 @@ int CseqMusic_Start(u16 songID, int p2, struct SongSet *p3, int p4, int p5)
 	{
 		return 0;
 	}
-	if (sdata->ptrCseqHeader == 0)
+	if (P32_GET(struct CseqHeader *, sdata->ptrCseqHeader) == 0)
 	{
 		return 0;
 	}
 
-	if (sdata->ptrCseqHeader->numSongs <= songID)
+	if (P32_GET(struct CseqHeader *, sdata->ptrCseqHeader)->numSongs <= songID)
 	{
 		return 0;
 	}
@@ -52,7 +52,7 @@ void CseqMusic_Pause()
 	{
 		return;
 	}
-	if (sdata->ptrCseqHeader == 0)
+	if (P32_GET(struct CseqHeader *, sdata->ptrCseqHeader) == 0)
 	{
 		return;
 	}
@@ -85,7 +85,7 @@ void CseqMusic_Resume()
 	{
 		return;
 	}
-	if (sdata->ptrCseqHeader == 0)
+	if (P32_GET(struct CseqHeader *, sdata->ptrCseqHeader) == 0)
 	{
 		return;
 	}
@@ -117,11 +117,11 @@ void CseqMusic_ChangeVolume(u16 songID, int p2, int p3)
 	{
 		return;
 	}
-	if (sdata->ptrCseqHeader == 0)
+	if (P32_GET(struct CseqHeader *, sdata->ptrCseqHeader) == 0)
 	{
 		return;
 	}
-	if (sdata->ptrCseqHeader->numSongs <= songID)
+	if (P32_GET(struct CseqHeader *, sdata->ptrCseqHeader)->numSongs <= songID)
 	{
 		return;
 	}
@@ -152,11 +152,11 @@ void CseqMusic_Restart(u16 songID, int p2)
 	{
 		return;
 	}
-	if (sdata->ptrCseqHeader == 0)
+	if (P32_GET(struct CseqHeader *, sdata->ptrCseqHeader) == 0)
 	{
 		return;
 	}
-	if (sdata->ptrCseqHeader->numSongs <= songID)
+	if (P32_GET(struct CseqHeader *, sdata->ptrCseqHeader)->numSongs <= songID)
 	{
 		return;
 	}
@@ -188,11 +188,11 @@ void CseqMusic_ChangeTempo(u16 songID, int p2)
 	{
 		return;
 	}
-	if (sdata->ptrCseqHeader == 0)
+	if (P32_GET(struct CseqHeader *, sdata->ptrCseqHeader) == 0)
 	{
 		return;
 	}
-	if (sdata->ptrCseqHeader->numSongs <= songID)
+	if (P32_GET(struct CseqHeader *, sdata->ptrCseqHeader)->numSongs <= songID)
 	{
 		return;
 	}
@@ -223,11 +223,11 @@ void CseqMusic_AdvHubSwap(u16 songId, struct SongSet *songSet, int songSetActive
 	{
 		return;
 	}
-	if (sdata->ptrCseqHeader == 0)
+	if (P32_GET(struct CseqHeader *, sdata->ptrCseqHeader) == 0)
 	{
 		return;
 	}
-	if (sdata->ptrCseqHeader->numSongs <= songId)
+	if (P32_GET(struct CseqHeader *, sdata->ptrCseqHeader)->numSongs <= songId)
 	{
 		return;
 	}
@@ -262,11 +262,11 @@ void CseqMusic_Stop(u16 songID)
 	{
 		return;
 	}
-	if (sdata->ptrCseqHeader == 0)
+	if (P32_GET(struct CseqHeader *, sdata->ptrCseqHeader) == 0)
 	{
 		return;
 	}
-	if (sdata->ptrCseqHeader->numSongs <= songID)
+	if (P32_GET(struct CseqHeader *, sdata->ptrCseqHeader)->numSongs <= songID)
 	{
 		return;
 	}
@@ -297,7 +297,7 @@ void CseqMusic_StopAll()
 	{
 		return;
 	}
-	if (sdata->ptrCseqHeader == 0)
+	if (P32_GET(struct CseqHeader *, sdata->ptrCseqHeader) == 0)
 	{
 		return;
 	}

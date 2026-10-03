@@ -32,7 +32,7 @@ void Voiceline_PoolInit(void)
 
 	sdata->numBackup_ChannelStats = 0;
 
-	sdata->ptrCseqHeader = 0;
+	P32_SET(sdata->ptrCseqHeader, 0);
 
 	Bank_ResetAllocator();
 
@@ -61,7 +61,7 @@ void Voiceline_PoolInit(void)
 
 		struct ChannelAttr *curr = &sdata->channelAttrCur[index];
 
-		curr->spuStartAddr = (void *)-1;
+		P32_SET(curr->spuStartAddr, (void *)-1);
 
 		curr->ad = 0x80ff;
 		curr->sr = 0x1fc2;
@@ -134,9 +134,9 @@ void Voiceline_PoolClear(void)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8002cb44-0x8002cbb4
 void Voiceline_StopAll(void)
 {
-	while (sdata->Voiceline2.last != 0)
+	while (P32_GET(struct Item *, sdata->Voiceline2.last) != 0)
 	{
-		struct Item *voiceLine = sdata->Voiceline2.last;
+		struct Item *voiceLine = P32_GET(struct Item *, sdata->Voiceline2.last);
 
 		LIST_RemoveMember(&sdata->Voiceline2, voiceLine);
 		LIST_AddFront(&sdata->Voiceline1, voiceLine);
@@ -200,7 +200,7 @@ void Voiceline_RequestPlay(u32 voiceID, u32 characterID, u32 characterID2)
 		return;
 	}
 
-	if ((sdata->gGT->gameMode1 & END_OF_RACE) != 0)
+	if ((P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 & END_OF_RACE) != 0)
 	{
 		return;
 	}
@@ -227,7 +227,7 @@ void Voiceline_RequestPlay(u32 voiceID, u32 characterID, u32 characterID2)
 		}
 	}
 
-	elapsedFrames = (u32)CTR_MipsSubLo(sdata->gGT->frameTimer_MainFrame_ResetDB, sdata->timeSet2[characterID]);
+	elapsedFrames = (u32)CTR_MipsSubLo(P32_GET(struct GameTracker *, sdata->gGT)->frameTimer_MainFrame_ResetDB, sdata->timeSet2[characterID]);
 	canImmediate = 0;
 	if (elapsedFrames >= 0x3d)
 	{
@@ -280,7 +280,7 @@ playImmediate:
 	if ((voiceType < NATIVE_CUSTOM_RACER_SAMPLED_VOICE_COUNT) &&
 	    NativeCustomRacer_PlayActiveSampledVoice(voiceType, characterID))
 	{
-		sdata->timeSet2[characterID] = sdata->gGT->frameTimer_MainFrame_ResetDB;
+		sdata->timeSet2[characterID] = P32_GET(struct GameTracker *, sdata->gGT)->frameTimer_MainFrame_ResetDB;
 		return;
 	}
 #endif
@@ -293,7 +293,7 @@ playImmediate:
 		OtherFX_Play((characterID + 0x2c) & 0xffff, 2);
 	}
 
-	sdata->timeSet2[characterID] = sdata->gGT->frameTimer_MainFrame_ResetDB;
+	sdata->timeSet2[characterID] = P32_GET(struct GameTracker *, sdata->gGT)->frameTimer_MainFrame_ResetDB;
 	return;
 
 queueVoiceline:
@@ -304,7 +304,7 @@ queueVoiceline:
 
 	sdata->timeSet1[characterID] |= 1 << (voiceID & 0x1f);
 
-	for (struct Item *item = sdata->Voiceline2.first; item != NULL; item = item->next)
+	for (struct Item *item = P32_GET(struct Item *, sdata->Voiceline2.first); item != NULL; item = P32_GET(struct Item *, item->next))
 	{
 		struct VoicelineItem *voiceLine = (struct VoicelineItem *)item;
 
@@ -321,14 +321,14 @@ queueVoiceline:
 		}
 	}
 
-	struct Item *item = sdata->Voiceline1.first;
+	struct Item *item = P32_GET(struct Item *, sdata->Voiceline1.first);
 	if (item != NULL)
 	{
 		LIST_RemoveMember(&sdata->Voiceline1, item);
 	}
 	else
 	{
-		item = sdata->Voiceline2.last;
+		item = P32_GET(struct Item *, sdata->Voiceline2.last);
 		if (item != NULL)
 		{
 			LIST_RemoveMember(&sdata->Voiceline2, item);
@@ -343,7 +343,7 @@ queueVoiceline:
 		voiceLine->characterID = characterID;
 		voiceLine->secondaryCharacterID = characterID2;
 		voiceLine->voiceID = voiceID;
-		voiceLine->startFrame = sdata->gGT->timer;
+		voiceLine->startFrame = P32_GET(struct GameTracker *, sdata->gGT)->timer;
 #if defined(CTR_NATIVE)
 		const int poolIndex = Voiceline_NativePoolIndex(voiceLine);
 		if (poolIndex >= 0)
@@ -387,7 +387,7 @@ void Voiceline_StartPlay(struct Item *voiceLine)
 	}
 #endif
 
-	s16 *voiceIDs = data.voiceData[characterID].voiceSet[voiceSetIndex].ptr;
+	s16 *voiceIDs = P32_GET(void *, data.voiceData[characterID].voiceSet[voiceSetIndex].ptr);
 	u16 numVoiceIDs = data.voiceData[characterID].voiceSet[voiceSetIndex].num;
 
 	if (numVoiceIDs == 0)
@@ -429,7 +429,7 @@ void Voiceline_StartPlay(struct Item *voiceLine)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8002d0f8-0x8002d2a8
 void Voiceline_Update(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	if (sdata->boolCanPlayVoicelines == 0)
 	{
@@ -460,7 +460,7 @@ void Voiceline_Update(void)
 
 			if (gGT->numPlyrCurrGame == 1)
 			{
-				if (!VehPickupItem_MaskBoolGoodGuy(gGT->drivers[0]))
+				if (!VehPickupItem_MaskBoolGoodGuy(P32_GET(struct Driver *, gGT->drivers[0])))
 				{
 					voiceID = 0x3d;
 				}
@@ -492,9 +492,9 @@ void Voiceline_Update(void)
 	}
 
 playQueuedVoice:
-	if (sdata->Voiceline2.first != NULL)
+	if (P32_GET(struct Item *, sdata->Voiceline2.first) != NULL)
 	{
-		struct Item *first = sdata->Voiceline2.first;
+		struct Item *first = P32_GET(struct Item *, sdata->Voiceline2.first);
 
 		LIST_RemoveMember(&sdata->Voiceline2, first);
 		LIST_AddBack(&sdata->Voiceline1, first);

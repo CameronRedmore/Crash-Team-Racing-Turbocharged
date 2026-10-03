@@ -103,7 +103,7 @@ struct BspSearchVertex
 	CollNormalAxis normalAxis;
 
 	// 0x8
-	struct LevVertex *pLevelVertex;
+	P32(struct LevVertex *) pLevelVertex;
 
 	// 0xC
 	struct CollPlane plane;
@@ -113,7 +113,7 @@ struct BspSearchVertex
 
 struct BspSearchTriangle
 {
-	struct QuadBlock *quadblock;
+	P32(struct QuadBlock *) quadblock;
 	s32 triangleID;
 	s32 scrubDepth;
 };
@@ -139,7 +139,7 @@ struct BspSearchResult
 	u8 triangleID;
 
 	// 0x18
-	struct QuadBlock *ptrQuadblock;
+	P32(struct QuadBlock *) ptrQuadblock;
 };
 
 struct CollInstanceHitboxScratch
@@ -175,16 +175,16 @@ struct CollTriangleBarycentrics
 
 struct CollLevelTriangle
 {
-	struct LevVertex *v0;
-	struct LevVertex *v1;
-	struct LevVertex *v2;
+	P32(struct LevVertex *) v0;
+	P32(struct LevVertex *) v1;
+	P32(struct LevVertex *) v2;
 };
 
 struct CollBspSearchTriangle
 {
-	struct BspSearchVertex *v0;
-	struct BspSearchVertex *v1;
-	struct BspSearchVertex *v2;
+	P32(struct BspSearchVertex *) v0;
+	P32(struct BspSearchVertex *) v1;
+	P32(struct BspSearchVertex *) v2;
 };
 
 struct BSP;
@@ -259,19 +259,19 @@ struct ScratchpadStruct
 			s16 pad16;
 
 			// 0x18
-			struct Thread *thread;
+			P32(struct Thread *) thread;
 
 			// 0x1c
 			struct BoundingBox bbox;
 
 			// 0x28
-			CollThBuckCallback funcCallback;
+			P32(CollThBuckCallback) funcCallback;
 
 		} ThBuckColl;
 	} Union;
 
 	// 0x2C
-	struct mesh_info *ptr_mesh_info;
+	P32(struct mesh_info *) ptr_mesh_info;
 
 	// 0x30
 	struct BoundingBox bbox;
@@ -290,10 +290,10 @@ struct ScratchpadStruct
 	s16 boolDidTouchHitbox;
 
 	// 0x44
-	struct mesh_info *ptr_mesh_info_2;
+	P32(struct mesh_info *) ptr_mesh_info_2;
 
 	// 0x48
-	struct BSP *bspHitbox;
+	P32(struct BSP *) bspHitbox;
 
 	// 0x4c
 	struct BspSearchResult candidate;
@@ -308,7 +308,7 @@ struct ScratchpadStruct
 	// 0x88
 	// COLL_MOVED_PlayerSearch can test up to 15 hitboxes, so this prevents
 	// duplicate collision handling within one search.
-	struct BSP *bspHitboxesHit[15];
+	P32(struct BSP *) bspHitboxesHit[15];
 
 	// 0xc4
 	s32 numBspHitboxesHit;

@@ -81,7 +81,7 @@ struct GhostPacket
 	SVec3 pos;
 	SVec3 rot;
 
-	u8 *bufferPacket;
+	P32(u8 *) bufferPacket;
 
 	// 0x10 -- size of packet
 };
@@ -91,10 +91,10 @@ CTR_STATIC_ASSERT(sizeof(struct GhostPacket) == 0x10);
 struct GhostTape
 {
 	// 0x0
-	struct GhostHeader *gh;
-	void *ptrStart; // gh->0x28
-	void *ptrEnd;   // gh->0x28 + gh->size
-	void *ptrCurr;
+	P32(struct GhostHeader *) gh;
+	P32(void *) ptrStart; // gh->0x28
+	P32(void *) ptrEnd;   // gh->0x28 + gh->size
+	P32(void *) ptrCurr;
 
 	// 0x10
 	int unk10;
@@ -138,7 +138,7 @@ struct GhostTape
 	int constDEADC0ED;
 
 	// 0x264
-	struct GhostHeader *gh_again; // duplicate?
+	P32(struct GhostHeader *) gh_again; // duplicate?
 
 	// 0x268 bytes large
 };

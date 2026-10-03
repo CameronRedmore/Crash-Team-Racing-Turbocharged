@@ -53,8 +53,8 @@ CTR_STATIC_ASSERT(UI_INSTANCE_RELIC_TIME_UNITS_PER_TENTH_SECOND == 0x60);
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8004cae8-0x8004cec4.
 struct Instance *UI_INSTANCE_BirthWithThread(int modelID, int tickFunc, int hudSlot, int rotateToHud, int pushBuffer, int threadName)
 {
-	struct GameTracker *gGT = sdata->gGT;
-	struct Model *model = gGT->modelPtr[modelID];
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct Model *model = P32_GET(struct Model *, gGT->modelPtr[modelID]);
 	struct UiElement2D *hudStruct;
 	struct Instance *inst = NULL;
 	struct Thread *driverThread;
@@ -65,12 +65,12 @@ struct Instance *UI_INSTANCE_BirthWithThread(int modelID, int tickFunc, int hudS
 		return NULL;
 	}
 
-	hudStruct = data.hudStructPtr[gGT->numPlyrCurrGame - 1];
-	driverThread = gGT->threadBuckets[PLAYER].thread;
+	hudStruct = P32_GET(struct UiElement2D *, data.hudStructPtr[gGT->numPlyrCurrGame - 1]);
+	driverThread = P32_GET(struct Thread *, gGT->threadBuckets[PLAYER].thread);
 
 	while (driverThread != 0)
 	{
-		struct Driver *driver = driverThread->object;
+		struct Driver *driver = P32_GET(void *, driverThread->object);
 		struct UiElement3D *ui3D;
 		struct Thread *hudThread;
 		s16 createdModelID;
@@ -80,26 +80,26 @@ struct Instance *UI_INSTANCE_BirthWithThread(int modelID, int tickFunc, int hudS
 		hudThread = PROC_BirthWithObject(UI_INSTANCE_THREAD_FLAGS, (void *)tickFunc, (char *)threadName, NULL);
 
 		// Get the object attached to the thread
-		ui3D = hudThread->object;
+		ui3D = P32_GET(void *, hudThread->object);
 
 		// Big Number HUD element
 		inst = INSTANCE_Birth2D(model, 0, hudThread);
 
 		// give the Instance to the thread
-		hudThread->inst = inst;
+		P32_SET(hudThread->inst, inst);
 
 		createdModelID = model->id;
 
 		// bigNum
 		if (createdModelID == STATIC_BIG1)
 		{
-			driver->instBigNum = inst;
+			P32_SET(driver->instBigNum, inst);
 		}
 
 		// fruitDisp
 		else if (createdModelID == STATIC_FRUITDISP)
 		{
-			driver->instFruitDisp = inst;
+			P32_SET(driver->instFruitDisp, inst);
 		}
 
 		// if this is a gem
@@ -195,7 +195,7 @@ struct Instance *UI_INSTANCE_BirthWithThread(int modelID, int tickFunc, int hudS
 		else
 		{
 			struct InstDrawPerPlayer *idpp = INST_GETIDPP(inst);
-			idpp[0].pushBuffer = (struct PushBuffer *)pushBuffer;
+			P32_SET(idpp[0].pushBuffer, (struct PushBuffer *)pushBuffer);
 
 			inst->flags |= PUSHBUFFER_EXISTS;
 
@@ -232,7 +232,7 @@ struct Instance *UI_INSTANCE_BirthWithThread(int modelID, int tickFunc, int hudS
 		ui3D->scale = UI_INSTANCE_SCALE;
 
 		// next thread
-		driverThread = driverThread->siblingThread;
+		driverThread = P32_GET(struct Thread *, driverThread->siblingThread);
 
 		hudStruct += UI_HUD_SLOT_COUNT;
 	}
@@ -250,7 +250,7 @@ void UI_INSTANCE_InitAll(void)
 	u32 relicTime;
 	int i;
 
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	sdata->menuReadyToPass &= ~UI_INSTANCE_MENU_READY_SHOW_MENU;
 	gGT->renderFlags |= RENDER_FLAG_SPLIT_SCREEN_LINES;
 
@@ -259,24 +259,24 @@ void UI_INSTANCE_InitAll(void)
 	// If you're in Crystal Challenge
 	if ((gameMode1 & CRYSTAL_CHALLENGE) != 0)
 	{
-		sdata->ptrMenuCrystal = UI_INSTANCE_BirthWithThread(STATIC_CRYSTAL, (int)UI_ThTick_Reward, UI_HUD_SLOT_CRYSTAL, 0, 0, (int)rdata.s_crystal1);
-		sdata->ptrHudCrystal = UI_INSTANCE_BirthWithThread(STATIC_CRYSTAL, (int)UI_ThTick_Reward, UI_HUD_SLOT_CRYSTAL, 0, 0, (int)rdata.s_crystal1);
+		P32_SET(sdata->ptrMenuCrystal, UI_INSTANCE_BirthWithThread(STATIC_CRYSTAL, (int)UI_ThTick_Reward, UI_HUD_SLOT_CRYSTAL, 0, 0, (int)rdata.s_crystal1));
+		P32_SET(sdata->ptrHudCrystal, UI_INSTANCE_BirthWithThread(STATIC_CRYSTAL, (int)UI_ThTick_Reward, UI_HUD_SLOT_CRYSTAL, 0, 0, (int)rdata.s_crystal1));
 
 		// Make a token
-		sdata->ptrToken = UI_INSTANCE_BirthWithThread(STATIC_TOKEN, (int)UI_ThTick_Reward, UI_HUD_SLOT_TOKEN_OR_CTR, 0, 0, (int)sdata->s_token);
+		P32_SET(sdata->ptrToken, UI_INSTANCE_BirthWithThread(STATIC_TOKEN, (int)UI_ThTick_Reward, UI_HUD_SLOT_TOKEN_OR_CTR, 0, 0, (int)sdata->s_token));
 
 		// make Crystal invisible
 #if defined(CTR_NATIVE)
 		// NOTE(aalhendi): Menu-storage can carry CRYSTAL_CHALLENGE into tracks
 		// that did not publish crystal HUD models.
-		if (sdata->ptrHudCrystal != NULL)
+		if (P32_GET(struct Instance *, sdata->ptrHudCrystal) != NULL)
 #endif
 		{
-			sdata->ptrHudCrystal->flags |= HIDE_MODEL;
+			P32_GET(struct Instance *, sdata->ptrHudCrystal)->flags |= HIDE_MODEL;
 		}
 
 		// make copy of Token pointer
-		token = sdata->ptrToken;
+		token = P32_GET(struct Instance *, sdata->ptrToken);
 
 #if defined(CTR_NATIVE)
 		if (token == NULL)
@@ -314,14 +314,14 @@ void UI_INSTANCE_InitAll(void)
 		{
 #if defined(CTR_NATIVE)
 			// NOTE(aalhendi): PSX low-memory reads are non-fatal for unused driver slots.
-			if (gGT->drivers[i] == NULL)
+			if (P32_GET(struct Driver *, gGT->drivers[i]) == NULL)
 			{
 				data.rankIconsCurr[i] = 0;
 			}
 			else
 			{
 #endif
-				data.rankIconsCurr[i] = gGT->drivers[i]->driverRank;
+				data.rankIconsCurr[i] = P32_GET(struct Driver *, gGT->drivers[i])->driverRank;
 			}
 
 			// if more than 1 screen
@@ -338,16 +338,16 @@ void UI_INSTANCE_InitAll(void)
 		}
 
 		// The rest of this block only happens in Relic Mode
-		sdata->ptrRelic = UI_INSTANCE_BirthWithThread(STATIC_RELIC, (int)UI_ThTick_Reward, UI_HUD_SLOT_RELIC, 1, 0, (int)sdata->s_relic1);
-		sdata->ptrTimebox1 = UI_INSTANCE_BirthWithThread(STATIC_TIME_CRATE_01, (int)UI_ThTick_CountPickup, UI_HUD_SLOT_TIMEBOX, 1, 0, (int)rdata.s_timebox1);
+		P32_SET(sdata->ptrRelic, UI_INSTANCE_BirthWithThread(STATIC_RELIC, (int)UI_ThTick_Reward, UI_HUD_SLOT_RELIC, 1, 0, (int)sdata->s_relic1));
+		P32_SET(sdata->ptrTimebox1, UI_INSTANCE_BirthWithThread(STATIC_TIME_CRATE_01, (int)UI_ThTick_CountPickup, UI_HUD_SLOT_TIMEBOX, 1, 0, (int)rdata.s_timebox1));
 
 		// if instance
-		if (sdata->ptrRelic != 0)
+		if (P32_GET(struct Instance *, sdata->ptrRelic) != 0)
 		{
 			// set scale to zero
-			sdata->ptrRelic->scale.z = 0;
-			sdata->ptrRelic->scale.y = 0;
-			sdata->ptrRelic->scale.x = 0;
+			P32_GET(struct Instance *, sdata->ptrRelic)->scale.z = 0;
+			P32_GET(struct Instance *, sdata->ptrRelic)->scale.y = 0;
+			P32_GET(struct Instance *, sdata->ptrRelic)->scale.x = 0;
 		}
 
 		// Get Relic Time to put in HUD
@@ -403,7 +403,7 @@ void UI_INSTANCE_InitAll(void)
 	sdata->pushBuffer_DecalMP.matrix_ViewProj = gGT->pushBuffer_UI.matrix_ViewProj;
 	sdata->pushBuffer_DecalMP.pos = gGT->pushBuffer_UI.pos;
 	sdata->pushBuffer_DecalMP.rect = gGT->pushBuffer_UI.rect;
-	sdata->pushBuffer_DecalMP.ptrOT = gGT->pushBuffer_UI.ptrOT;
+	P32_SET(sdata->pushBuffer_DecalMP.ptrOT, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT));
 	sdata->pushBuffer_DecalMP.distanceToScreen_PREV = gGT->pushBuffer_UI.distanceToScreen_PREV;
 
 	sdata->ptrFruitDisp = (int)UI_INSTANCE_BirthWithThread(STATIC_FRUITDISP, (int)UI_ThTick_CountPickup, UI_HUD_SLOT_FRUIT_MODEL, 1, sdata->ptrPushBufferUI,
@@ -423,35 +423,35 @@ void UI_INSTANCE_InitAll(void)
 		return;
 	}
 
-	sdata->ptrHudC = UI_INSTANCE_BirthWithThread(STATIC_C, (int)UI_ThTick_CtrLetters, UI_HUD_SLOT_TOKEN_OR_CTR, 0, 0, (int)sdata->s_hudc);
-	sdata->ptrHudT = UI_INSTANCE_BirthWithThread(STATIC_T, (int)UI_ThTick_CtrLetters, UI_HUD_SLOT_TOKEN_OR_CTR, 0, 0, (int)sdata->s_hudt);
-	sdata->ptrHudR = UI_INSTANCE_BirthWithThread(STATIC_R, (int)UI_ThTick_CtrLetters, UI_HUD_SLOT_TOKEN_OR_CTR, 0, 0, (int)sdata->s_hudr);
+	P32_SET(sdata->ptrHudC, UI_INSTANCE_BirthWithThread(STATIC_C, (int)UI_ThTick_CtrLetters, UI_HUD_SLOT_TOKEN_OR_CTR, 0, 0, (int)sdata->s_hudc));
+	P32_SET(sdata->ptrHudT, UI_INSTANCE_BirthWithThread(STATIC_T, (int)UI_ThTick_CtrLetters, UI_HUD_SLOT_TOKEN_OR_CTR, 0, 0, (int)sdata->s_hudt));
+	P32_SET(sdata->ptrHudR, UI_INSTANCE_BirthWithThread(STATIC_R, (int)UI_ThTick_CtrLetters, UI_HUD_SLOT_TOKEN_OR_CTR, 0, 0, (int)sdata->s_hudr));
 
 	// Make a token
-	sdata->ptrToken = UI_INSTANCE_BirthWithThread(STATIC_TOKEN, (int)UI_ThTick_Reward, UI_HUD_SLOT_TOKEN_OR_CTR, 0, 0, (int)sdata->s_token);
+	P32_SET(sdata->ptrToken, UI_INSTANCE_BirthWithThread(STATIC_TOKEN, (int)UI_ThTick_Reward, UI_HUD_SLOT_TOKEN_OR_CTR, 0, 0, (int)sdata->s_token));
 
 #if defined(CTR_NATIVE)
 	// NOTE(aalhendi): PSX writes the hidden C/T/R flags through null HUD pointers in Garage; native cannot.
-	if (sdata->ptrHudC != NULL)
+	if (P32_GET(struct Instance *, sdata->ptrHudC) != NULL)
 #endif
 	{
-		sdata->ptrHudC->flags |= HIDE_MODEL;
+		P32_GET(struct Instance *, sdata->ptrHudC)->flags |= HIDE_MODEL;
 	}
 #if defined(CTR_NATIVE)
-	if (sdata->ptrHudT != NULL)
+	if (P32_GET(struct Instance *, sdata->ptrHudT) != NULL)
 #endif
 	{
-		sdata->ptrHudT->flags |= HIDE_MODEL;
+		P32_GET(struct Instance *, sdata->ptrHudT)->flags |= HIDE_MODEL;
 	}
 #if defined(CTR_NATIVE)
-	if (sdata->ptrHudR != NULL)
+	if (P32_GET(struct Instance *, sdata->ptrHudR) != NULL)
 #endif
 	{
-		sdata->ptrHudR->flags |= HIDE_MODEL;
+		P32_GET(struct Instance *, sdata->ptrHudR)->flags |= HIDE_MODEL;
 	}
 
 	// make copy of Token pointer
-	token = sdata->ptrToken;
+	token = P32_GET(struct Instance *, sdata->ptrToken);
 
 	// set Token scale (x, y, z) to zero
 	token->scale.x = 0;

@@ -8,7 +8,7 @@ void MainLoadVLC_Callback(struct LoadQueueSlot *param_1)
 
 #ifdef CTR_NATIVE
 	// NOTE(aalhendi): Native keeps the loaded VLC pointer in host-visible state.
-	sdata->ptrVlcTable = param_1->ptrDestination;
+	P32_SET(sdata->ptrVlcTable, P32_GET(void *, param_1->ptrDestination));
 #endif
 }
 
@@ -22,11 +22,11 @@ void MainLoadVLC(void)
 	// VLC is not loaded
 	sdata->bool_IsLoaded_VlcTable = 0;
 
-	bigfile = sdata->ptrBigfileCdPos_2;
+	bigfile = P32_GET(struct BigHeader *, sdata->ptrBigfileCdPos_2);
 	entry = BIG_GETENTRY(bigfile);
 	size = (entry[BI_VLCTABLE].size + 0x7ff) & 0xfffff800;
-	sdata->ptrVlcTable = MEMPACK_AllocMem(size);
+	P32_SET(sdata->ptrVlcTable, MEMPACK_AllocMem(size));
 
 	// This table is passed as parameter to DecDCTvlc2
-	LOAD_AppendQueue(bigfile, LT_SETADDR, BI_VLCTABLE, sdata->ptrVlcTable, MainLoadVLC_Callback);
+	LOAD_AppendQueue(bigfile, LT_SETADDR, BI_VLCTABLE, P32_GET(void *, sdata->ptrVlcTable), MainLoadVLC_Callback);
 }

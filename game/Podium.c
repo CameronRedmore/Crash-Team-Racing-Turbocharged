@@ -32,7 +32,7 @@ void Podium_InitModels(struct GameTracker *gGT)
 
 	for (int i = 0; i < PODIUM_DRIVER_COUNT; i++)
 	{
-		struct Driver *driver = gGT->drivers[i];
+		struct Driver *driver = P32_GET(struct Driver *, gGT->drivers[i]);
 
 		if (driver == NULL)
 		{

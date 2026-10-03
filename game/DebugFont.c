@@ -16,7 +16,7 @@ CTR_STATIC_ASSERT(DEBUG_FONT_PRIM_WORD_COUNT == 9);
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800222e0-0x80022318.
 void DebugFont_Init(struct GameTracker *gGT)
 {
-	struct Icon *debugFontIcon = gGT->ptrIcons[DEBUG_FONT_ICON_INDEX];
+	struct Icon *debugFontIcon = P32_GET(struct Icon *, gGT->ptrIcons[DEBUG_FONT_ICON_INDEX]);
 
 	if (debugFontIcon == 0)
 	{
@@ -43,11 +43,11 @@ void DebugFont_DrawNumbers(int index, int screenPosX, int screenPosY)
 	u32 bottomU;
 	u32 topV;
 	u32 bottomV;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
-	p = (POLY_FT4 *)gGT->backBuffer->primMem.cursor;
-	ot = (u32 *)gGT->pushBuffer_UI.ptrOT;
-	gGT->backBuffer->primMem.cursor = p + 1;
+	p = (POLY_FT4 *)P32_GET(void *, P32_GET(struct DB *, gGT->backBuffer)->primMem.cursor);
+	ot = (u32 *)P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT);
+	P32_SET(P32_GET(struct DB *, gGT->backBuffer)->primMem.cursor, p + 1);
 
 	CtrGpu_WriteColorCode(&p->r0, 0x2e000000);
 	CtrGpu_WritePackedXY(&p->x0, CTR_PackS16Pair(screenPosX, screenPosY));

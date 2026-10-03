@@ -51,16 +51,16 @@ static const char s_resultsMaxLapTime[] = " 9:59:99";
 
 static void UI_DrawRacePersonalBest(u16 labelPosX, int posY)
 {
-	if (sdata->ptrActiveHighScoreEntry == NULL)
+	if (P32_GET(struct HighScoreEntry *, sdata->ptrActiveHighScoreEntry) == NULL)
 	{
 		return;
 	}
 
 	int timeX = (int)labelPosX + UI_RACE_CLOCK_PB_TIME_X_OFFSET;
 	DecalFont_DrawLine((char *)s_timeTrialPbRaceLabel, (int)(s16)labelPosX, posY, FONT_SMALL, ORANGE);
-	if (sdata->ptrActiveHighScoreEntry[1].time < MEMCARD_HIGH_SCORE_DEFAULT_TIME)
+	if (P32_GET(struct HighScoreEntry *, sdata->ptrActiveHighScoreEntry)[1].time < MEMCARD_HIGH_SCORE_DEFAULT_TIME)
 	{
-		DecalFont_DrawLine(RECTMENU_DrawTime(sdata->ptrActiveHighScoreEntry[1].time), timeX, posY, FONT_SMALL, PERIWINKLE);
+		DecalFont_DrawLine(RECTMENU_DrawTime(P32_GET(struct HighScoreEntry *, sdata->ptrActiveHighScoreEntry)[1].time), timeX, posY, FONT_SMALL, PERIWINKLE);
 	}
 	else
 	{
@@ -72,7 +72,7 @@ static void UI_DrawRelicTargets(u16 labelPosX, u16 labelPosY, struct Driver *dri
 {
 	static const int labels[UI_RACE_CLOCK_RELIC_TIER_COUNT] = {LNG_SAPPHIRE, LNG_GOLD, LNG_PLATINUM};
 	static const int colors[UI_RACE_CLOCK_RELIC_TIER_COUNT] = {TROPY_LIGHT_BLUE, PAPU_YELLOW, SILVER};
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	int row = 0;
 
 	for (int tier = 0; tier < UI_RACE_CLOCK_RELIC_TIER_COUNT; tier++)
@@ -81,9 +81,9 @@ static void UI_DrawRelicTargets(u16 labelPosX, u16 labelPosY, struct Driver *dri
 		if (gNativeRelicRaceMode != 0)
 		{
 			// Standalone relic races record earned tiers through the track's best time.
-			if ((sdata->ptrActiveHighScoreEntry != NULL) &&
-			    (sdata->ptrActiveHighScoreEntry[1].time < MEMCARD_HIGH_SCORE_DEFAULT_TIME) &&
-			    (sdata->ptrActiveHighScoreEntry[1].time <= (u32)target))
+			if ((P32_GET(struct HighScoreEntry *, sdata->ptrActiveHighScoreEntry) != NULL) &&
+			    (P32_GET(struct HighScoreEntry *, sdata->ptrActiveHighScoreEntry)[1].time < MEMCARD_HIGH_SCORE_DEFAULT_TIME) &&
+			    (P32_GET(struct HighScoreEntry *, sdata->ptrActiveHighScoreEntry)[1].time <= (u32)target))
 			{
 				continue;
 			}
@@ -96,7 +96,7 @@ static void UI_DrawRelicTargets(u16 labelPosX, u16 labelPosY, struct Driver *dri
 
 		int color = driver->timeElapsedInRace > target ? GRAY : colors[tier];
 		int rowY = (int)(s16)labelPosY + row * UI_RACE_CLOCK_RELIC_ROW_Y_STEP;
-		DecalFont_DrawLine(sdata->lngStrings[labels[tier]], (int)(s16)labelPosX,
+		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[labels[tier]], (int)(s16)labelPosX,
 		                   rowY + UI_RACE_CLOCK_RELIC_HUD_LABEL_Y_OFFSET, FONT_SMALL, color);
 		DecalFont_DrawLine(RECTMENU_DrawTime(target), (int)(s16)labelPosX,
 		                   rowY + UI_RACE_CLOCK_RELIC_HUD_TIME_Y_OFFSET, FONT_BIG, color);
@@ -113,7 +113,7 @@ static void UI_DrawRelicTargets(u16 labelPosX, u16 labelPosY, struct Driver *dri
 
 void UI_NativeRaceClock_GetTwoColumnLayout(int centerX, int *leftAnchorX, int *rightAnchorX, int *contentLeftX, int *contentWidth)
 {
-	int labelWidth = DecalFont_GetLineWidth(sdata->lngStrings[LNG_LAP], FONT_SMALL);
+	int labelWidth = DecalFont_GetLineWidth(P32_GET(char **, sdata->lngStrings)[LNG_LAP], FONT_SMALL);
 	int digitWidth = data.font_charPixWidth[FONT_SMALL];
 	int timeWidth = DecalFont_GetLineWidth((char *)s_resultsMaxLapTime, FONT_SMALL);
 	int labelExtent = labelWidth + digitWidth;
@@ -141,8 +141,8 @@ void UI_NativeRaceClock_GetTwoColumnLayout(int centerX, int *leftAnchorX, int *r
 
 static int UI_TimeTrialLapColor(struct GameTracker *gGT, struct Driver *driver, int lapIndex)
 {
-	if ((sdata->ptrActiveHighScoreEntry == NULL) ||
-	    (sdata->ptrActiveHighScoreEntry[0].time >= MEMCARD_HIGH_SCORE_DEFAULT_TIME))
+	if ((P32_GET(struct HighScoreEntry *, sdata->ptrActiveHighScoreEntry) == NULL) ||
+	    (P32_GET(struct HighScoreEntry *, sdata->ptrActiveHighScoreEntry)[0].time >= MEMCARD_HIGH_SCORE_DEFAULT_TIME))
 	{
 		return PERIWINKLE;
 	}
@@ -161,7 +161,7 @@ static int UI_TimeTrialLapColor(struct GameTracker *gGT, struct Driver *driver, 
 		return PERIWINKLE;
 	}
 
-	int delta = lapTime - (s32)sdata->ptrActiveHighScoreEntry[0].time;
+	int delta = lapTime - (s32)P32_GET(struct HighScoreEntry *, sdata->ptrActiveHighScoreEntry)[0].time;
 	if (delta <= 0)
 	{
 		return PAPU_YELLOW;
@@ -182,7 +182,7 @@ static int UI_TimeTrialLapColor(struct GameTracker *gGT, struct Driver *driver, 
 
 static void UI_DrawTimeTrialPersonalBests(u16 labelPosX, u16 labelPosY, struct GameTracker *gGT)
 {
-	if (sdata->ptrActiveHighScoreEntry == NULL)
+	if (P32_GET(struct HighScoreEntry *, sdata->ptrActiveHighScoreEntry) == NULL)
 	{
 		return;
 	}
@@ -195,9 +195,9 @@ static void UI_DrawTimeTrialPersonalBests(u16 labelPosX, u16 labelPosY, struct G
 	UI_DrawRacePersonalBest(labelPosX, pbRaceY);
 
 	DecalFont_DrawLine((char *)s_timeTrialPbLapLabel, (int)(s16)labelPosX, pbLapY, FONT_SMALL, ORANGE);
-	if (sdata->ptrActiveHighScoreEntry[0].time < MEMCARD_HIGH_SCORE_DEFAULT_TIME)
+	if (P32_GET(struct HighScoreEntry *, sdata->ptrActiveHighScoreEntry)[0].time < MEMCARD_HIGH_SCORE_DEFAULT_TIME)
 	{
-		DecalFont_DrawLine(RECTMENU_DrawTime(sdata->ptrActiveHighScoreEntry[0].time), timeX, pbLapY, FONT_SMALL, PERIWINKLE);
+		DecalFont_DrawLine(RECTMENU_DrawTime(P32_GET(struct HighScoreEntry *, sdata->ptrActiveHighScoreEntry)[0].time), timeX, pbLapY, FONT_SMALL, PERIWINKLE);
 	}
 	else
 	{
@@ -248,7 +248,7 @@ void UI_DrawRaceClock(u16 labelPosX, u16 labelPosY, u32 flags, struct Driver *dr
 	int unbitshiftTextPosX;
 	int bitshiftTextPosX;
 
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	minutesTens = '\0';
 
@@ -339,7 +339,7 @@ void UI_DrawRaceClock(u16 labelPosX, u16 labelPosY, u32 flags, struct Driver *dr
 	textPosX = labelPosX;
 	textPosY = labelPosY;
 
-	DecalFont_DrawLine(sdata->lngStrings[lngIndex], (int)(s16)labelPosX, (int)(s16)labelPosY, fontType, (int)labelFlags);
+	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[lngIndex], (int)(s16)labelPosX, (int)(s16)labelPosY, fontType, (int)labelFlags);
 
 	// set string to use data.ptrColor[1], which is the periwinkle gradient seen in the LAP text on the HUD
 	// particularly used for relic race when the time is frozen
@@ -541,7 +541,7 @@ void UI_DrawRaceClock(u16 labelPosX, u16 labelPosY, u32 flags, struct Driver *dr
 					// draw string
 					DecalFont_DrawLine(lapNumberString, lapDrawX, lapDrawY, lapFontType, (JUSTIFY_RIGHT | RED));
 
-					DecalFont_DrawLine(sdata->lngStrings[LNG_LAP], lapDrawX - (int)data.font_charPixWidth[lapFontType], lapDrawY, lapFontType, (JUSTIFY_RIGHT | RED));
+					DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_LAP], lapDrawX - (int)data.font_charPixWidth[lapFontType], lapDrawY, lapFontType, (JUSTIFY_RIGHT | RED));
 
 					stringColor = (int)(s16)lapOrRelicColor;
 					iVar7 = lapDrawY;
@@ -652,7 +652,7 @@ LAB_8004f378:
 		relicTimeX = textPosX + UI_RACE_CLOCK_RESULTS_TIME_X_OFFSET;
 	}
 
-	DecalFont_DrawLine(sdata->lngStrings[lngIndex], (int)(s16)textPosX, (int)relicLabelY, fontType, (int)(s16)lapOrRelicColor);
+	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[lngIndex], (int)(s16)textPosX, (int)relicLabelY, fontType, (int)(s16)lapOrRelicColor);
 
 	// Convert each number from the binary
 	// version of Relic Time to the ascii version
@@ -672,7 +672,7 @@ void UI_DrawLimitClock(s16 posX, s16 posY, s16 fontType)
 {
 	char *str;
 	u32 flags;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// amount of time event should last, minus, time elapsed in the event.
 	// basically, time remaining in the event
@@ -694,7 +694,7 @@ void UI_DrawLimitClock(s16 posX, s16 posY, s16 fontType)
 			for (int i = 0; i < gGT->numPlyrCurrGame; i++)
 			{
 				// pointer of each player (P1, P2, P3, P4)
-				struct Driver *d = gGT->drivers[i];
+				struct Driver *d = P32_GET(struct Driver *, gGT->drivers[i]);
 				d->actionsFlagSet |= ACTION_RACE_FINISHED;
 			}
 

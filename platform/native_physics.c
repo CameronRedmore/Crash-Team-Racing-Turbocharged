@@ -93,7 +93,7 @@ void NativePhysics_UpdateTurboPadContact(struct Driver *d, u32 stepFlags)
 		state->turboPadAbsentMS = 0;
 	else
 	{
-		state->turboPadAbsentMS += NativePhysics_ElapsedMS(sdata->gGT->elapsedTimeMS);
+		state->turboPadAbsentMS += NativePhysics_ElapsedMS(P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS);
 		// Require a full retail step away from the pad to rearm. Short contact
 		// gaps at high FPS are still part of the same crossing.
 		if (state->turboPadAbsentMS >= 32.0 - 1e-9) state->turboPadBoosted = 0;
@@ -202,12 +202,12 @@ void NativePhysics_CounterSteer(struct Driver *d)
 {
 	NativePhysicsVec acceleration={0,0,0};
 	if (abs(d->speedApprox)>768 && !(d->actionsFlagSet & ACTION_WARP) && d->kartState!=KS_CRASHING && !d->wallRubTimer &&
-	    (d->actionsFlagSet & ACTION_TOUCH_GROUND) && d->terrainMeta1->counterSteerRatio)
+	    (d->actionsFlagSet & ACTION_TOUCH_GROUND) && P32_GET(struct Terrain *, d->terrainMeta1)->counterSteerRatio)
 	{
 		double delta=NATIVE_PHYSICS_READ(d,turnAngleCurr)-d->turnAnglePrev;
 		double limit=(u8)d->const_ModelTurnCounterSteerStrength;
 		delta=fmax(-limit,fmin(limit,delta));
-		double impulse=d->terrainMeta1->counterSteerRatio*-8000.0/256.0*sin(delta*(6.2831853071795864769/4096.0));
+		double impulse=P32_GET(struct Terrain *, d->terrainMeta1)->counterSteerRatio*-8000.0/256.0*sin(delta*(6.2831853071795864769/4096.0));
 		acceleration=NativePhysics_RotateDriver(d,(NativePhysicsVec){impulse,0,0},0);
 	}
 	NATIVE_PHYSICS_WRITE(d,accel.x,acceleration.x);

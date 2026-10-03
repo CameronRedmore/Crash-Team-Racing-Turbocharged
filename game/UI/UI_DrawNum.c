@@ -22,7 +22,7 @@ enum
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80050c20-0x80050e6c.
 void UI_DrawNumWumpa(s16 posX, s16 posY, struct Driver *d)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	char message[UI_DRAWNUM_WUMPA_TEXT_BUFFER_SIZE];
 
 	if (gGT->numPlyrCurrGame <= UI_DRAWNUM_TEXT_PLAYER_MAX)
@@ -46,9 +46,9 @@ void UI_DrawNumWumpa(s16 posX, s16 posY, struct Driver *d)
 				iconID = currWumpa + currWumpa10s * -UI_DRAWNUM_DECIMAL_BASE;
 			}
 
-			DecalHUD_DrawPolyGT4(iconPtrArray[iconID], posX + UI_DRAWNUM_WUMPA_DIGIT_SPACING_X * digitIndex, posY, &gGT->backBuffer->primMem,
-			                     gGT->pushBuffer_UI.ptrOT, data.ptrColor[ORANGE][0], data.ptrColor[ORANGE][1], data.ptrColor[ORANGE][2],
-			                     data.ptrColor[ORANGE][3], 0, FP(1.0));
+			DecalHUD_DrawPolyGT4(iconPtrArray[iconID], posX + UI_DRAWNUM_WUMPA_DIGIT_SPACING_X * digitIndex, posY, &P32_GET(struct DB *, gGT->backBuffer)->primMem,
+			                     P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), P32_GET(u32 *, data.ptrColor[ORANGE])[0], P32_GET(u32 *, data.ptrColor[ORANGE])[1], P32_GET(u32 *, data.ptrColor[ORANGE])[2],
+			                     P32_GET(u32 *, data.ptrColor[ORANGE])[3], 0, FP(1.0));
 		}
 	}
 }
@@ -60,7 +60,7 @@ void UI_DrawNumTimebox(s16 posX, s16 posY, struct Driver *d)
 
 	DecalFont_DrawLine(&sdata->s_x[0], posX + UI_DRAWNUM_TIMEBOX_X_OFFSET_X, posY + UI_DRAWNUM_TIMEBOX_X_OFFSET_Y, FONT_SMALL, ORANGE);
 
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	int numCratesOwned = d->numTimeCrates;
 	int numCratesTotal = gGT->timeCratesInLEV;
 
@@ -76,7 +76,7 @@ void UI_DrawNumRelic(s16 posX, s16 posY)
 
 	DecalFont_DrawLine(&sdata->s_x[0], posX, posY + UI_DRAWNUM_SMALL_X_OFFSET_Y, FONT_SMALL, ORANGE);
 
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	int num = gGT->currAdvProfile.numRelics;
 	if ((gGT->gameMode2 & INC_RELIC) != 0)
 	{
@@ -94,7 +94,7 @@ void UI_DrawNumKey(s16 posX, s16 posY)
 
 	DecalFont_DrawLine(&sdata->s_x[0], posX, posY + UI_DRAWNUM_SMALL_X_OFFSET_Y, FONT_SMALL, ORANGE);
 
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	int num = gGT->currAdvProfile.numKeys;
 	if ((gGT->gameMode2 & INC_KEY) != 0)
 	{
@@ -112,7 +112,7 @@ void UI_DrawNumTrophy(s16 posX, s16 posY)
 
 	DecalFont_DrawLine(&sdata->s_x[0], posX, posY + UI_DRAWNUM_SMALL_X_OFFSET_Y, FONT_SMALL, ORANGE);
 
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	int num = gGT->currAdvProfile.numTrophies;
 	if ((gGT->gameMode2 & INC_TROPHY) != 0)
 	{
@@ -130,7 +130,7 @@ void UI_DrawNumCrystal(s16 posX, s16 posY, struct Driver *d)
 
 	DecalFont_DrawLine(&sdata->s_x[0], posX, posY + UI_DRAWNUM_SMALL_X_OFFSET_Y, FONT_SMALL, ORANGE);
 
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	int numCrystalsOwned = d->numCrystals;
 	int numCrystalsTotal = gGT->numCrystalsInLEV;
 

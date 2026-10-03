@@ -19,11 +19,11 @@ static void RB_Burst_CopyDrawState(struct Instance *dstInst, struct Instance *sr
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b1bd8-0x800b1d2c
 void RB_Burst_ProcessBucket(struct Thread *thread)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
-	for (; thread != NULL; thread = thread->siblingThread)
+	for (; thread != NULL; thread = P32_GET(struct Thread *, thread->siblingThread))
 	{
-		u32 *burst = thread->object;
+		u32 *burst = P32_GET(void *, thread->object);
 
 		for (int i = 0; i < gGT->numPlyrCurrGame; i++)
 		{
@@ -75,7 +75,7 @@ static void RB_Burst_UpdateSlot(int *slot)
 void RB_Burst_ThTick(struct Thread *t)
 {
 	int *burst;
-	burst = t->object;
+	burst = P32_GET(void *, t->object);
 
 	RB_Burst_UpdateSlot(&burst[1]);
 	RB_Burst_UpdateSlot(&burst[2]);
@@ -97,14 +97,14 @@ void RB_Burst_CollThBucket(struct ScratchpadStruct *sps, void *hitObject)
 	u16 reason;
 	struct Thread *weaponTh;
 
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
-	weaponTh = sps->Union.ThBuckColl.thread;
-	tw = weaponTh->object;
-	void *weaponObj = weaponTh->object;
+	weaponTh = P32_GET(struct Thread *, sps->Union.ThBuckColl.thread);
+	tw = P32_GET(void *, weaponTh->object);
+	void *weaponObj = P32_GET(void *, weaponTh->object);
 
 	struct Driver *attacker;
-	struct Driver *victim = t->object;
+	struct Driver *victim = P32_GET(void *, t->object);
 	model = t->modelIndex;
 
 	b32 hitDriver = (model == DYNAMIC_PLAYER) || (model == DYNAMIC_ROBOT_CAR);
@@ -115,7 +115,7 @@ void RB_Burst_CollThBucket(struct ScratchpadStruct *sps, void *hitObject)
 		b32 weaponIsMineHazard = (model == PU_EXPLOSIVE_CRATE) || (model == STATIC_BEAKER_RED) || (model == STATIC_BEAKER_GREEN) || (model == STATIC_CRATE_TNT);
 		if (weaponIsMineHazard)
 		{
-			attacker = ((struct MineWeapon *)weaponObj)->instParent->thread->object;
+			attacker = P32_GET(void *, P32_GET(struct Thread *, P32_GET(struct Instance *, ((struct MineWeapon *)weaponObj)->instParent)->thread)->object);
 
 			// blast driver
 			RB_Hazard_HurtDriver(victim, 2, attacker, 2);
@@ -132,7 +132,7 @@ void RB_Burst_CollThBucket(struct ScratchpadStruct *sps, void *hitObject)
 				reason = 3;
 			}
 
-			attacker = ((struct TrackerWeapon *)weaponObj)->instParent->thread->object;
+			attacker = P32_GET(void *, P32_GET(struct Thread *, P32_GET(struct Instance *, ((struct TrackerWeapon *)weaponObj)->instParent)->thread)->object);
 
 			// blast driver
 			RB_Hazard_HurtDriver(victim, 2, attacker, reason);
@@ -182,9 +182,9 @@ void RB_Burst_CollThBucket(struct ScratchpadStruct *sps, void *hitObject)
 	}
 
 	// if function pointer is valid
-	if (t->funcThCollide != NULL)
+	if (P32_GET(void *, t->funcThCollide) != NULL)
 	{
-		((ThreadBurstCollideFunc)t->funcThCollide)(t, weaponTh, t->funcThCollide, 3);
+		((ThreadBurstCollideFunc)P32_GET(void *, t->funcThCollide))(t, weaponTh, P32_GET(void *, t->funcThCollide), 3);
 	}
 	return;
 }
@@ -198,13 +198,13 @@ void RB_Burst_CollLevInst(struct ScratchpadStruct *sps, void *hitObject)
 	struct InstDef *instdef;
 	struct MetaDataMODEL *meta;
 
-	instdef = bspHitbox->data.hitbox.instDef;
+	instdef = P32_GET(struct InstDef *, bspHitbox->data.hitbox.instDef);
 	if (instdef == NULL)
 	{
 		return;
 	}
 
-	inst = instdef->ptrInstance;
+	inst = P32_GET(struct Instance *, instdef->ptrInstance);
 	if (inst == NULL)
 	{
 		return;
@@ -227,12 +227,12 @@ void RB_Burst_CollLevInst(struct ScratchpadStruct *sps, void *hitObject)
 			return;
 		}
 
-		if (meta->LInC == NULL)
+		if (P32_GET(int (*)(struct Instance *, struct Thread *, struct ScratchpadStruct *), meta->LInC) == NULL)
 		{
 			return;
 		}
 
-		meta->LInC(inst, sps->Union.ThBuckColl.thread, sps);
+		P32_GET(int (*)(struct Instance *, struct Thread *, struct ScratchpadStruct *), meta->LInC)(inst, P32_GET(struct Thread *, sps->Union.ThBuckColl.thread), sps);
 		return;
 	}
 
@@ -251,7 +251,7 @@ static char s_burst_shockwave1[] = "shockwave1";
 // NOTE(aalhendi): ASM-verified against NTSC-U 926 overlay 231 0x800b2154-0x800b25b8.
 void RB_Burst_Init(struct Instance *weaponInst)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	struct ModelHeader *headers;
 	struct Instance *currInst;
 	struct Thread *t;
@@ -261,10 +261,10 @@ void RB_Burst_Init(struct Instance *weaponInst)
 	currInst = INSTANCE_BirthWithThread(STATIC_WARPEDBURST, s_burst_explosion1, SMALL, BURST, RB_Burst_ThTick, 0xc, 0);
 
 	// get thread from instance
-	t = currInst->thread;
+	t = P32_GET(struct Thread *, currInst->thread);
 
 	// get object from thread
-	burst = t->object;
+	burst = P32_GET(void *, t->object);
 
 	// ====== First Instance =========
 
@@ -275,12 +275,12 @@ void RB_Burst_Init(struct Instance *weaponInst)
 	CTR_MatrixSetRotIdentity(&currInst->matrix);
 
 	// set flag to always point to camera
-	headers = currInst->model->headers;
+	headers = P32_GET(struct ModelHeader *, P32_GET(struct Model *, currInst->model)->headers);
 	headers[0].flags |= 2;
 
 	// ======== Next one ===========
 
-	currInst = INSTANCE_Birth3D(gGT->modelPtr[STATIC_WARPEDBURST], s_burst_explosion2, t);
+	currInst = INSTANCE_Birth3D(P32_GET(struct Model *, gGT->modelPtr[STATIC_WARPEDBURST]), s_burst_explosion2, t);
 
 	burst[2] = (int)currInst;
 	currInst->depthBiasNormal += -2;
@@ -297,12 +297,12 @@ void RB_Burst_Init(struct Instance *weaponInst)
 	currInst->matrix.m[2][2] = 0x1000;
 
 	// set flag to always point to camera
-	headers = currInst->model->headers;
+	headers = P32_GET(struct ModelHeader *, P32_GET(struct Model *, currInst->model)->headers);
 	headers[0].flags |= 2;
 
 	// ======= Next One ===========
 
-	currInst = INSTANCE_Birth3D(gGT->modelPtr[STATIC_SHOCKWAVE_RED], s_burst_shockwave1, t);
+	currInst = INSTANCE_Birth3D(P32_GET(struct Model *, gGT->modelPtr[STATIC_SHOCKWAVE_RED]), s_burst_shockwave1, t);
 
 	burst[0] = (int)currInst;
 	currInst->depthBiasNormal += -2;
@@ -311,7 +311,7 @@ void RB_Burst_Init(struct Instance *weaponInst)
 	currInst->flags |= (VISIBLE_DURING_GAMEPLAY | DRAW_BILLBOARD);
 
 	// set flag to always point to camera
-	headers = currInst->model->headers;
+	headers = P32_GET(struct ModelHeader *, P32_GET(struct Model *, currInst->model)->headers);
 	headers[0].flags |= 2;
 	headers[1].flags |= 2;
 
@@ -369,9 +369,9 @@ void RB_Burst_Init(struct Instance *weaponInst)
 	sps->Input1.pos.y = weaponInst->matrix.t[1];
 	sps->Input1.pos.z = weaponInst->matrix.t[2];
 
-	struct TrackerWeapon *tw = weaponInst->thread->object;
+	struct TrackerWeapon *tw = P32_GET(void *, P32_GET(struct Thread *, weaponInst->thread)->object);
 
-	int modelID = weaponInst->model->id;
+	int modelID = P32_GET(struct Model *, weaponInst->model)->id;
 
 	// missile
 	if (modelID == DYNAMIC_ROCKET)
@@ -398,24 +398,24 @@ void RB_Burst_Init(struct Instance *weaponInst)
 
 	sps->Input1.modelID = modelID;
 
-	sps->Union.ThBuckColl.thread = weaponInst->thread;
-	sps->Union.ThBuckColl.funcCallback = RB_Burst_CollThBucket;
+	P32_SET(sps->Union.ThBuckColl.thread, P32_GET(struct Thread *, weaponInst->thread));
+	P32_SET(sps->Union.ThBuckColl.funcCallback, RB_Burst_CollThBucket);
 
-	struct Thread *driverTh = tw->driverParent->instSelf->thread;
+	struct Thread *driverTh = P32_GET(struct Thread *, P32_GET(struct Instance *, P32_GET(struct Driver *, tw->driverParent)->instSelf)->thread);
 
 	// check collision with all Player thread
-	PROC_CollideHitboxWithBucket(gGT->threadBuckets[PLAYER].thread, sps, driverTh);
+	PROC_CollideHitboxWithBucket(P32_GET(struct Thread *, gGT->threadBuckets[PLAYER].thread), sps, driverTh);
 
 	// check collision with all Robotcar thread
-	PROC_CollideHitboxWithBucket(gGT->threadBuckets[ROBOT].thread, sps, driverTh);
+	PROC_CollideHitboxWithBucket(P32_GET(struct Thread *, gGT->threadBuckets[ROBOT].thread), sps, driverTh);
 
 	// check collision with all Mine thread
-	PROC_CollideHitboxWithBucket(gGT->threadBuckets[MINE].thread, sps, 0);
+	PROC_CollideHitboxWithBucket(P32_GET(struct Thread *, gGT->threadBuckets[MINE].thread), sps, 0);
 
 	// check collision with all Tracking thread
-	PROC_CollideHitboxWithBucket(gGT->threadBuckets[TRACKING].thread, sps, 0);
+	PROC_CollideHitboxWithBucket(P32_GET(struct Thread *, gGT->threadBuckets[TRACKING].thread), sps, 0);
 
-	sps->Union.ThBuckColl.funcCallback = RB_Burst_CollLevInst;
+	P32_SET(sps->Union.ThBuckColl.funcCallback, RB_Burst_CollLevInst);
 
 	PROC_StartSearch_Self(sps);
 	return;
@@ -430,7 +430,7 @@ static void RB_Burst_DrawAll_SetPushBuffer(struct Instance *inst, int playerInde
 {
 	if (inst != NULL)
 	{
-		RB_Burst_DrawAll_GetIDPP(inst, playerIndex)->pushBuffer = pb;
+		P32_SET(RB_Burst_DrawAll_GetIDPP(inst, playerIndex)->pushBuffer, pb);
 	}
 }
 
@@ -458,9 +458,9 @@ void RB_Burst_DrawAll(struct GameTracker *gGT)
 		SetRotMatrix(&pb->matrix_ViewProj);
 		SetTransMatrix(&pb->matrix_ViewProj);
 
-		for (thread = gGT->threadBuckets[BURST].thread; thread != NULL; thread = thread->siblingThread)
+		for (thread = P32_GET(struct Thread *, gGT->threadBuckets[BURST].thread); thread != NULL; thread = P32_GET(struct Thread *, thread->siblingThread))
 		{
-			u32 *burst = thread->object;
+			u32 *burst = P32_GET(void *, thread->object);
 			struct Instance *burstInst = RB_Burst_DrawAll_GetSlot(burst, 1);
 			SVECTOR pos;
 			VECTOR transformed;
@@ -524,9 +524,9 @@ void RB_Burst_DrawAll(struct GameTracker *gGT)
 	{
 		struct PushBuffer *pb = &gGT->pushBuffer[playerIndex];
 
-		for (thread = gGT->threadBuckets[BURST].thread; thread != NULL; thread = thread->siblingThread)
+		for (thread = P32_GET(struct Thread *, gGT->threadBuckets[BURST].thread); thread != NULL; thread = P32_GET(struct Thread *, thread->siblingThread))
 		{
-			u32 *burst = thread->object;
+			u32 *burst = P32_GET(void *, thread->object);
 			struct PushBuffer *targetPB = pb;
 
 			if ((selectedThread[playerIndex] != NULL) && (selectedThread[playerIndex] != thread))

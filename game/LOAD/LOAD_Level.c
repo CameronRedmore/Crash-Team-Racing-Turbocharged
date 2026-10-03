@@ -6,11 +6,11 @@
 // game does 3-GetAdvPackIndex to load the hub you ARE on
 void LOAD_TalkingMask(int packID, int maskID)
 {
-	sdata->modelMaskHints3D = 0;
+	P32_SET(sdata->modelMaskHints3D, 0);
 
 	// invalidate alternative-hub, because
 	// the mask will load in that level's RAM
-	sdata->gGT->levID_in_each_mempack[packID] = -1;
+	P32_GET(struct GameTracker *, sdata->gGT)->levID_in_each_mempack[packID] = -1;
 
 	// Swap to pack of hub you're NOT on,
 	// wipe the pack to reload the new MASK
@@ -22,18 +22,18 @@ void LOAD_TalkingMask(int packID, int maskID)
 	int offset = maskID * 4 + (packID - 1) * 2;
 
 	// NOTE(aalhendi): Retail queues legacy VRAM type 3 with no final callback.
-	LOAD_AppendQueue(sdata->ptrBigfileCdPos_2, LT_VRAM, BI_UKAHEAD + offset, NULL, NULL);
+	LOAD_AppendQueue(P32_GET(struct BigHeader *, sdata->ptrBigfileCdPos_2), LT_VRAM, BI_UKAHEAD + offset, NULL, NULL);
 
-	LOAD_AppendQueue(sdata->ptrBigfileCdPos_2, LT_GETADDR, BI_UKAHEAD + offset + 1, NULL, LOAD_Callback_MaskHints3D);
+	LOAD_AppendQueue(P32_GET(struct BigHeader *, sdata->ptrBigfileCdPos_2), LT_GETADDR, BI_UKAHEAD + offset + 1, NULL, LOAD_Callback_MaskHints3D);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80034874-0x800348e8.
 void LOAD_LevelFile(int levelID)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// why here?
-	sdata->modelMaskHints3D = 0;
+	P32_SET(sdata->modelMaskHints3D, 0);
 
 	gGT->hudFlags &= HUD_FLAG_CLEAR_RACE_HUD_MASK;
 

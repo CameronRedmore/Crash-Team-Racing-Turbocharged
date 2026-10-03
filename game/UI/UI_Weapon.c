@@ -66,7 +66,7 @@ void UI_Weapon_DrawSelf(s16 posX, s16 posY, s16 scale, struct Driver *d)
 	int iconID;
 	SVec2 pos;
 
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	itemID = d->heldItemID;
 
 	// If you do have "no weapon icon"
@@ -199,15 +199,15 @@ void UI_Weapon_DrawSelf(s16 posX, s16 posY, s16 scale, struct Driver *d)
 
 	DecalHUD_DrawWeapon(
 	    // pointer to icon, from array of icon pointers
-	    gGT->ptrIcons[iconID],
+	    P32_GET(struct Icon *, gGT->ptrIcons[iconID]),
 
 	    (int)posX, (int)posY,
 
 	    // PrimMem
-	    &gGT->backBuffer->primMem,
+	    &P32_GET(struct DB *, gGT->backBuffer)->primMem,
 
 	    // OTMem
-	    gGT->pushBuffer_UI.ptrOT,
+	    P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT),
 
 	    TRANS_50_DECAL, (int)scale, 1);
 
@@ -217,7 +217,7 @@ void UI_Weapon_DrawSelf(s16 posX, s16 posY, s16 scale, struct Driver *d)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80050af8-0x80050c20.
 void UI_Weapon_DrawBG(s16 posX, s16 posY, s16 scale, struct Driver *d)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// reduce frame timer until it hits zero (unused?)
 	if (d->BattleHUD.juicedUpCooldown != 0)
@@ -237,15 +237,15 @@ void UI_Weapon_DrawBG(s16 posX, s16 posY, s16 scale, struct Driver *d)
 		UI_WeaponBG_DrawShine(
 
 		    // Weapon Roulette background (shine)
-		    gGT->ptrIcons[UI_WEAPON_BG_SHINE_ICON_INDEX],
+		    P32_GET(struct Icon *, gGT->ptrIcons[UI_WEAPON_BG_SHINE_ICON_INDEX]),
 
 		    (int)posX, (int)posY,
 
 		    // pointer to PrimMem struct
-		    &gGT->backBuffer->primMem,
+		    &P32_GET(struct DB *, gGT->backBuffer)->primMem,
 
 		    // pointer to OTMem
-		    gGT->pushBuffer[d->driverID].ptrOT,
+		    P32_GET(uint32_t *, gGT->pushBuffer[d->driverID].ptrOT),
 
 		    UI_WEAPON_BG_SHINE_TRANSPARENCY_BASE + i, scaleInt, shineScale, UI_WEAPON_BG_SHINE_COLOR);
 	}

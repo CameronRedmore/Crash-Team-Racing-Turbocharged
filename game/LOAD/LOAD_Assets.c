@@ -149,7 +149,7 @@ static void NativeAIRandomizer_2PModelLoaded(struct LoadQueueSlot *lqs)
 		int driverIndex = 2 + i;
 		if (data.characterIDs[driverIndex] == characterID)
 		{
-			s_nativeAIRandomizer2PModels[i] = (struct Model *)lqs->ptrDestination;
+			s_nativeAIRandomizer2PModels[i] = (struct Model *)P32_GET(void *, lqs->ptrDestination);
 			return;
 		}
 	}
@@ -240,10 +240,9 @@ void NativeAIRandomizer_FinalizeModels(void)
 {
 	for (int driverIndex = 0; driverIndex < NATIVE_AI_RANDOMIZER_DRIVER_COUNT; driverIndex++)
 	{
-		if (s_nativeAIRandomizerModels[driverIndex].fileBase != NULL)
+		if (P32_GET(void *, s_nativeAIRandomizerModels[driverIndex].fileBase) != NULL)
 		{
-			s_nativeAIRandomizerModels[driverIndex].model =
-			    (struct Model *)((u8 *)s_nativeAIRandomizerModels[driverIndex].fileBase + LOAD_MODEL_FILE_HEADER_BYTES);
+			P32_SET(s_nativeAIRandomizerModels[driverIndex].model, (struct Model *)((u8 *)P32_GET(void *, s_nativeAIRandomizerModels[driverIndex].fileBase) + LOAD_MODEL_FILE_HEADER_BYTES));
 		}
 	}
 	NativeCustomRacer_ApplyDriverVramPatches();
@@ -273,7 +272,7 @@ struct Model *NativeAIRandomizer_GetDriverModel(int driverIndex)
 		}
 	}
 
-	return s_nativeAIRandomizerModels[driverIndex].model;
+	return P32_GET(struct Model *, s_nativeAIRandomizerModels[driverIndex].model);
 }
 #endif
 
@@ -326,9 +325,9 @@ void LOAD_Robots2P(struct BigHeader *bigfile, int p1, int p2, void (*callback)(s
 	}
 
 #if defined(CTR_NATIVE)
-	if (NativeAIRandomizer_ShouldUse(sdata->gGT))
+	if (NativeAIRandomizer_ShouldUse(P32_GET(struct GameTracker *, sdata->gGT)))
 	{
-		NativeAIRandomizer_SetCharacters(sdata->gGT, 2, 2 + LOAD_2P_AI_SET_RACER_COUNT);
+		NativeAIRandomizer_SetCharacters(P32_GET(struct GameTracker *, sdata->gGT), 2, 2 + LOAD_2P_AI_SET_RACER_COUNT);
 
 		if (!NativeAIRandomizer_Queue2PModels(bigfile))
 		{
@@ -360,7 +359,7 @@ void LOAD_Robots1P(int characterID)
 	data.characterIDs[0] = characterID;
 
 #if defined(CTR_NATIVE)
-	if (NativeAIRandomizer_ShouldPreserveCupLineup(sdata->gGT))
+	if (NativeAIRandomizer_ShouldPreserveCupLineup(P32_GET(struct GameTracker *, sdata->gGT)))
 	{
 		return;
 	}
@@ -377,9 +376,9 @@ void LOAD_Robots1P(int characterID)
 	}
 
 #if defined(CTR_NATIVE)
-	if (NativeAIRandomizer_ShouldUse(sdata->gGT))
+	if (NativeAIRandomizer_ShouldUse(P32_GET(struct GameTracker *, sdata->gGT)))
 	{
-		NativeAIRandomizer_SetCharacters(sdata->gGT, 1, LOAD_CHARACTER_ID_COUNT);
+		NativeAIRandomizer_SetCharacters(P32_GET(struct GameTracker *, sdata->gGT), 1, LOAD_CHARACTER_ID_COUNT);
 	}
 #endif
 }
@@ -392,7 +391,7 @@ int LOAD_DriverMPK(struct BigHeader *bigfile, int levelLOD, void (*callback)(str
 	int i;
 	int gameMode1;
 
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 #if defined(CTR_NATIVE)
 	NativeAIRandomizer_ResetModels();
 	if (!NativeAIRandomizer_ShouldUse(gGT))
@@ -594,7 +593,7 @@ void LOAD_LangFile(int bigfilePtr, int lang)
 	VSync(0);
 #endif
 
-	if (sdata->lngFile == 0)
+	if (P32_GET(void *, sdata->lngFile) == 0)
 	{
 		struct BigHeader *bigfile = (struct BigHeader *)bigfilePtr;
 		struct BigEntry *entries = BIG_GETENTRY(bigfile);
@@ -612,10 +611,10 @@ void LOAD_LangFile(int bigfilePtr, int lang)
 		}
 
 		sdata->langBufferSize = (int)langBufferSize;
-		sdata->lngFile = MEMPACK_AllocMem(sdata->langBufferSize /* "lang buffer" */);
+		P32_SET(sdata->lngFile, MEMPACK_AllocMem(sdata->langBufferSize /* "lang buffer" */));
 	}
 
-	lngFile = sdata->lngFile;
+	lngFile = P32_GET(void *, sdata->lngFile);
 
 	lngFile = LOAD_ReadFile_ex((struct BigHeader *)bigfilePtr, LT_SETADDR, BI_LANGUAGEFILE + lang, lngFile, &size, NULL);
 	if (lngFile == NULL)
@@ -627,7 +626,7 @@ void LOAD_LangFile(int bigfilePtr, int lang)
 	strArray = (char **)((u32)lngFile + lngFile->offsetToPtrArr);
 
 	sdata->numLngStrings = numStrings;
-	sdata->lngStrings = strArray;
+	P32_SET(sdata->lngStrings, strArray);
 
 	for (i = 0; i < numStrings; i++)
 	{

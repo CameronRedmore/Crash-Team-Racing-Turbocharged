@@ -16,7 +16,7 @@ enum CutsceneCameraConstants
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800aed48-0x800aedf8
 b32 CS_Camera_BoolGotoBoss(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// If just got 18th relic
 	if ((gGT->podiumRewardID == STATIC_RELIC) && (gGT->currAdvProfile.numRelics >= ADV_OXIDE_FINAL_RELIC_COUNT))
@@ -34,8 +34,8 @@ b32 CS_Camera_BoolGotoBoss(void)
 		return 1;
 	}
 
-	struct Instance *inst = gGT->drivers[0]->instSelf;
-	const SVec3 *podiumPos = &gGT->level1->ptrSpawnType2_PosRot[1].posRot->pos;
+	struct Instance *inst = P32_GET(struct Instance *, P32_GET(struct Driver *, gGT->drivers[0])->instSelf);
+	const SVec3 *podiumPos = &P32_GET(struct SpawnPosRot *, P32_GET(struct SpawnType2 *, P32_GET(struct Level *, gGT->level1)->ptrSpawnType2_PosRot)[1].posRot)->pos;
 
 	// TRUE if TeleportSelf did NOT spawn on podium (goto boss door)
 	return (inst->matrix.t[0] != podiumPos->x) || (inst->matrix.t[2] != podiumPos->z);
@@ -51,7 +51,7 @@ void CS_Camera_ThTick_Boss(struct Thread *t)
 	struct CutsceneObj *cs;
 	struct GameTracker *gGT;
 
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	levID = gGT->levelID;
 
 	// for undecided cutscene:
@@ -95,15 +95,15 @@ void CS_Camera_ThTick_Boss(struct Thread *t)
 		}
 
 		// kill all podium "other" threads
-		t = gGT->threadBuckets[OTHER].thread;
+		t = P32_GET(struct Thread *, gGT->threadBuckets[OTHER].thread);
 		while (t != 0)
 		{
 			t->flags |= THREAD_FLAG_DEAD;
-			t = t->siblingThread;
+			t = P32_GET(struct Thread *, t->siblingThread);
 		}
 
 		// wait one frame, for the thread recycler to finish
-		if (gGT->threadBuckets[OTHER].thread != 0)
+		if (P32_GET(struct Thread *, gGT->threadBuckets[OTHER].thread) != 0)
 		{
 			break;
 		}
@@ -119,7 +119,7 @@ void CS_Camera_ThTick_Boss(struct Thread *t)
 
 		// NULLPTR checks if load finished,
 		// because CS_LoadBossCallback writes this last
-		if (D233.ptrModelBossHead == 0)
+		if (P32_GET(struct Model *, D233.ptrModelBossHead) == 0)
 		{
 			break;
 		}
@@ -135,7 +135,7 @@ void CS_Camera_ThTick_Boss(struct Thread *t)
 					mArr[i] = (struct Model *)((char *)mArr[i] + 4);
 				}
 
-				gGT->modelPtr[mArr[i]->id] = mArr[i];
+				P32_SET(gGT->modelPtr[mArr[i]->id], mArr[i]);
 			}
 		}
 
@@ -169,13 +169,13 @@ void CS_Camera_ThTick_Boss(struct Thread *t)
 				continue;
 			}
 
-			inst = t->inst;
-			cs = t->object;
+			inst = P32_GET(struct Instance *, t->inst);
+			cs = P32_GET(void *, t->object);
 
 			// head
 			if (i == 0)
 			{
-				CS_ScriptCmd_OpcodeAt(cs, bcd->opcode);
+				CS_ScriptCmd_OpcodeAt(cs, P32_GET(char *const, bcd->opcode));
 				cs->opcodeDuration = 0;
 				continue;
 			}
@@ -229,12 +229,12 @@ void CS_Camera_ThTick_Boss(struct Thread *t)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800aedf8-0x800af328
 void CS_Camera_ThTick_Podium(struct Thread *th)
 {
-	struct GameTracker *gGT = sdata->gGT;
-	struct CsPodiumCameraThreadObj *podium = th->object;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct CsPodiumCameraThreadObj *podium = P32_GET(void *, th->object);
 
 	if (podium->pathFrame32 == 0)
 	{
-		gGT->drivers[0]->funcPtrs[DRIVER_FUNC_INIT] = VehStuckProc_RIP_Init;
+		P32_SET(P32_GET(struct Driver *, gGT->drivers[0])->funcPtrs[DRIVER_FUNC_INIT], VehStuckProc_RIP_Init);
 	}
 
 	if (gGT->cameraDC[0].cameraMode != CAMERA_MODE_FREECAM)
@@ -247,7 +247,7 @@ void CS_Camera_ThTick_Podium(struct Thread *th)
 		D233.podiumPrizeDropReady = 1;
 	}
 
-	if (((D233.cutsceneState != CS_CAMERA_PAN || D233.boolStartToSkip != 0) && ((gGT->gameMode2 & CUP_NEW_WIN) != 0)) && sdata->ptrActiveMenu == NULL)
+	if (((D233.cutsceneState != CS_CAMERA_PAN || D233.boolStartToSkip != 0) && ((gGT->gameMode2 & CUP_NEW_WIN) != 0)) && P32_GET(struct RectMenu *, sdata->ptrActiveMenu) == NULL)
 	{
 		s16 stringIndex = LNG_SAVE_YOUR_CUP_PROGRESS;
 
@@ -260,7 +260,7 @@ void CS_Camera_ThTick_Podium(struct Thread *th)
 		gGT->gameMode2 &= ~(CUP_NEW_WIN | CUP_NEW_BATTLE);
 	}
 
-	if (D233.cutsceneState == CS_CAMERA_PAN || sdata->ptrActiveMenu != NULL)
+	if (D233.cutsceneState == CS_CAMERA_PAN || P32_GET(struct RectMenu *, sdata->ptrActiveMenu) != NULL)
 	{
 		int numPoints = CAM_Path_GetNumPoints();
 		int maxFrame = numPoints * CS_PODIUM_PATH_FRAME_UNIT;
@@ -306,12 +306,12 @@ void CS_Camera_ThTick_Podium(struct Thread *th)
 			goto check_skip_button;
 		}
 
-		DecalFont_DrawLine(sdata->lngStrings[LNG_PRESS_TO_CONTINUE], CS_PODIUM_CONTINUE_TEXT_X, CS_PODIUM_CONTINUE_TEXT_Y, FONT_BIG, JUSTIFY_CENTER | ORANGE);
+		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_PRESS_TO_CONTINUE], CS_PODIUM_CONTINUE_TEXT_X, CS_PODIUM_CONTINUE_TEXT_Y, FONT_BIG, JUSTIFY_CENTER | ORANGE);
 	}
 
-	if (((gGT->gameMode2 & CUP_NEW_WIN) == 0) && sdata->ptrActiveMenu == NULL)
+	if (((gGT->gameMode2 & CUP_NEW_WIN) == 0) && P32_GET(struct RectMenu *, sdata->ptrActiveMenu) == NULL)
 	{
-		u32 tapped = sdata->gGamepads->gamepad[0].buttonsTapped;
+		u32 tapped = P32_GET(struct GamepadSystem *, sdata->gGamepads)->gamepad[0].buttonsTapped;
 		s16 rewardId;
 
 		if (((tapped & BTN_START) == 0) && ((D233.cutsceneState == CS_CAMERA_PAN || (tapped & (BTN_START | BTN_CROSS_one)) == 0)) &&
@@ -367,7 +367,7 @@ void CS_Camera_ThTick_Podium(struct Thread *th)
 					break;
 				}
 
-				if (!VehPickupItem_MaskBoolGoodGuy(gGT->drivers[0]))
+				if (!VehPickupItem_MaskBoolGoodGuy(P32_GET(struct Driver *, gGT->drivers[0])))
 				{
 					hintID += ADV_MASK_HINT_UKA_UKA_XA_OFFSET;
 				}
@@ -379,7 +379,7 @@ void CS_Camera_ThTick_Podium(struct Thread *th)
 				return;
 			}
 
-			th->funcThTick = CS_Camera_ThTick_Boss;
+			P32_SET(th->funcThTick, CS_Camera_ThTick_Boss);
 
 			if (gGT->podiumRewardID != STATIC_RELIC)
 			{
@@ -420,7 +420,7 @@ void CS_Camera_ThTick_Podium(struct Thread *th)
 	}
 
 check_skip_button:
-	if ((sdata->gGamepads->gamepad[0].buttonsTapped & BTN_START) != 0)
+	if ((P32_GET(struct GamepadSystem *, sdata->gGamepads)->gamepad[0].buttonsTapped & BTN_START) != 0)
 	{
 		D233.boolStartToSkip = 1;
 	}

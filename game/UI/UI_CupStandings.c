@@ -75,7 +75,7 @@ void UI_CupStandings_FinalizeCupRanks(void)
 	int selectedRankSlot;
 
 	bestRank = 99;
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	selectedRankSlot = -1;
 
 	numDrivers = gGT->numPlyrCurrGame + gGT->numBotsNextGame;
@@ -105,7 +105,7 @@ void UI_CupStandings_FinalizeCupRanks(void)
 		for (int i = rankSlot; i < tiedTopCount + 1; i++)
 		{
 			struct Driver *driver;
-			driver = gGT->drivers[data.cupPositionPerPlayer[i]];
+			driver = P32_GET(struct Driver *, gGT->drivers[data.cupPositionPerPlayer[i]]);
 
 			if (driver->driverRank < (s16)bestRank)
 			{
@@ -133,7 +133,7 @@ void UI_CupStandings_UpdateCupRanks(void)
 
 	bestScore = 0;
 	bestIndex = -1;
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	assignedMask = 0;
 
 	numDrivers = gGT->numPlyrCurrGame + gGT->numBotsNextGame;
@@ -169,7 +169,7 @@ void UI_CupStandings_UpdateCupRanks(void)
 void UI_CupStandings_InputAndDraw(void)
 {
 	// NOTE(aalhendi): ASM-verified NTSC-U 926 0x800562fc-0x800572d0.
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	s16 iconColumnOffset;
 	int i;
 	int animationFrame;
@@ -288,9 +288,9 @@ void UI_CupStandings_InputAndDraw(void)
 	}
 
 	// title text
-	DecalFont_DrawLine(sdata->lngStrings[titleString], drawPos.x, drawPos.y + UI_CUP_STANDINGS_TITLE_Y_OFFSET, FONT_BIG, JUSTIFY_CENTER | ORANGE);
+	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[titleString], drawPos.x, drawPos.y + UI_CUP_STANDINGS_TITLE_Y_OFFSET, FONT_BIG, JUSTIFY_CENTER | ORANGE);
 
-	DecalFont_DrawLine(sdata->lngStrings[LNG_STANDINGS], drawPos.x, drawPos.y, FONT_BIG, JUSTIFY_CENTER | ORANGE);
+	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_STANDINGS], drawPos.x, drawPos.y, FONT_BIG, JUSTIFY_CENTER | ORANGE);
 
 	// 24 characters, in case of other
 	// languages with longer text
@@ -299,7 +299,7 @@ void UI_CupStandings_InputAndDraw(void)
 	// TRACK 1/4, 2/4, 3/4, 4/4
 	sprintf(text, "%s %ld/4",
 
-	        sdata->lngStrings[LNG_TRACK],
+	        P32_GET(char **, sdata->lngStrings)[LNG_TRACK],
 
 	        // Track Index (0, 1, 2, 3) + 1
 	        CTR_PRINTF_PSX_LONG(gGT->cup.trackIndex + 1));
@@ -421,7 +421,7 @@ void UI_CupStandings_InputAndDraw(void)
 		if ((sdata->menuReadyToPass & UI_CUP_STANDINGS_PAGE_TRACK_POINTS) == 0)
 		{
 			// get driver in order of race rank (for one track)
-			d = gGT->driversInRaceOrder[i];
+			d = P32_GET(struct Driver *, gGT->driversInRaceOrder[i]);
 		}
 
 		// if this is not the first page,
@@ -429,15 +429,15 @@ void UI_CupStandings_InputAndDraw(void)
 		else
 		{
 			// get driver in order of cup rank (for collection of tracks)
-			d = gGT->drivers[data.cupPositionPerPlayer[i]];
+			d = P32_GET(struct Driver *, gGT->drivers[data.cupPositionPerPlayer[i]]);
 		}
 
 		// Draw character icon
-		UI_DrawDriverIconForDriver(d->driverID, gGT->ptrIcons[data.MetaDataCharacters[data.characterIDs[d->driverID]].iconID],
+		UI_DrawDriverIconForDriver(d->driverID, P32_GET(struct Icon *, gGT->ptrIcons[data.MetaDataCharacters[data.characterIDs[d->driverID]].iconID]),
 
-		                  drawPos.x, drawPos.y, &gGT->backBuffer->primMem,
+		                  drawPos.x, drawPos.y, &P32_GET(struct DB *, gGT->backBuffer)->primMem,
 
-		                  gGT->pushBuffer_UI.ptrOT, TRANS_50_DECAL, UI_CUP_STANDINGS_ICON_SCALE,
+		                  P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), TRANS_50_DECAL, UI_CUP_STANDINGS_ICON_SCALE,
 		                  MakeColor(UI_CUP_STANDINGS_ICON_NEUTRAL_CHANNEL, UI_CUP_STANDINGS_ICON_NEUTRAL_CHANNEL, UI_CUP_STANDINGS_ICON_NEUTRAL_CHANNEL).self);
 
 		// If this is the first screen of cup standings,
@@ -508,7 +508,7 @@ void UI_CupStandings_InputAndDraw(void)
 	r.h = UI_CUP_STANDINGS_PANEL_H;
 
 	// Draw 2D Menu rectangle background
-	RECTMENU_DrawInnerRect(&r, 4, gGT->backBuffer->otMem.uiOT);
+	RECTMENU_DrawInnerRect(&r, 4, P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT));
 
 	// Timer
 	if (sdata->framesSinceRaceEnded < FPS_DOUBLE(UI_CUP_STANDINGS_DONE_FRAME))
@@ -519,7 +519,7 @@ void UI_CupStandings_InputAndDraw(void)
 
 		        // If you are not in overall Cup standings
 		        ((sdata->menuReadyToPass & UI_CUP_STANDINGS_PAGE_OVERALL_POINTS) == 0)) &&
-		    (DecalFont_DrawLine(sdata->lngStrings[LNG_PRESS_TO_CONTINUE], UI_CUP_STANDINGS_PRESS_X, UI_CUP_STANDINGS_PRESS_Y, FONT_BIG,
+		    (DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_PRESS_TO_CONTINUE], UI_CUP_STANDINGS_PRESS_X, UI_CUP_STANDINGS_PRESS_Y, FONT_BIG,
 		                        JUSTIFY_CENTER | ORANGE),
 
 		     // If you press Cross or Circle
@@ -561,7 +561,7 @@ void UI_CupStandings_InputAndDraw(void)
 			for (i = 0; i < numDrivers; i++)
 			{
 				// the amount of points this player has in the cup
-				gGT->cup.points[gGT->driversInRaceOrder[i]->driverID] +=
+				gGT->cup.points[P32_GET(struct Driver *, gGT->driversInRaceOrder[i])->driverID] +=
 
 				    // Incremented by
 				    // The amount of points that should be awarded to each position
@@ -627,7 +627,7 @@ void UI_CupStandings_InputAndDraw(void)
 				for (i = 0; i < UI_CUP_STANDINGS_DRIVER_SLOTS; i++)
 				{
 					struct Driver *d;
-					d = gGT->drivers[ranks[i]];
+					d = P32_GET(struct Driver *, gGT->drivers[ranks[i]]);
 
 					// If driver is not nullptr
 					if (d != 0)
@@ -655,7 +655,7 @@ void UI_CupStandings_InputAndDraw(void)
 					sdata->Loading.OnBegin.RemBitsConfig0 |= ADVENTURE_CUP;
 
 					// If player 1 won the cup
-					if (data.cupPositionPerPlayer[0] == gGT->drivers[0]->driverID)
+					if (data.cupPositionPerPlayer[0] == P32_GET(struct Driver *, gGT->drivers[0])->driverID)
 					{
 						int bitIndex = ADV_REWARD_FIRST_GEM + i;
 						u32 *rewardsSet = sdata->advProgress.rewards;
@@ -694,7 +694,7 @@ void UI_CupStandings_InputAndDraw(void)
 					// then you still get completion credit
 
 					// If Player 1 or Player 2 won the cup
-					if ((gGT->drivers[0]->driverRank == 0) || ((gGT->drivers[1]->driverRank == 0) &&
+					if ((P32_GET(struct Driver *, gGT->drivers[0])->driverRank == 0) || ((P32_GET(struct Driver *, gGT->drivers[1])->driverRank == 0) &&
 
 					                                           // If you're in Arcade Mode
 					                                           ((gGT->gameMode1 & ARCADE_MODE) != 0)))

@@ -47,7 +47,7 @@ void PlayLevel_UpdateLapStats(void)
 	int driverIndex;
 	int finishedHumanCount;
 	int currRank;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	finishedHumanCount = 0;
 	currRank = 0;
@@ -59,7 +59,7 @@ void PlayLevel_UpdateLapStats(void)
 	// find farthest-ahead human
 	for (int raceOrderIndex = 0; raceOrderIndex < PLAYLEVEL_DRIVER_COUNT; raceOrderIndex++)
 	{
-		currDriver = gGT->driversInRaceOrder[raceOrderIndex];
+		currDriver = P32_GET(struct Driver *, gGT->driversInRaceOrder[raceOrderIndex]);
 
 		if ((currDriver != 0) && ((currDriver->actionsFlagSet & ACTION_BOT) == 0))
 		{
@@ -70,9 +70,9 @@ void PlayLevel_UpdateLapStats(void)
 
 	for (driverIndex = 0; driverIndex < PLAYLEVEL_DRIVER_COUNT; driverIndex++)
 	{
-		gGT->driversInRaceOrder[driverIndex] = NULL;
+		P32_SET(gGT->driversInRaceOrder[driverIndex], NULL);
 
-		currDriver = gGT->drivers[driverIndex];
+		currDriver = P32_GET(struct Driver *, gGT->drivers[driverIndex]);
 
 		if (currDriver == NULL)
 		{
@@ -143,7 +143,7 @@ void PlayLevel_UpdateLapStats(void)
 				    ) &&
 
 				    // player of any kind
-				    (currDriver->instSelf->thread->modelIndex == DYNAMIC_PLAYER))
+				    (P32_GET(struct Thread *, P32_GET(struct Instance *, currDriver->instSelf)->thread)->modelIndex == DYNAMIC_PLAYER))
 				{
 					UI_SaveLapTime(currDriver->lapIndex, gGT->elapsedEventTime - currDriver->lapTime, currDriver->driverID);
 
@@ -265,7 +265,7 @@ void PlayLevel_UpdateLapStats(void)
 			// if player did not JUST cross finish backwards
 			else
 			{
-				u32 trackLen = gGT->level1->ptr_restart_points[0].distToFinish;
+				u32 trackLen = P32_GET(struct CheckpointNode *, P32_GET(struct Level *, gGT->level1)->ptr_restart_points)[0].distToFinish;
 
 				if (
 				    // if player did not EVER cross finish backwards
@@ -296,7 +296,7 @@ void PlayLevel_UpdateLapStats(void)
 
 		// === Driver Finished Race ===
 
-		if (currDriver->instSelf->thread->modelIndex == DYNAMIC_PLAYER)
+		if (P32_GET(struct Thread *, P32_GET(struct Instance *, currDriver->instSelf)->thread)->modelIndex == DYNAMIC_PLAYER)
 		{
 			// count humans to finish race
 			finishedHumanCount = finishedHumanCount + 1;
@@ -329,7 +329,7 @@ void PlayLevel_UpdateLapStats(void)
 		for (driverIndex = 0; driverIndex < PLAYLEVEL_DRIVER_COUNT; driverIndex++)
 		{
 			// get current driver
-			currDriver = gGT->drivers[driverIndex];
+			currDriver = P32_GET(struct Driver *, gGT->drivers[driverIndex]);
 
 			if (currDriver == NULL)
 			{
@@ -380,7 +380,7 @@ void PlayLevel_UpdateLapStats(void)
 			// If traffic lights run out
 			if (gGT->trafficLightsTimer < 1)
 			{
-				gGT->drivers[bestDriverIndex]->driverRank = currRank;
+				P32_GET(struct Driver *, gGT->drivers[bestDriverIndex])->driverRank = currRank;
 			}
 
 			// if traffic lights >= 1
@@ -388,7 +388,7 @@ void PlayLevel_UpdateLapStats(void)
 			{
 				// set every driver position rank,
 				// to the order that they spawn on the starting line
-				gGT->drivers[bestDriverIndex]->driverRank = sdata->kartSpawnOrderArray[bestDriverIndex];
+				P32_GET(struct Driver *, gGT->drivers[bestDriverIndex])->driverRank = sdata->kartSpawnOrderArray[bestDriverIndex];
 				gGT->humanPlayerPositions[bestDriverIndex] = sdata->kartSpawnOrderArray[bestDriverIndex];
 			}
 		}
@@ -397,7 +397,7 @@ void PlayLevel_UpdateLapStats(void)
 	for (driverIndex = 0; driverIndex < PLAYLEVEL_DRIVER_COUNT; driverIndex++)
 	{
 		// get pointer to each player structure
-		currDriver = gGT->drivers[driverIndex];
+		currDriver = P32_GET(struct Driver *, gGT->drivers[driverIndex]);
 
 		if (currDriver == NULL)
 		{
@@ -407,14 +407,14 @@ void PlayLevel_UpdateLapStats(void)
 		// should be impossible to be -1 here
 		if (currDriver->driverRank > PLAYLEVEL_UNSORTED_RANK)
 		{
-			gGT->driversInRaceOrder[currDriver->driverRank] = currDriver;
+			P32_SET(gGT->driversInRaceOrder[currDriver->driverRank], currDriver);
 		}
 	}
 
 	for (driverIndex = 0; driverIndex < gGT->numPlyrCurrGame; driverIndex++)
 	{
 		// pointer to each player structure
-		currDriver = gGT->drivers[driverIndex];
+		currDriver = P32_GET(struct Driver *, gGT->drivers[driverIndex]);
 
 		if (currDriver == NULL)
 		{
@@ -426,7 +426,7 @@ void PlayLevel_UpdateLapStats(void)
 		if ((PLAYLEVEL_UNSORTED_RANK < currRank) && (PLAYLEVEL_PASS_VOICELINE_DELAY < gGT->elapsedEventTime) &&
 		    ((s8)gGT->humanPlayerPositions[driverIndex] < currRank))
 		{
-			struct Driver *voiceDriver = gGT->driversInRaceOrder[currRank - 1];
+			struct Driver *voiceDriver = P32_GET(struct Driver *, gGT->driversInRaceOrder[currRank - 1]);
 			// Make driver talk
 #if defined(__vita__)
 			if (NativeAdhoc_ShouldPresentDriver(voiceDriver->driverID))
@@ -465,7 +465,7 @@ void PlayLevel_UpdateLapStats(void)
 		for (currRank = 0; currRank < PLAYLEVEL_DRIVER_COUNT; currRank++)
 		{
 			// Get address of each player structure
-			currDriver = gGT->drivers[currRank];
+			currDriver = P32_GET(struct Driver *, gGT->drivers[currRank]);
 
 			if (currDriver == NULL)
 			{

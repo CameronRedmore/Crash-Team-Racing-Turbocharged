@@ -38,6 +38,17 @@ union NativeScratchpadStorage
 
 CTR_STATIC_ASSERT(sizeof(union NativeScratchpadStorage) == CTR_SCRATCHPAD_SIZE);
 
+#if defined(CTR_NATIVE_64BIT)
+// Origin for CtrPtr32 handles. Nothing may ever be allocated at offset 0.
+char gCtrPtr32Anchor[64];
+
+void CtrPtr32_RangeError(uintptr_t p)
+{
+	fprintf(stderr, "CtrPtr32: pointer %p is outside +-2 GiB of the image\n", (void *)p);
+	abort();
+}
+#endif
+
 global_variable char s_mempackMemory[CTR_NATIVE_MEMPACK_BUFFER_SIZE];
 global_variable struct PlatformMempackArena s_mempackArena;
 global_variable union NativeScratchpadStorage s_scratchpadMemory;
@@ -98,9 +109,9 @@ void Platform_RepairResidentPointers(s32 activeMempackIndex)
 	// initializer-only memcard helper global out of the live state graph so
 	// checkpoints capture the actual memcard buffer.
 	sdata = &sdata_static;
-	sdata_static.gGT = &sdata_static.gameTracker;
-	sdata_static.gGamepads = &sdata_static.gamepadSystem;
-	sdata_static.PtrMempack = &sdata_static.mempack[activeMempackIndex];
-	sdata_static.ptrToMemcardBuffer1 = &sdata_static.memcardBytes[0];
-	sdata_static.ptrToMemcardBuffer2 = &sdata_static.memcardBytes[0];
+	P32_SET(sdata_static.gGT, &sdata_static.gameTracker);
+	P32_SET(sdata_static.gGamepads, &sdata_static.gamepadSystem);
+	P32_SET(sdata_static.PtrMempack, &sdata_static.mempack[activeMempackIndex]);
+	P32_SET(sdata_static.ptrToMemcardBuffer1, &sdata_static.memcardBytes[0]);
+	P32_SET(sdata_static.ptrToMemcardBuffer2, &sdata_static.memcardBytes[0]);
 }

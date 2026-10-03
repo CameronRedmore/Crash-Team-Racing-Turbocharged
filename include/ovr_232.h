@@ -4,7 +4,7 @@
 
 struct MaskHint
 {
-	struct MaskHint *self; // why?
+	P32(struct MaskHint *) self; // why?
 	s16 scale;
 
 	// end of struct
@@ -114,7 +114,7 @@ struct BossGarageDoor
 	// so you can't spam open/close
 	int cooldown;
 
-	struct Instance *garageTopInst;
+	P32(struct Instance *) garageTopInst;
 
 	SVec3 rot;
 	s16 _pad_rot;
@@ -162,8 +162,8 @@ CTR_STATIC_ASSERT(sizeof(AdventureHubDoorID) == 0x2);
 
 struct WoodDoor
 {
-	struct Instance *otherDoor;
-	struct Instance *keyInst[AH_WOOD_DOOR_KEY_COUNT];
+	P32(struct Instance *) otherDoor;
+	P32(struct Instance *) keyInst[AH_WOOD_DOOR_KEY_COUNT];
 
 	// 0x14 (5)
 	SVec3 doorRot;
@@ -338,7 +338,7 @@ struct AHPauseMember
 	s16 _pad_rot;
 
 	// 0xC
-	struct Instance *inst;
+	P32(struct Instance *) inst;
 
 	// 0x10 -- size
 };
@@ -349,7 +349,7 @@ struct PauseObject
 	struct AHPauseMember members[AH_PAUSE_MEMBER_COUNT];
 
 	// 0xE0
-	struct Thread *t;
+	P32(struct Thread *) t;
 
 	// 0xe4 -- size
 };
@@ -409,7 +409,7 @@ CTR_STATIC_ASSERT(offsetof(struct AHPauseInstance, lightDir) == 0xc);
 struct WarpPad
 {
 	// 0x0
-	struct Instance *inst[WPIS_NUM_INSTANCES];
+	P32(struct Instance *) inst[WPIS_NUM_INSTANCES];
 
 	// 0x28
 	SVec3 spinRot_Prize;
@@ -488,7 +488,7 @@ enum AHSaveObjConstants
 struct SaveObj
 {
 	// 0x0
-	struct Instance *inst;
+	P32(struct Instance *) inst;
 	// 0x4
 	AHSaveObjFlagSet flags;
 	// 0x6
@@ -633,7 +633,7 @@ struct OverlayDATA_232
 	// 800b4f9c -- array of pointers:
 	//		800b4ed4 800b4efc 800b4f24
 	//		800b4f4c 800b4f7c
-	struct HubItem *hubItemsXY_ptrArray[5];
+	P32(struct HubItem *) hubItemsXY_ptrArray[5];
 
 	// 800b4fb0
 	SVec2 hubArrowInnerOffset[3];
@@ -778,7 +778,7 @@ struct OverlayDATA_232
 	s16 padding_maskWarppadBoolInterrupt;
 
 	// 800b5578
-	struct PauseObject *ptrPauseObject;
+	P32(struct PauseObject *) ptrPauseObject;
 
 	struct PauseObject pauseObject; // 800b557c
 

@@ -2,7 +2,7 @@
 
 void OVR_Region1(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	if (gGT == 0)
 	{

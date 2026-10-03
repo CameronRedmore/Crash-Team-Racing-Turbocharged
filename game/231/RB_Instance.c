@@ -4,7 +4,7 @@
 void RB_MakeInstanceReflective(struct ScratchpadStruct *sps, struct Instance *inst)
 {
 	u16 quadFlags;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	if ((sps->boolDidTouchQuadblock == 0) || (sps->boolDidTouchHitbox != 0))
 	{
@@ -19,21 +19,21 @@ void RB_MakeInstanceReflective(struct ScratchpadStruct *sps, struct Instance *in
 			return;
 		}
 
-		quadFlags = sps->hit.ptrQuadblock->quadFlags;
+		quadFlags = P32_GET(struct QuadBlock *, sps->hit.ptrQuadblock)->quadFlags;
 
 		if ((quadFlags & QUADBLOCK_FLAG_COLLISION_SURFACE) == 0)
 		{
 			if ((quadFlags & QUADBLOCK_FLAG_REFLECT_SPLIT_LINE_1) != 0)
 			{
 				inst->flags |= REFLECTIVE;
-				inst->vertSplit = gGT->level1->splitLines[1];
+				inst->vertSplit = P32_GET(struct Level *, gGT->level1)->splitLines[1];
 				return;
 			}
 
 			if ((quadFlags & QUADBLOCK_FLAG_REFLECT_SPLIT_LINE_0) != 0)
 			{
 				inst->flags |= REFLECTIVE;
-				inst->vertSplit = gGT->level1->splitLines[0];
+				inst->vertSplit = P32_GET(struct Level *, gGT->level1)->splitLines[0];
 				return;
 			}
 		}

@@ -7,7 +7,7 @@
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800abbb4-0x800abefc.
 void RB_Player_KillPlayer(struct Driver *attacker, struct Driver *victim)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	u32 gameMode = gGT->gameMode1;
 	u8 numPlyr = gGT->numPlyrCurrGame;
 
@@ -63,7 +63,7 @@ void RB_Player_KillPlayer(struct Driver *attacker, struct Driver *victim)
 
 		for (int i = 0; i < numPlyr; i++)
 		{
-			gGT->drivers[i]->actionsFlagSet |= ACTION_RACE_FINISHED;
+			P32_GET(struct Driver *, gGT->drivers[i])->actionsFlagSet |= ACTION_RACE_FINISHED;
 		}
 	}
 	else
@@ -87,13 +87,13 @@ void RB_Player_KillPlayer(struct Driver *attacker, struct Driver *victim)
 		int deadPlayers = 0;
 		s16 teamsAlive = 0;
 
-		victim->funcPtrs[DRIVER_FUNC_INIT] = VehStuckProc_RIP_Init;
+		P32_SET(victim->funcPtrs[DRIVER_FUNC_INIT], VehStuckProc_RIP_Init);
 		victim->BattleHUD.numLives = 0;
 		victim->actionsFlagSet |= ACTION_RACE_FINISHED;
 
 		for (int i = 0; i < numPlyr; i++)
 		{
-			struct Driver *driver = gGT->drivers[i];
+			struct Driver *driver = P32_GET(struct Driver *, gGT->drivers[i]);
 
 			if ((driver->actionsFlagSet & ACTION_RACE_FINISHED) == 0)
 			{
@@ -134,7 +134,7 @@ void RB_Player_KillPlayer(struct Driver *attacker, struct Driver *victim)
 
 		for (int i = 0; i < numPlyr; i++)
 		{
-			gGT->drivers[i]->actionsFlagSet |= ACTION_RACE_FINISHED;
+			P32_GET(struct Driver *, gGT->drivers[i])->actionsFlagSet |= ACTION_RACE_FINISHED;
 		}
 	}
 
@@ -147,7 +147,7 @@ void RB_Player_ModifyWumpa(struct Driver *driver, int wumpaDelta)
 	s8 numWumpaOriginal = driver->numWumpas;
 
 	// if using unlimited wumpa, quit
-	if ((sdata->gGT->gameMode2 & CHEAT_WUMPA) != 0)
+	if ((P32_GET(struct GameTracker *, sdata->gGT)->gameMode2 & CHEAT_WUMPA) != 0)
 	{
 		return;
 	}
@@ -211,15 +211,15 @@ void RB_Player_ModifyWumpa(struct Driver *driver, int wumpaDelta)
 // NOTE(aalhendi): ASM-verified against NTSC-U 926 overlay 231 0x800b0dbc-0x800b0e68.
 void RB_Player_ToggleInvisible(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	struct Driver *d;
 	struct Thread *t;
 
 	// loop through player threads
-	for (t = gGT->threadBuckets[PLAYER].thread; t != NULL; t = t->siblingThread)
+	for (t = P32_GET(struct Thread *, gGT->threadBuckets[PLAYER].thread); t != NULL; t = P32_GET(struct Thread *, t->siblingThread))
 	{
 		// driver object
-		d = t->object;
+		d = P32_GET(void *, t->object);
 
 		// if driver is invisible
 		if (d->invisibleTimer != 0)
@@ -244,14 +244,14 @@ void RB_Player_ToggleInvisible(void)
 // NOTE(aalhendi): ASM-verified against NTSC-U 926 overlay 231 0x800b0e68-0x800b0f1c.
 void RB_Player_ToggleFlicker(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	struct Thread *t;
 	struct Driver *d;
 
-	for (t = gGT->threadBuckets[PLAYER].thread; t != NULL; t = t->siblingThread)
+	for (t = P32_GET(struct Thread *, gGT->threadBuckets[PLAYER].thread); t != NULL; t = P32_GET(struct Thread *, t->siblingThread))
 	{
 		// driver object
-		d = t->object;
+		d = P32_GET(void *, t->object);
 
 		if (
 		    // invincible timer

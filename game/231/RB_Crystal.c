@@ -19,7 +19,7 @@ int RB_Crystal_ThCollide(struct Thread *crystalTh, struct Thread *driverTh, void
 	int modelID;
 
 	modelID = sps->Input1.modelID;
-	crystalInst = crystalTh->inst;
+	crystalInst = P32_GET(struct Instance *, crystalTh->inst);
 
 	// wumpa fruit or crystal can be grabbed
 	// by player, or robotcar, and there's no
@@ -39,8 +39,8 @@ int RB_Crystal_ThCollide(struct Thread *crystalTh, struct Thread *driverTh, void
 	if (modelID == DYNAMIC_PLAYER)
 	{
 		// get driver object, get screen coords
-		driver = driverTh->object;
-		pb = &sdata->gGT->pushBuffer[driver->driverID];
+		driver = P32_GET(void *, driverTh->object);
+		pb = &P32_GET(struct GameTracker *, sdata->gGT)->pushBuffer[driver->driverID];
 		RB_Fruit_GetScreenCoords(pb, crystalInst, &posScreen[0]);
 
 		// lasts 5 frames, give start position, count numCollected
@@ -52,7 +52,7 @@ int RB_Crystal_ThCollide(struct Thread *crystalTh, struct Thread *driverTh, void
 
 	CTR_WriteU32LE(&crystalInst->scale.x, 0);
 	crystalInst->scale.z = 0;
-	crystalInst->thread = 0;
+	P32_SET(crystalInst->thread, 0);
 
 	// play sound
 	PlaySound3D(0x43, crystalInst);
@@ -68,8 +68,8 @@ void RB_Crystal_ThTick(struct Thread *t)
 	struct Instance *crystalInst;
 	struct Crystal *crystalObj;
 
-	crystalInst = t->inst;
-	crystalObj = t->object;
+	crystalInst = P32_GET(struct Instance *, t->inst);
+	crystalObj = P32_GET(void *, t->object);
 
 	RB_Crystal_RotateStep(crystalInst, crystalObj);
 	RB_Crystal_RotateStep(crystalInst, crystalObj);
@@ -78,7 +78,7 @@ void RB_Crystal_ThTick(struct Thread *t)
 	sine = MATH_Sin(crystalObj->rot.y);
 
 	// set posY
-	crystalInst->matrix.t[1] = crystalInst->instDef->pos.y + // original posY
+	crystalInst->matrix.t[1] = P32_GET(struct InstDef *, crystalInst->instDef)->pos.y + // original posY
 	                           ((sine << 4) >> 0xc) +        // sine (bounce up/down)
 	                           0x30;                         // airborne bump
 
@@ -90,7 +90,7 @@ int RB_Crystal_LInC(struct Instance *crystalInst, struct Thread *driverTh, struc
 {
 	struct Thread *crystalTh;
 
-	crystalTh = crystalInst->thread;
+	crystalTh = P32_GET(struct Thread *, crystalInst->thread);
 	if (crystalTh == NULL)
 	{
 		crystalTh = PROC_BirthWithObject(
@@ -102,18 +102,18 @@ int RB_Crystal_LInC(struct Instance *crystalInst, struct Thread *driverTh, struc
 		    0                  // thread relative
 		);
 
-		crystalInst->thread = crystalTh;
+		P32_SET(crystalInst->thread, crystalTh);
 		if (crystalTh == NULL)
 		{
 			return 0;
 		}
 
-		crystalTh->inst = crystalInst;
-		crystalTh->funcThCollide = (void *)RB_Crystal_ThCollide;
-		crystalTh = crystalInst->thread;
+		P32_SET(crystalTh->inst, crystalInst);
+		P32_SET(crystalTh->funcThCollide, (void *)RB_Crystal_ThCollide);
+		crystalTh = P32_GET(struct Thread *, crystalInst->thread);
 	}
 
-	if ((crystalTh == NULL) || (crystalTh->funcThCollide == NULL))
+	if ((crystalTh == NULL) || (P32_GET(void *, crystalTh->funcThCollide) == NULL))
 	{
 		return 0;
 	}
@@ -123,7 +123,7 @@ int RB_Crystal_LInC(struct Instance *crystalInst, struct Thread *driverTh, struc
 		return 0;
 	}
 
-	return ((ThreadScratchCollideFunc)crystalTh->funcThCollide)(crystalTh, driverTh, crystalTh->funcThCollide, sps);
+	return ((ThreadScratchCollideFunc)P32_GET(void *, crystalTh->funcThCollide))(crystalTh, driverTh, P32_GET(void *, crystalTh->funcThCollide), sps);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b4f48-0x800b4fe4.
@@ -132,7 +132,7 @@ void RB_Crystal_LInB(struct Instance *inst)
 	struct Crystal *crystalObj;
 	struct Thread *t;
 
-	if (inst->thread == NULL)
+	if (P32_GET(struct Thread *, inst->thread) == NULL)
 	{
 		t = PROC_BirthWithObject(
 		    // creation flags
@@ -143,15 +143,15 @@ void RB_Crystal_LInB(struct Instance *inst)
 		    0                  // thread relative
 		);
 
-		inst->thread = t;
+		P32_SET(inst->thread, t);
 		if (t == 0)
 		{
 			return;
 		}
 
-		crystalObj = ((struct Crystal *)t->object);
-		t->inst = inst;
-		t->funcThCollide = (void *)RB_Crystal_ThCollide;
+		crystalObj = ((struct Crystal *)P32_GET(void *, t->object));
+		P32_SET(t->inst, inst);
+		P32_SET(t->funcThCollide, (void *)RB_Crystal_ThCollide);
 
 		// rotX, rotY, rotZ
 		CTR_WriteU32LE(&crystalObj->rot.x, 0);

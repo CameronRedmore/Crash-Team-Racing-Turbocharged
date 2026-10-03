@@ -42,7 +42,7 @@ void OtherFX_Play_Echo(u32 soundID, int flags, int echoFlag)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800284d0-0x80028690
 int OtherFX_Play_LowLevel(u32 soundID, u8 boolAntiSpam, u32 flags)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	struct ChannelStats *channel;
 	int count;
 	u16 id;
@@ -61,16 +61,16 @@ int OtherFX_Play_LowLevel(u32 soundID, u8 boolAntiSpam, u32 flags)
 	id = soundID & 0xffff;
 
 	// quit if out of bounds
-	if (id >= sdata->ptrHowlHeader->numOtherFX)
+	if (id >= P32_GET(struct HowlHeader *, sdata->ptrHowlHeader)->numOtherFX)
 	{
 		return 0;
 	}
 
 	// get pointer to cseq audio, given soundID
-	ptrOtherFX = &sdata->howl_metaOtherFX[id];
+	ptrOtherFX = &P32_GET(struct OtherFX *, sdata->howl_metaOtherFX)[id];
 
 	// quit if effect is not loaded
-	if (sdata->howl_spuAddrs[ptrOtherFX->spuIndex].spuAddr == 0)
+	if (P32_GET(struct SpuAddrEntry *, sdata->howl_spuAddrs)[ptrOtherFX->spuIndex].spuAddr == 0)
 	{
 		return 0;
 	}
@@ -147,13 +147,13 @@ u32 OtherFX_Modify(u32 soundId, u32 flags)
 	}
 
 	// quit if out of bounds
-	if ((sdata->ptrHowlHeader->numOtherFX) <= (int)(soundId & 0xffff))
+	if ((P32_GET(struct HowlHeader *, sdata->ptrHowlHeader)->numOtherFX) <= (int)(soundId & 0xffff))
 	{
 		return 0;
 	}
 
 	// metaOtherFX
-	ptrOtherFX = &sdata->howl_metaOtherFX[soundId & 0xffff];
+	ptrOtherFX = &P32_GET(struct OtherFX *, sdata->howl_metaOtherFX)[soundId & 0xffff];
 	volume = HowlSfx_Volume(flags);
 	distort = HowlSfx_Distortion(flags);
 	echo = (u16)HowlSfx_Echo(flags);

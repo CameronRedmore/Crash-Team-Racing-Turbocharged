@@ -4,7 +4,7 @@
 void MainDrawCb_DrawSync()
 {
 	struct GameTracker *gGT;
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	if (gGT->bool_DrawOTag_InProgress == 1)
 	{
@@ -20,7 +20,7 @@ void MainDrawCb_Vsync()
 {
 	struct GameTracker *gGT;
 
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	int audioTick = 1;
 #ifdef CTR_NATIVE
 	static unsigned int callbackFrame;
@@ -55,7 +55,7 @@ void MainDrawCb_Vsync()
 	Platform_PollInput();
 #endif
 
-	GAMEPAD_PollVsync(sdata->gGamepads);
+	GAMEPAD_PollVsync(P32_GET(struct GamepadSystem *, sdata->gGamepads));
 
 	return;
 }

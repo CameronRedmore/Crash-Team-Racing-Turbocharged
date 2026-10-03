@@ -27,8 +27,8 @@ void CS_Instance_GetFrameData(struct Instance *inst, int animIndex, u32 animFram
 	int scaleX, scaleY, scaleZ;
 	int deltaDX, deltaDY, deltaDZ;
 
-	headers = inst->model->headers;
-	ptrAnim = headers->ptrAnimations[animIndex];
+	headers = P32_GET(struct ModelHeader *, P32_GET(struct Model *, inst->model)->headers);
+	ptrAnim = P32_GET(struct ModelAnim **, headers->ptrAnimations)[animIndex];
 
 	if ((int)animFrame < 0)
 	{
@@ -144,7 +144,7 @@ int CS_Instance_GetNumAnimFrames(struct Instance *modelInst, int animIndex, int 
 		return 0;
 	}
 
-	model = modelInst->model;
+	model = P32_GET(struct Model *, modelInst->model);
 	if (model == NULL)
 	{
 		return 0;
@@ -155,7 +155,7 @@ int CS_Instance_GetNumAnimFrames(struct Instance *modelInst, int animIndex, int 
 		return 0;
 	}
 
-	header = &model->headers[LOD];
+	header = &P32_GET(struct ModelHeader *, model->headers)[LOD];
 	if (header == NULL)
 	{
 		return 0;
@@ -166,12 +166,12 @@ int CS_Instance_GetNumAnimFrames(struct Instance *modelInst, int animIndex, int 
 		return 0;
 	}
 
-	if (header->ptrAnimations == NULL)
+	if (P32_GET(struct ModelAnim **, header->ptrAnimations) == NULL)
 	{
 		return 0;
 	}
 
-	anim = header->ptrAnimations[animIndex];
+	anim = P32_GET(struct ModelAnim **, header->ptrAnimations)[animIndex];
 	if (anim == NULL)
 	{
 		return 0;
@@ -226,7 +226,7 @@ b32 CS_Instance_BoolPlaySound(struct CutsceneObj *cs, struct Instance *desiredIn
 	}
 
 	// pointer to array of visible instances
-	visInstSrc = sdata->gGT->cameraDC[0].visInstSrc;
+	visInstSrc = P32_GET(struct Instance **, P32_GET(struct GameTracker *, sdata->gGT)->cameraDC[0].visInstSrc);
 
 #if defined(CTR_NATIVE)
 	// NOTE(aalhendi): Same native low-RAM guard as AH_WarpPad_ThTick:
@@ -267,7 +267,7 @@ void CS_Instance_InitMatrix(void)
 
 	for (int i = 0; i < 4; i++)
 	{
-		struct CsInitMatrixEntry *data = D233.cs_initMatrixTable[i].data;
+		struct CsInitMatrixEntry *data = P32_GET(struct CsInitMatrixEntry *, D233.cs_initMatrixTable[i].data);
 		int count = D233.cs_initMatrixTable[i].count;
 
 		if (data == NULL || count <= 0)

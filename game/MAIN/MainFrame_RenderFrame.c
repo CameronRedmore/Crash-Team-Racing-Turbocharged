@@ -35,7 +35,7 @@ static int MainFrame_NativeMirrorWorldActive(struct GameTracker *gGT)
 
 void MainFrame_RenderFrame(struct GameTracker *gGT, struct GamepadSystem *gGamepads)
 {
-	struct Level *lev = gGT->level1;
+	struct Level *lev = P32_GET(struct Level *, gGT->level1);
 	struct mesh_info *ptr_mesh_info = 0;
 #if defined(CTR_NATIVE)
 	int nativeMirrorWorldActive = MainFrame_NativeMirrorWorldActive(gGT);
@@ -55,32 +55,32 @@ void MainFrame_RenderFrame(struct GameTracker *gGT, struct GamepadSystem *gGamep
 
 	if (lev != 0)
 	{
-		ptr_mesh_info = lev->ptr_mesh_info;
+		ptr_mesh_info = P32_GET(struct mesh_info *, lev->ptr_mesh_info);
 	}
 
 	if ((gGT->renderFlags & RENDER_FLAG_VISMEM_REFRESH_MASK) != 0)
 	{
-		MainFrame_VisMemFullFrame(gGT, gGT->level1);
+		MainFrame_VisMemFullFrame(gGT, P32_GET(struct Level *, gGT->level1));
 	}
 
 
 	if ((gGT->renderFlags & RENDER_FLAG_DRAW_LEVEL) != 0)
 	{
-		if (gGT->visMem1 != 0)
+		if (P32_GET(struct VisMem *, gGT->visMem1) != 0)
 		{
 			if (lev != 0)
 			{
-				CTR_CycleTex_LEV(lev->ptr_anim_tex, gGT->timer);
+				CTR_CycleTex_LEV(P32_GET(struct AnimTex *, lev->ptr_anim_tex), gGT->timer);
 			}
 		}
 	}
 
-	if ((sdata->ptrActiveMenu != 0) || ((gGT->gameMode1 & END_OF_RACE) != 0))
+	if ((P32_GET(struct RectMenu *, sdata->ptrActiveMenu) != 0) || ((gGT->gameMode1 & END_OF_RACE) != 0))
 	{
 		RECTMENU_CollectInput();
 	}
 
-	if (sdata->ptrActiveMenu != 0)
+	if (P32_GET(struct RectMenu *, sdata->ptrActiveMenu) != 0)
 	{
 		if (sdata->Loading.stage == LOAD_IDLE)
 		{
@@ -113,7 +113,7 @@ void MainFrame_RenderFrame(struct GameTracker *gGT, struct GamepadSystem *gGamep
 			starsPlayers = 1;
 		}
 #endif
-		RenderStars(starsPb, &gGT->backBuffer->primMem, &gGT->stars, starsPlayers);
+		RenderStars(starsPb, &P32_GET(struct DB *, gGT->backBuffer)->primMem, &gGT->stars, starsPlayers);
 	}
 
 	MAINFRAME_PERF_END(NATIVE_PERF_BUCKET_MAINFRAME_EFFECTS);
@@ -242,7 +242,7 @@ void MainFrame_RenderFrame(struct GameTracker *gGT, struct GamepadSystem *gGamep
 			// NOTE(aalhendi): Native menu/adventure-hub LEVs may publish no
 			// restart table. Retail lap stats assume the table exists whenever
 			// this caller reaches them; keep the ASM-verified lap function intact.
-			if ((gGT->level1 != NULL) && (gGT->level1->ptr_restart_points != NULL) && (gGT->level1->cnt_restart_points != 0))
+			if ((P32_GET(struct Level *, gGT->level1) != NULL) && (P32_GET(struct CheckpointNode *, P32_GET(struct Level *, gGT->level1)->ptr_restart_points) != NULL) && (P32_GET(struct Level *, gGT->level1)->cnt_restart_points != 0))
 			{
 				PlayLevel_UpdateLapStats();
 			}
@@ -344,7 +344,7 @@ void DrawUnpluggedMsg(struct GameTracker *gGT, struct GamepadSystem *gGamepads)
 		// if main menu is open, assume 230 loaded,
 		// quit if menu is at highest level (no ptrNext to draw)
 		// maybe a member of D230.c?
-		if (sdata->ptrActiveMenu == (struct RectMenu *)0x800B4540)
+		if (P32_GET(struct RectMenu *, sdata->ptrActiveMenu) == (struct RectMenu *)0x800B4540)
 		{
 			skipMainMenuTopLevel = ((*(int *)0x800b4548 & 0x10) == 0);
 		}
@@ -392,7 +392,7 @@ void DrawUnpluggedMsg(struct GameTracker *gGT, struct GamepadSystem *gGamepads)
 
 	for (i = 0; i < gGT->numPlyrNextGame; i++)
 	{
-		struct ControllerPacket *ptrControllerPacket = gGamepads->gamepad[i].ptrControllerPacket;
+		struct ControllerPacket *ptrControllerPacket = P32_GET(struct ControllerPacket *, gGamepads->gamepad[i].ptrControllerPacket);
 
 		if (ptrControllerPacket != 0)
 		{
@@ -404,13 +404,13 @@ void DrawUnpluggedMsg(struct GameTracker *gGT, struct GamepadSystem *gGamepads)
 
 		// if controller is unplugged
 
-		DecalFont_DrawLine(sdata->lngStrings[data.lngIndex_gamepadUnplugged[lngArrStart + i]], 0x100, posY + window.h, FONT_SMALL, (JUSTIFY_CENTER | ORANGE));
+		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[data.lngIndex_gamepadUnplugged[lngArrStart + i]], 0x100, posY + window.h, FONT_SMALL, (JUSTIFY_CENTER | ORANGE));
 
 		// add for each line
 		window.h += 8;
 	}
 
-	DecalFont_DrawLine(sdata->lngStrings[LNG_PLEASE_INSERT_A_CONTROLLER], 0x100, posY + window.h, FONT_SMALL, (JUSTIFY_CENTER | ORANGE));
+	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_PLEASE_INSERT_A_CONTROLLER], 0x100, posY + window.h, FONT_SMALL, (JUSTIFY_CENTER | ORANGE));
 
 	// add for each line
 	window.h += 8;
@@ -418,7 +418,7 @@ void DrawUnpluggedMsg(struct GameTracker *gGT, struct GamepadSystem *gGamepads)
 	// add 3 pixels above, 3 pixels bellow
 	window.h += 6;
 
-	RECTMENU_DrawInnerRect(&window, 1, gGT->backBuffer->otMem.uiOT);
+	RECTMENU_DrawInnerRect(&window, 1, P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT));
 }
 
 void DrawFinalLap(struct GameTracker *gGT)
@@ -500,7 +500,7 @@ void DrawFinalLap(struct GameTracker *gGT)
 
 		// need to specify OT, or else "FINAL LAP" will draw on top of character icons,
 		// and by doing this, "FINAL LAP" draws under the character icons instead
-		DecalFont_DrawLineOT(sdata->lngStrings[LNG_FINAL_LAP], resultPos.x, resultPos.y, FONT_BIG, (JUSTIFY_CENTER | ORANGE), pb->ptrOT);
+		DecalFont_DrawLineOT(P32_GET(char **, sdata->lngStrings)[LNG_FINAL_LAP], resultPos.x, resultPos.y, FONT_BIG, (JUSTIFY_CENTER | ORANGE), P32_GET(uint32_t *, pb->ptrOT));
 
 		sdata->finalLapTextTimer[i]--;
 	}
@@ -518,7 +518,7 @@ void RainLogic(struct GameTracker *gGT)
 	{
 		PushBuffer_UpdateFrustum(&gGT->pushBuffer[i]);
 
-		camQB = gGT->cameraDC[i].ptrQuadBlock;
+		camQB = P32_GET(struct QuadBlock *, gGT->cameraDC[i].ptrQuadBlock);
 
 		// skip if camera isn't over quadblock
 		if (camQB == 0)
@@ -579,7 +579,7 @@ void RenderAllWeather(struct GameTracker *gGT)
 		return;
 	}
 
-	RenderWeather(&gGT->pushBuffer[0], &gGT->backBuffer->primMem, &gGT->rainBuffer[0], numPlyrCurrGame, gGT->gameMode1 & PAUSE_ALL);
+	RenderWeather(&gGT->pushBuffer[0], &P32_GET(struct DB *, gGT->backBuffer)->primMem, &gGT->rainBuffer[0], numPlyrCurrGame, gGT->gameMode1 & PAUSE_ALL);
 }
 
 void RenderAllConfetti(struct GameTracker *gGT)
@@ -601,7 +601,7 @@ void RenderAllConfetti(struct GameTracker *gGT)
 
 	for (i = 0; i < numWinners; i++)
 	{
-		DrawConfetti(&gGT->pushBuffer[gGT->winnerIndex[i]], &gGT->backBuffer->primMem, &gGT->confetti, gGT->frameTimer_Confetti, gGT->gameMode1 & PAUSE_ALL);
+		DrawConfetti(&gGT->pushBuffer[gGT->winnerIndex[i]], &P32_GET(struct DB *, gGT->backBuffer)->primMem, &gGT->confetti, gGT->frameTimer_Confetti, gGT->gameMode1 & PAUSE_ALL);
 	}
 }
 
@@ -765,7 +765,7 @@ void RenderAllHUD(struct GameTracker *gGT)
 					{
 						gGT->overlayTransition = 0;
 
-						INSTANCE_LevDelayedLInBs(gGT->level1->ptrInstDefs, gGT->level1->numInstances);
+						INSTANCE_LevDelayedLInBs(P32_GET(struct InstDef *, P32_GET(struct Level *, gGT->level1)->ptrInstDefs), P32_GET(struct Level *, gGT->level1)->numInstances);
 
 						// allow instances again
 						gGT->gameMode2 &= ~(NO_LEV_INSTANCE);
@@ -807,7 +807,7 @@ void RenderAllBeakerRain(struct GameTracker *gGT)
 		return;
 	}
 #endif
-	RedBeaker_RenderRain(&gGT->pushBuffer[0], &gGT->backBuffer->primMem, &gGT->JitPools.rain, numPlyrCurrGame, gGT->gameMode1 & PAUSE_ALL);
+	RedBeaker_RenderRain(&gGT->pushBuffer[0], &P32_GET(struct DB *, gGT->backBuffer)->primMem, &gGT->JitPools.rain, numPlyrCurrGame, gGT->gameMode1 & PAUSE_ALL);
 }
 
 void RenderAllBoxSceneSplitLines(struct GameTracker *gGT)
@@ -846,10 +846,10 @@ void RenderBucket_QueueAllInstances(struct GameTracker *gGT)
 		lod |= 4;
 	}
 
-	RBI = RenderBucket_QueueLevInstances(&gGT->cameraDC[0], &gGT->backBuffer->otMem, gGT->ptrRenderBucketInstance, (u8)sdata->LOD[lod], numPlyrCurrGame,
+	RBI = RenderBucket_QueueLevInstances(&gGT->cameraDC[0], &P32_GET(struct DB *, gGT->backBuffer)->otMem, P32_GET(void *, gGT->ptrRenderBucketInstance), (u8)sdata->LOD[lod], numPlyrCurrGame,
 	                                     gGT->gameMode1 & PAUSE_ALL);
 
-	RBI = RenderBucket_QueueNonLevInstances(gGT->JitPools.instance.taken.first, &gGT->backBuffer->otMem, (void *)RBI, (u8)sdata->LOD[lod], numPlyrCurrGame,
+	RBI = RenderBucket_QueueNonLevInstances(P32_GET(struct Item *, gGT->JitPools.instance.taken.first), &P32_GET(struct DB *, gGT->backBuffer)->otMem, (void *)RBI, (u8)sdata->LOD[lod], numPlyrCurrGame,
 	                                        gGT->gameMode1 & PAUSE_ALL);
 
 	// Aug prototype
@@ -892,7 +892,7 @@ void RenderAllNormalParticles(struct GameTracker *gGT)
 
 	for (i = 0; i < gGT->numPlyrCurrGame; i++)
 	{
-		Particle_RenderList(&gGT->pushBuffer[i], gGT->particleList_ordinary);
+		Particle_RenderList(&gGT->pushBuffer[i], P32_GET(struct Particle *, gGT->particleList_ordinary));
 	}
 #if defined(CTR_NATIVE)
 	NativePgxp_SetDepthContext(nativeDepthContext);
@@ -915,7 +915,7 @@ void RenderDispEnv_World(struct GameTracker *gGT)
 	for (i = 0; i < gGT->numPlyrCurrGame; i++)
 	{
 		pb = &gGT->pushBuffer[i];
-		PushBuffer_SetDrawEnv_Normal(&pb->ptrOT[0x3ff], pb, gGT->backBuffer, 0, 0);
+		PushBuffer_SetDrawEnv_Normal(&P32_GET(uint32_t *, pb->ptrOT)[0x3ff], pb, P32_GET(struct DB *, gGT->backBuffer), 0, 0);
 	}
 }
 
@@ -931,16 +931,16 @@ void RenderAllFlag0x40(struct GameTracker *gGT)
 	{
 		RB_Player_ToggleInvisible();
 		RB_Player_ToggleFlicker();
-		RB_Burst_ProcessBucket(gGT->threadBuckets[BURST].thread);
-		RB_Blowup_ProcessBucket(gGT->threadBuckets[BLOWUP].thread);
+		RB_Burst_ProcessBucket(P32_GET(struct Thread *, gGT->threadBuckets[BURST].thread));
+		RB_Blowup_ProcessBucket(P32_GET(struct Thread *, gGT->threadBuckets[BLOWUP].thread));
 
-		RB_Spider_DrawWebs(gGT->threadBuckets[SPIDER].thread,
+		RB_Spider_DrawWebs(P32_GET(struct Thread *, gGT->threadBuckets[SPIDER].thread),
 #if defined(__vita__)
 			NativeAdhoc_IsSingleViewRenderActive() ? NativeAdhoc_GetRenderPushBuffer() :
 #endif
 			&gGT->pushBuffer[0]);
-		RB_Follower_ProcessBucket(gGT->threadBuckets[FOLLOWER].thread);
-		RB_StartText_ProcessBucket(gGT->threadBuckets[STARTTEXT].thread);
+		RB_Follower_ProcessBucket(P32_GET(struct Thread *, gGT->threadBuckets[FOLLOWER].thread));
+		RB_StartText_ProcessBucket(P32_GET(struct Thread *, gGT->threadBuckets[STARTTEXT].thread));
 	}
 
 	if (LOAD_IsOpen_AdvHub())
@@ -951,7 +951,7 @@ void RenderAllFlag0x40(struct GameTracker *gGT)
 		}
 	}
 
-	VehTurbo_ProcessBucket(gGT->threadBuckets[TURBO].thread);
+	VehTurbo_ProcessBucket(P32_GET(struct Thread *, gGT->threadBuckets[TURBO].thread));
 
 	int i;
 	struct PushBuffer *pb;
@@ -967,8 +967,8 @@ void RenderAllFlag0x40(struct GameTracker *gGT)
 	for (i = 0; i < gGT->numPlyrCurrGame; i++)
 	{
 		pb = &gGT->pushBuffer[i];
-		VehGroundSkids_Main(gGT->threadBuckets[PLAYER].thread, pb);
-		VehGroundSkids_Main(gGT->threadBuckets[ROBOT].thread, pb);
+		VehGroundSkids_Main(P32_GET(struct Thread *, gGT->threadBuckets[PLAYER].thread), pb);
+		VehGroundSkids_Main(P32_GET(struct Thread *, gGT->threadBuckets[ROBOT].thread), pb);
 	}
 }
 
@@ -992,7 +992,7 @@ void RenderBucket_ExecuteAllInstances(struct GameTracker *gGT)
 		return;
 	}
 
-	RenderBucket_Execute(gGT->ptrRenderBucketInstance, &gGT->backBuffer->primMem);
+	RenderBucket_Execute(P32_GET(void *, gGT->ptrRenderBucketInstance), &P32_GET(struct DB *, gGT->backBuffer)->primMem);
 }
 
 void RenderAllTires(struct GameTracker *gGT)
@@ -1005,25 +1005,25 @@ void RenderAllTires(struct GameTracker *gGT)
 		return;
 	}
 
-	gGT_primMem = &gGT->backBuffer->primMem;
+	gGT_primMem = &P32_GET(struct DB *, gGT->backBuffer)->primMem;
 	numPlyrCurrGame = gGT->numPlyrCurrGame;
 
-	if (gGT->threadBuckets[PLAYER].thread != 0)
+	if (P32_GET(struct Thread *, gGT->threadBuckets[PLAYER].thread) != 0)
 	{
-		DrawTires_Solid(gGT->threadBuckets[PLAYER].thread, gGT_primMem, numPlyrCurrGame);
-		DrawTires_Reflection(gGT->threadBuckets[PLAYER].thread, gGT_primMem, numPlyrCurrGame);
+		DrawTires_Solid(P32_GET(struct Thread *, gGT->threadBuckets[PLAYER].thread), gGT_primMem, numPlyrCurrGame);
+		DrawTires_Reflection(P32_GET(struct Thread *, gGT->threadBuckets[PLAYER].thread), gGT_primMem, numPlyrCurrGame);
 	}
 
 	if (gGT->numBotsNextGame != 0)
 	{
-		DrawTires_Solid(gGT->threadBuckets[ROBOT].thread, gGT_primMem, numPlyrCurrGame);
-		DrawTires_Reflection(gGT->threadBuckets[ROBOT].thread, gGT_primMem, numPlyrCurrGame);
+		DrawTires_Solid(P32_GET(struct Thread *, gGT->threadBuckets[ROBOT].thread), gGT_primMem, numPlyrCurrGame);
+		DrawTires_Reflection(P32_GET(struct Thread *, gGT->threadBuckets[ROBOT].thread), gGT_primMem, numPlyrCurrGame);
 	}
 
-	if (gGT->threadBuckets[GHOST].thread != 0)
+	if (P32_GET(struct Thread *, gGT->threadBuckets[GHOST].thread) != 0)
 	{
-		DrawTires_Solid(gGT->threadBuckets[GHOST].thread, gGT_primMem, numPlyrCurrGame);
-		DrawTires_Reflection(gGT->threadBuckets[GHOST].thread, gGT_primMem, numPlyrCurrGame);
+		DrawTires_Solid(P32_GET(struct Thread *, gGT->threadBuckets[GHOST].thread), gGT_primMem, numPlyrCurrGame);
+		DrawTires_Reflection(P32_GET(struct Thread *, gGT->threadBuckets[GHOST].thread), gGT_primMem, numPlyrCurrGame);
 	}
 }
 
@@ -1050,7 +1050,7 @@ void RenderAllHeatParticles(struct GameTracker *gGT)
 	}
 #endif
 
-	Torch_Main(gGT->particleList_heatWarp, &gGT->pushBuffer[0], &gGT->backBuffer->primMem, gGT->numPlyrCurrGame, gGT->swapchainIndex * 0x128);
+	Torch_Main(P32_GET(struct Particle *, gGT->particleList_heatWarp), &gGT->pushBuffer[0], &P32_GET(struct DB *, gGT->backBuffer)->primMem, gGT->numPlyrCurrGame, gGT->swapchainIndex * 0x128);
 }
 
 static s32 RenderAllLevelGeometry_ScaleDistanceShift8(s32 distToScreen, s32 scale)
@@ -1112,12 +1112,12 @@ static void RenderAllLevelGeometry_NativeViewports(struct GameTracker *gGT, stru
 		RenderAllLevelGeometry_ApplyNativeMaxLod(scratch);
 
 		RenderLists_PreInit();
-		gGT->bspLeafsDrawn += RenderLists_Init1P2P(ptr_mesh_info->bspRoot, gGT->visMem1->visLeafList[i], pushBuffer, (u32)&gGT->LevRenderLists[i],
-		                                           gGT->visMem1->bspList[i], 1);
+		gGT->bspLeafsDrawn += RenderLists_Init1P2P(P32_GET(struct BSP *, ptr_mesh_info->bspRoot), P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visLeafList[i]), pushBuffer, (u32)&gGT->LevRenderLists[i],
+		                                           P32_GET(struct VisMemBspListNode *, P32_GET(struct VisMem *, gGT->visMem1)->bspList[i]), 1);
 
-		DrawLevelOvr1P_WithContext(&gGT->LevRenderLists[i], pushBuffer, (struct BSP *)ptr_mesh_info, &gGT->backBuffer->primMem, gGT->visMem1->visFaceList[i],
-		                           level1->ptr_tex_waterEnvMap, data.PtrClipBuffer[i],
-		                           (struct QuadBlock **)data.ptrRenderedQuadblockDestination_forEachPlayer[i]);
+		DrawLevelOvr1P_WithContext(&gGT->LevRenderLists[i], pushBuffer, (struct BSP *)ptr_mesh_info, &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visFaceList[i]),
+		                           P32_GET(struct TextureLayout *, level1->ptr_tex_waterEnvMap), P32_GET(void *, data.PtrClipBuffer[i]),
+		                           (struct QuadBlock **)P32_GET(void *, data.ptrRenderedQuadblockDestination_forEachPlayer[i]));
 	}
 }
 #endif
@@ -1130,7 +1130,7 @@ static void RenderAllLevelGeometry_Native(struct GameTracker *gGT, struct Level 
 {
 	struct MainRenderLevelGeometryScratch *scratch = CTR_SCRATCHPAD_PTR(struct MainRenderLevelGeometryScratch, 0);
 	const int numPlyrCurrGame = gGT->numPlyrCurrGame;
-	int *const *visOVert = gGT->visMem1->visOVertList;
+	int *const *visOVert = P32_GET(struct VisMem *, gGT->visMem1)->visOVertList;
 
 	CTR_ClearRenderLists_1P2P(gGT, numPlyrCurrGame);
 
@@ -1139,24 +1139,24 @@ static void RenderAllLevelGeometry_Native(struct GameTracker *gGT, struct Level 
 		switch (numPlyrCurrGame)
 		{
 		case 1:
-			AnimateWater1P(FPS_HALF(gGT->timer), level1->numWaterVertices, level1->ptr_water, level1->ptr_tex_waterEnvMap, visOVert[0]);
+			AnimateWater1P(FPS_HALF(gGT->timer), level1->numWaterVertices, P32_GET(struct WaterVert *, level1->ptr_water), P32_GET(struct TextureLayout *, level1->ptr_tex_waterEnvMap), visOVert[0]);
 			break;
 		case 2:
-			AnimateWater2P(FPS_HALF(gGT->timer), level1->numWaterVertices, level1->ptr_water, level1->ptr_tex_waterEnvMap, visOVert[0], visOVert[1]);
+			AnimateWater2P(FPS_HALF(gGT->timer), level1->numWaterVertices, P32_GET(struct WaterVert *, level1->ptr_water), P32_GET(struct TextureLayout *, level1->ptr_tex_waterEnvMap), visOVert[0], visOVert[1]);
 			break;
 		case 3:
-			AnimateWater3P(FPS_HALF(gGT->timer), level1->numWaterVertices, level1->ptr_water, level1->ptr_tex_waterEnvMap, visOVert[0], visOVert[1],
+			AnimateWater3P(FPS_HALF(gGT->timer), level1->numWaterVertices, P32_GET(struct WaterVert *, level1->ptr_water), P32_GET(struct TextureLayout *, level1->ptr_tex_waterEnvMap), visOVert[0], visOVert[1],
 			               visOVert[2]);
 			break;
 		default:
-			AnimateWater4P(FPS_HALF(gGT->timer), level1->numWaterVertices, level1->ptr_water, level1->ptr_tex_waterEnvMap, visOVert[0], visOVert[1],
+			AnimateWater4P(FPS_HALF(gGT->timer), level1->numWaterVertices, P32_GET(struct WaterVert *, level1->ptr_water), P32_GET(struct TextureLayout *, level1->ptr_tex_waterEnvMap), visOVert[0], visOVert[1],
 			               visOVert[2], visOVert[3]);
 			break;
 		}
 	}
 	else if (numPlyrCurrGame == 1)
 	{
-		AnimateQuad(FPS_HALF((s64)gGT->timer * 128), level1->numSCVert, level1->ptrSCVert, gGT->visMem1->visSCVertList[0]);
+		AnimateQuad(FPS_HALF((s64)gGT->timer * 128), level1->numSCVert, P32_GET(struct SCVert *, level1->ptrSCVert), P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visSCVertList[0]));
 	}
 
 	gGT->bspLeafsDrawn = 0;
@@ -1190,22 +1190,22 @@ static void RenderAllLevelGeometry_Native(struct GameTracker *gGT, struct Level 
 		}
 		RenderAllLevelGeometry_ApplyNativeMaxLod(scratch);
 
-		gGT->bspLeafsDrawn += RenderLists_Init1P2P(ptr_mesh_info->bspRoot, gGT->visMem1->visLeafList[i], pushBuffer, (u32)&gGT->LevRenderLists[i],
-		                                           gGT->visMem1->bspList[i], 1);
-		NativeDrawLevel_Viewport(pushBuffer, &gGT->backBuffer->primMem, ptr_mesh_info, &gGT->LevRenderLists[i],
-		                         gGT->visMem1->visFaceList[i], level1->ptr_tex_waterEnvMap);
+		gGT->bspLeafsDrawn += RenderLists_Init1P2P(P32_GET(struct BSP *, ptr_mesh_info->bspRoot), P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visLeafList[i]), pushBuffer, (u32)&gGT->LevRenderLists[i],
+		                                           P32_GET(struct VisMemBspListNode *, P32_GET(struct VisMem *, gGT->visMem1)->bspList[i]), 1);
+		NativeDrawLevel_Viewport(pushBuffer, &P32_GET(struct DB *, gGT->backBuffer)->primMem, ptr_mesh_info, &gGT->LevRenderLists[i],
+		                         P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visFaceList[i]), P32_GET(struct TextureLayout *, level1->ptr_tex_waterEnvMap));
 	}
 
 	// Retail draws the skybox in single player only.
 	if (numPlyrCurrGame == 1)
 	{
-		DrawSky_Full(level1->ptr_skybox, &gGT->pushBuffer[0], &gGT->backBuffer->primMem);
+		DrawSky_Full(P32_GET(struct Skybox *, level1->ptr_skybox), &gGT->pushBuffer[0], &P32_GET(struct DB *, gGT->backBuffer)->primMem);
 	}
 	if ((numPlyrCurrGame > 1) || ((level1->configFlags & 1) != 0))
 	{
 		for (int i = 0; i < numPlyrCurrGame; i++)
 		{
-			CAM_SkyboxGlow(&level1->glowGradient[0], &gGT->pushBuffer[i], &gGT->backBuffer->primMem, &gGT->pushBuffer[i].ptrOT[0x3ff]);
+			CAM_SkyboxGlow(&level1->glowGradient[0], &gGT->pushBuffer[i], &P32_GET(struct DB *, gGT->backBuffer)->primMem, &P32_GET(uint32_t *, gGT->pushBuffer[i].ptrOT)[0x3ff]);
 		}
 	}
 }
@@ -1320,14 +1320,14 @@ void RenderAllLevelGeometry(struct GameTracker *gGT, struct Level *level1, struc
 		if ((level1->configFlags & 4) == 0)
 		{
 			// assume OVert (no primitives generated here)
-			AnimateWater1P(FPS_HALF(gGT->timer), level1->numWaterVertices, level1->ptr_water, level1->ptr_tex_waterEnvMap, gGT->visMem1->visOVertList[0]);
+			AnimateWater1P(FPS_HALF(gGT->timer), level1->numWaterVertices, P32_GET(struct WaterVert *, level1->ptr_water), P32_GET(struct TextureLayout *, level1->ptr_tex_waterEnvMap), P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visOVertList[0]));
 		}
 
 		// if SCVert
 		else
 		{
 			// draw SCVert (no primitives generated here
-			AnimateQuad(FPS_HALF((s64)gGT->timer * 128), level1->numSCVert, level1->ptrSCVert, gGT->visMem1->visSCVertList[0]);
+			AnimateQuad(FPS_HALF((s64)gGT->timer * 128), level1->numSCVert, P32_GET(struct SCVert *, level1->ptrSCVert), P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visSCVertList[0]));
 		}
 
 		// camera of player 1
@@ -1376,14 +1376,14 @@ void RenderAllLevelGeometry(struct GameTracker *gGT, struct Level *level1, struc
 		RenderLists_PreInit();
 		gGT->bspLeafsDrawn = 0;
 
-		gGT->bspLeafsDrawn += RenderLists_Init1P2P(ptr_mesh_info->bspRoot, gGT->visMem1->visLeafList[0], pushBuffer, (u32)&gGT->LevRenderLists[0],
-		                                           gGT->visMem1->bspList[0], numPlyrCurrGame);
+		gGT->bspLeafsDrawn += RenderLists_Init1P2P(P32_GET(struct BSP *, ptr_mesh_info->bspRoot), P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visLeafList[0]), pushBuffer, (u32)&gGT->LevRenderLists[0],
+		                                           P32_GET(struct VisMemBspListNode *, P32_GET(struct VisMem *, gGT->visMem1)->bspList[0]), numPlyrCurrGame);
 
 		// 226-229
-		DrawLevelOvr1P(&gGT->LevRenderLists[0], pushBuffer, (struct BSP *)ptr_mesh_info, &gGT->backBuffer->primMem, gGT->visMem1->visFaceList[0],
-		               level1->ptr_tex_waterEnvMap); // waterEnvMap?
+		DrawLevelOvr1P(&gGT->LevRenderLists[0], pushBuffer, (struct BSP *)ptr_mesh_info, &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visFaceList[0]),
+		               P32_GET(struct TextureLayout *, level1->ptr_tex_waterEnvMap)); // waterEnvMap?
 
-		DrawSky_Full(level1->ptr_skybox, pushBuffer, &gGT->backBuffer->primMem);
+		DrawSky_Full(P32_GET(struct Skybox *, level1->ptr_skybox), pushBuffer, &P32_GET(struct DB *, gGT->backBuffer)->primMem);
 
 		// skybox gradient
 		if ((level1->configFlags & 1) != 0)
@@ -1402,8 +1402,8 @@ void RenderAllLevelGeometry(struct GameTracker *gGT, struct Level *level1, struc
 		if ((level1->configFlags & 4) == 0)
 		{
 			// assume OVert (no primitives generated here)
-			AnimateWater2P(FPS_HALF(gGT->timer), level1->numWaterVertices, level1->ptr_water, level1->ptr_tex_waterEnvMap, gGT->visMem1->visOVertList[0],
-			               gGT->visMem1->visOVertList[1]);
+			AnimateWater2P(FPS_HALF(gGT->timer), level1->numWaterVertices, P32_GET(struct WaterVert *, level1->ptr_water), P32_GET(struct TextureLayout *, level1->ptr_tex_waterEnvMap), P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visOVertList[0]),
+			               P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visOVertList[1]));
 		}
 
 		gGT->bspLeafsDrawn = 0;
@@ -1445,15 +1445,15 @@ void RenderAllLevelGeometry(struct GameTracker *gGT, struct Level *level1, struc
 		if (numPlyrCurrGame == 3)
 		{
 			// assume OVert (no primitives generated here)
-			AnimateWater3P(FPS_HALF(gGT->timer), level1->numWaterVertices, level1->ptr_water, level1->ptr_tex_waterEnvMap, gGT->visMem1->visOVertList[0],
-			               gGT->visMem1->visOVertList[1], gGT->visMem1->visOVertList[2]);
+			AnimateWater3P(FPS_HALF(gGT->timer), level1->numWaterVertices, P32_GET(struct WaterVert *, level1->ptr_water), P32_GET(struct TextureLayout *, level1->ptr_tex_waterEnvMap), P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visOVertList[0]),
+			               P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visOVertList[1]), P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visOVertList[2]));
 		}
 
 		else // 4P mode
 		{
 			// assume OVert (no primitives generated here)
-			AnimateWater4P(FPS_HALF(gGT->timer), level1->numWaterVertices, level1->ptr_water, level1->ptr_tex_waterEnvMap, gGT->visMem1->visOVertList[0],
-			               gGT->visMem1->visOVertList[1], gGT->visMem1->visOVertList[2], gGT->visMem1->visOVertList[3]);
+			AnimateWater4P(FPS_HALF(gGT->timer), level1->numWaterVertices, P32_GET(struct WaterVert *, level1->ptr_water), P32_GET(struct TextureLayout *, level1->ptr_tex_waterEnvMap), P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visOVertList[0]),
+			               P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visOVertList[1]), P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visOVertList[2]), P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visOVertList[3]));
 		}
 	}
 
@@ -1471,24 +1471,24 @@ void RenderAllLevelGeometry(struct GameTracker *gGT, struct Level *level1, struc
 
 	for (i = 0; i < numPlyrCurrGame; i++)
 	{
-		gGT->bspLeafsDrawn += RenderLists_Init3P4P(ptr_mesh_info->bspRoot, gGT->visMem1->visLeafList[i], &gGT->pushBuffer[i], (u32)&gGT->LevRenderLists[i],
-		                                           gGT->visMem1->bspList[i]);
+		gGT->bspLeafsDrawn += RenderLists_Init3P4P(P32_GET(struct BSP *, ptr_mesh_info->bspRoot), P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visLeafList[i]), &gGT->pushBuffer[i], (u32)&gGT->LevRenderLists[i],
+		                                           P32_GET(struct VisMemBspListNode *, P32_GET(struct VisMem *, gGT->visMem1)->bspList[i]));
 	}
 
 	if (numPlyrCurrGame == 3)
 	{
 		// 226-229
-		DrawLevelOvr3P(&gGT->LevRenderLists[0], &gGT->pushBuffer[0], (struct BSP *)ptr_mesh_info, &gGT->backBuffer->primMem, gGT->visMem1->visFaceList[0],
-		               gGT->visMem1->visFaceList[1], gGT->visMem1->visFaceList[2],
-		               level1->ptr_tex_waterEnvMap); // waterEnvMap?
+		DrawLevelOvr3P(&gGT->LevRenderLists[0], &gGT->pushBuffer[0], (struct BSP *)ptr_mesh_info, &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visFaceList[0]),
+		               P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visFaceList[1]), P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visFaceList[2]),
+		               P32_GET(struct TextureLayout *, level1->ptr_tex_waterEnvMap)); // waterEnvMap?
 	}
 
 	else // 4P mode
 	{
 		// 226-229
-		DrawLevelOvr4P(&gGT->LevRenderLists[0], &gGT->pushBuffer[0], (struct BSP *)ptr_mesh_info, &gGT->backBuffer->primMem, gGT->visMem1->visFaceList[0],
-		               gGT->visMem1->visFaceList[1], gGT->visMem1->visFaceList[2], gGT->visMem1->visFaceList[3],
-		               level1->ptr_tex_waterEnvMap); // waterEnvMap?
+		DrawLevelOvr4P(&gGT->LevRenderLists[0], &gGT->pushBuffer[0], (struct BSP *)ptr_mesh_info, &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visFaceList[0]),
+		               P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visFaceList[1]), P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visFaceList[2]), P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visFaceList[3]),
+		               P32_GET(struct TextureLayout *, level1->ptr_tex_waterEnvMap)); // waterEnvMap?
 	}
 
 SkyboxGlow:
@@ -1497,7 +1497,7 @@ SkyboxGlow:
 	for (i = 0; i < numPlyrCurrGame; i++)
 	{
 		pushBuffer = &gGT->pushBuffer[i];
-		CAM_SkyboxGlow(&level1->glowGradient[0], pushBuffer, &gGT->backBuffer->primMem, &pushBuffer->ptrOT[0x3ff]);
+		CAM_SkyboxGlow(&level1->glowGradient[0], pushBuffer, &P32_GET(struct DB *, gGT->backBuffer)->primMem, &P32_GET(uint32_t *, pushBuffer->ptrOT)[0x3ff]);
 	}
 
 	return;
@@ -1520,7 +1520,7 @@ void WindowBoxLines(struct GameTracker *gGT)
 	for (i = 0; i < gGT->numPlyrCurrGame; i++)
 	{
 		Color color;
-		color.self = *data.ptrColor[gGT->drivers[i]->BattleHUD.teamID + PLAYER_BLUE];
+		color.self = *P32_GET(u32 *, data.ptrColor[P32_GET(struct Driver *, gGT->drivers[i])->BattleHUD.teamID + PLAYER_BLUE]);
 		RECTMENU_DrawOuterRect_LowLevel(
 
 		    // dimensions, thickness
@@ -1532,7 +1532,7 @@ void WindowBoxLines(struct GameTracker *gGT)
 		    0,
 
 		    // pushBuffer_UI = 0x1388
-		    &gGT->pushBuffer_UI.ptrOT[3]);
+		    &P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT)[3]);
 	}
 }
 
@@ -1553,7 +1553,7 @@ void WindowDivsionLines(struct GameTracker *gGT)
 	// horizontal bar
 	if (numPlyrCurrGame > 1)
 	{
-		p = gGT->backBuffer->primMem.cursor;
+		p = P32_GET(void *, P32_GET(struct DB *, gGT->backBuffer)->primMem.cursor);
 
 		// set R, G, B, CODE, all to zero,
 		// this makes black color, and invalid CODE
@@ -1575,9 +1575,9 @@ void WindowDivsionLines(struct GameTracker *gGT)
 
 		// Draw a bar from left to right,
 		// dividing the screen in half on top and bottom
-		AddPrim(&gGT->pushBuffer_UI.ptrOT[3], p);
+		AddPrim(&P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT)[3], p);
 
-		gGT->backBuffer->primMem.cursor = (void *)(p + 1);
+		P32_SET(P32_GET(struct DB *, gGT->backBuffer)->primMem.cursor, (void *)(p + 1));
 	}
 
 	// vertical bar
@@ -1590,7 +1590,7 @@ void WindowDivsionLines(struct GameTracker *gGT)
 		gGT->drivers[1]->heldItemID = HELD_ITEM_TNT;
 #endif
 
-		p = gGT->backBuffer->primMem.cursor;
+		p = P32_GET(void *, P32_GET(struct DB *, gGT->backBuffer)->primMem.cursor);
 
 		// set R, G, B, CODE, all to zero,
 		// this makes black color, and invalid CODE
@@ -1612,10 +1612,10 @@ void WindowDivsionLines(struct GameTracker *gGT)
 
 		// Draw a bar from left to right,
 		// dividing the screen in half on top and bottom
-		AddPrim(&gGT->pushBuffer_UI.ptrOT[3], p);
+		AddPrim(&P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT)[3], p);
 
 		// backBuffer->primMem.cursor
-		gGT->backBuffer->primMem.cursor = (void *)(p + 1);
+		P32_SET(P32_GET(struct DB *, gGT->backBuffer)->primMem.cursor, (void *)(p + 1));
 	}
 
 	// if numPlyrCurrGame is 3
@@ -1625,7 +1625,7 @@ void WindowDivsionLines(struct GameTracker *gGT)
 		// to black anyway, even without this block,
 		// at least it does it Crash Cove, does it always?
 
-		p = gGT->backBuffer->primMem.cursor;
+		p = P32_GET(void *, P32_GET(struct DB *, gGT->backBuffer)->primMem.cursor);
 
 		// set R, G, B, CODE, all to zero,
 		// this makes black color, and invalid CODE
@@ -1646,10 +1646,10 @@ void WindowDivsionLines(struct GameTracker *gGT)
 
 		// Draw a bar from left to right,
 		// dividing the screen in half on top and bottom
-		AddPrim(&gGT->pushBuffer_UI.ptrOT[3], p);
+		AddPrim(&P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT)[3], p);
 
 		// backBuffer->primMem.cursor
-		gGT->backBuffer->primMem.cursor = (void *)(p + 1);
+		P32_SET(P32_GET(struct DB *, gGT->backBuffer)->primMem.cursor, (void *)(p + 1));
 	}
 }
 
@@ -1657,7 +1657,7 @@ void RenderDispEnv_UI(struct GameTracker *gGT)
 {
 	struct PushBuffer *pb = &gGT->pushBuffer_UI;
 
-	PushBuffer_SetDrawEnv_Normal(&pb->ptrOT[4], pb, gGT->backBuffer, 0, 0);
+	PushBuffer_SetDrawEnv_Normal(&P32_GET(uint32_t *, pb->ptrOT)[4], pb, P32_GET(struct DB *, gGT->backBuffer), 0, 0);
 }
 
 CTR_GCC_OPTIMIZE_O0 int ReadyToFlip(struct GameTracker *gGT)
@@ -1757,9 +1757,9 @@ void RenderSubmit(struct GameTracker *gGT)
 
 	// Native still renders immediately through PsyCross, so keep the host GPU's
 	// active draw/display envs in step with the retail DB selected this frame.
-	PutDrawEnv(&gGT->backBuffer->drawEnv);
-	gGT->frontBuffer = &gGT->db[1 - gGT->swapchainIndex];
-	PutDispEnv(&gGT->frontBuffer->dispEnv);
+	PutDrawEnv(&P32_GET(struct DB *, gGT->backBuffer)->drawEnv);
+	P32_SET(gGT->frontBuffer, &gGT->db[1 - gGT->swapchainIndex]);
+	PutDispEnv(&P32_GET(struct DB *, gGT->frontBuffer)->dispEnv);
 
 #else
 
@@ -1793,7 +1793,7 @@ void RenderSubmit(struct GameTracker *gGT)
 	else
 #endif
 	{
-		ot = &gGT->pushBuffer[0].ptrOT[0x3ff];
+		ot = &P32_GET(uint32_t *, gGT->pushBuffer[0].ptrOT)[0x3ff];
 	}
 
 	DrawOTag(ot);

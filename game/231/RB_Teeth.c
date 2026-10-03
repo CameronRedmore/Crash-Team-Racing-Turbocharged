@@ -4,7 +4,7 @@ static char s_teeth[] = "teeth";
 
 static b32 RB_Teeth_IsAlwaysOpen(void)
 {
-	b32 relicRace = (sdata->gGT->gameMode1 & RELIC_RACE) != 0;
+	b32 relicRace = (P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 & RELIC_RACE) != 0;
 #if defined(CTR_NATIVE)
 	if (gNativeAlternativeTrackEnabled != 0)
 	{
@@ -21,7 +21,7 @@ void RB_Teeth_LInB(struct Instance *inst)
 
 	b32 alwaysOpen = RB_Teeth_IsAlwaysOpen();
 #if defined(CTR_NATIVE)
-	if (((sdata->gGT->gameMode1 & RELIC_RACE) != 0) && (gNativeAlternativeTrackEnabled != 0))
+	if (((P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 & RELIC_RACE) != 0) && (gNativeAlternativeTrackEnabled != 0))
 	{
 		sdata->doorAccessFlags &= 0xfffffffe;
 		inst->flags &= ~HIDE_MODEL;
@@ -54,11 +54,11 @@ void RB_Teeth_BSP_Callback(struct ScratchpadStruct *sps, void *hitObject)
 		return;
 	}
 
-	teethTh = sps->Union.ThBuckColl.thread;
+	teethTh = P32_GET(struct Thread *, sps->Union.ThBuckColl.thread);
 
-	weaponInst = weaponThread->inst;
+	weaponInst = P32_GET(struct Instance *, weaponThread->inst);
 
-	teethInst = teethTh->inst;
+	teethInst = P32_GET(struct Instance *, teethTh->inst);
 
 	if ((weaponInst != NULL) && (teethInst != NULL))
 	{
@@ -77,7 +77,7 @@ void RB_Teeth_BSP_Callback(struct ScratchpadStruct *sps, void *hitObject)
 		}
 	}
 
-	((struct Teeth *)teethTh->object)->direction = TEETH_DIRECTION_OPENING;
+	((struct Teeth *)P32_GET(void *, teethTh->object))->direction = TEETH_DIRECTION_OPENING;
 
 	return;
 }
@@ -89,9 +89,9 @@ void RB_Teeth_ThTick(struct Thread *t)
 	struct Instance *inst;
 	struct GameTracker *gGT;
 
-	gGT = sdata->gGT;
-	teeth = t->object;
-	inst = t->inst;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	teeth = P32_GET(void *, t->object);
+	inst = P32_GET(struct Instance *, t->inst);
 	struct ScratchpadStruct *sps = CTR_SCRATCHPAD_PTR(struct ScratchpadStruct, 0x108);
 
 	// if door is not moving
@@ -187,15 +187,15 @@ void RB_Teeth_ThTick(struct Thread *t)
 
 	sps->Input1.modelID = STATIC_TEETH;
 
-	sps->Union.ThBuckColl.thread = t;
-	sps->Union.ThBuckColl.funcCallback = RB_Teeth_BSP_Callback;
+	P32_SET(sps->Union.ThBuckColl.thread, t);
+	P32_SET(sps->Union.ThBuckColl.funcCallback, RB_Teeth_BSP_Callback);
 
 	// If door wants to close, but Player or Mine
 	// is in the way, then do not force the doors to close
 
-	PROC_CollideHitboxWithBucket(gGT->threadBuckets[PLAYER].thread, sps, 0);
+	PROC_CollideHitboxWithBucket(P32_GET(struct Thread *, gGT->threadBuckets[PLAYER].thread), sps, 0);
 
-	PROC_CollideHitboxWithBucket(gGT->threadBuckets[MINE].thread, sps, 0);
+	PROC_CollideHitboxWithBucket(P32_GET(struct Thread *, gGT->threadBuckets[MINE].thread), sps, 0);
 
 LAB_800ba084:
 
@@ -232,8 +232,8 @@ int RB_Teeth_LInC(struct Instance *teethInst, struct Thread *t, struct Scratchpa
 		return 2;
 	}
 
-	teethTh = teethInst->thread;
-	d = t->object;
+	teethTh = P32_GET(struct Thread *, teethInst->thread);
+	d = P32_GET(void *, t->object);
 
 	if (teethTh == NULL)
 	{
@@ -243,16 +243,16 @@ int RB_Teeth_LInC(struct Instance *teethInst, struct Thread *t, struct Scratchpa
 		// 0x3 = "static" thread bucket
 		teethTh = PROC_BirthWithObject(SIZE_RELATIVE_POOL_BUCKET(sizeof(struct Teeth), NONE, SMALL, STATIC), RB_Teeth_ThTick, s_teeth, NULL);
 
-		teethInst->thread = teethTh;
+		P32_SET(teethInst->thread, teethTh);
 
 		if (teethTh == NULL)
 		{
 			return 2;
 		}
 
-		teeth = teethTh->object;
+		teeth = P32_GET(void *, teethTh->object);
 
-		teethTh->inst = teethInst;
+		P32_SET(teethTh->inst, teethInst);
 
 		// door not moving
 		teeth->direction = TEETH_DIRECTION_IDLE;
@@ -261,7 +261,7 @@ int RB_Teeth_LInC(struct Instance *teethInst, struct Thread *t, struct Scratchpa
 		teeth->timeOpen = 0;
 	}
 
-	teeth = teethTh->object;
+	teeth = P32_GET(void *, teethTh->object);
 
 	// if collided object is a player
 	if (sps->Input1.modelID == DYNAMIC_PLAYER)
@@ -299,19 +299,19 @@ int RB_Teeth_LInC(struct Instance *teethInst, struct Thread *t, struct Scratchpa
 
 void RB_Teeth_OpenDoor(struct Instance *inst)
 {
-	struct Thread *teethTh = inst->thread;
+	struct Thread *teethTh = P32_GET(struct Thread *, inst->thread);
 	if (teethTh == NULL)
 	{
 		teethTh = PROC_BirthWithObject(SIZE_RELATIVE_POOL_BUCKET(sizeof(struct Teeth), NONE, SMALL, STATIC), RB_Teeth_ThTick, s_teeth, NULL);
-		inst->thread = teethTh;
+		P32_SET(inst->thread, teethTh);
 		if (teethTh == NULL)
 		{
 			return;
 		}
-		teethTh->inst = inst;
-		((struct Teeth *)teethTh->object)->timeOpen = 0;
+		P32_SET(teethTh->inst, inst);
+		((struct Teeth *)P32_GET(void *, teethTh->object))->timeOpen = 0;
 	}
 	PlaySound3D(0x75, inst); // play sound, teeth opening
-	((struct Teeth *)teethTh->object)->direction = TEETH_DIRECTION_OPENING;
+	((struct Teeth *)P32_GET(void *, teethTh->object))->direction = TEETH_DIRECTION_OPENING;
 	sdata->doorAccessFlags |= 1; // enable access through a door (disable collision)
 }

@@ -14,11 +14,11 @@ void RB_Follower_ProcessBucket(struct Thread *t)
 	struct Follower *fObj;
 	struct Instance *inst;
 	struct InstDrawPerPlayer *idpp;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	numPlyr = gGT->numPlyrNextGame;
 
-	for (/**/; t != 0; t = t->siblingThread)
+	for (/**/; t != 0; t = P32_GET(struct Thread *, t->siblingThread))
 	{
 		// skip dead threads
 		if ((t->flags & THREAD_FLAG_DEAD) != 0)
@@ -26,10 +26,10 @@ void RB_Follower_ProcessBucket(struct Thread *t)
 			continue;
 		}
 
-		fObj = t->object;
-		driverID = fObj->driver->driverID;
+		fObj = P32_GET(void *, t->object);
+		driverID = P32_GET(struct Driver *, fObj->driver)->driverID;
 
-		inst = t->inst;
+		inst = P32_GET(struct Instance *, t->inst);
 		idpp = RB_Follower_GetIDPP(inst, 0);
 
 		// make Follower invisible to all other players
@@ -42,7 +42,7 @@ void RB_Follower_ProcessBucket(struct Thread *t)
 		}
 
 		// make Mine invisible to this player
-		inst = fObj->mineTh->inst;
+		inst = P32_GET(struct Instance *, P32_GET(struct Thread *, fObj->mineTh)->inst);
 		idpp = RB_Follower_GetIDPP(inst, driverID);
 		idpp->instFlags &= ~DRAW_SUCCESSFUL;
 	}
@@ -56,9 +56,9 @@ void RB_Follower_ThTick(struct Thread *t)
 	struct Follower *fObj;
 	struct Instance *inst;
 
-	inst = t->inst;
-	fObj = t->object;
-	d = fObj->driver;
+	inst = P32_GET(struct Instance *, t->inst);
+	fObj = P32_GET(void *, t->object);
+	d = P32_GET(struct Driver *, fObj->driver);
 	kartState = d->kartState;
 
 	// lifetime and scale-up run at 30 Hz; position still updates every frame
@@ -73,7 +73,7 @@ void RB_Follower_ThTick(struct Thread *t)
 
 	    // terrible way of checking if mineTh was destroyed
 	    // before the follower thread was destroyed
-	    (fObj->mineTh->timesDestroyed == fObj->backupTimesDestroyed) &&
+	    (P32_GET(struct Thread *, fObj->mineTh)->timesDestroyed == fObj->backupTimesDestroyed) &&
 
 	    (d->speedApprox > -1))
 	{
@@ -117,7 +117,7 @@ void RB_Follower_Init(struct Driver *d, struct Thread *mineTh)
 	}
 
 	// disable for reverse camera
-	if (((sdata->gGT->cameraDC[d->driverID].flags) & CAMERA_FLAG_REVERSE) != 0)
+	if (((P32_GET(struct GameTracker *, sdata->gGT)->cameraDC[d->driverID].flags) & CAMERA_FLAG_REVERSE) != 0)
 	{
 		return;
 	}
@@ -136,17 +136,17 @@ void RB_Follower_Init(struct Driver *d, struct Thread *mineTh)
 	followerInst->scale.z = 0x200;
 
 	// mineInst
-	mineInst = mineTh->inst;
+	mineInst = P32_GET(struct Instance *, mineTh->inst);
 
 	memcpy(&followerInst->matrix, &mineInst->matrix, sizeof(followerInst->matrix));
 
-	t = followerInst->thread;
-	t->funcThDestroy = PROC_DestroyInstance;
+	t = P32_GET(struct Thread *, followerInst->thread);
+	P32_SET(t->funcThDestroy, PROC_DestroyInstance);
 
-	fObj = t->object;
+	fObj = P32_GET(void *, t->object);
 	fObj->frameCount = 7;
-	fObj->driver = d;
-	fObj->mineTh = mineTh;
+	P32_SET(fObj->driver, d);
+	P32_SET(fObj->mineTh, mineTh);
 	fObj->backupTimesDestroyed = mineTh->timesDestroyed;
 
 	// backup original position

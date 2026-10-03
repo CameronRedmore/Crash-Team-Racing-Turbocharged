@@ -168,7 +168,7 @@ static const struct TextureLayout *NativeDrawLevel_SelectMidTexture(const struct
 {
 	*mosaic = NULL;
 
-	const struct TextureLayout *texture = DrawLevelOvr1P_ResolveTexturePointerChecked((uintptr_t)block->ptr_texture_mid[faceIndex]);
+	const struct TextureLayout *texture = DrawLevelOvr1P_ResolveTexturePointerChecked((uintptr_t)P32_GET(void *const, block->ptr_texture_mid[faceIndex]));
 	if (texture == NULL)
 	{
 		return NULL;
@@ -459,7 +459,7 @@ static void NativeDrawLevel_MorphMiddle(const struct NativeDrawLevelContext *ctx
 // picked) or a partial topology with the low texture.
 static void NativeDrawLevel_EmitFullDynamic(const struct NativeDrawLevelContext *ctx, const struct QuadBlock *block)
 {
-	const struct TextureLayout *texture = DrawLevelOvr1P_ResolveTexturePointerChecked((uintptr_t)block->ptr_texture_low);
+	const struct TextureLayout *texture = DrawLevelOvr1P_ResolveTexturePointerChecked((uintptr_t)P32_GET(void *const, block->ptr_texture_low));
 	if (texture == NULL)
 	{
 		return;
@@ -611,10 +611,10 @@ enum NativeDrawLevelKind
 static void NativeDrawLevel_BspList(const struct NativeDrawLevelContext *ctx, const struct VisMemBspListNode *node, const int *visFaceList,
                                     enum NativeDrawLevelKind kind)
 {
-	for (; node != NULL; node = node->next)
+	for (; node != NULL; node = P32_GET(struct VisMemBspListNode *const, node->next))
 	{
-		const struct BSP *bsp = node->bsp;
-		const struct QuadBlock *block = bsp->data.leaf.ptrQuadBlockArray;
+		const struct BSP *bsp = P32_GET(struct BSP *const, node->bsp);
+		const struct QuadBlock *block = P32_GET(struct QuadBlock *const, bsp->data.leaf.ptrQuadBlockArray);
 		s32 quadCount = bsp->data.leaf.numQuads;
 		struct NativeDrawLevelVisibility vis;
 
@@ -683,15 +683,15 @@ static void NativeDrawLevel_BuildView(const struct PushBuffer *pb, NativeDraw3DV
 // Links a layer marker after the sky's negative-D OT slots.
 static void NativeDrawLevel_LinkLayer(struct PushBuffer *pb, struct PrimMem *primMem, int layer, int otIndex)
 {
-	DR_PSYX_DRAW3D *marker = (DR_PSYX_DRAW3D *)primMem->cursor;
-	if ((u8 *)(marker + 1) > (u8 *)primMem->end)
+	DR_PSYX_DRAW3D *marker = (DR_PSYX_DRAW3D *)P32_GET(void *, primMem->cursor);
+	if ((u8 *)(marker + 1) > (u8 *)P32_GET(void *, primMem->end))
 	{
 		return;
 	}
 
 	NativeDraw3D_SetMarker(marker, layer);
-	AddPrim(&pb->ptrOT[otIndex], marker);
-	primMem->cursor = marker + 1;
+	AddPrim(&P32_GET(uint32_t *, pb->ptrOT)[otIndex], marker);
+	P32_SET(primMem->cursor, marker + 1);
 }
 
 // Takes the retail LevRenderList like the overlays do.
@@ -700,7 +700,7 @@ static void NativeDrawLevel_Viewport(struct PushBuffer *pb, struct PrimMem *prim
 {
 	const struct DrawLevelOvr1PRenderList *renderList = levRenderList;
 
-	if ((visFaceList == NULL) || (mesh->ptrQuadBlockArray == NULL) || (mesh->ptrVertexArray == NULL))
+	if ((visFaceList == NULL) || (P32_GET(struct QuadBlock *const, mesh->ptrQuadBlockArray) == NULL) || (P32_GET(struct LevVertex *const, mesh->ptrVertexArray) == NULL))
 	{
 		NativeDraw3D_ReportDiagnostic(NATIVE_DRAW3D_DIAG_LEVEL_INPUT, "NativeDrawLevel", pb->cameraID);
 		return;
@@ -716,7 +716,7 @@ static void NativeDrawLevel_Viewport(struct PushBuffer *pb, struct PrimMem *prim
 
 	struct NativeDrawLevelContext ctx;
 	ctx.layer = layer;
-	ctx.vertices = mesh->ptrVertexArray;
+	ctx.vertices = P32_GET(struct LevVertex *const, mesh->ptrVertexArray);
 	ctx.lod = CTR_SCRATCHPAD_PTR(struct MainRenderLevelGeometryScratch, 0);
 	ctx.waterEnvMap = waterEnvMap;
 	ctx.view = &view;
@@ -729,10 +729,10 @@ static void NativeDrawLevel_Viewport(struct PushBuffer *pb, struct PrimMem *prim
 	{
 		const enum NativeDrawLevelKind kind = (slot == RENDER_LIST_SLOT_WATER) ? NATIVE_DRAW_LEVEL_WATER : NATIVE_DRAW_LEVEL_HIGH;
 		ctx.mosaic = (slot < RENDER_LIST_SLOT_WATER) ? &sNativeDrawLevelMosaicShapes[slot] : NULL;
-		NativeDrawLevel_BspList(&ctx, renderList->list[slot].bspListStart, visFaceList, kind);
+		NativeDrawLevel_BspList(&ctx, P32_GET(struct VisMemBspListNode *const, renderList->list[slot].bspListStart), visFaceList, kind);
 	}
 	ctx.mosaic = NULL;
-	NativeDrawLevel_BspList(&ctx, renderList->bspListStart_FullDynamic, visFaceList, NATIVE_DRAW_LEVEL_LOW);
+	NativeDrawLevel_BspList(&ctx, P32_GET(struct VisMemBspListNode *const, renderList->bspListStart_FullDynamic), visFaceList, NATIVE_DRAW_LEVEL_LOW);
 
 	NativeDraw3D_EndLayer(layer);
 	NativeDrawLevel_LinkLayer(pb, primMem, layer, NATIVE_DRAW_LEVEL_MARKER_OT_INDEX);

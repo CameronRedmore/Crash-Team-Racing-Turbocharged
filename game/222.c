@@ -75,8 +75,8 @@ void AA_EndEvent_DrawMenu(void)
 	s16 lerpFrames;
 	s32 rewardBit = -1;
 
-	struct GameTracker *gGT = sdata->gGT;
-	struct Driver *driver = gGT->drivers[0];
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct Driver *driver = P32_GET(struct Driver *, gGT->drivers[0]);
 	b32 use30HzStep = true;
 #if CTR_NATIVE_60FPS
 	use30HzStep = CTR_RETAIL_FRAME_TICK(gGT->timer);
@@ -84,11 +84,11 @@ void AA_EndEvent_DrawMenu(void)
 	s32 numPlayers = gGT->numPlyrCurrGame;
 	s32 totalRacers = numPlayers + gGT->numBotsNextGame;
 	struct AdvProgress *adv = &sdata->advProgress;
-	struct Instance *hudC = sdata->ptrHudC;
-	struct Instance *hudT = sdata->ptrHudT;
-	struct Instance *hudR = sdata->ptrHudR;
+	struct Instance *hudC = P32_GET(struct Instance *, sdata->ptrHudC);
+	struct Instance *hudT = P32_GET(struct Instance *, sdata->ptrHudT);
+	struct Instance *hudR = P32_GET(struct Instance *, sdata->ptrHudR);
 	struct Instance *hudLetters[3] = {hudC, hudT, hudR};
-	struct Instance *hudToken = sdata->ptrToken;
+	struct Instance *hudToken = P32_GET(struct Instance *, sdata->ptrToken);
 	struct UiElement2D *hudCTR = &data.hud_1P_P1[AA_CTR_HUD_SLOT];
 
 	s32 elapsedFrames = sdata->framesSinceRaceEnded;
@@ -100,9 +100,9 @@ void AA_EndEvent_DrawMenu(void)
 
 	sdata->framesSinceRaceEnded = elapsedFrames;
 
-	if (driver->instBigNum->scale.x != AA_BIG_NUM_TARGET_SCALE)
+	if (P32_GET(struct Instance *, driver->instBigNum)->scale.x != AA_BIG_NUM_TARGET_SCALE)
 	{
-		struct Instance *instFruitDisp = driver->instFruitDisp;
+		struct Instance *instFruitDisp = P32_GET(struct Instance *, driver->instFruitDisp);
 		instFruitDisp->scale = (SVec3){{0, 0, 0}};
 	}
 
@@ -250,7 +250,7 @@ void AA_EndEvent_DrawMenu(void)
 
 					s32 textColor = (FPS_HALF(gGT->timer) & 1) ? (JUSTIFY_CENTER | RED) : (JUSTIFY_CENTER | WHITE);
 
-					DecalFont_DrawLine(sdata->lngStrings[LNG_CTR_TOKEN_AWARDED], textPos.x, textPos.y, FONT_BIG, textColor);
+					DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_CTR_TOKEN_AWARDED], textPos.x, textPos.y, FONT_BIG, textColor);
 				}
 			}
 		}
@@ -275,7 +275,7 @@ void AA_EndEvent_DrawMenu(void)
 						    // letter not fully off-screen
 						    (AA_CTR_LETTER_FALL_MIN_Y < hudLetters[i]->matrix.t[1]) && use30HzStep)
 					{
-						struct UiElement3D *letter = hudLetters[i]->thread->object;
+						struct UiElement3D *letter = P32_GET(void *, P32_GET(struct Thread *, hudLetters[i]->thread)->object);
 
 						// move X position (yes, C-Letter only, Naughty Dog bug?)
 						hudLetters[0]->matrix.t[0] += letter->vel[0];
@@ -364,14 +364,14 @@ void AA_EndEvent_DrawMenu(void)
 			DecalFont_DrawLine((char *)&s_driverRankString222, letterPos.x + 0x20, 0x5f, FONT_SMALL, WHITE);
 
 			// Draw the driver's character icon
-			UI_DrawDriverIconForDriver(gGT->driversInRaceOrder[i]->driverID,
+			UI_DrawDriverIconForDriver(P32_GET(struct Driver *, gGT->driversInRaceOrder[i])->driverID,
 
-			    gGT->ptrIcons[data.MetaDataCharacters[data.characterIDs[gGT->driversInRaceOrder[i]->driverID]].iconID],
+			    P32_GET(struct Icon *, gGT->ptrIcons[data.MetaDataCharacters[data.characterIDs[P32_GET(struct Driver *, gGT->driversInRaceOrder[i])->driverID]].iconID]),
 
-			    letterPos.x, 0x60, &gGT->backBuffer->primMem,
+			    letterPos.x, 0x60, &P32_GET(struct DB *, gGT->backBuffer)->primMem,
 
 			    // pointer to OT mem
-			    gGT->pushBuffer_UI.ptrOT,
+			    P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT),
 
 			    1, AA_DRIVER_ICON_SCALE, MakeColor(AA_DRIVER_ICON_GRAY_CHANNEL, AA_DRIVER_ICON_GRAY_CHANNEL, AA_DRIVER_ICON_GRAY_CHANNEL).self);
 		}
@@ -393,7 +393,7 @@ void AA_EndEvent_DrawMenu(void)
 		// but text near middle of screen
 		s16 pressContinueY = (numPlayers == 2) ? 100 : 0xbe;
 
-		DecalFont_DrawLine(sdata->lngStrings[LNG_PRESS_TO_CONTINUE], 0x100, pressContinueY, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
+		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_PRESS_TO_CONTINUE], 0x100, pressContinueY, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
 
 		// If you do not "Press X to continue"
 		if ((sdata->AnyPlayerTap & AA_CONFIRM_BUTTON_MASK) == 0)
@@ -456,7 +456,7 @@ void AA_EndEvent_DrawMenu(void)
 		return;
 	}
 
-	DecalFont_DrawLine(sdata->lngStrings[LNG_PRESS_TO_CONTINUE], 0x100, 0xbe, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
+	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_PRESS_TO_CONTINUE], 0x100, 0xbe, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
 
 	// If you have not pressed X
 	if ((sdata->AnyPlayerTap & AA_CONFIRM_BUTTON_MASK) == 0)
@@ -567,14 +567,14 @@ void AA_EndEvent_DisplayTime(s16 driverId, s16 timeOffsetFrames)
 	s32 endFrame;
 	SVec2 pos;
 
-	struct GameTracker *gGT = sdata->gGT;
-	struct Driver *driver = gGT->drivers[driverId];
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct Driver *driver = P32_GET(struct Driver *, gGT->drivers[driverId]);
 
 	s32 numPlayers = gGT->numPlyrCurrGame;
 	int presentationDriverId = driverId;
-	struct UiElement2D *hudArray = data.hudStructPtr[numPlayers - 1];
+	struct UiElement2D *hudArray = P32_GET(struct UiElement2D *, data.hudStructPtr[numPlayers - 1]);
 	struct UiElement2D *hud = &hudArray[driverId * AA_HUD_ELEMENTS_PER_DRIVER];
-	struct Instance *bigNum = driver->instBigNum;
+	struct Instance *bigNum = P32_GET(struct Instance *, driver->instBigNum);
 #if defined(__vita__)
 	u32 *adhocSavedPushUiOT = NULL;
 	u32 *adhocSavedDbUiOT = NULL;
@@ -745,7 +745,7 @@ void AA_EndEvent_DisplayTime(s16 driverId, s16 timeOffsetFrames)
 
 	UI_DrawRaceClock(pos.x, pos.y, UI_RACE_CLOCK_SHOW_RESULTS, driver);
 
-	s16 totalTextWidth = DecalFont_GetLineWidth(sdata->lngStrings[LNG_TOTAL], FONT_BIG);
+	s16 totalTextWidth = DecalFont_GetLineWidth(P32_GET(char **, sdata->lngStrings)[LNG_TOTAL], FONT_BIG);
 
 	timeBoxRect.x = (pos.x - totalTextWidth) + -6;
 	timeBoxRect.y = (pos.y - timeBoxRect.h) + 0xd;
@@ -770,7 +770,7 @@ void AA_EndEvent_DisplayTime(s16 driverId, s16 timeOffsetFrames)
 	timeBoxRect.h += 6;
 
 	// Draw 2D Menu rectangle background
-	RECTMENU_DrawInnerRect(&timeBoxRect, 4, gGT->backBuffer->otMem.uiOT);
+	RECTMENU_DrawInnerRect(&timeBoxRect, 4, P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT));
 #if defined(__vita__)
 	if (adhocSavedPushUiOT != NULL)
 	{

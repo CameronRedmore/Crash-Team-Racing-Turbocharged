@@ -340,7 +340,7 @@ enum LoadType
 struct LoadQueueSlot
 {
 	// 0x0
-	struct BigHeader *ptrBigfileCdPos_UNUSED;
+	P32(struct BigHeader *) ptrBigfileCdPos_UNUSED;
 
 	// 0x4
 	u16 flags;
@@ -352,13 +352,13 @@ struct LoadQueueSlot
 	u32 subfileIndex;
 
 	// 0xC
-	void *ptrDestination;
+	P32(void *) ptrDestination;
 
 	// 0x10
 	u32 size_UNUSED;
 
 	// 0x14
-	void (*callbackFuncPtr)(struct LoadQueueSlot *);
+	P32_FNPTR(void, callbackFuncPtr, (struct LoadQueueSlot *));
 };
 
 #define LOAD_QUEUE_CALLBACK_SET_POINTER ((void (*)(struct LoadQueueSlot *)) - 2)

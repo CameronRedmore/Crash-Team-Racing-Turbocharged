@@ -72,7 +72,7 @@ void CS_Credits_DestroyCreditGhost(void)
 {
 	for (int i = 0; i < CS_CREDITS_GHOST_COUNT; i++)
 	{
-		INSTANCE_Death(creditsBSS.creditsObj.creditGhostInst[i]);
+		INSTANCE_Death(P32_GET(struct Instance *, creditsBSS.creditsObj.creditGhostInst[i]));
 	}
 
 	MEMPACK_ClearHighMem();
@@ -95,7 +95,7 @@ void CS_Credits_AnimateCreditGhost(struct Instance *dst, struct Instance *src, i
 	dst->scale.z = scale;
 
 	dst->flags &= ~HIDE_MODEL;
-	if ((int)dst->model == 0)
+	if ((int)P32_GET(struct Model *, dst->model) == 0)
 	{
 		dst->flags |= HIDE_MODEL;
 	}
@@ -103,9 +103,9 @@ void CS_Credits_AnimateCreditGhost(struct Instance *dst, struct Instance *src, i
 	dst->alphaScale = (index + 1) * CS_CREDITS_GHOST_ALPHA_STEP;
 
 	struct Model *localModel = &co->creditGhostModelCopies[index];
-	dst->model = localModel;
+	P32_SET(dst->model, localModel);
 
-	struct Model *srcModel = src->model;
+	struct Model *srcModel = P32_GET(struct Model *, src->model);
 	int *dstModelInts = (int *)localModel;
 	int *srcModelInts = (int *)srcModel;
 	dstModelInts[0] = srcModelInts[0];
@@ -115,13 +115,13 @@ void CS_Credits_AnimateCreditGhost(struct Instance *dst, struct Instance *src, i
 	dstModelInts[4] = srcModelInts[4];
 	dstModelInts[5] = srcModelInts[5];
 
-	localModel->headers = co->creditGhostHeaders[index];
+	P32_SET(localModel->headers, co->creditGhostHeaders[index]);
 
 	s16 srcNumHeaders = srcModel->numHeaders;
 	if (srcNumHeaders > 0)
 	{
-		struct ModelHeader *dstHeaders = localModel->headers;
-		struct ModelHeader *srcHeaders = srcModel->headers;
+		struct ModelHeader *dstHeaders = P32_GET(struct ModelHeader *, localModel->headers);
+		struct ModelHeader *srcHeaders = P32_GET(struct ModelHeader *, srcModel->headers);
 
 		for (int i = 0; i < srcNumHeaders; i++)
 		{
@@ -175,14 +175,14 @@ void CS_Credits_Init(void)
 	struct CreditsLevHeader *creditsDst;
 	struct Thread *creditThread;
 
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	advProg = &sdata->advProgress;
 	creditsObj = &creditsBSS.creditsObj;
 
 	void **pointers = ST1_GETPOINTERS(gGT->level1->ptrSpawnType1);
 	CLH = pointers[ST1_CREDITS];
 
-	creditsBSS.dancerThread = 0;
+	P32_SET(creditsBSS.dancerThread, 0);
 
 	creditsBSS.boolAllBlue = 1;
 	boolAllGold = true;
@@ -212,8 +212,8 @@ void CS_Credits_Init(void)
 	}
 
 	creditThread = PROC_BirthWithObject(CS_CREDITS_THREAD_FLAGS, CS_Credits_ThTick, cs_creditsThreadName, NULL);
-	creditThread->funcThDestroy = CS_Credits_ThDestroy_NoOp;
-	creditsBSS.creditThread = creditThread;
+	P32_SET(creditThread->funcThDestroy, CS_Credits_ThDestroy_NoOp);
+	P32_SET(creditsBSS.creditThread, creditThread);
 
 	memset(creditsObj, 0, sizeof(struct CreditsObj));
 	creditsObj->countdown = CS_CREDITS_COUNTDOWN_FRAMES;
@@ -222,25 +222,25 @@ void CS_Credits_Init(void)
 	for (i = 0; i < CS_CREDITS_GHOST_COUNT; i++)
 	{
 		// STATIC_AKUAKU for some reason?
-		inst = INSTANCE_Birth3D(gGT->modelPtr[STATIC_AKUAKU], cs_creditGhostName, creditThread);
+		inst = INSTANCE_Birth3D(P32_GET(struct Model *, gGT->modelPtr[STATIC_AKUAKU]), cs_creditGhostName, creditThread);
 
 		// save instance
-		creditsObj->creditGhostInst[(CS_CREDITS_GHOST_COUNT - 1) - i] = inst;
+		P32_SET(creditsObj->creditGhostInst[(CS_CREDITS_GHOST_COUNT - 1) - i], inst);
 
 		CTR_MatrixSetRotIdentity(&inst->matrix);
 
 		inst->flags |= SCREENSPACE_INSTANCE;
 
 		struct InstDrawPerPlayer *idpp = INST_GETIDPP(inst);
-		idpp[0].pushBuffer = &gGT->pushBuffer_UI;
+		P32_SET(idpp[0].pushBuffer, &gGT->pushBuffer_UI);
 
 		for (int j = 1; j < gGT->numPlyrCurrGame; j++)
 		{
-			idpp[j].pushBuffer = NULL;
+			P32_SET(idpp[j].pushBuffer, NULL);
 		}
 	}
 
-	creditsBSS.dancerInst_invisible = NULL;
+	P32_SET(creditsBSS.dancerInst_invisible, NULL);
 
 	creditsDst = MEMPACK_AllocHighMem(CLH->size /* "credits strings" */);
 
@@ -249,7 +249,7 @@ void CS_Credits_Init(void)
 	creditsBSS.numStrings = creditsDst->numStrings;
 
 	char **ptrStrings = (char **)CREDITSHEADER_GETSTRINGS(creditsDst);
-	creditsBSS.ptrStrings = ptrStrings;
+	P32_SET(creditsBSS.ptrStrings, ptrStrings);
 
 	for (i = 0; i < creditsBSS.numStrings; i++)
 	{
@@ -257,7 +257,7 @@ void CS_Credits_Init(void)
 	}
 
 	creditsObj->creditsPosY = CS_CREDITS_NAME_START_Y;
-	creditsObj->creditsTopString = ptrStrings[CS_CREDITS_TEXT_START_STRING_INDEX];
+	P32_SET(creditsObj->creditsTopString, ptrStrings[CS_CREDITS_TEXT_START_STRING_INDEX]);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b92a0-0x800b92cc
@@ -265,7 +265,7 @@ b32 CS_Credits_IsTextValid(void)
 {
 	struct CreditsObj *creditsObj = &creditsBSS.creditsObj;
 
-	if (creditsObj->epilogueTopString != 0)
+	if (P32_GET(char *, creditsObj->epilogueTopString) != 0)
 	{
 		return 0;
 	}
@@ -280,39 +280,39 @@ void CS_Credits_NewDancer(struct Thread *dancerTh, int dancerModelID)
 	struct CreditsObj *creditsObj = &creditsBSS.creditsObj;
 
 	// kill any living thread
-	struct Thread *oldDancerThread = creditsBSS.dancerThread;
+	struct Thread *oldDancerThread = P32_GET(struct Thread *, creditsBSS.dancerThread);
 	if (oldDancerThread != 0)
 	{
-		creditsBSS.dancerThread = 0;
+		P32_SET(creditsBSS.dancerThread, 0);
 		oldDancerThread->flags |= THREAD_FLAG_DEAD;
 	}
 
 	// store globally, make instance invisible
-	creditsBSS.dancerThread = dancerTh;
-	creditsBSS.dancerInst_invisible = dancerTh->inst;
-	creditsBSS.dancerInst_invisible->flags |= HIDE_MODEL;
+	P32_SET(creditsBSS.dancerThread, dancerTh);
+	P32_SET(creditsBSS.dancerInst_invisible, P32_GET(struct Instance *, dancerTh->inst));
+	P32_GET(struct Instance *, creditsBSS.dancerInst_invisible)->flags |= HIDE_MODEL;
 
 	creditsObj->countdown = CS_CREDITS_COUNTDOWN_FRAMES;
 
-	char **ptrStrings = creditsBSS.ptrStrings;
+	char **ptrStrings = P32_GET(char **, creditsBSS.ptrStrings);
 
 	// less than TAWNA1
 	if (dancerModelID < STATIC_TAWNA1)
 	{
 		// subtract CRASHDANCE
-		creditsObj->epilogueTopString = ptrStrings[dancerModelID - STATIC_CRASHDANCE];
+		P32_SET(creditsObj->epilogueTopString, ptrStrings[dancerModelID - STATIC_CRASHDANCE]);
 	}
 
 	// TAWNA
 	else
 	{
 		// subtract an extra cause of GARAGE_TOP
-		creditsObj->epilogueTopString = ptrStrings[(dancerModelID - STATIC_CRASHDANCE) - 1];
+		P32_SET(creditsObj->epilogueTopString, ptrStrings[(dancerModelID - STATIC_CRASHDANCE) - 1]);
 	}
 
 	creditsObj->epilogueFramesLeft = CS_CREDITS_EPILOGUE_DURATION_FRAMES;
 
-	creditsObj->epilogueNextString = CS_Credits_GetNextString(creditsObj->epilogueTopString);
+	P32_SET(creditsObj->epilogueNextString, CS_Credits_GetNextString(P32_GET(char *, creditsObj->epilogueTopString)));
 
 	creditsObj->epiloguePosX_unused = CS_CREDITS_EPILOGUE_UNUSED_POS_X;
 }
@@ -320,12 +320,12 @@ void CS_Credits_NewDancer(struct Thread *dancerTh, int dancerModelID)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b9398-0x800b93f4
 int CS_Credits_NewCreditGhosts(void)
 {
-	struct Model *model = creditsBSS.dancerInst_invisible->model;
+	struct Model *model = P32_GET(struct Model *, P32_GET(struct Instance *, creditsBSS.dancerInst_invisible)->model);
 	int i;
 
 	for (i = 0; i < CS_CREDITS_GHOST_COUNT; i++)
 	{
-		if (creditsBSS.creditsObj.creditGhostModel[i] != model)
+		if (P32_GET(struct Model *, creditsBSS.creditsObj.creditGhostModel[i]) != model)
 		{
 			return 0;
 		}
@@ -358,13 +358,13 @@ static void CS_Credits_RestorePodiumAudioForNativeHandoff(void)
 void CS_Credits_End(void)
 {
 	int levID;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// erase 5 instances
 	CS_Credits_DestroyCreditGhost();
 
 	// kill thread
-	creditsBSS.creditThread->flags |= THREAD_FLAG_DEAD;
+	P32_GET(struct Thread *, creditsBSS.creditThread)->flags |= THREAD_FLAG_DEAD;
 
 #if defined(CTR_NATIVE)
 	CS_Credits_RestorePodiumAudioForNativeHandoff();
@@ -394,7 +394,7 @@ void CS_Credits_End(void)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b88c8-0x800b8bd0
 void CS_Credits_DrawNames(struct CreditsObj *co)
 {
-	if (co->creditsTopString == 0)
+	if (P32_GET(char *, co->creditsTopString) == 0)
 	{
 		return;
 	}
@@ -408,12 +408,12 @@ void CS_Credits_DrawNames(struct CreditsObj *co)
 
 	if (co->creditsPosY < -CS_CREDITS_LINE_HEIGHT)
 	{
-		co->creditsTopString = CS_Credits_GetNextString(co->creditsTopString);
+		P32_SET(co->creditsTopString, CS_Credits_GetNextString(P32_GET(char *, co->creditsTopString)));
 		co->creditsPosY += CS_CREDITS_LINE_HEIGHT;
 	}
 
 	int posY = co->creditsPosY;
-	char *str = co->creditsTopString;
+	char *str = P32_GET(char *, co->creditsTopString);
 	int charId = 0;
 
 	while (posY < CS_CREDITS_NAME_END_Y)
@@ -487,7 +487,7 @@ void CS_Credits_DrawNames(struct CreditsObj *co)
 				colorSlot = CREDITS_FADE;
 
 				int fade8 = (fadeAmount << 8) / CS_CREDITS_LINE_HEIGHT;
-				char *src = (char *)data.ptrColor[charId];
+				char *src = (char *)P32_GET(u32 *, data.ptrColor[charId]);
 				char *dst = (char *)&data.colors[CREDITS_FADE];
 
 				for (int i = 0; i < 4; i++)
@@ -519,7 +519,7 @@ void CS_Credits_DrawNames(struct CreditsObj *co)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b8bd0-0x800b8dc8
 void CS_Credits_DrawEpilogue(struct CreditsObj *co)
 {
-	if (co->epilogueTopString == 0)
+	if (P32_GET(char *, co->epilogueTopString) == 0)
 	{
 		return;
 	}
@@ -534,11 +534,11 @@ void CS_Credits_DrawEpilogue(struct CreditsObj *co)
 	if (co->epilogueFramesLeft <= 0)
 	{
 		co->epilogueFramesLeft = CS_CREDITS_EPILOGUE_DURATION_FRAMES;
-		co->epilogueTopString = co->epilogueNextString;
-		co->epilogueNextString = CS_Credits_GetNextString(co->epilogueNextString);
+		P32_SET(co->epilogueTopString, P32_GET(char *, co->epilogueNextString));
+		P32_SET(co->epilogueNextString, CS_Credits_GetNextString(P32_GET(char *, co->epilogueNextString)));
 	}
 
-	if (co->epilogueTopString == 0)
+	if (P32_GET(char *, co->epilogueTopString) == 0)
 	{
 		return;
 	}
@@ -568,7 +568,7 @@ void CS_Credits_DrawEpilogue(struct CreditsObj *co)
 
 			int fade8 = (fadeAmount << 8) / CS_CREDITS_LINE_HEIGHT;
 			char *dst = (char *)&data.colors[CREDITS_FADE];
-			char *src = (char *)data.ptrColor[WHITE];
+			char *src = (char *)P32_GET(u32 *, data.ptrColor[WHITE]);
 
 			for (int i = 0; i < 4; i++)
 			{
@@ -588,12 +588,12 @@ void CS_Credits_DrawEpilogue(struct CreditsObj *co)
 	{
 		s16 strLen = -1;
 
-		if (co->epilogueNextString != 0)
+		if (P32_GET(char *, co->epilogueNextString) != 0)
 		{
-			strLen = (s16)(co->epilogueNextString - co->epilogueTopString) - 1;
+			strLen = (s16)(P32_GET(char *, co->epilogueNextString) - P32_GET(char *, co->epilogueTopString)) - 1;
 		}
 
-		DecalFont_DrawMultiLineStrlen(co->epilogueTopString, strLen, CS_CREDITS_EPILOGUE_CENTER_X, CS_CREDITS_EPILOGUE_Y, CS_CREDITS_EPILOGUE_WIDTH, FONT_SMALL,
+		DecalFont_DrawMultiLineStrlen(P32_GET(char *, co->epilogueTopString), strLen, CS_CREDITS_EPILOGUE_CENTER_X, CS_CREDITS_EPILOGUE_Y, CS_CREDITS_EPILOGUE_WIDTH, FONT_SMALL,
 		                              colorSlot | JUSTIFY_CENTER);
 	}
 }
@@ -602,14 +602,14 @@ void CS_Credits_DrawEpilogue(struct CreditsObj *co)
 void CS_Credits_ThTick(void)
 {
 	struct CreditsObj *co = &creditsBSS.creditsObj;
-	struct Instance *danceInst = creditsBSS.dancerInst_invisible;
+	struct Instance *danceInst = P32_GET(struct Instance *, creditsBSS.dancerInst_invisible);
 	b32 use30HzStep = true;
 
 #if CTR_NATIVE_60FPS
 	use30HzStep = CTR_RETAIL_FRAME_TICK(sdata->gGT->timer);
 #endif
 
-	co->creditDanceInst = danceInst;
+	P32_SET(co->creditDanceInst, danceInst);
 
 	if (danceInst != NULL)
 	{
@@ -619,7 +619,7 @@ void CS_Credits_ThTick(void)
 		danceInst->matrix.t[1] = (int)creditsBSS.creditGhostPos.y;
 		danceInst->matrix.t[2] = (int)creditsBSS.creditGhostPos.z;
 
-		struct GameTracker *gGT = sdata->gGT;
+		struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 		if (use30HzStep)
 		{
@@ -627,20 +627,20 @@ void CS_Credits_ThTick(void)
 			{
 				for (int i = CS_CREDITS_GHOST_COUNT - 1; i > 0; i--)
 				{
-					CS_Credits_AnimateCreditGhost(co->creditGhostInst[i], co->creditGhostInst[i - 1], i);
-					co->creditGhostModel[i] = co->creditGhostModel[i - 1];
+					CS_Credits_AnimateCreditGhost(P32_GET(struct Instance *, co->creditGhostInst[i]), P32_GET(struct Instance *, co->creditGhostInst[i - 1]), i);
+					P32_SET(co->creditGhostModel[i], P32_GET(struct Model *, co->creditGhostModel[i - 1]));
 				}
 
-				CS_Credits_AnimateCreditGhost(co->creditGhostInst[0], co->creditDanceInst, 0);
-				co->creditGhostModel[0] = co->creditDanceInst->model;
+				CS_Credits_AnimateCreditGhost(P32_GET(struct Instance *, co->creditGhostInst[0]), P32_GET(struct Instance *, co->creditDanceInst), 0);
+				P32_SET(co->creditGhostModel[0], P32_GET(struct Model *, P32_GET(struct Instance *, co->creditDanceInst)->model));
 			}
 			else
 			{
-				CS_Credits_AnimateCreditGhost(co->creditGhostInst[0], co->creditDanceInst, 0);
+				CS_Credits_AnimateCreditGhost(P32_GET(struct Instance *, co->creditGhostInst[0]), P32_GET(struct Instance *, co->creditDanceInst), 0);
 
 				for (int i = 1; i < CS_CREDITS_GHOST_COUNT; i++)
 				{
-					struct Instance *ghost = co->creditGhostInst[i];
+					struct Instance *ghost = P32_GET(struct Instance *, co->creditGhostInst[i]);
 					ghost->scale.x += CS_CREDITS_GHOST_TRAIL_SCALE_STEP;
 					ghost->scale.y += CS_CREDITS_GHOST_TRAIL_SCALE_STEP;
 					ghost->scale.z += CS_CREDITS_GHOST_TRAIL_SCALE_STEP;

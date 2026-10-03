@@ -28,7 +28,7 @@ void NativePhysics_SurfacePushback(struct Driver *d)
 	if (d->spsNormalVec.x * diffX + d->spsNormalVec.y * floorDiffY + d->spsNormalVec.z * diffZ >= 0) return;
 	// Recovery acceleration retains fractional impulses and scales with the
 	// simulation duration rather than applying it once per rendered frame.
-	double scale = ldexp(NativePhysics_ElapsedMS(sdata->gGT->elapsedTimeMS) / 32.0, VEH_PHYS_FORCE_SURFACE_PUSHBACK_SHIFT);
+	double scale = ldexp(NativePhysics_ElapsedMS(P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS) / 32.0, VEH_PHYS_FORCE_SURFACE_PUSHBACK_SHIFT);
 	NativePhysicsVec velocity = NativePhysics_ReadVelocity(d);
 	velocity.x += diffX * scale;
 	velocity.y += (position.y / 256.0 - d->spsHitPos.y) * scale;
@@ -37,7 +37,7 @@ void NativePhysics_SurfacePushback(struct Driver *d)
 }
 void NativePhysics_Gravity(struct Driver *driver, Vec3 *output)
 {
-	double elapsedTimeMS = NativePhysics_ElapsedMS(sdata->gGT->elapsedTimeMS);
+	double elapsedTimeMS = NativePhysics_ElapsedMS(P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS);
 
 	NativePhysicsVec velocityValue = NativePhysics_ReadVelocity(driver);
 	NativePhysicsVec *velocity = &velocityValue;
@@ -45,7 +45,7 @@ void NativePhysics_Gravity(struct Driver *driver, Vec3 *output)
 	NativePhysicsVec localVelocity = NativePhysics_RotateDriver(driver, *velocity, 1);
 	double originalLocalZ = localVelocity.z;
 	double gravityY = Smoothed_Neg(driver->const_Gravity);
-	struct QuadBlock *underDriver = driver->underDriver;
+	struct QuadBlock *underDriver = P32_GET(struct QuadBlock *, driver->underDriver);
 
 	// NOTE(aalhendi): Retail does not branch before reading this flag. Native
 	// can reach this frame after TeleportSelf clears underDriver and before
@@ -120,7 +120,7 @@ void NativePhysics_Gravity(struct Driver *driver, Vec3 *output)
 		}
 	}
 
-	TerrainFlags terrainFlags = driver->terrainMeta1->flags;
+	TerrainFlags terrainFlags = P32_GET(struct Terrain *, driver->terrainMeta1)->flags;
 	double terminalVelocity = driver->const_TerminalVelocity;
 	if ((localY < 0) && ((terrainFlags & TERRAIN_FLAG_MUD_PHYSICS) != 0))
 	{
@@ -159,7 +159,7 @@ void NativePhysics_Gravity(struct Driver *driver, Vec3 *output)
 		localZ = 0;
 	}
 	else if (((driver->actionsFlagSetPrevFrame & ACTION_TOUCH_GROUND) != 0) || (driver->kartState == KS_BLASTED) ||
-			 ((driver->terrainScaledBaseSpeed < driver->speedApprox) && (driver->terrainMeta2->speedMultiplier < VEH_PHYS_FORCE_TERRAIN_SCALE_NEUTRAL)))
+			 ((driver->terrainScaledBaseSpeed < driver->speedApprox) && (P32_GET(struct Terrain *, driver->terrainMeta2)->speedMultiplier < VEH_PHYS_FORCE_TERRAIN_SCALE_NEUTRAL)))
 	{
 		double perpendicularFriction;
 		double forwardFriction;
@@ -248,7 +248,7 @@ void NativePhysics_Gravity(struct Driver *driver, Vec3 *output)
 		perpendicularFriction = Smoothed_Down((perpendicularFriction * elapsedTimeMS), 5);
 		forwardFriction = Smoothed_Down((forwardFriction * elapsedTimeMS), 5);
 
-		double terrainFrictionScale = driver->terrainMeta1->groundFrictionScale;
+		double terrainFrictionScale = P32_GET(struct Terrain *, driver->terrainMeta1)->groundFrictionScale;
 		if (terrainFrictionScale != VEH_PHYS_FORCE_TERRAIN_SCALE_NEUTRAL)
 		{
 			perpendicularFriction = Smoothed_Down((terrainFrictionScale * perpendicularFriction), 8);
@@ -283,7 +283,7 @@ void NativePhysics_Gravity(struct Driver *driver, Vec3 *output)
 				GAMEPAD_ShockFreq(driver, VEH_PHYS_FORCE_TERRAIN_RUMBLE_FRAMES, 0);
 			}
 
-			terrainTimer = (terrainTimer + sdata->gGT->elapsedTimeMS);
+			terrainTimer = (terrainTimer + P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS);
 			if (terrainTimer > 0)
 			{
 				terrainTimer = 0;
@@ -292,7 +292,7 @@ void NativePhysics_Gravity(struct Driver *driver, Vec3 *output)
 		}
 		else if (terrainTimer > 0)
 		{
-			terrainTimer = (terrainTimer - sdata->gGT->elapsedTimeMS);
+			terrainTimer = (terrainTimer - P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS);
 			if (terrainTimer < 0)
 			{
 				terrainTimer = 0;
@@ -484,7 +484,7 @@ void NativePhysics_JumpAndFriction(struct Driver *d)
 	}
 	else if (d->baseSpeed != 0)
 	{
-		if (((d->terrainMeta1->flags & TERRAIN_FLAG_ACCEL_WHILE_REVERSE_SLIDING) == 0) || (d->baseSpeed < 1) || (d->speedApprox >= 0))
+		if (((P32_GET(struct Terrain *, d->terrainMeta1)->flags & TERRAIN_FLAG_ACCEL_WHILE_REVERSE_SLIDING) == 0) || (d->baseSpeed < 1) || (d->speedApprox >= 0))
 		{
 			int speedApprox = d->speedApprox;
 			int absSpeedApprox = abs(speedApprox);
@@ -505,7 +505,7 @@ void NativePhysics_JumpAndFriction(struct Driver *d)
 				acceleration = d->const_Accel_Reserves;
 			}
 
-			int slowUntilSpeed = d->terrainMeta1->slowUntilSpeed;
+			int slowUntilSpeed = P32_GET(struct Terrain *, d->terrainMeta1)->slowUntilSpeed;
 			if ((slowUntilSpeed != VEH_PHYS_JUMP_TERRAIN_SCALE_NEUTRAL) && ((d->actionsFlagSet & ACTION_MASK_WEAPON) == 0))
 			{
 				acceleration = Smoothed_Down((slowUntilSpeed * acceleration), VEH_PHYS_JUMP_SPEED_FIXED_SHIFT);
@@ -519,7 +519,7 @@ void NativePhysics_JumpAndFriction(struct Driver *d)
 
 PROCESS_ACCEL:
 {
-	double forwardImpulse = Smoothed_Down((acceleration * NativePhysics_ElapsedMS(sdata->gGT->elapsedTimeMS)), 5);
+	double forwardImpulse = Smoothed_Down((acceleration * NativePhysics_ElapsedMS(P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS)), 5);
 	NativePhysicsVec rotated = NativePhysics_RotateDriver(d, (NativePhysicsVec){0, 0, forwardImpulse}, 0);
 
 	if (d->baseSpeed < 0)
@@ -611,7 +611,7 @@ CHECK_FOR_ANY_JUMP:
 		{
 			if ((d->actionsFlagSet & ACTION_TOUCH_GROUND) != 0)
 			{
-				if ((d->underDriver != NULL) && (d->underDriver->mulNormVecY != 0))
+				if ((P32_GET(struct QuadBlock *, d->underDriver) != NULL) && (P32_GET(struct QuadBlock *, d->underDriver)->mulNormVecY != 0))
 				{
 					int speedApprox = d->speedApprox;
 					if (speedApprox < 0)
@@ -619,8 +619,8 @@ CHECK_FOR_ANY_JUMP:
 						speedApprox = abs(speedApprox);
 					}
 
-					double antiGravVelY = Smoothed_Down((d->underDriver->mulNormVecY * speedApprox), 8);
-					antiGravVelY *= NativePhysics_ElapsedMS(sdata->gGT->elapsedTimeMS) / 32.0;
+					double antiGravVelY = Smoothed_Down((P32_GET(struct QuadBlock *, d->underDriver)->mulNormVecY * speedApprox), 8);
+					antiGravVelY *= NativePhysics_ElapsedMS(P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS) / 32.0;
 					NativePhysicsVec rotated = NativePhysics_RotateDriver(d, (NativePhysicsVec){0, antiGravVelY, 0}, 0);
 
 					movement.x = (movement.x + rotated.x);
@@ -700,7 +700,7 @@ PROCESS_JUMP:
 
 	double verticalSpeed = sqrt(jumpVelYSquared + (double)d->jump_InitialVelY * d->jump_InitialVelY);
 
-	int maxVerticalSpeed = sdata->gGT->level1->jumpVerticalSpeedCap << VEH_PHYS_JUMP_SPEED_FIXED_SHIFT;
+	int maxVerticalSpeed = P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->jumpVerticalSpeedCap << VEH_PHYS_JUMP_SPEED_FIXED_SHIFT;
 	if (maxVerticalSpeed == 0)
 	{
 		maxVerticalSpeed = VEH_PHYS_JUMP_VERTICAL_SPEED_DEFAULT;
@@ -742,7 +742,7 @@ NOT_JUMPING:
 		{
 			d->speedometerNeedleValue =
 				(s16)((u32)CTR_MipsAddLo(CTR_MipsMulLo(d->speedometerNeedleValue, VEH_PHYS_JUMP_SPEEDOMETER_BLEND_OLD),
-										 CTR_MipsMulLo(sdata->gGT->timer & VEH_PHYS_JUMP_SPEEDOMETER_TIMER_MASK, VEH_PHYS_JUMP_SPEEDOMETER_TIMER_SCALE)) >>
+										 CTR_MipsMulLo(P32_GET(struct GameTracker *, sdata->gGT)->timer & VEH_PHYS_JUMP_SPEEDOMETER_TIMER_MASK, VEH_PHYS_JUMP_SPEEDOMETER_TIMER_SCALE)) >>
 					  VEH_PHYS_JUMP_SPEEDOMETER_BLEND_SHIFT);
 		}
 	}

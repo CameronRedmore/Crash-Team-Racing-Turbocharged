@@ -4,11 +4,11 @@ void PickupBots_Init(void)
 {
 	// NOTE(aalhendi): ASM-verified NTSC-U 926 0x80040850-0x800408b8.
 	int hub;
-	int lev = sdata->gGT->levelID;
+	int lev = P32_GET(struct GameTracker *, sdata->gGT)->levelID;
 
 	if (gNativeBossFightMode != 0)
 	{
-		sdata->bossWeaponMeta = NativeBossFight_GetWeaponMeta(sdata->gGT->bossID);
+		P32_SET(sdata->bossWeaponMeta, NativeBossFight_GetWeaponMeta(P32_GET(struct GameTracker *, sdata->gGT)->bossID));
 		return;
 	}
 
@@ -24,7 +24,7 @@ void PickupBots_Init(void)
 	if (hub > -1)
 	{
 		// set pointer to boss weapon meta
-		sdata->bossWeaponMeta = data.bossWeaponMetaPtr[hub];
+		P32_SET(sdata->bossWeaponMeta, P32_GET(struct MetaDataBOSS *, data.bossWeaponMetaPtr[hub]));
 	}
 	return;
 }
@@ -110,14 +110,14 @@ static int PickupBots_IsBotWeaponReady(struct Driver *driver)
 #endif
 
 	return ((driver->actionsFlagSet & ACTION_BOT) != 0) && ((driver->botData.botFlags & BOT_FLAG_DAMAGE_ACTIVE) == 0) &&
-	       ((driver->actionsFlagSet & ACTION_RACE_FINISHED) == 0) && (driver->botData.weaponCooldown == 0) && (driver->instTntRecv == NULL) &&
+	       ((driver->actionsFlagSet & ACTION_RACE_FINISHED) == 0) && (driver->botData.weaponCooldown == 0) && (P32_GET(struct Instance *, driver->instTntRecv) == NULL) &&
 	       (driver->clockReceive == 0);
 }
 
 static int PickupBots_IsCloseToPlayer(struct Driver *player, struct Driver *bot)
 {
-	int x = player->instSelf->matrix.t[0] - bot->instSelf->matrix.t[0];
-	int z = player->instSelf->matrix.t[2] - bot->instSelf->matrix.t[2];
+	int x = P32_GET(struct Instance *, player->instSelf)->matrix.t[0] - P32_GET(struct Instance *, bot->instSelf)->matrix.t[0];
+	int z = P32_GET(struct Instance *, player->instSelf)->matrix.t[2] - P32_GET(struct Instance *, bot->instSelf)->matrix.t[2];
 
 	return (u32)((x * x + z * z) - PICKUPBOTS_CLOSE_DIST_SQ_BIAS) < PICKUPBOTS_CLOSE_DIST_SQ_RANGE;
 }
@@ -134,15 +134,15 @@ static void PickupBots_PlayVoice(u32 voiceID, struct Driver *attacker, struct Dr
 
 static void PickupBots_UpdateArcade(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	for (int i = 0; i < gGT->numPlyrCurrGame; i++)
 	{
-		struct Driver *player = gGT->drivers[i];
+		struct Driver *player = P32_GET(struct Driver *, gGT->drivers[i]);
 
 		if (player->driverRank != 0)
 		{
-			struct Driver *bot = gGT->driversInRaceOrder[player->driverRank - 1];
+			struct Driver *bot = P32_GET(struct Driver *, gGT->driversInRaceOrder[player->driverRank - 1]);
 
 			if (PickupBots_IsBotWeaponReady(bot) && PickupBots_IsCloseToPlayer(player, bot))
 			{
@@ -216,7 +216,7 @@ static void PickupBots_UpdateArcade(void)
 
 		if (player->driverRank < 3)
 		{
-			struct Driver *bot = gGT->driversInRaceOrder[player->driverRank + 1];
+			struct Driver *bot = P32_GET(struct Driver *, gGT->driversInRaceOrder[player->driverRank + 1]);
 
 			if (PickupBots_IsBotWeaponReady(bot) &&
 			    (((int)player->lapIndex < (int)gGT->numLaps) || (player->distanceToFinish_curr > PICKUPBOTS_TRAILING_ATTACK_DISTANCE_TO_FINISH_MIN)) &&
@@ -255,7 +255,7 @@ static void PickupBots_UpdateArcade(void)
 
 static void PickupBots_SetBossCooldown(struct MetaDataBOSS *bossMeta)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	s32 timesLost = 0;
 	if (gNativeBossFightMode == 0)
@@ -269,7 +269,7 @@ static void PickupBots_SetBossCooldown(struct MetaDataBOSS *bossMeta)
 
 static struct MetaDataBOSS *PickupBots_GetInitialBossMeta(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	if (gNativeBossFightMode != 0)
 	{
@@ -278,16 +278,16 @@ static struct MetaDataBOSS *PickupBots_GetInitialBossMeta(void)
 
 	if (gGT->levelID == OXIDE_STATION)
 	{
-		return data.bossWeaponMetaPtr[0];
+		return P32_GET(struct MetaDataBOSS *, data.bossWeaponMetaPtr[0]);
 	}
 
-	return data.bossWeaponMetaPtr[data.metaDataLEV[gGT->levelID].hubID];
+	return P32_GET(struct MetaDataBOSS *, data.bossWeaponMetaPtr[data.metaDataLEV[gGT->levelID].hubID]);
 }
 
 static void PickupBots_AdvanceBossMeta(struct Driver *boss)
 {
-	struct GameTracker *gGT = sdata->gGT;
-	struct MetaDataBOSS *bossMeta = sdata->bossWeaponMeta;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct MetaDataBOSS *bossMeta = P32_GET(struct MetaDataBOSS *, sdata->bossWeaponMeta);
 
 	if (gNativeBossFightMode != 0)
 	{
@@ -301,7 +301,7 @@ static void PickupBots_AdvanceBossMeta(struct Driver *boss)
 			metaIndex = 0;
 		}
 
-		int totalDistance = gGT->level1->ptr_restart_points[0].distToFinish << PICKUPBOTS_BOSS_CHECKPOINT_DISTANCE_SHIFT;
+		int totalDistance = P32_GET(struct CheckpointNode *, P32_GET(struct Level *, gGT->level1)->ptr_restart_points)[0].distToFinish << PICKUPBOTS_BOSS_CHECKPOINT_DISTANCE_SHIFT;
 		if (totalDistance > 0)
 		{
 			if (metaIndex + 1 < metaCount)
@@ -319,7 +319,7 @@ static void PickupBots_AdvanceBossMeta(struct Driver *boss)
 			}
 		}
 
-		sdata->bossWeaponMeta = bossMeta;
+		P32_SET(sdata->bossWeaponMeta, bossMeta);
 		return;
 	}
 
@@ -327,7 +327,7 @@ static void PickupBots_AdvanceBossMeta(struct Driver *boss)
 
 	if (nextMeta->throwFlag == 0)
 	{
-		int threshold = gGT->level1->ptr_restart_points[bossMeta->trackCheckpoint].distToFinish << PICKUPBOTS_BOSS_CHECKPOINT_DISTANCE_SHIFT;
+		int threshold = P32_GET(struct CheckpointNode *, P32_GET(struct Level *, gGT->level1)->ptr_restart_points)[bossMeta->trackCheckpoint].distToFinish << PICKUPBOTS_BOSS_CHECKPOINT_DISTANCE_SHIFT;
 
 		if (threshold < (int)boss->distanceToFinish_curr)
 		{
@@ -349,7 +349,7 @@ static void PickupBots_AdvanceBossMeta(struct Driver *boss)
 	}
 	else
 	{
-		int threshold = gGT->level1->ptr_restart_points[nextMeta->trackCheckpoint].distToFinish << PICKUPBOTS_BOSS_CHECKPOINT_DISTANCE_SHIFT;
+		int threshold = P32_GET(struct CheckpointNode *, P32_GET(struct Level *, gGT->level1)->ptr_restart_points)[nextMeta->trackCheckpoint].distToFinish << PICKUPBOTS_BOSS_CHECKPOINT_DISTANCE_SHIFT;
 
 		if ((int)boss->distanceToFinish_curr < threshold)
 		{
@@ -370,7 +370,7 @@ static void PickupBots_AdvanceBossMeta(struct Driver *boss)
 		}
 	}
 
-	sdata->bossWeaponMeta = bossMeta;
+	P32_SET(sdata->bossWeaponMeta, bossMeta);
 }
 
 static void PickupBots_UpdateBossPathRequest(struct Driver *boss)
@@ -380,7 +380,7 @@ static void PickupBots_UpdateBossPathRequest(struct Driver *boss)
 		return;
 	}
 
-	if (sdata->bossWeaponMeta->pathChangeDisabled != 0)
+	if (P32_GET(struct MetaDataBOSS *, sdata->bossWeaponMeta)->pathChangeDisabled != 0)
 	{
 		return;
 	}
@@ -523,12 +523,12 @@ static int PickupBots_UpdateBossJuice(struct MetaDataBOSS *bossMeta, int weaponI
 
 static void PickupBots_UpdateBoss(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
-	struct Driver *boss = gGT->drivers[1];
-	struct Driver *player = gGT->drivers[0];
-	struct MetaDataBOSS *bossMeta = sdata->bossWeaponMeta;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct Driver *boss = P32_GET(struct Driver *, gGT->drivers[1]);
+	struct Driver *player = P32_GET(struct Driver *, gGT->drivers[0]);
+	struct MetaDataBOSS *bossMeta = P32_GET(struct MetaDataBOSS *, sdata->bossWeaponMeta);
 
-	if (((boss->botData.botFlags & BOT_FLAG_DAMAGE_ACTIVE) != 0) || ((boss->actionsFlagSet & ACTION_RACE_FINISHED) != 0) || (boss->instTntRecv != NULL) ||
+	if (((boss->botData.botFlags & BOT_FLAG_DAMAGE_ACTIVE) != 0) || ((boss->actionsFlagSet & ACTION_RACE_FINISHED) != 0) || (P32_GET(struct Instance *, boss->instTntRecv) != NULL) ||
 	    (boss->clockReceive != 0) || (boss->botData.aiPhysics.speedLinear < PICKUPBOTS_BOSS_SPEED_MIN))
 	{
 		PickupBots_SetBossCooldown(bossMeta);
@@ -536,7 +536,7 @@ static void PickupBots_UpdateBoss(void)
 	}
 
 	PickupBots_AdvanceBossMeta(boss);
-	bossMeta = sdata->bossWeaponMeta;
+	bossMeta = P32_GET(struct MetaDataBOSS *, sdata->bossWeaponMeta);
 
 	PickupBots_UpdateBossPathRequest(boss);
 
@@ -596,7 +596,7 @@ static void PickupBots_UpdateBoss(void)
 void PickupBots_Update(void)
 {
 	// NOTE(aalhendi): ASM-verified NTSC-U 926 0x800408b8-0x800414f4.
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	if ((gGT->numBotsNextGame == 0) || (gGT->elapsedEventTime < PICKUPBOTS_UPDATE_START_DELAY))
 	{

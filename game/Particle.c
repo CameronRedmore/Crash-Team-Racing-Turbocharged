@@ -98,7 +98,7 @@ static int Particle_FrameRateVelocityLag(int retailAccel)
 // caller-adjusted axes are included.
 void Particle_RescaleNewParticles(struct Particle *p)
 {
-	for (; p != NULL; p = p->next)
+	for (; p != NULL; p = P32_GET(struct Particle *, p->next))
 	{
 		if ((p->flagsSetColor & PARTICLE_SET_COLOR_FLAG_NATIVE_FRAME_RATE_SCALED) != 0)
 		{
@@ -295,7 +295,7 @@ void Particle_FuncPtr_SpitTire(struct Particle *p)
 	// Wait until tires are 0x10 units above
 	// the ground, which is where the plant
 	// actually "spits" tires from the mouth
-	targetY = p->plantInst->matrix.t[1] + PARTICLE_SPIT_TIRE_MOUTH_Y_OFFSET;
+	targetY = P32_GET(struct Instance *, p->plantInst)->matrix.t[1] + PARTICLE_SPIT_TIRE_MOUTH_Y_OFFSET;
 
 	if ((p->axis[PARTICLE_AXIS_POS_Y].startVal >> 8) >= targetY)
 	{
@@ -371,12 +371,12 @@ void Particle_FuncPtr_ExhaustUnderwater(struct Particle *p)
 {
 	struct IconGroup *icon;
 
-	if ((PARTICLE_EXHAUST_WATER_HEIGHT_THRESHOLD < ((p->axis[PARTICLE_AXIS_POS_Y].startVal >> 8) + p->driverInst->matrix.t[1])) &&
+	if ((PARTICLE_EXHAUST_WATER_HEIGHT_THRESHOLD < ((p->axis[PARTICLE_AXIS_POS_Y].startVal >> 8) + P32_GET(struct Instance *, p->driverInst)->matrix.t[1])) &&
 	    (p->framesLeftInLife < Particle_FrameCount(p, PARTICLE_EXHAUST_POP_LIFE_THRESHOLD)))
 	{
 		// bubblepop
-		icon = sdata->gGT->iconGroup[PARTICLE_EXHAUST_BUBBLEPOP_ICON_GROUP];
-		p->ptrIconGroup = icon;
+		icon = P32_GET(struct IconGroup *, P32_GET(struct GameTracker *, sdata->gGT)->iconGroup[PARTICLE_EXHAUST_BUBBLEPOP_ICON_GROUP]);
+		P32_SET(p->ptrIconGroup, icon);
 
 		if (icon != NULL)
 		{
@@ -384,7 +384,7 @@ void Particle_FuncPtr_ExhaustUnderwater(struct Particle *p)
 
 			// actually the first icon pointer in the array,
 			// not the pointer to the array itself
-			p->ptrIconArray = ptrIconArray[0];
+			P32_SET(p->ptrIconArray, ptrIconArray[0]);
 		}
 
 		p->axis[PARTICLE_AXIS_ROT_Y_OR_LINE_PREV_Z].startVal = MixRNG_Scramble() & PARTICLE_EXHAUST_ROTATION_RANDOM_MASK;
@@ -398,7 +398,7 @@ void Particle_FuncPtr_ExhaustUnderwater(struct Particle *p)
 		// moves it again before destroying it.
 		if (Particle_IsFrameRateScaled(p))
 		{
-			p->funcPtr = NULL;
+			P32_SET(p->funcPtr, NULL);
 
 			for (int axis = 0; axis < 11; axis++)
 			{
@@ -416,13 +416,13 @@ void Particle_OnDestroy(struct Particle *p)
 {
 	struct ParticleOscillator *osc;
 
-	osc = p->oscillator;
+	osc = P32_GET(struct ParticleOscillator *, p->oscillator);
 
 	while (osc != NULL)
 	{
-		struct ParticleOscillator *next = osc->next;
+		struct ParticleOscillator *next = P32_GET(struct ParticleOscillator *, osc->next);
 
-		LIST_AddFront(&sdata->gGT->JitPools.oscillator.free, (struct Item *)osc);
+		LIST_AddFront(&P32_GET(struct GameTracker *, sdata->gGT)->JitPools.oscillator.free, (struct Item *)osc);
 		osc = next;
 	}
 }
@@ -436,7 +436,7 @@ static u32 Particle_GetAxisFlags(const struct Particle *p)
 static int Particle_OscillatorValue(struct ParticleOscillator *osc)
 {
 	int value;
-	int timer = sdata->gGT->frameTimer_Confetti;
+	int timer = P32_GET(struct GameTracker *, sdata->gGT)->frameTimer_Confetti;
 	int phase = timer + osc->phase;
 	int product = (int)osc->period * phase;
 
@@ -560,7 +560,7 @@ static void Particle_UpdateIconFrame(struct Particle *p, u16 flagsSetColor)
 {
 	struct ParticleAxis *frameAxis = &p->axis[PARTICLE_AXIS_ICON_FRAME_OR_LINE_COLOR];
 	int frame = frameAxis->startVal;
-	int frameLimit = p->ptrIconGroup->numIcons << 8;
+	int frameLimit = P32_GET(struct IconGroup *, p->ptrIconGroup)->numIcons << 8;
 
 	if (frame < 0)
 	{
@@ -612,7 +612,7 @@ void Particle_UpdateList(struct Particle **listHead, struct Particle *p)
 
 	while (p != NULL)
 	{
-		struct Particle *next = p->next;
+		struct Particle *next = P32_GET(struct Particle *, p->next);
 		u16 flagsSetColor;
 		u32 axisFlags;
 		u16 activeFlags;
@@ -644,7 +644,7 @@ void Particle_UpdateList(struct Particle **listHead, struct Particle *p)
 		}
 
 		axisFlags = Particle_GetAxisFlags(p);
-		osc = p->oscillator;
+		osc = P32_GET(struct ParticleOscillator *, p->oscillator);
 
 		for (int axisIndex = 0; axisFlags != 0; axisIndex++)
 		{
@@ -661,16 +661,16 @@ void Particle_UpdateList(struct Particle **listHead, struct Particle *p)
 				if (((axisFlags >> 16) & 1) != 0 && osc != NULL)
 				{
 					Particle_ApplyOscillator(axis, osc);
-					osc = osc->next;
+					osc = P32_GET(struct ParticleOscillator *, osc->next);
 				}
 			}
 
 			axisFlags = (axisFlags & 0xfffeffffu) >> 1;
 		}
 
-		if (p->funcPtr != NULL)
+		if (P32_GET(void *, p->funcPtr) != NULL)
 		{
-			void (*funcPtr)(struct Particle *) = (void (*)(struct Particle *))p->funcPtr;
+			void (*funcPtr)(struct Particle *) = (void (*)(struct Particle *))P32_GET(void *, p->funcPtr);
 			funcPtr(p);
 		}
 
@@ -692,7 +692,7 @@ void Particle_UpdateList(struct Particle **listHead, struct Particle *p)
 
 		link = &p->next;
 
-		if ((activeFlags & PARTICLE_AXIS_FLAG_ICON_FRAME_OR_LINE_COLOR) != 0 && p->ptrIconGroup != NULL)
+		if ((activeFlags & PARTICLE_AXIS_FLAG_ICON_FRAME_OR_LINE_COLOR) != 0 && P32_GET(struct IconGroup *, p->ptrIconGroup) != NULL)
 		{
 			Particle_UpdateIconFrame(p, flagsSetColor);
 		}
@@ -702,8 +702,8 @@ void Particle_UpdateList(struct Particle **listHead, struct Particle *p)
 
 	destroyParticle:
 		Particle_OnDestroy(p);
-		LIST_AddFront(&sdata->gGT->JitPools.particle.free, (struct Item *)p);
-		sdata->gGT->numParticles--;
+		LIST_AddFront(&P32_GET(struct GameTracker *, sdata->gGT)->JitPools.particle.free, (struct Item *)p);
+		P32_GET(struct GameTracker *, sdata->gGT)->numParticles--;
 		*link = next;
 		p = next;
 	}
@@ -713,15 +713,15 @@ void Particle_UpdateList(struct Particle **listHead, struct Particle *p)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8003f434-0x8003f48c.
 void Particle_UpdateAllParticles(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	if ((gGT->gameMode1 & DEBUG_MENU) != 0)
 	{
 		return;
 	}
 
-	Particle_UpdateList(&gGT->particleList_ordinary, gGT->particleList_ordinary);
-	Particle_UpdateList(&gGT->particleList_heatWarp, gGT->particleList_heatWarp);
+	Particle_UpdateList(&gGT->particleList_ordinary, P32_GET(struct Particle *, gGT->particleList_ordinary));
+	Particle_UpdateList(&gGT->particleList_heatWarp, P32_GET(struct Particle *, gGT->particleList_heatWarp));
 }
 
 
@@ -1318,7 +1318,7 @@ static int Particle_RenderList_SubmitNative(struct PushBuffer *pb, struct Partic
 {
 	if (!NATIVE_DRAW3D_ACTIVE()) return -1;
 	const int screenDriver = (particle->flagsSetColor & PARTICLE_SET_COLOR_FLAG_DRIVER_LOCAL) &&
-	    particle->driverInst && (particle->driverInst->flags & SCREENSPACE_INSTANCE);
+	    P32_GET(struct Instance *, particle->driverInst) && (P32_GET(struct Instance *, particle->driverInst)->flags & SCREENSPACE_INSTANCE);
 	NativeDraw3DView view = {0};
 	double rotation[9], translation[3];
 	NativePgxp_GetTransform(&pb->matrix_ViewProj, &pb->matrix_ViewProj.m[0][0], pb->matrix_ViewProj.t, rotation, translation);
@@ -1406,11 +1406,11 @@ static int Particle_RenderList_SubmitNative(struct PushBuffer *pb, struct Partic
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8003f590-0x80040308
 void Particle_RenderList(struct PushBuffer *pb, void *particleList)
 {
-	struct GameTracker *gGT = sdata->gGT;
-	struct PrimMem *primMem = &gGT->backBuffer->primMem;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct PrimMem *primMem = &P32_GET(struct DB *, gGT->backBuffer)->primMem;
 	struct Particle *particle = particleList;
 	struct ParticleRenderListScratch *scratch = CTR_SCRATCHPAD_PTR(struct ParticleRenderListScratch, 0x00);
-	u32 *prim = (u32 *)primMem->cursor;
+	u32 *prim = (u32 *)P32_GET(void *, primMem->cursor);
 	u32 *primPayload = prim + 8;
 	s8 cameraID;
 
@@ -1428,13 +1428,13 @@ void Particle_RenderList(struct PushBuffer *pb, void *particleList)
 	CTC2(scratch->viewProjWords[3], 11);
 	CTC2(scratch->viewProjWords[4], 12);
 
-	scratch->ot = pb->ptrOT;
+	scratch->ot = P32_GET(uint32_t *, pb->ptrOT);
 	cameraID = (s8)pb->cameraID;
 	scratch->cameraOffset[0] = CTR_MipsSll(pb->matrix_Camera.t[0], 2);
 	scratch->cameraOffset[1] = CTR_MipsSll(pb->matrix_Camera.t[1], 2);
 	scratch->cameraOffset[2] = CTR_MipsSll(pb->matrix_Camera.t[2], 2);
 
-	if (prim + (gGT->numParticles * 10) >= (u32 *)primMem->guardEnd)
+	if (prim + (gGT->numParticles * 10) >= (u32 *)P32_GET(void *, primMem->guardEnd))
 	{
 		return;
 	}
@@ -1467,7 +1467,7 @@ void Particle_RenderList(struct PushBuffer *pb, void *particleList)
 				goto next_particle;
 			}
 
-			iconGroup = particle->ptrIconGroup;
+			iconGroup = P32_GET(struct IconGroup *, particle->ptrIconGroup);
 			if (iconGroup == NULL)
 			{
 				goto next_particle;
@@ -1476,7 +1476,7 @@ void Particle_RenderList(struct PushBuffer *pb, void *particleList)
 			flagsAxis = particle->flagsAxis;
 			if ((flagsAxis & PARTICLE_AXIS_FLAG_ICON_FRAME_OR_LINE_COLOR) == 0)
 			{
-				icon = particle->ptrIconArray;
+				icon = P32_GET(struct Icon *, particle->ptrIconArray);
 			}
 			else
 			{
@@ -1498,7 +1498,7 @@ void Particle_RenderList(struct PushBuffer *pb, void *particleList)
 				}
 
 				icon = ((struct Icon **)ICONGROUP_GETICONS(iconGroup))[frame];
-				particle->ptrIconArray = icon;
+				P32_SET(particle->ptrIconArray, icon);
 			}
 
 			if (icon == NULL)
@@ -1512,9 +1512,9 @@ void Particle_RenderList(struct PushBuffer *pb, void *particleList)
 			posZ = particle->axis[PARTICLE_AXIS_POS_Z].startVal >> 6;
 			flagsSetColor = particle->flagsSetColor;
 
-			if ((flagsSetColor & PARTICLE_SET_COLOR_FLAG_DRIVER_LOCAL) != 0 && particle->driverInst != NULL)
+			if ((flagsSetColor & PARTICLE_SET_COLOR_FLAG_DRIVER_LOCAL) != 0 && P32_GET(struct Instance *, particle->driverInst) != NULL)
 			{
-				struct Instance *inst = particle->driverInst;
+				struct Instance *inst = P32_GET(struct Instance *, particle->driverInst);
 				u32 idppFlags;
 
 				idpp = Particle_RenderList_GetIdpp(inst, cameraID);
@@ -1597,11 +1597,11 @@ void Particle_RenderList(struct PushBuffer *pb, void *particleList)
 			prim = primCursor;
 
 		next_particle:
-			particle = particle->next;
+			particle = P32_GET(struct Particle *, particle->next);
 		} while (particle != NULL);
 	}
 
-	primMem->cursor = prim;
+	P32_SET(primMem->cursor, prim);
 }
 
 
@@ -1683,7 +1683,7 @@ static void Particle_InitOscillator(struct Particle *p, struct ParticleOscillato
 
 	if ((*flagsAxis & oscBit) == 0)
 	{
-		osc = (struct ParticleOscillator *)LIST_RemoveFront(&sdata->gGT->JitPools.oscillator.free);
+		osc = (struct ParticleOscillator *)LIST_RemoveFront(&P32_GET(struct GameTracker *, sdata->gGT)->JitPools.oscillator.free);
 		if (osc == NULL)
 		{
 			return;
@@ -1700,7 +1700,7 @@ static void Particle_InitOscillator(struct Particle *p, struct ParticleOscillato
 
 	if ((osc->flags & PARTICLE_OSC_FLAG_PHASE_RELATIVE_TO_NOW) != 0)
 	{
-		osc->phase = (s16)(osc->phase - (u16)sdata->gGT->frameTimer_Confetti);
+		osc->phase = (s16)(osc->phase - (u16)P32_GET(struct GameTracker *, sdata->gGT)->frameTimer_Confetti);
 	}
 
 	if ((osc->flags & PARTICLE_OSC_FLAG_MODE_MASK) == PARTICLE_OSC_MODE_SEEDED_RANDOM)
@@ -1784,7 +1784,7 @@ static void Particle_LinkOscillators(struct Particle *p, struct ParticleOscillat
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80040308-0x80040850
 struct Particle *Particle_Init(u32 param_1, struct IconGroup *ig, struct ParticleEmitter *emSet)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	struct Particle *p;
 	struct ParticleOscillator *localOsc[12];
 	u32 flagsAxis = 0;
@@ -1808,15 +1808,15 @@ struct Particle *Particle_Init(u32 param_1, struct IconGroup *ig, struct Particl
 
 	gGT->numParticles++;
 
-	p->ptrIconGroup = ig;
+	P32_SET(p->ptrIconGroup, ig);
 	if (ig != NULL && ig->numIcons != 0 && ig->numIcons > 0)
 	{
-		p->ptrIconArray = ((struct Icon **)ICONGROUP_GETICONS(ig))[0];
+		P32_SET(p->ptrIconArray, ((struct Icon **)ICONGROUP_GETICONS(ig))[0]);
 	}
 	else
 	{
-		p->ptrIconGroup = NULL;
-		p->ptrIconArray = NULL;
+		P32_SET(p->ptrIconGroup, NULL);
+		P32_SET(p->ptrIconArray, NULL);
 	}
 
 	if (emSet != NULL)
@@ -1830,7 +1830,7 @@ struct Particle *Particle_Init(u32 param_1, struct IconGroup *ig, struct Particl
 			{
 				if ((flags & PARTICLE_EMITTER_FLAG_NON_FUNC_INIT_MASK) == 0)
 				{
-					p->funcPtr = emSet->InitTypes.FuncInit.particle_funcPtr;
+					P32_SET(p->funcPtr, P32_GET(void *, emSet->InitTypes.FuncInit.particle_funcPtr));
 					p->flagsSetColor = emSet->InitTypes.FuncInit.particle_colorFlags;
 					p->framesLeftInLife = emSet->InitTypes.FuncInit.particle_lifespan;
 					flagsAxis |= PARTICLE_AXIS_FLAG_FUNC_INIT;
@@ -1858,11 +1858,11 @@ struct Particle *Particle_Init(u32 param_1, struct IconGroup *ig, struct Particl
 
 	if ((flagsAxis & PARTICLE_AXIS_FLAG_FUNC_INIT) == 0)
 	{
-		p->funcPtr = NULL;
+		P32_SET(p->funcPtr, NULL);
 		p->flagsSetColor = 0;
 		p->framesLeftInLife = 0;
-		p->ptrIconArray = NULL;
-		p->ptrIconGroup = NULL;
+		P32_SET(p->ptrIconArray, NULL);
+		P32_SET(p->ptrIconGroup, NULL);
 	}
 
 	Particle_Init_SetAxisFlags(p, flagsAxis & ~PARTICLE_AXIS_FLAG_FUNC_INIT);
@@ -1875,13 +1875,13 @@ struct Particle *Particle_Init(u32 param_1, struct IconGroup *ig, struct Particl
 
 	if (particleType == 0)
 	{
-		p->next = gGT->particleList_ordinary;
-		gGT->particleList_ordinary = p;
+		P32_SET(p->next, P32_GET(struct Particle *, gGT->particleList_ordinary));
+		P32_SET(gGT->particleList_ordinary, p);
 	}
 	else
 	{
-		p->next = gGT->particleList_heatWarp;
-		gGT->particleList_heatWarp = p;
+		P32_SET(p->next, P32_GET(struct Particle *, gGT->particleList_heatWarp));
+		P32_SET(gGT->particleList_heatWarp, p);
 	}
 
 	p->renderDepthLimit = 0x400;

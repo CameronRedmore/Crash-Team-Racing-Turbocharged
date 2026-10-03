@@ -113,7 +113,7 @@ struct AudioMeta
 	// \XA\MUSIC\S01.XA;1
 	// \XA\ENG\EXTRA\S05.XA;1
 	// \XA\ENG\GAME\S20.XA;1
-	char *name;
+	P32(char *) name;
 };
 
 CTR_STATIC_ASSERT(sizeof(struct AudioMeta) == 8);

@@ -69,26 +69,26 @@ enum
 struct Thread
 {
 	// 0x0
-	struct Thread *next;
+	P32(struct Thread *) next;
 
 	// 0x4
-	struct Thread *prev;
+	P32(struct Thread *) prev;
 
 	// 0x8
-	const char *name;
+	P32(const char *) name;
 
 	// 0xc
 	// weapons hold drivers as parentThreads when fired
-	struct Thread *parentThread;
+	P32(struct Thread *) parentThread;
 
 	// 0x10
 	// players hold other players,
 	// cameras hold other cameras, etc
-	struct Thread *siblingThread;
+	P32(struct Thread *) siblingThread;
 
 	// 0x14
 	// drivers hold weapons as childThreads when fired
-	struct Thread *childThread;
+	P32(struct Thread *) childThread;
 
 	// 0x18
 	// unused, can pause a thread for
@@ -116,25 +116,25 @@ struct Thread
 	int timesDestroyed;
 
 	// 0x24
-	ThreadFunc funcThDestroy;
+	P32(ThreadFunc) funcThDestroy;
 
 	//  0x28
 	// NOTE(aalhendi): Retail stores this as a raw code pointer. Collision
 	// users call it with different register contracts.
-	void *funcThCollide;
+	P32(void *) funcThCollide;
 
 	// 0x2c
-	ThreadFunc funcThTick;
+	P32(ThreadFunc) funcThTick;
 
 	// This would be 9900C for players, or a pointer
 	// to a camera, etc
 	// 0x30
-	void *object;
+	P32(void *) object;
 
 	// Thread and Instance are linked together,
 	// except Camera storing CameraDC here
 	// 0x34
-	struct Instance *inst;
+	P32(struct Instance *) inst;
 
 	// Driver collision/model fields initialized by VehBirth_NonGhost.
 
@@ -166,7 +166,7 @@ struct BucketSearchParams
 	s16 padding_0x6;
 
 	// 0x8
-	struct Thread *th;
+	P32(struct Thread *) th;
 
 	// 0xC
 	int bestDistSq;
@@ -206,18 +206,18 @@ CTR_STATIC_ASSERT(THREAD_FLAG_DISABLE_COLLISION == 0x1000);
 struct ThreadBucket
 {
 	// 0x0
-	struct Thread *thread;
+	P32(struct Thread *) thread;
 
 
 	// ==== ONLY FOR DEBUG MENU ====
 
 	// could be PLAYER
 	// 0x4
-	char *s_longName;
+	P32(char *) s_longName;
 
 	// could be PLYR
 	// 0x8
-	char *s_shortName;
+	P32(char *) s_shortName;
 
 	// 0xC
 	int boolCantPause;

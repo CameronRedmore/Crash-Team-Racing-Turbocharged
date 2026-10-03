@@ -187,7 +187,7 @@ static int DrawLevelOvr3P_DrawViewportBucket(struct DrawLevelOvr1PRenderList *re
 	void *bucketValue = DrawLevelOvr1P_GetRenderListBucketValue(renderList, bucket);
 	u32 setupAddress = R228.bucketSetupAddresses[bucketIndex];
 	u32 handlerAddress = R228.bucketHandlerAddresses[bucketIndex];
-	struct QuadBlock **renderedOverflowBase = (struct QuadBlock **)data.ptrRenderedQuadblockDestination_forEachPlayer[playerIndex];
+	struct QuadBlock **renderedOverflowBase = (struct QuadBlock **)P32_GET(void *, data.ptrRenderedQuadblockDestination_forEachPlayer[playerIndex]);
 
 	*didDispatch = 0;
 
@@ -202,7 +202,7 @@ static int DrawLevelOvr3P_DrawViewportBucket(struct DrawLevelOvr1PRenderList *re
 		DrawLevelOvr3P_ApplyBucketSetup(setupAddress, handlerAddress);
 	}
 
-	DrawLevelOvr1P_SetViewportScratchContext(pb, visFaceList, data.PtrClipBuffer[playerIndex], *clipCursor, renderedOverflowBase);
+	DrawLevelOvr1P_SetViewportScratchContext(pb, visFaceList, P32_GET(void *, data.PtrClipBuffer[playerIndex]), *clipCursor, renderedOverflowBase);
 	if (!DrawLevelOvr3P_DispatchBucketHandler(handlerAddress, bucketValue, pb, mesh, primMem, visFaceList))
 	{
 		return 0;
@@ -361,16 +361,16 @@ void DrawLevelOvr3P(void *LevRenderList, struct PushBuffer *pb, struct BSP *bspL
 	}
 
 	DrawLevelOvr1P_Scratch()->waterEnvMapPtr32 = (u32)(uintptr_t)waterEnvMap;
-	DrawLevelOvr1P_Scratch()->primMemEndPtr32 = (u32)(uintptr_t)primMem->end;
+	DrawLevelOvr1P_Scratch()->primMemEndPtr32 = (u32)(uintptr_t)P32_GET(void *, primMem->end);
 
-	if (mesh->ptrQuadBlockArray == NULL)
+	if (P32_GET(struct QuadBlock *, mesh->ptrQuadBlockArray) == NULL)
 	{
 		return;
 	}
 
-	clipCursors[0] = data.PtrClipBuffer[0];
-	clipCursors[1] = data.PtrClipBuffer[1];
-	clipCursors[2] = data.PtrClipBuffer[2];
+	clipCursors[0] = P32_GET(void *, data.PtrClipBuffer[0]);
+	clipCursors[1] = P32_GET(void *, data.PtrClipBuffer[1]);
+	clipCursors[2] = P32_GET(void *, data.PtrClipBuffer[2]);
 
 	DrawLevelOvr1P_Scratch()->pushBufferPtr32[0] = (u32)(uintptr_t)&pb[0];
 	DrawLevelOvr1P_Scratch()->pushBufferPtr32[1] = (u32)(uintptr_t)&pb[1];

@@ -116,7 +116,7 @@ static void RedBeaker_RenderPass(u32 **primCursor, uint32_t *ot, u32 color, u32 
 	s32 remaining = frameCount;
 	int nativeLayer = -1;
 #if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
-	if (NATIVE_DRAW3D_ACTIVE() && (u8 *)*primCursor + sizeof(DR_PSYX_DRAW3D) <= (u8 *)primMem->guardEnd)
+	if (NATIVE_DRAW3D_ACTIVE() && (u8 *)*primCursor + sizeof(DR_PSYX_DRAW3D) <= (u8 *)P32_GET(void *, primMem->guardEnd))
 	{
 		NativeDraw3DView view = {0};
 		double rotation[9], translation[3];
@@ -238,15 +238,15 @@ CTR_STATIC_ASSERT(offsetof(struct RedBeakerRainScratch, colorBottom) == 0x1C);
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8006dc30-0x8006e26c
 void RedBeaker_RenderRain(struct PushBuffer *pb, struct PrimMem *primMem, struct JitPool *rain, u8 numPlyr, int gameMode1)
 {
-	u32 *prim = (u32 *)primMem->cursor;
-	struct RainLocal *firstRain = (struct RainLocal *)rain->taken.first;
+	u32 *prim = (u32 *)P32_GET(void *, primMem->cursor);
+	struct RainLocal *firstRain = (struct RainLocal *)P32_GET(struct Item *, rain->taken.first);
 	struct RedBeakerRainScratch *scratch = CTR_SCRATCHPAD_PTR(struct RedBeakerRainScratch, 0x30);
 
 	// NOTE(aalhendi): PSX-backfeed blocker: retail saves/restores callee registers in scratchpad 0x00-0x2c and stores 32-bit pointer cursors at 0x34/0x38.
 	// Native C keeps pointer cursors as host-width locals; restore those exact scratchpad pointer stores before PSX backfeed.
 	if (firstRain == NULL)
 	{
-		primMem->cursor = prim;
+		P32_SET(primMem->cursor, prim);
 		return;
 	}
 
@@ -283,7 +283,7 @@ void RedBeaker_RenderRain(struct PushBuffer *pb, struct PrimMem *primMem, struct
 		CTC2((u32)pb->distanceToScreen_PREV, 26);
 
 		screenBounds = RedBeaker_ReadWord(pb, 0x20);
-		otBase = pb->ptrOT;
+		otBase = P32_GET(uint32_t *, pb->ptrOT);
 		int instancePlayerIndex = playerIndex;
 #if defined(__vita__)
 		if (NativeAdhoc_IsSingleViewRenderActive())
@@ -293,7 +293,7 @@ void RedBeaker_RenderRain(struct PushBuffer *pb, struct PrimMem *primMem, struct
 #endif
 		playerOffset = instancePlayerIndex * sizeof(struct InstDrawPerPlayer);
 
-		for (rainLocal = firstRain; rainLocal != NULL; rainLocal = rainLocal->next)
+		for (rainLocal = firstRain; rainLocal != NULL; rainLocal = P32_GET(struct RainLocal *, rainLocal->next))
 		{
 			char *instBase;
 			s32 cloudZ;
@@ -308,7 +308,7 @@ void RedBeaker_RenderRain(struct PushBuffer *pb, struct PrimMem *primMem, struct
 			s32 otOffset;
 			uint32_t *ot;
 
-			if (rainLocal->cloudInst == NULL)
+			if (P32_GET(struct Instance *, rainLocal->cloudInst) == NULL)
 			{
 				continue;
 			}
@@ -326,7 +326,7 @@ void RedBeaker_RenderRain(struct PushBuffer *pb, struct PrimMem *primMem, struct
 				rainLocal->scroll.z = (s16)nextScrollZ;
 			}
 
-			instBase = (char *)rainLocal->cloudInst + playerOffset;
+			instBase = (char *)P32_GET(struct Instance *, rainLocal->cloudInst) + playerOffset;
 			CTC2((u32)(s32)RedBeaker_ReadS16(instBase, 0x8c), 5);
 			CTC2((u32)(s32)RedBeaker_ReadS16(instBase, 0x90), 6);
 			cloudZ = RedBeaker_ReadS16(instBase, 0x94);
@@ -368,14 +368,14 @@ void RedBeaker_RenderRain(struct PushBuffer *pb, struct PrimMem *primMem, struct
 			ot = (uint32_t *)(void *)((char *)otBase + otOffset);
 
 			RedBeaker_RenderPass(&prim, ot, scratch->colorTop, 0xe1000a20, rainLocal->frameCount, scrollXY, nextScrollXY, scrollZ, nextScrollZ, velocityXY,
-			                     velocityZ, screenBounds, pb, rainLocal->cloudInst, primMem);
+			                     velocityZ, screenBounds, pb, P32_GET(struct Instance *, rainLocal->cloudInst), primMem);
 			RedBeaker_RenderPass(&prim, ot, scratch->colorBottom, 0xe1000a40, rainLocal->frameCount, scrollXY, nextScrollXY, scrollZ, nextScrollZ, velocityXY,
-			                     velocityZ, screenBounds, pb, rainLocal->cloudInst, primMem);
+			                     velocityZ, screenBounds, pb, P32_GET(struct Instance *, rainLocal->cloudInst), primMem);
 		}
 	}
 
 #if defined(CTR_NATIVE)
 	NativePgxp_SetDepthContext(nativeDepthContext);
 #endif
-	primMem->cursor = prim;
+	P32_SET(primMem->cursor, prim);
 }

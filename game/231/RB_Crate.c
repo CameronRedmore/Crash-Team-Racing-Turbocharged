@@ -12,7 +12,7 @@ static void RB_CrateAny_CheckBlockage(struct Thread *crateTh, int hitModelIDValu
 {
 	struct Crate *crateObj;
 
-	crateObj = crateTh->object;
+	crateObj = P32_GET(void *, crateTh->object);
 
 	// if model is on top of crate
 	if ((hitModelIDValue == PU_EXPLOSIVE_CRATE) || // nitro
@@ -44,7 +44,7 @@ struct Driver *RB_CrateAny_GetDriver(struct Thread *t, struct ScratchpadStruct *
 	)
 	{
 		// get driver that used the weapon
-		driver = ((struct TrackerWeapon *)t->object)->driverParent;
+		driver = P32_GET(struct Driver *, ((struct TrackerWeapon *)P32_GET(void *, t->object))->driverParent);
 
 		return driver;
 	}
@@ -52,7 +52,7 @@ struct Driver *RB_CrateAny_GetDriver(struct Thread *t, struct ScratchpadStruct *
 	// if driver itself
 	else if (hitModelIDValue == DYNAMIC_PLAYER) // //player model
 	{
-		driver = (struct Driver *)t->object;
+		driver = (struct Driver *)P32_GET(void *, t->object);
 
 		return driver;
 	}
@@ -67,7 +67,7 @@ void RB_CrateAny_ThTick_Explode(struct Thread *t)
 	// this is an "exploded" crate, with
 	// it's own instance, thread, and object,
 	// separate from "solid" crate
-	struct Instance *crateExplodeInst = t->inst;
+	struct Instance *crateExplodeInst = P32_GET(struct Instance *, t->inst);
 
 	// if explosion is not over
 	if ((crateExplodeInst->animFrame + 1) < INSTANCE_GetNumAnimFrames(crateExplodeInst, 0))
@@ -156,13 +156,13 @@ void RB_CrateAny_ThTick_Grow(struct Thread *t)
 	struct Crate *crateObj;
 	int modelID;
 
-	crateInst = t->inst;
-	crateObj = (struct Crate *)t->object;
-	modelID = crateInst->model->id;
+	crateInst = P32_GET(struct Instance *, t->inst);
+	crateObj = (struct Crate *)P32_GET(void *, t->object);
+	modelID = P32_GET(struct Model *, crateInst->model)->id;
 
 	if ((modelID == STATIC_TIME_CRATE_01) || (modelID == STATIC_TIME_CRATE_02) || (modelID == STATIC_TIME_CRATE_03))
 	{
-		crateInst->thread = 0;
+		P32_SET(crateInst->thread, 0);
 		t->flags |= THREAD_FLAG_DEAD;
 	}
 
@@ -196,7 +196,7 @@ void RB_CrateAny_ThTick_Grow(struct Thread *t)
 		crateInst->scale.z = 0x1000;
 
 		// kill thread
-		crateInst->thread = 0;
+		P32_SET(crateInst->thread, 0);
 		crateInst->animFrame++;
 		t->flags |= THREAD_FLAG_DEAD;
 	}
@@ -221,11 +221,11 @@ static struct Thread *RB_CrateAny_LInC_Birth(struct Instance *crateInst, void *f
 		return 0;
 	}
 
-	crateInst->thread = crateThread;
-	crateThread->inst = crateInst;
-	crateThread->funcThCollide = funcThCollide;
+	P32_SET(crateInst->thread, crateThread);
+	P32_SET(crateThread->inst, crateInst);
+	P32_SET(crateThread->funcThCollide, funcThCollide);
 
-	crateObj = ((struct Crate *)crateThread->object);
+	crateObj = ((struct Crate *)P32_GET(void *, crateThread->object));
 	crateObj->cooldown = 0;
 	crateObj->boolPauseCooldown = 0;
 
@@ -244,8 +244,8 @@ int RB_CrateWeapon_ThCollide(struct Thread *crateThread, struct Thread *collidin
 	int hitModelIDValue;
 	struct Driver *driver;
 
-	crateInst = crateThread->inst;
-	crateObj = ((struct Crate *)crateThread->object);
+	crateInst = P32_GET(struct Instance *, crateThread->inst);
+	crateObj = ((struct Crate *)P32_GET(void *, crateThread->object));
 
 	if ((crateObj->cooldown == 0) && ((crateInst->scale.x == 0) || (crateInst->scale.x == 0x1000)))
 	{
@@ -279,9 +279,9 @@ int RB_CrateWeapon_ThCollide(struct Thread *crateThread, struct Thread *collidin
 				return 1;
 			}
 
-			if (driver->thCloud != 0)
+			if (P32_GET(struct Thread *, driver->thCloud) != 0)
 			{
-				if (((struct RainCloud *)driver->thCloud->object)->effect == RAIN_CLOUD_EFFECT_ITEM_ROLL)
+				if (((struct RainCloud *)P32_GET(void *, P32_GET(struct Thread *, driver->thCloud)->object))->effect == RAIN_CLOUD_EFFECT_ITEM_ROLL)
 				{
 					return 1;
 				}
@@ -296,7 +296,7 @@ int RB_CrateWeapon_ThCollide(struct Thread *crateThread, struct Thread *collidin
 			driver->numTimesHitWeaponBox++;
 			driver->itemRollTimer = FPS_DOUBLE(90);
 
-			if ((sdata->gGT->gameMode1 & ROLLING_ITEM) == 0)
+			if ((P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 & ROLLING_ITEM) == 0)
 			{
 #if defined(__vita__)
 				if (!NativeAdhoc_IsConnected())
@@ -304,7 +304,7 @@ int RB_CrateWeapon_ThCollide(struct Thread *crateThread, struct Thread *collidin
 				{
 					OtherFX_Play(0x5d, 0);
 				}
-				sdata->gGT->gameMode1 |= ROLLING_ITEM;
+				P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 |= ROLLING_ITEM;
 			}
 
 			driver->PickupTimeboxHUD.cooldown = FPS_DOUBLE(5);
@@ -315,7 +315,7 @@ int RB_CrateWeapon_ThCollide(struct Thread *crateThread, struct Thread *collidin
 				driver->BattleHUD.juicedUpCooldown = DRIVER_WUMPA_JUICED_HUD_COOLDOWN_FRAMES;
 			}
 
-			pb = &sdata->gGT->pushBuffer[driver->driverID];
+			pb = &P32_GET(struct GameTracker *, sdata->gGT)->pushBuffer[driver->driverID];
 			RB_Fruit_GetScreenCoords(pb, crateInst, &posScreen[0]);
 
 			driver->PickupTimeboxHUD.startX = pb->rect.x + posScreen[0];
@@ -343,7 +343,7 @@ int RB_CrateWeapon_LInC(struct Instance *crateInst, struct Thread *collidingTh, 
 {
 	struct Thread *crateThread;
 
-	crateThread = crateInst->thread;
+	crateThread = P32_GET(struct Thread *, crateInst->thread);
 	if (crateThread == NULL)
 	{
 		crateThread = RB_CrateAny_LInC_Birth(crateInst, (void *)RB_CrateWeapon_ThCollide, "crate");
@@ -353,12 +353,12 @@ int RB_CrateWeapon_LInC(struct Instance *crateInst, struct Thread *collidingTh, 
 		}
 	}
 
-	if (crateThread->funcThCollide == NULL)
+	if (P32_GET(void *, crateThread->funcThCollide) == NULL)
 	{
 		return 0;
 	}
 
-	return ((ThreadScratchCollideFunc)crateThread->funcThCollide)(crateThread, collidingTh, crateThread->funcThCollide, sps);
+	return ((ThreadScratchCollideFunc)P32_GET(void *, crateThread->funcThCollide))(crateThread, collidingTh, P32_GET(void *, crateThread->funcThCollide), sps);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b432c-0x800b471c.
@@ -375,8 +375,8 @@ int RB_CrateFruit_ThCollide(struct Thread *crateThread, struct Thread *colliding
 	int random;
 	int newWumpa;
 
-	crateInst = crateThread->inst;
-	crateObj = ((struct Crate *)crateThread->object);
+	crateInst = P32_GET(struct Instance *, crateThread->inst);
+	crateObj = ((struct Crate *)P32_GET(void *, crateThread->object));
 
 	if ((crateObj->cooldown == 0) && ((crateInst->scale.x == 0) || (crateInst->scale.x == 0x1000)))
 	{
@@ -402,8 +402,8 @@ int RB_CrateFruit_ThCollide(struct Thread *crateThread, struct Thread *colliding
 			driver->PickupWumpaHUD.cooldown = FPS_DOUBLE(5);
 			driver->PickupWumpaHUD.numCollected = newWumpa;
 
-			pb = &sdata->gGT->pushBuffer[driver->driverID];
-			RB_Fruit_GetScreenCoords(pb, driver->instSelf, &posScreen[0]);
+			pb = &P32_GET(struct GameTracker *, sdata->gGT)->pushBuffer[driver->driverID];
+			RB_Fruit_GetScreenCoords(pb, P32_GET(struct Instance *, driver->instSelf), &posScreen[0]);
 
 			driver->PickupWumpaHUD.startX = pb->rect.x + posScreen[0];
 			driver->PickupWumpaHUD.startY = pb->rect.y + posScreen[1] - 0x14;
@@ -430,7 +430,7 @@ int RB_CrateFruit_LInC(struct Instance *crateInst, struct Thread *collidingTh, s
 {
 	struct Thread *crateThread;
 
-	crateThread = crateInst->thread;
+	crateThread = P32_GET(struct Thread *, crateInst->thread);
 	if (crateThread == NULL)
 	{
 		crateThread = RB_CrateAny_LInC_Birth(crateInst, (void *)RB_CrateFruit_ThCollide, "fruit_crate");
@@ -440,12 +440,12 @@ int RB_CrateFruit_LInC(struct Instance *crateInst, struct Thread *collidingTh, s
 		}
 	}
 
-	if (crateThread->funcThCollide == NULL)
+	if (P32_GET(void *, crateThread->funcThCollide) == NULL)
 	{
 		return 0;
 	}
 
-	return ((ThreadScratchCollideFunc)crateThread->funcThCollide)(crateThread, collidingTh, crateThread->funcThCollide, sps);
+	return ((ThreadScratchCollideFunc)P32_GET(void *, crateThread->funcThCollide))(crateThread, collidingTh, P32_GET(void *, crateThread->funcThCollide), sps);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b47d0-0x800b4ba8.
@@ -462,8 +462,8 @@ int RB_CrateTime_ThCollide(struct Thread *crateThread, struct Thread *driverTh, 
 	int hitModelIDValue;
 	struct GameTracker *gGT;
 
-	crateInst = crateThread->inst;
-	crateObj = ((struct Crate *)crateThread->object);
+	crateInst = P32_GET(struct Instance *, crateThread->inst);
+	crateObj = ((struct Crate *)P32_GET(void *, crateThread->object));
 
 	if ((crateObj->cooldown == 0) && ((crateInst->scale.x == 0) || (crateInst->scale.x == 0x1000)))
 	{
@@ -471,7 +471,7 @@ int RB_CrateTime_ThCollide(struct Thread *crateThread, struct Thread *driverTh, 
 
 		if (crateInst->scale.x == 0x1000)
 		{
-			gGT = sdata->gGT;
+			gGT = P32_GET(struct GameTracker *, sdata->gGT);
 			driver = RB_CrateAny_GetDriver(driverTh, sps);
 			RB_CrateAny_ExplodeInit(crateInst, 0x80ff000, true, RB_CrateAny_ShouldPlayBreakSound(driver));
 			if ((int)driver == 1)
@@ -479,7 +479,7 @@ int RB_CrateTime_ThCollide(struct Thread *crateThread, struct Thread *driverTh, 
 				return 1;
 			}
 
-			modelID = crateInst->model->id;
+			modelID = P32_GET(struct Model *, crateInst->model)->id;
 
 			if ((driver->actionsFlagSet & ACTION_BOT) != 0)
 			{
@@ -544,7 +544,7 @@ int RB_CrateTime_LInC(struct Instance *crateInst, struct Thread *driverTh, struc
 {
 	struct Thread *crateThread;
 
-	crateThread = crateInst->thread;
+	crateThread = P32_GET(struct Thread *, crateInst->thread);
 	if (crateThread == NULL)
 	{
 		crateThread = RB_CrateAny_LInC_Birth(crateInst, (void *)RB_CrateTime_ThCollide, "fruit_crate");
@@ -554,10 +554,10 @@ int RB_CrateTime_LInC(struct Instance *crateInst, struct Thread *driverTh, struc
 		}
 	}
 
-	if (crateThread->funcThCollide == NULL)
+	if (P32_GET(void *, crateThread->funcThCollide) == NULL)
 	{
 		return 0;
 	}
 
-	return ((ThreadScratchCollideFunc)crateThread->funcThCollide)(crateThread, driverTh, crateThread->funcThCollide, sps);
+	return ((ThreadScratchCollideFunc)P32_GET(void *, crateThread->funcThCollide))(crateThread, driverTh, P32_GET(void *, crateThread->funcThCollide), sps);
 }

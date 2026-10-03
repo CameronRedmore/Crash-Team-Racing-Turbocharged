@@ -13,10 +13,10 @@ internal s16 Ghost_LerpRot12(s16 curr, s16 next, u16 t)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80026ed8-0x80027838.
 void GhostReplay_ThTick(struct Thread *t)
 {
-	struct GameTracker *gGT = sdata->gGT;
-	struct Driver *d = t->object;
-	struct GhostTape *tape = d->ghostTape;
-	struct Instance *inst = d->instSelf;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct Driver *d = P32_GET(void *, t->object);
+	struct GhostTape *tape = P32_GET(struct GhostTape *, d->ghostTape);
+	struct Instance *inst = P32_GET(struct Instance *, d->instSelf);
 
 	inst->scale = (SVec3){.x = 0xccc, .y = 0xccc, .z = 0xccc};
 
@@ -29,13 +29,13 @@ void GhostReplay_ThTick(struct Thread *t)
 			color = 0xFFFF8003;
 		}
 
-		DecalFont_DrawLine(sdata->lngStrings[LNG_GHOST_DATA_OVERFLOW], 0x100, 0x28, 2, color);
-		DecalFont_DrawLine(sdata->lngStrings[LNG_CAN_NOT_SAVE_GHOST_DATA], 0x100, 0x32, 2, color);
+		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_GHOST_DATA_OVERFLOW], 0x100, 0x28, 2, color);
+		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_CAN_NOT_SAVE_GHOST_DATA], 0x100, 0x32, 2, color);
 
 		sdata->ghostOverflowTextTimer--;
 	}
 
-	if ((sdata->boolGhostsDrawing == 0) || ((gGT->gameMode1 & DEBUG_MENU) != 0) || (tape->ptrEnd == tape->ptrStart) || (d->ghostBoolInit == 0))
+	if ((sdata->boolGhostsDrawing == 0) || ((gGT->gameMode1 & DEBUG_MENU) != 0) || (P32_GET(void *, tape->ptrEnd) == P32_GET(void *, tape->ptrStart)) || (d->ghostBoolInit == 0))
 	{
 		inst->flags |= HIDE_MODEL;
 		return;
@@ -66,8 +66,8 @@ void GhostReplay_ThTick(struct Thread *t)
 	if (tape->timeInPacket32 <= timeInRace)
 	{
 		s16 opcodePos = 0;
-		u8 *packetPtr = tape->ptrCurr;
-		u8 *packetEndChain = tape->ptrCurr;
+		u8 *packetPtr = P32_GET(void *, tape->ptrCurr);
+		u8 *packetEndChain = P32_GET(void *, tape->ptrCurr);
 		SVec3 tmpPos = {0};
 
 		tape->packetID = -1;
@@ -78,9 +78,9 @@ void GhostReplay_ThTick(struct Thread *t)
 		while (opcodePos < 2)
 		{
 			// reached end of tape
-			if (tape->ptrEnd <= (void *)packetPtr)
+			if (P32_GET(void *, tape->ptrEnd) <= (void *)packetPtr)
 			{
-				struct GhostHeader *gh = tape->gh;
+				struct GhostHeader *gh = P32_GET(struct GhostHeader *, tape->gh);
 
 				d->ySpeed = gh->ySpeed;
 				d->actionsFlagSet &= ~ACTION_BOT;
@@ -114,7 +114,7 @@ void GhostReplay_ThTick(struct Thread *t)
 					if (opcodePos == 1)
 					{
 						s32 bigEndianTime = Ghost_ReadBE16(&packetPtr[7]);
-						tape->ptrCurr = packetPtr;
+						P32_SET(tape->ptrCurr, packetPtr);
 
 						tape->timeInPacket32_backup += bigEndianTime;
 						tape->timeInPacket32 += bigEndianTime;
@@ -122,7 +122,7 @@ void GhostReplay_ThTick(struct Thread *t)
 
 					opcodePos++;
 
-					packet->bufferPacket = packetEndChain;
+					P32_SET(packet->bufferPacket, packetEndChain);
 					packetPtr += GHOST_SIZE_POSITION;
 					packetEndChain = packetPtr;
 
@@ -146,7 +146,7 @@ void GhostReplay_ThTick(struct Thread *t)
 					packet->pos = tmpPos;
 					packet[0].rot = packet[-1].rot;
 
-					packet->bufferPacket = packetEndChain;
+					P32_SET(packet->bufferPacket, packetEndChain);
 					packetPtr += GHOST_SIZE_IDLE;
 					packetEndChain = packetPtr;
 
@@ -168,7 +168,7 @@ void GhostReplay_ThTick(struct Thread *t)
 				packet->rot.y = packetPtr[3] << 4;
 				packet->rot.z = packetPtr[4] << 4;
 
-				packet->bufferPacket = packetEndChain;
+				P32_SET(packet->bufferPacket, packetEndChain);
 				packetPtr += GHOST_SIZE_VELOCITY;
 				packetEndChain = packetPtr;
 
@@ -234,11 +234,11 @@ void GhostReplay_ThTick(struct Thread *t)
 	d->rotCurr.y = local_rot.y;
 	d->rotCurr.z = local_rot.z;
 
-	u8 *buffer = tape->packets[packetIdx].bufferPacket;
+	u8 *buffer = P32_GET(u8 *, tape->packets[packetIdx].bufferPacket);
 
 	while (tape->packetID < packetIdx)
 	{
-		if (tape->ptrEnd <= (void *)buffer)
+		if (P32_GET(void *, tape->ptrEnd) <= (void *)buffer)
 		{
 			break;
 		}
@@ -325,7 +325,7 @@ void GhostReplay_ThTick(struct Thread *t)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80027838-0x80027b88.
 void GhostReplay_Init1(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	sdata->boolCanSaveGhost = 0;
 	sdata->boolGhostsDrawing = 0;
@@ -342,9 +342,9 @@ void GhostReplay_Init1(void)
 
 	struct GhostHeader *gh = MEMPACK_AllocMem(0x3e00);
 	char *recordBuffer = GHOSTHEADER_GETRECORDBUFFER(gh);
-	sdata->GhostRecording.ptrGhost = gh;
-	sdata->GhostRecording.ptrStartOffset = &recordBuffer[0];
-	sdata->GhostRecording.ptrEndOffset = &recordBuffer[0x3DD4];
+	P32_SET(sdata->GhostRecording.ptrGhost, gh);
+	P32_SET(sdata->GhostRecording.ptrStartOffset, &recordBuffer[0]);
+	P32_SET(sdata->GhostRecording.ptrEndOffset, &recordBuffer[0x3DD4]);
 
 	// ALWAYS initialize ghost threads, even if gh == 0,
 	// or else the "Ghost Too Big" text will never play.
@@ -356,16 +356,16 @@ void GhostReplay_Init1(void)
 	s32 ghostCount = humanGhostOnly ? 1 : 2;
 	if (humanGhostOnly)
 	{
-		sdata->ptrGhostTape[1] = NULL;
+		P32_SET(sdata->ptrGhostTape[1], NULL);
 	}
 	for (s32 i = 0; i < ghostCount; i++)
 	{
 		struct GhostTape *tape = MEMPACK_AllocMem(0x268);
-		sdata->ptrGhostTape[i] = tape;
+		P32_SET(sdata->ptrGhostTape[i], tape);
 
 		if (i == 0)
 		{
-			gh = sdata->ptrGhostTapePlaying;
+			gh = P32_GET(struct GhostHeader *, sdata->ptrGhostTapePlaying);
 		}
 		else
 		{
@@ -377,11 +377,11 @@ void GhostReplay_Init1(void)
 
 		recordBuffer = GHOSTHEADER_GETRECORDBUFFER(gh);
 
-		tape->gh = gh;
-		tape->gh_again = gh;
-		tape->ptrStart = &recordBuffer[0];
+		P32_SET(tape->gh, gh);
+		P32_SET(tape->gh_again, gh);
+		P32_SET(tape->ptrStart, &recordBuffer[0]);
 		tape->constDEADC0ED = 0xDEADC0ED;
-		tape->ptrEnd = &recordBuffer[gh->size];
+		P32_SET(tape->ptrEnd, &recordBuffer[gh->size]);
 
 		if (i == 1)
 		{
@@ -396,23 +396,23 @@ void GhostReplay_Init1(void)
 		t->modelIndex = DYNAMIC_GHOST;
 		t->flags |= THREAD_FLAG_DISABLE_COLLISION;
 
-		struct Driver *ghostDriver = t->object;
+		struct Driver *ghostDriver = P32_GET(void *, t->object);
 		memset(ghostDriver, 0, 0x638);
 		ghostDriver->ghostID = i;
 		ghostDriver->driverID = i + 1;
 		ghostDriver->ghostBoolInit = 0;
-		ghostDriver->ghostTape = sdata->ptrGhostTape[i];
+		P32_SET(ghostDriver->ghostTape, P32_GET(struct GhostTape *, sdata->ptrGhostTape[i]));
 
 		s32 charID = data.characterIDs[i + 1];
-		struct Model *model = VehBirth_GetModelByName(data.MetaDataCharacters[charID].name_Debug);
+		struct Model *model = VehBirth_GetModelByName(P32_GET(char *, data.MetaDataCharacters[charID].name_Debug));
 		struct Instance *inst = INSTANCE_Birth3D(model, model->name, t);
-		t->inst = inst;
+		P32_SET(t->inst, inst);
 
-		struct Model *wake = gGT->modelPtr[STATIC_WAKE];
+		struct Model *wake = P32_GET(struct Model *, gGT->modelPtr[STATIC_WAKE]);
 		if (wake)
 		{
 			struct Instance *wakeInst = INSTANCE_Birth3D(wake, wake->name, 0);
-			ghostDriver->wakeInst = wakeInst;
+			P32_SET(ghostDriver->wakeInst, wakeInst);
 
 			if (wakeInst != 0)
 			{
@@ -422,12 +422,12 @@ void GhostReplay_Init1(void)
 
 		inst->depthBiasSecondary = 0xc;
 		inst->flags |= OWNER_PUSHBUFFER_GATE;
-		ghostDriver->instSelf = inst;
+		P32_SET(ghostDriver->instSelf, inst);
 		VehBirth_TireSprites(t);
 		VehBirth_SetConsts(ghostDriver);
 
 		ghostDriver->actionsFlagSet |= ACTION_BOT; // AI driver
-		ghostDriver->wheelSprites = ICONGROUP_GETICONS(gGT->iconGroup[0xc]);
+		P32_SET(ghostDriver->wheelSprites, ICONGROUP_GETICONS(gGT->iconGroup[0xc]));
 
 		// NOTE(aalhendi): GhostReplay_Init2 owns retail activation/tick.
 	}
@@ -437,18 +437,18 @@ void GhostReplay_Init1(void)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80027b88-0x80027df4.
 void GhostReplay_Init2(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
-	for (struct Thread *thread = gGT->threadBuckets[GHOST].thread; thread != NULL; thread = thread->siblingThread)
+	for (struct Thread *thread = P32_GET(struct Thread *, gGT->threadBuckets[GHOST].thread); thread != NULL; thread = P32_GET(struct Thread *, thread->siblingThread))
 	{
-		struct Driver *driver = thread->object;
+		struct Driver *driver = P32_GET(void *, thread->object);
 		if (driver == NULL)
 		{
 			continue;
 		}
 
-		struct GhostTape *tape = driver->ghostTape;
-		if (tape->ptrEnd == tape->ptrStart)
+		struct GhostTape *tape = P32_GET(struct GhostTape *, driver->ghostTape);
+		if (P32_GET(void *, tape->ptrEnd) == P32_GET(void *, tape->ptrStart))
 		{
 			continue;
 		}
@@ -480,7 +480,7 @@ void GhostReplay_Init2(void)
 		tape->unk20 = 0;
 		tape->timeInPacket32 = 0;
 		tape->timeInPacket01 = 0;
-		tape->ptrCurr = tape->ptrStart;
+		P32_SET(tape->ptrCurr, P32_GET(void *, tape->ptrStart));
 
 		sdata->boolGhostsDrawing = 1;
 		driver->ghostBoolInit = 1;
@@ -497,7 +497,7 @@ void GhostReplay_Init2(void)
 		}
 
 		s32 characterID = data.characterIDs[characterIndex];
-		struct Model *model = VehBirth_GetModelByName(data.MetaDataCharacters[characterID].name_Debug);
+		struct Model *model = VehBirth_GetModelByName(P32_GET(char *, data.MetaDataCharacters[characterID].name_Debug));
 
 		b32 showWheels = characterID != NITROS_OXIDE;
 #if defined(CTR_NATIVE)
@@ -509,10 +509,10 @@ void GhostReplay_Init2(void)
 #endif
 		driver->wheelSize = showWheels ? 0xccc : 0;
 
-		struct Instance *inst = driver->instSelf;
+		struct Instance *inst = P32_GET(struct Instance *, driver->instSelf);
 		char *name = (ghostID != 0) ? sdata->s_ghost1 : sdata->s_ghost0;
 
-		INSTANCE_Birth(inst, model, name, inst->thread, 7);
+		INSTANCE_Birth(inst, model, name, P32_GET(struct Thread *, inst->thread), 7);
 		GhostReplay_ThTick(thread);
 
 		// NOTE(aalhendi): written in retail. never read?

@@ -60,9 +60,9 @@ static void GAMEPAD_NativeMirrorRefreshState(struct GamepadSystem *gGamepads)
 	int trackActive = 0;
 	int inputActive = 0;
 
-	if ((sdata != NULL) && (sdata->gGT != NULL))
+	if ((sdata != NULL) && (P32_GET(struct GameTracker *, sdata->gGT) != NULL))
 	{
-		struct GameTracker *gGT = sdata->gGT;
+		struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 		trackActive =
 			(gGT->levelID >= DINGO_CANYON) &&
@@ -318,7 +318,7 @@ int GAMEPAD_GetNumConnected(struct GamepadSystem *gGamepads)
 					bitwiseConnected |= 1 << (Slot * 4 + Port);
 					gGamepads->numGamepadsConnected = padIndex + 1;
 
-					padCurr->ptrControllerPacket = ptrControllerPacket;
+					P32_SET(padCurr->ptrControllerPacket, ptrControllerPacket);
 					padCurr->gamepadID = Slot * 0x10 + Port;
 				}
 			}
@@ -331,7 +331,7 @@ int GAMEPAD_GetNumConnected(struct GamepadSystem *gGamepads)
 	while (padCurr < &gGamepads->gamepad[8])
 	{
 		// pad is now unplugged
-		padCurr->ptrControllerPacket = 0;
+		P32_SET(padCurr->ptrControllerPacket, 0);
 		padCurr++;
 	}
 
@@ -378,7 +378,7 @@ int GAMEPAD_ProcessHold(struct GamepadSystem *gGamepads)
 	{
 		pad->buttonsHeldPrevFrame = pad->buttonsHeldCurrFrame;
 
-		ptrControllerPacket = pad->ptrControllerPacket;
+		ptrControllerPacket = P32_GET(struct ControllerPacket *, pad->ptrControllerPacket);
 
 		// if pointer is invalid
 		if (ptrControllerPacket == NULL)
@@ -610,8 +610,8 @@ void GAMEPAD_ProcessSticks(struct GamepadSystem *gGamepads)
 
 	for (pad = &gGamepads->gamepad[0], i = 0; i < 8; pad++, i++, rwd = (struct RacingWheelData *)((char *)rwd + sizeof(struct RacingWheelData)))
 	{
-		packet = pad->ptrControllerPacket;
-		pad->rwd = NULL;
+		packet = P32_GET(struct ControllerPacket *, pad->ptrControllerPacket);
+		P32_SET(pad->rwd, NULL);
 
 		if (packet == NULL)
 		{
@@ -645,7 +645,7 @@ void GAMEPAD_ProcessSticks(struct GamepadSystem *gGamepads)
 			{
 				if (i < 4)
 				{
-					pad->rwd = rwd;
+					P32_SET(pad->rwd, rwd);
 				}
 
 				pad->stickLX_dontUse1 = packet->neGcon.twist;
@@ -658,7 +658,7 @@ void GAMEPAD_ProcessSticks(struct GamepadSystem *gGamepads)
 			{
 				if (i < 4)
 				{
-					pad->rwd = rwd;
+					P32_SET(pad->rwd, rwd);
 				}
 
 				sVar8 = packet->jogcon.jog_rot;
@@ -761,7 +761,7 @@ int GAMEPAD_ProcessTapRelease(struct GamepadSystem *gGamepads)
 
 	for (pad = &gGamepads->gamepad[0]; pad < &gGamepads->gamepad[numConnected]; pad++)
 	{
-		ptrControllerPacket = pad->ptrControllerPacket;
+		ptrControllerPacket = P32_GET(struct ControllerPacket *, pad->ptrControllerPacket);
 
 		// if pointer is invalid
 		if (ptrControllerPacket == NULL)
@@ -813,12 +813,12 @@ int GAMEPAD_ProcessTapRelease(struct GamepadSystem *gGamepads)
 void GAMEPAD_ProcessMotors(struct GamepadSystem *gGS)
 {
 	int totalPower = 0;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	for (int i = 0; i < gGS->numGamepadsConnected; i++)
 	{
 		struct GamepadBuffer *pad = &gGS->gamepad[i];
-		struct ControllerPacket *packet = pad->ptrControllerPacket;
+		struct ControllerPacket *packet = P32_GET(struct ControllerPacket *, pad->ptrControllerPacket);
 
 		if ((packet != 0) && (gGT->boolDemoMode == 0) && ((gGT->gameMode1 & PAUSE_ALL) == 0) && !RaceFlag_IsTransitioning())
 		{
@@ -1086,7 +1086,7 @@ void GAMEPAD_JogCon1(struct Driver *d, u8 val, u16 timeMS)
 		return;
 	}
 
-	struct GamepadBuffer *gb = &sdata->gGamepads->gamepad[d->driverID];
+	struct GamepadBuffer *gb = &P32_GET(struct GamepadSystem *, sdata->gGamepads)->gamepad[d->driverID];
 
 	if ((gb->unk45 & 0xf) > (val & 0xf))
 	{
@@ -1106,7 +1106,7 @@ void GAMEPAD_JogCon2(struct Driver *d, u8 val, s16 timeMS)
 		return;
 	}
 
-	struct GamepadBuffer *gb = &sdata->gGamepads->gamepad[d->driverID];
+	struct GamepadBuffer *gb = &P32_GET(struct GamepadSystem *, sdata->gGamepads)->gamepad[d->driverID];
 
 	gb->unk42 = val;
 	gb->unk48 = timeMS;
@@ -1123,12 +1123,12 @@ void GAMEPAD_ShockFreq(struct Driver *d, int frame, int val)
 
 	// 0 for enabled,
 	// 1 for disabled
-	if ((sdata->gGT->gameMode1 & (P1_VIBRATE << d->driverID)) != 0)
+	if ((P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 & (P1_VIBRATE << d->driverID)) != 0)
 	{
 		return;
 	}
 
-	struct GamepadBuffer *gb = &sdata->gGamepads->gamepad[d->driverID];
+	struct GamepadBuffer *gb = &P32_GET(struct GamepadSystem *, sdata->gGamepads)->gamepad[d->driverID];
 
 	if (gb->framesSinceLastInput >= 0x385)
 	{
@@ -1155,12 +1155,12 @@ void GAMEPAD_ShockForce1(struct Driver *d, int frame, int val)
 
 	// 0 for enabled,
 	// 1 for disabled
-	if ((sdata->gGT->gameMode1 & (P1_VIBRATE << d->driverID)) != 0)
+	if ((P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 & (P1_VIBRATE << d->driverID)) != 0)
 	{
 		return;
 	}
 
-	struct GamepadBuffer *gb = &sdata->gGamepads->gamepad[d->driverID];
+	struct GamepadBuffer *gb = &P32_GET(struct GamepadSystem *, sdata->gGamepads)->gamepad[d->driverID];
 
 	if (gb->framesSinceLastInput >= 0x385)
 	{
@@ -1187,12 +1187,12 @@ void GAMEPAD_ShockForce2(struct Driver *d, int frame, int val)
 
 	// 0 for enabled,
 	// 1 for disabled
-	if ((sdata->gGT->gameMode1 & (P1_VIBRATE << d->driverID)) != 0)
+	if ((P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 & (P1_VIBRATE << d->driverID)) != 0)
 	{
 		return;
 	}
 
-	struct GamepadBuffer *gb = &sdata->gGamepads->gamepad[d->driverID];
+	struct GamepadBuffer *gb = &P32_GET(struct GamepadSystem *, sdata->gGamepads)->gamepad[d->driverID];
 
 	if (gb->framesSinceLastInput >= 0x385)
 	{
