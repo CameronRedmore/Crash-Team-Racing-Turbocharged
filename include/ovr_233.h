@@ -694,7 +694,9 @@ extern struct OverlayDATA_233 D233;
 	CTR_STATIC_ASSERT(OFFSETOF(struct OverlayRDATA_233, ELEMENT) == (OFFSET)); \
 	CTR_STATIC_ASSERT(sizeof(((struct OverlayRDATA_233 *)0)->ELEMENT) == (SIZE))
 
+#ifndef CTR_NATIVE_64BIT
 CTR_STATIC_ASSERT(sizeof(void *) == 4);
+#endif
 OVR233_LAYOUT_ASSERT(s_spawn, 0x4, 0x8);
 OVR233_LAYOUT_ASSERT(s_g_dancer, 0xc, 0x10);
 OVR233_LAYOUT_ASSERT(s_podium, 0x2ac, 0x8);

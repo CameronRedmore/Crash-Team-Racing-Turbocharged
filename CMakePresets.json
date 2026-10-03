@@ -112,6 +112,23 @@
         "CMAKE_C_FLAGS": "-m32",
         "CMAKE_EXE_LINKER_FLAGS": "-m32"
       }
+    },
+    {
+      "name": "linux-x64-debug",
+      "displayName": "Linux x86_64 Debug (experimental 64-bit)",
+      "inherits": "common",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build-linux-x64-debug",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "cc",
+        "CTR_NATIVE_64BIT": "ON"
+      }
     }
   ],
   "buildPresets": [

@@ -4,12 +4,23 @@ include(CheckCCompilerFlag)
 
 set(CTR_NATIVE_VERSION "0.1.0-beta.7.1")
 
-if(NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
+option(CTR_NATIVE_64BIT "Experimental: build for a 64-bit target (game pointers must live below 2 GiB)" OFF)
+
+if(CTR_NATIVE_64BIT)
+    if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+        message(FATAL_ERROR "CTR_NATIVE_64BIT is ON but the target is not 64-bit.")
+    endif()
+elseif(NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
     message(FATAL_ERROR
         "CTR Native currently requires a 32-bit target. "
         "Select Win32 for MSVC, an i686 MinGW compiler on Windows, or pass -m32 "
-        "in the initial compiler and linker flags on Linux."
+        "in the initial compiler and linker flags on Linux. "
+        "For the experimental 64-bit port, configure with -DCTR_NATIVE_64BIT=ON."
     )
+endif()
+
+if(CTR_NATIVE_64BIT)
+    add_compile_definitions(CTR_NATIVE_64BIT)
 endif()
 
 set(CTR_NATIVE_MSVC_FRONTEND OFF)
