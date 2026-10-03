@@ -120,7 +120,7 @@ void MainFreeze_ConfigDrawArrows(s16 offsetX, s16 offsetY, char *str)
 	// get color data
 	colorPtr = P32_GET(u32 *, data.ptrColor[color]);
 
-	struct Icon **iconPtrArray = ICONGROUP_GETICONS(gGT->iconGroup[4]);
+	struct Icon **iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[4]));
 
 	// Draw left arrow
 	DecalHUD_Arrow2D(

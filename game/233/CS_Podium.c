@@ -175,7 +175,7 @@ void CS_Podium_Stand_Init(struct CsThreadInitData *podiumData)
 
 internal b32 CS_Podium_Prize_ShouldStep(void)
 {
-	return CTR_RETAIL_FRAME_TICK(sdata->gGT->timer);
+	return CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800af7c0-0x800af994

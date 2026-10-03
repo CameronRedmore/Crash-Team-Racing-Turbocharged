@@ -345,7 +345,7 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 	int arrowPos[2] = {GARAGE_CHARACTER_ARROW_LEFT_BASE_X - nameLen, nameLen + GARAGE_CHARACTER_ARROW_RIGHT_BASE_X};
 	int arrowRot[2] = {GARAGE_CHARACTER_ARROW_ROT_LEFT, 0};
 
-	struct Icon **iconPtrArray = ICONGROUP_GETICONS(gGT->iconGroup[4]);
+	struct Icon **iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[4]));
 
 	for (int i = 0; i < 2; i++)
 	{

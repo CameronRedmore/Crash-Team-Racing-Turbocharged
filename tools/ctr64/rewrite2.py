@@ -39,8 +39,9 @@ def ftext(path):
     return files_text[path]
 CUR_TAG=[None]; SITE_CNT=collections.Counter()
 def add(path,start,end,text,order):
-    SITE_CNT[(path,CUR_TAG[0],start,end,text,order)]+=1
-    edits[path].add((start,end,text,order,CUR_TAG[0],SITE_CNT[(path,CUR_TAG[0],start,end,text,order)]))
+    # A macro that expands its argument several times visits the same spelled
+    # site more than once; the set dedupes those so the site is wrapped once.
+    edits[path].add((start,end,text,order,CUR_TAG[0]))
 targets={}
 def collect_fields(c):
     for ch in c.get_children():
@@ -153,5 +154,5 @@ if APPLY:
         src=ftext(path)
         es=sorted(es,key=lambda x:(x[0],x[3]),reverse=True)
         out=bytearray(src)
-        for s,e,t,o,_,_ in es: out[s:e]=t.encode('latin1')
+        for s,e,t,o,_ in es: out[s:e]=t.encode('latin1')
         open(path,'wb').write(bytes(out))

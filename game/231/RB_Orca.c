@@ -116,7 +116,7 @@ void RB_Orca_ThTick(struct Thread *t)
 	if (orcaObj->cooldown != 0)
 	{
 		// cooldown is in 30 FPS frames
-		if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+		if (CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer))
 		{
 			orcaObj->cooldown--;
 		}
@@ -272,7 +272,7 @@ void RB_Orca_LInB(struct Instance *inst)
 		return;
 	}
 
-	pointers = ST1_GETPOINTERS(sdata->gGT->level1->ptrSpawnType1);
+	pointers = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->ptrSpawnType1));
 	metaArray = (s16 *)pointers[ST1_SPAWN];
 	orcaObj->cooldown = metaArray[orcaObj->orcaID];
 

@@ -93,7 +93,7 @@ void UI_Map_DrawMap(struct Icon *mapTop, struct Icon *mapBottom, s16 posX, s16 p
 
 	if (P32_GET(struct SpawnType1 *, P32_GET(struct Level *, gGT->level1)->ptrSpawnType1) != 0)
 	{
-		void **pointers = ST1_GETPOINTERS(gGT->level1->ptrSpawnType1);
+		void **pointers = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *, gGT->level1)->ptrSpawnType1));
 		mapMetadata = pointers[ST1_MAP];
 	}
 
@@ -162,7 +162,7 @@ void UI_Map_DrawMap_ExtraFunc(struct Icon *icon, POLY_FT4 *p, s16 posX, s16 empt
 	// map around that same origin so its route icons remain registered.
 	if (((P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 & MAIN_MENU) == 0) && (P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1) != NULL) && (P32_GET(struct SpawnType1 *, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->ptrSpawnType1) != NULL))
 	{
-		void **pointers = ST1_GETPOINTERS(sdata->gGT->level1->ptrSpawnType1);
+		void **pointers = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->ptrSpawnType1));
 		struct UIMap *map = pointers[ST1_MAP];
 		if (map != NULL)
 		{
@@ -316,7 +316,7 @@ void UI_Map_DrawAdvPlayer(struct UIMap *map, const s32 worldPos[3], int unused1,
 	UI_Map_GetIconPos(map, &posX, &posY);
 
 	arrowColor = &data.playerIconAdvMap.vertCol1[0];
-	if ((FPS_HALF(sdata->gGT->timer) & 2) != 0)
+	if ((FPS_HALF(P32_GET(struct GameTracker *, sdata->gGT)->timer) & 2) != 0)
 	{
 		arrowColor = &data.playerIconAdvMap.vertCol2[0];
 	}
@@ -353,7 +353,7 @@ void UI_Map_DrawRawIcon(struct UIMap *map, const s32 worldPos[3], int iconID, in
 
 	ptrColor = P32_GET(u32 *, data.ptrColor[colorID]);
 
-	struct Icon **iconPtrArray = ICONGROUP_GETICONS(sdata->gGT->iconGroup[UI_MAP_ICON_GROUP]);
+	struct Icon **iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, P32_GET(struct GameTracker *, sdata->gGT)->iconGroup[UI_MAP_ICON_GROUP]));
 
 #if defined(CTR_NATIVE)
 	POLY_GT4 *p = P32_GET(void *, P32_GET(struct DB *, gGT->backBuffer)->primMem.cursor);
@@ -534,7 +534,7 @@ void UI_Map_DrawTracking(struct UIMap *map, struct Thread *bucket)
 
 		// flicker
 		targetColor = CRASH_BLUE;
-		if ((FPS_HALF(sdata->gGT->timer) & 1) != 0)
+		if ((FPS_HALF(P32_GET(struct GameTracker *, sdata->gGT)->timer) & 1) != 0)
 		{
 			targetColor = CORTEX_RED;
 		}

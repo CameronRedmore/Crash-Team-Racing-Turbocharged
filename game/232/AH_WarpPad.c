@@ -439,7 +439,7 @@ void AH_WarpPad_ThTick(struct Thread *t)
 		warppadObj->spinRot_Prize.x = 0;
 		warppadObj->spinRot_Prize.z = 0;
 
-		warppadObj->spinRot_Prize.y += CTR_FRAME_STEP(AH_WP_SPIN_PRIZE_STEP, sdata->gGT->timer);
+		warppadObj->spinRot_Prize.y += CTR_FRAME_STEP(AH_WP_SPIN_PRIZE_STEP, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 
 		struct Instance *closedItemInst = instArr[WPIS_CLOSED_ITEM];
 
@@ -769,7 +769,7 @@ WarpPad_AnimateOpen:
 			warppadObj->spinRot_Wisp[i].x = 0;
 			warppadObj->spinRot_Wisp[i].z = 0;
 
-			warppadObj->spinRot_Wisp[i].y += CTR_FRAME_STEP(AH_WP_SPIN_WISP_STEP, sdata->gGT->timer);
+			warppadObj->spinRot_Wisp[i].y += CTR_FRAME_STEP(AH_WP_SPIN_WISP_STEP, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 
 			// converted to TEST in rebuildPS1
 			ConvertRotToMatrix(&instArr[WPIS_OPEN_RING1 + i]->matrix, &warppadObj->spinRot_Wisp[i]);
@@ -784,7 +784,7 @@ WarpPad_AnimateOpen:
 				if (instArr[WPIS_OPEN_RING1 + i]->matrix.t[1] < (warppadInst->matrix.t[1] + wispRiseRate * FPS_DOUBLE(AH_WP_WISP_FIRST_FRAMES)))
 				{
 					// reduce transparency
-					instArr[WPIS_OPEN_RING1 + i]->alphaScale -= CTR_FRAME_STEP(AH_WP_WISP_FADE_IN_STEP, sdata->gGT->timer);
+					instArr[WPIS_OPEN_RING1 + i]->alphaScale -= CTR_FRAME_STEP(AH_WP_WISP_FADE_IN_STEP, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 				}
 
 				// after first 4 frames
@@ -816,10 +816,10 @@ WarpPad_AnimateOpen:
 			}
 		}
 
-		wispRiseRate += CTR_FRAME_STEP(AH_WP_WISP_RISE_RATE_STEP, sdata->gGT->timer);
+		wispRiseRate += CTR_FRAME_STEP(AH_WP_WISP_RISE_RATE_STEP, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 	}
 
-	warppadObj->spinRot_Prize.y += CTR_FRAME_STEP(AH_WP_SPIN_PRIZE_REWARD_STEP, sdata->gGT->timer);
+	warppadObj->spinRot_Prize.y += CTR_FRAME_STEP(AH_WP_SPIN_PRIZE_REWARD_STEP, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 
 	rewardScale = 0x100;
 
@@ -876,8 +876,8 @@ WarpPad_AnimateOpen:
 			}
 		}
 
-		warppadObj->thirds[i] += CTR_FRAME_STEP(AH_WP_REWARD_PHASE_STEP, sdata->gGT->timer);
-		warppadObj->spinRot_Rewards.y += CTR_FRAME_STEP(AH_WP_SPIN_REWARD_RING_STEP, sdata->gGT->timer);
+		warppadObj->thirds[i] += CTR_FRAME_STEP(AH_WP_REWARD_PHASE_STEP, P32_GET(struct GameTracker *, sdata->gGT)->timer);
+		warppadObj->spinRot_Rewards.y += CTR_FRAME_STEP(AH_WP_SPIN_REWARD_RING_STEP, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 	}
 
 	if (instArr[WPIS_CLOSED_1S] != 0)

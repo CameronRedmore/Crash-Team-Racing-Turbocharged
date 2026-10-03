@@ -313,8 +313,8 @@ void MM_Title_SetTrophyDPP(void)
 		return;
 	}
 
-	struct InstDrawPerPlayer *idpp1 = INST_GETIDPP(title->i[1]); // "title"
-	struct InstDrawPerPlayer *idpp2 = INST_GETIDPP(title->i[2]); // another "title"
+	struct InstDrawPerPlayer *idpp1 = INST_GETIDPP(P32_GET(struct Instance *, title->i[1])); // "title"
+	struct InstDrawPerPlayer *idpp2 = INST_GETIDPP(P32_GET(struct Instance *, title->i[2])); // another "title"
 
 	u32 secondaryFlags = idpp2->instFlags;
 	if ((secondaryFlags & PUSHBUFFER_EXISTS) != 0)
@@ -536,7 +536,7 @@ void MM_Title_Init(void)
 
 		gGT->pushBuffer[0].distanceToScreen_CURR = TITLE_INTRO_DISTANCE_TO_SCREEN;
 
-		void **pointers = ST1_GETPOINTERS(gGT->level1->ptrSpawnType1);
+		void **pointers = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *, gGT->level1)->ptrSpawnType1));
 
 		// pointer to Intro Cam, to view Crash holding Trophy in main menu
 		P32_SET(D230.titleIntroCameraPath, pointers[ST1_CAMERA_PATH]);

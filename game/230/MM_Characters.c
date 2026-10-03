@@ -214,7 +214,7 @@ static void MM_Characters_NativeDrawStats(void)
 		s16 *length = &s_nativeCharacterSelectStatLengths[i];
 		if (*length < target)
 		{
-			*length += CTR_FRAME_STEP(MM_CHARACTER_SELECT_STATS_BAR_RATE, sdata->gGT->timer);
+			*length += CTR_FRAME_STEP(MM_CHARACTER_SELECT_STATS_BAR_RATE, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 			if (*length > target)
 			{
 				*length = target;
@@ -2338,7 +2338,7 @@ dontDrawSelectCharacter:
 		}
 
 		// spin the character
-		D230.characterSelectPlayerState.angle[playerIndex] += CTR_FRAME_STEP(MM_CHARACTER_SELECT_SPIN_STEP, sdata->gGT->timer);
+		D230.characterSelectPlayerState.angle[playerIndex] += CTR_FRAME_STEP(MM_CHARACTER_SELECT_SPIN_STEP, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 	}
 
 	// reset

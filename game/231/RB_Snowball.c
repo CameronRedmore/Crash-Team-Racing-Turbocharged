@@ -78,7 +78,7 @@ void RB_Snowball_ThTick(struct Thread *t)
 		RB_Minecart_CheckColl(snowInst, t);
 	}
 
-	if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+	if (CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer))
 	{
 		snowObj->pointIndex = (snowObj->pointIndex + 1) % (snowObj->numPoints * 2);
 	}

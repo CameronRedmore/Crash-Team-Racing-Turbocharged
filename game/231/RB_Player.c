@@ -230,7 +230,7 @@ void RB_Player_ToggleInvisible(void)
 				// if this is not the screen of the invisible driver
 				if (i != d->driverID)
 				{
-					struct InstDrawPerPlayer *idpp = INST_GETIDPP(d->instSelf);
+					struct InstDrawPerPlayer *idpp = INST_GETIDPP(P32_GET(struct Instance *, d->instSelf));
 
 					// make driver instance invisible on this screen
 					idpp[i].instFlags &= 0xffffffbf;
@@ -260,7 +260,7 @@ void RB_Player_ToggleFlicker(void)
 		    // odd number frames
 			((FPS_HALF(gGT->timer) & 1) != 0))
 		{
-			struct InstDrawPerPlayer *idpp = INST_GETIDPP(d->instSelf);
+			struct InstDrawPerPlayer *idpp = INST_GETIDPP(P32_GET(struct Instance *, d->instSelf));
 
 			// on all screens
 			for (int i = 0; i < gGT->numPlyrCurrGame; i++)

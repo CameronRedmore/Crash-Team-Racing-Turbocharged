@@ -225,7 +225,7 @@ void NativePhysics_Steer(struct Driver *driver)
 	// spins camera from side of driver, to back of driver,
 	// when the drifting ends. "LerpToForwards"
 #if CTR_NATIVE_60FPS
-	if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+	if (CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer))
 #endif
 	NATIVE_PHYSICS_WRITE(driver, turnAngleLerpVel, NativeSteering_LerpForwards(driver, driftAngleCurr_og, forwardDir, classSpeed_halved));
 
@@ -934,6 +934,6 @@ void NativePhysics_LerpRotation(struct Driver *driver, double targetRotW)
 	NATIVE_PHYSICS_WRITE(driver, rotPrev.w, NativeSteering_Approach(NATIVE_PHYSICS_READ(driver, rotPrev.w), 8 * NativePhysics_FrameScale(), maxLerpStep));
 
 	// Interpolate rotation by speed
-	NATIVE_PHYSICS_WRITE(driver, rotCurr.w, NativeSteering_Approach(NATIVE_PHYSICS_READ(driver, rotCurr.w), ldexp((NATIVE_PHYSICS_READ(driver, rotPrev.w) * NativePhysics_ElapsedMS(sdata->gGT->elapsedTimeMS)), -(5)), targetRotW));
+	NATIVE_PHYSICS_WRITE(driver, rotCurr.w, NativeSteering_Approach(NATIVE_PHYSICS_READ(driver, rotCurr.w), ldexp((NATIVE_PHYSICS_READ(driver, rotPrev.w) * NativePhysics_ElapsedMS(P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS)), -(5)), targetRotW));
 }
 #endif

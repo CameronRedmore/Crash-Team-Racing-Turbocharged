@@ -974,7 +974,7 @@ void VehStuckProc_RevEngine_PhysLinear(struct Thread *t, struct Driver *d)
 		return;
 	}
 
-	d->posCurr.y = CTR_MipsSubLo(d->posCurr.y, CTR_FRAME_STEP(VEH_STUCK_REV_MASK_DESCENT_STEP, sdata->gGT->timer));
+	d->posCurr.y = CTR_MipsSubLo(d->posCurr.y, CTR_FRAME_STEP(VEH_STUCK_REV_MASK_DESCENT_STEP, P32_GET(struct GameTracker *, sdata->gGT)->timer));
 
 	// if maskObj exists
 	if (P32_GET(struct MaskHeadWeapon *, d->KartStates.RevEngine.maskObj) != 0)
@@ -1018,7 +1018,7 @@ void VehStuckProc_RevEngine_Animate(struct Thread *t, struct Driver *d)
 			fillStep = VEH_STUCK_REV_STEP_MIN;
 		}
 
-		int revLevel = VehCalc_InterpBySpeed(d->KartStates.RevEngine.fireLevel, CTR_FRAME_STEP(fillStep, sdata->gGT->timer), d->KartStates.RevEngine.boostMeter);
+		int revLevel = VehCalc_InterpBySpeed(d->KartStates.RevEngine.fireLevel, CTR_FRAME_STEP(fillStep, P32_GET(struct GameTracker *, sdata->gGT)->timer), d->KartStates.RevEngine.boostMeter);
 
 		d->KartStates.RevEngine.fireLevel = revLevel;
 		d->KartStates.RevEngine.chargeState = REV_ENGINE_CHARGE_ACTIVE;
@@ -1064,7 +1064,7 @@ void VehStuckProc_RevEngine_Animate(struct Thread *t, struct Driver *d)
 	{
 		d->KartStates.RevEngine.chargeState = REV_ENGINE_CHARGE_IDLE;
 
-		int boostMeter = VehCalc_InterpBySpeed(d->KartStates.RevEngine.boostMeter, CTR_FRAME_STEP(CTR_MipsAddLo(d->const_SacredFireSpeed / 3, 3), sdata->gGT->timer),
+		int boostMeter = VehCalc_InterpBySpeed(d->KartStates.RevEngine.boostMeter, CTR_FRAME_STEP(CTR_MipsAddLo(d->const_SacredFireSpeed / 3, 3), P32_GET(struct GameTracker *, sdata->gGT)->timer),
 		                                       CTR_MipsAddLo(d->const_SacredFireSpeed, d->const_AccelSpeed_ClassStat));
 		d->KartStates.RevEngine.boostMeter = boostMeter;
 	}
@@ -1105,7 +1105,7 @@ void VehStuckProc_RevEngine_Animate(struct Thread *t, struct Driver *d)
 			decayStep = VEH_STUCK_REV_STEP_MIN;
 		}
 
-		int revLevel = CTR_MipsSubLo(d->KartStates.RevEngine.fireLevel, CTR_FRAME_STEP(decayStep, sdata->gGT->timer));
+		int revLevel = CTR_MipsSubLo(d->KartStates.RevEngine.fireLevel, CTR_FRAME_STEP(decayStep, P32_GET(struct GameTracker *, sdata->gGT)->timer));
 		d->KartStates.RevEngine.fireLevel = revLevel;
 
 		if (revLevel < 1)
@@ -1835,7 +1835,7 @@ void VehStuckProc_Warp_AddDustPuff2(struct Driver *d, struct DriverWarpState *wa
 void VehStuckProc_Warp_PhysAngular(struct Thread *th, struct Driver *d)
 {
 	(void)th;
-	if (!CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+	if (!CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer))
 	{
 		d->actionsFlagSet |= ACTION_WARP;
 		return;

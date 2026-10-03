@@ -361,7 +361,7 @@ void VehPhysForce_OnGravity(struct Driver *driver, Vec3 *velocity)
 			// Mud takes the maximum of constant and proportional drag. Sample
 			// both together at 30 Hz; otherwise the intervening constant drag
 			// would be added on top of the authored proportional minimum.
-			frictionElapsedTimeMS = CTR_RETAIL_FRAME_TICK(sdata->gGT->timer) ? ELAPSED_MS : 0;
+			frictionElapsedTimeMS = CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer) ? ELAPSED_MS : 0;
 		}
 		perpendicularFriction = CTR_MipsSra(CTR_MipsMulLo(perpendicularFriction, frictionElapsedTimeMS), 5);
 		forwardFriction = CTR_MipsSra(CTR_MipsMulLo(forwardFriction, frictionElapsedTimeMS), 5);
@@ -428,7 +428,7 @@ void VehPhysForce_OnGravity(struct Driver *driver, Vec3 *velocity)
 		// Speed-dependent mud damping is authored per 30 Hz step. Keep its
 		// original signed shifts on retail ticks instead of damping at render Hz.
 		if (((actionsFlagSet & ACTION_MASK_WEAPON) == 0) && ((terrainFlags & TERRAIN_FLAG_MUD_PHYSICS) != 0) &&
-		    CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+		    CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer))
 		{
 			int absSideSpeed = VehPhysForce_OnGravity_Abs(CTR_MipsSra(localX, 3));
 			if (perpendicularFriction < absSideSpeed)
@@ -701,9 +701,9 @@ void VehPhysForce_CollideDrivers(struct Thread *thread, struct Driver *driver)
 			int diffY = CTR_MipsSubLo(CTR_MipsSra(driver->posCurr.y, FRACTIONAL_BITS_8), driver->spsHitPos.y);
 
 			// Recovery acceleration must have the same strength per second.
-			driver->velocity.x = CTR_MipsAddLo(driver->velocity.x, CTR_FRAME_STEP(CTR_MipsSll(diffX, VEH_PHYS_FORCE_SURFACE_PUSHBACK_SHIFT), sdata->gGT->timer));
-			driver->velocity.y = CTR_MipsAddLo(driver->velocity.y, CTR_FRAME_STEP(CTR_MipsSll(diffY, VEH_PHYS_FORCE_SURFACE_PUSHBACK_SHIFT), sdata->gGT->timer));
-			driver->velocity.z = CTR_MipsAddLo(driver->velocity.z, CTR_FRAME_STEP(CTR_MipsSll(diffZ, VEH_PHYS_FORCE_SURFACE_PUSHBACK_SHIFT), sdata->gGT->timer));
+			driver->velocity.x = CTR_MipsAddLo(driver->velocity.x, CTR_FRAME_STEP(CTR_MipsSll(diffX, VEH_PHYS_FORCE_SURFACE_PUSHBACK_SHIFT), P32_GET(struct GameTracker *, sdata->gGT)->timer));
+			driver->velocity.y = CTR_MipsAddLo(driver->velocity.y, CTR_FRAME_STEP(CTR_MipsSll(diffY, VEH_PHYS_FORCE_SURFACE_PUSHBACK_SHIFT), P32_GET(struct GameTracker *, sdata->gGT)->timer));
+			driver->velocity.z = CTR_MipsAddLo(driver->velocity.z, CTR_FRAME_STEP(CTR_MipsSll(diffZ, VEH_PHYS_FORCE_SURFACE_PUSHBACK_SHIFT), P32_GET(struct GameTracker *, sdata->gGT)->timer));
 		}
 	}
 }
@@ -794,7 +794,7 @@ static void VehPhysForce_TranslateMatrix_UpdateSquashStretch(struct Instance *in
 		return;
 	}
 
-	const int scaleInterpSpeed = CTR_FRAME_STEP(VEH_PHYS_FORCE_SQUISH_SCALE_INTERP_SPEED, sdata->gGT->timer);
+	const int scaleInterpSpeed = CTR_FRAME_STEP(VEH_PHYS_FORCE_SQUISH_SCALE_INTERP_SPEED, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 	int jumpHeightCurr = d->jumpHeightCurr;
 	int targetSquish = VEH_PHYS_FORCE_TARGET_SQUISH_DEFAULT;
 
@@ -857,7 +857,7 @@ static void VehPhysForce_TranslateMatrix_UpdateSquashStretch(struct Instance *in
 	}
 
 	// Squash/stretch decay and height smoothing are tuned per 30 FPS frame.
-	if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+	if (CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer))
 	{
 		d->jumpSquishStretch = VehCalc_InterpBySpeed(d->jumpSquishStretch, VEH_PHYS_FORCE_SQUISH_INTERP_SPEED, 0);
 		d->jumpSquishStretch2 = (s16)CTR_MipsSra(CTR_MipsAddLo(CTR_MipsMulLo(d->jumpSquishStretch2, 9), CTR_MipsMulLo(jumpHeightCurr, 7)), 4);
@@ -897,7 +897,7 @@ static void VehPhysForce_TranslateMatrix_UpdateSquashStretch(struct Instance *in
 static void VehPhysForce_TranslateMatrix_UpdateMatrixAnimation(struct Driver *d)
 {
 	// Baked matrix indices are authored at 30 FPS, so they only advance on retail ticks.
-	const b32 stepMatrixIndex = CTR_RETAIL_FRAME_TICK(sdata->gGT->timer);
+	const b32 stepMatrixIndex = CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer);
 
 	if ((d->reserves == 0) || (d->fireSpeed < d->const_Speed_ClassStat) || ((d->actionsFlagSet & ACTION_TURBO_INPUT_LATCH) != 0))
 	{

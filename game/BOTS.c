@@ -13,7 +13,7 @@ force_inline b32 BOTS_IsOxideBoss(const struct Driver *driver)
 	}
 
 #if defined(CTR_NATIVE)
-	return IS_BOSS_RACE(sdata->gGT->gameMode1);
+	return IS_BOSS_RACE(P32_GET(struct GameTracker *, sdata->gGT)->gameMode1);
 #else
 	return true;
 #endif
@@ -145,7 +145,7 @@ void BOTS_InitNavPath(struct GameTracker *gGT, s16 index)
 		// grab the data
 		P32_SET(sdata->NavPath_ptrHeader[index], nh);
 
-		P32_SET(sdata->NavPath_ptrNavFrameArray[index], NAVHEADER_GETFRAME(sdata->NavPath_ptrHeader[index]));
+		P32_SET(sdata->NavPath_ptrNavFrameArray[index], NAVHEADER_GETFRAME(P32_GET(struct NavHeader *, sdata->NavPath_ptrHeader[index])));
 
 		// if data is outdated
 		if (P32_GET(struct NavHeader *, sdata->NavPath_ptrHeader[index])->magicNumber != -0x1303)
@@ -2539,8 +2539,8 @@ UpdateTireColorTimer:
 	    ((0x1c1f < NATIVE_AI_READ(botDriver, botData.aiPhysics.speedLinear)) || (BOTS_IsOxideBoss(botDriver))))
 	{
 		int iVar4 = (local_3c & BOTS_NAV_SPECIAL_INDEX_MASK);
-		NATIVE_AI_WRITE(botDriver, botData.aiPhysics.speedY, sdata->NavPath_ptrHeader[botDriver->botData.botPath]->rampPhys2[iVar4]);
-		NATIVE_AI_WRITE(botDriver, botData.aiPhysics.speedLinear, sdata->NavPath_ptrHeader[botDriver->botData.botPath]->rampPhys1[iVar4]);
+		NATIVE_AI_WRITE(botDriver, botData.aiPhysics.speedY, P32_GET(struct NavHeader *, sdata->NavPath_ptrHeader[botDriver->botData.botPath])->rampPhys2[iVar4]);
+		NATIVE_AI_WRITE(botDriver, botData.aiPhysics.speedLinear, P32_GET(struct NavHeader *, sdata->NavPath_ptrHeader[botDriver->botData.botPath])->rampPhys1[iVar4]);
 
 		if (BOTS_IsOxideBoss(botDriver))
 		{
@@ -3351,7 +3351,7 @@ void BOTS_Driver_Convert(struct Driver *d)
 
 	if ((P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 & BATTLE_MODE) != 0)
 	{ // you are in battle mode
-		struct NavFrame *nf = NAVHEADER_GETFRAME(sdata->NavPath_ptrHeader[navPathIndex]);
+		struct NavFrame *nf = NAVHEADER_GETFRAME(P32_GET(struct NavHeader *, sdata->NavPath_ptrHeader[navPathIndex]));
 		d->posCurr.x = CTR_MipsSll(nf->pos.x, 8);
 		d->posCurr.y = CTR_MipsSll(nf->pos.y, 8);
 		d->posCurr.z = CTR_MipsSll(nf->pos.z, 8);

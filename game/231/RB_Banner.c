@@ -205,7 +205,7 @@ void RB_Banner_ThTick(struct Thread *t)
 	if (banner->numVertices != 0)
 	{
 #if CTR_NATIVE_60FPS
-		if (!CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+		if (!CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer))
 		{
 			return;
 		}

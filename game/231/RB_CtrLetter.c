@@ -87,7 +87,7 @@ void RB_CtrLetter_ThTick(struct Thread *t)
 	letterObj = P32_GET(void *, t->object);
 
 	// rotate each frame
-	letterObj->rot.y += CTR_FRAME_STEP(0x40, sdata->gGT->timer);
+	letterObj->rot.y += CTR_FRAME_STEP(0x40, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 	ConvertRotToMatrix(&letterInst->matrix, &letterObj->rot);
 
 	Vector_SpecLightSpin3D(letterInst, &letterObj->rot, &letterLightDir);

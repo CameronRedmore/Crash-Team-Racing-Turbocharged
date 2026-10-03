@@ -361,7 +361,7 @@ void Voiceline_StartPlay(struct Item *voiceLine)
 	u32 voiceID = (u16)voiceLineItem->voiceID;
 	u32 characterID = voiceLineItem->characterID;
 	u32 voiceSetIndex;
-	b32 isBossVoice = (IS_BOSS_RACE(sdata->gGT->gameMode1)) &&
+	b32 isBossVoice = (IS_BOSS_RACE(P32_GET(struct GameTracker *, sdata->gGT)->gameMode1)) &&
 	                  ((u32)(voiceID - 10) < 6) &&
 	                  (((u32)(characterID - 8) < 4) || (characterID == 0xf));
 

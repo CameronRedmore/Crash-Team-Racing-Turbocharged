@@ -173,7 +173,7 @@ void AH_Pause_Draw(s32 pageID, s32 posX)
 	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	struct PrimMem *primMem = &P32_GET(struct DB *, gGT->backBuffer)->primMem;
 
-	struct Icon **iconPtrArray = ICONGROUP_GETICONS(gGT->iconGroup[AH_PAUSE_ICON_GROUP_HUD]);
+	struct Icon **iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[AH_PAUSE_ICON_GROUP_HUD]));
 
 	// Draw arrow pointing Left
 	DecalHUD_Arrow2D(iconPtrArray[AH_PAUSE_HUD_ICON_PAGE_ARROW], (posX - titleHalfWidth) + AH_PAUSE_ARROW_LEFT_X_OFFSET, AH_PAUSE_ARROW_Y,
@@ -324,7 +324,7 @@ void AH_Pause_Draw(s32 pageID, s32 posX)
 
 			u32 *starColor = P32_GET(u32 *, data.ptrColor[bossStarColor]);
 
-			struct Icon **iconPtrArray = ICONGROUP_GETICONS(gGT->iconGroup[AH_PAUSE_ICON_GROUP_MISC]);
+			struct Icon **iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[AH_PAUSE_ICON_GROUP_MISC]));
 
 			DecalHUD_DrawPolyGT4(iconPtrArray[AH_PAUSE_HUD_ICON_BOSS_STAR],
 

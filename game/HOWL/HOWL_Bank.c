@@ -91,7 +91,7 @@ int Bank_AssignSpuAddrs()
 
 		for (i = 0; i < P32_GET(struct SampleBlockHeader *, sdata->ptrSampleBlock1)->numSamples; i++)
 		{
-			s16 *spuIndexArr = SBHEADER_GETARR(sdata->ptrSampleBlock1);
+			s16 *spuIndexArr = SBHEADER_GETARR(P32_GET(struct SampleBlockHeader *, sdata->ptrSampleBlock1));
 			sdata->audioAllocSize += P32_GET(struct SpuAddrEntry *, sdata->howl_spuAddrs)[spuIndexArr[i]].spuSize;
 		}
 
@@ -158,7 +158,7 @@ int Bank_AssignSpuAddrs()
 
 		for (i = 0; i < P32_GET(struct SampleBlockHeader *, sdata->ptrSampleBlock1)->numSamples; i++)
 		{
-			s16 *spuIndexArr = SBHEADER_GETARR(sdata->ptrSampleBlock1);
+			s16 *spuIndexArr = SBHEADER_GETARR(P32_GET(struct SampleBlockHeader *, sdata->ptrSampleBlock1));
 			sae = &P32_GET(struct SpuAddrEntry *, sdata->howl_spuAddrs)[spuIndexArr[i]];
 
 			if (sae->spuAddr == 0)

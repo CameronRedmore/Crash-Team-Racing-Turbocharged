@@ -464,7 +464,7 @@ void MM_CupSelect_MenuProc(struct RectMenu *menu)
 			{
 				u32 *starColor = P32_GET(u32 *, data.ptrColor[D230.cupSelectStars.colorIndex[starIndex]]);
 
-				struct Icon **iconPtrArray = ICONGROUP_GETICONS(gGT->iconGroup[MM_CUP_SELECT_STAR_ICON_GROUP]);
+				struct Icon **iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[MM_CUP_SELECT_STAR_ICON_GROUP]));
 
 				DecalHUD_DrawPolyGT4(iconPtrArray[MM_CUP_SELECT_STAR_ICON_ID],
 				                     startX + (cupIndex & 1) * MM_CUP_SELECT_STAR_COLUMN_BIAS + MM_CUP_SELECT_STAR_X_OFFSET,

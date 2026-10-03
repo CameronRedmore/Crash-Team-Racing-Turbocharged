@@ -68,7 +68,7 @@ void SelectProfile_ThTick(struct Thread *t)
 #endif
 		struct Instance *inst = P32_GET(struct Instance *, activeIcon->inst);
 
-		activeIcon->rot.y = (s16)(activeIcon->rot.y + CTR_FRAME_STEP(sdata->LoadSave_SpinRateY[slot], sdata->gGT->timer));
+		activeIcon->rot.y = (s16)(activeIcon->rot.y + CTR_FRAME_STEP(sdata->LoadSave_SpinRateY[slot], P32_GET(struct GameTracker *, sdata->gGT)->timer));
 
 #if defined(CTR_NATIVE)
 		// NOTE(aalhendi): Menu-storage can keep this thread alive when the

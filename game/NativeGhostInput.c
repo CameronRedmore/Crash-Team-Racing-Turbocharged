@@ -904,7 +904,7 @@ void NativeGhostInput_ProcessFrameTiming(s32 *elapsedTimeMS)
 #if CTR_NATIVE_60FPS
             if (CTR_NATIVE_60FPS_ACTIVE)
             {
-                s32 frameMS = CTR_FRAME_STEP(ELAPSED_MS, sdata->gGT->timer);
+                s32 frameMS = CTR_FRAME_STEP(ELAPSED_MS, P32_GET(struct GameTracker *, sdata->gGT)->timer);
                 s32 replayVBlanks = (*elapsedTimeMS + frameMS - 1) / frameMS;
                 if (CTR_FRAMES_PER_SECOND > 60)
                     replayVBlanks = (*elapsedTimeMS * CTR_FRAMES_PER_SECOND + ELAPSED_MS * FPS / 2) / (ELAPSED_MS * FPS);

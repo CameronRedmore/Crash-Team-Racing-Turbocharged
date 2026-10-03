@@ -200,7 +200,7 @@ void UI_RenderFrame_Racing()
 	if (gGT->level1->ptrSpawnType1->count != 0)
 #endif
 	{
-		void **pointers = ST1_GETPOINTERS(gGT->level1->ptrSpawnType1);
+		void **pointers = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *, gGT->level1)->ptrSpawnType1));
 		levPtrMap = pointers[ST1_MAP];
 	}
 
@@ -396,7 +396,7 @@ void UI_RenderFrame_Racing()
 						playerStruct->PickupWumpaHUD.cooldown = partTimeVariable1;
 					}
 
-					struct Icon **iconPtrArray = ICONGROUP_GETICONS(gGT->iconGroup[0xB]);
+					struct Icon **iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[0xB]));
 
 					// "wumpaposter" icon group
 					DecalHUD_DrawPolyFT4(iconPtrArray[0], (int)wumpaModelPos.x, (int)wumpaModelPos.y,
@@ -810,7 +810,7 @@ void UI_RenderFrame_Racing()
 			}
 
 			// Set display position value (the slide is authored as one step per 30 FPS frame)
-			if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+			if (CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer))
 			{
 				sdata->TurboDisplayPos_Only1P = sVar1;
 			}

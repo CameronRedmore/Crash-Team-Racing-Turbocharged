@@ -483,7 +483,7 @@ void DecalFont_DrawLineStrlen(char *str, s16 len, int posX, s16 posY, s16 fontTy
 
 				if (iconID < P32_GET(struct IconGroup *, gGT->iconGroup[iconGroupID])->numIcons)
 				{
-					struct Icon **iconPtrArray = ICONGROUP_GETICONS(gGT->iconGroup[iconGroupID]);
+					struct Icon **iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[iconGroupID]));
 
 					DecalFont_DrawGlyph(iconPtrArray[iconID],
 

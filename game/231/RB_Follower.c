@@ -62,7 +62,7 @@ void RB_Follower_ThTick(struct Thread *t)
 	kartState = d->kartState;
 
 	// lifetime and scale-up run at 30 Hz; position still updates every frame
-	b32 retailTick = CTR_RETAIL_FRAME_TICK(sdata->gGT->timer);
+	b32 retailTick = CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer);
 
 	if (retailTick)
 	{

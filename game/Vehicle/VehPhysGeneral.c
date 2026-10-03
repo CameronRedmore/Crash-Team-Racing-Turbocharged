@@ -134,7 +134,7 @@ void VehPhysGeneral_PhysAngular(struct Thread *thread, struct Driver *driver)
 		                  terrain->turnResponseScale),
 		    8);
 
-		rotCurrW_interp = VehCalc_InterpBySpeed(rotCurrW_original, CTR_FRAME_STEP(rate, sdata->gGT->timer), 0);
+		rotCurrW_interp = VehCalc_InterpBySpeed(rotCurrW_original, CTR_FRAME_STEP(rate, P32_GET(struct GameTracker *, sdata->gGT)->timer), 0);
 
 		forwardDir = (s16)rotCurrW_interp;
 	}
@@ -270,7 +270,7 @@ void VehPhysGeneral_PhysAngular(struct Thread *thread, struct Driver *driver)
 	// spins camera from side of driver, to back of driver,
 	// when the drifting ends. "LerpToForwards"
 #if CTR_NATIVE_60FPS
-	if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+	if (CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer))
 #endif
 	driver->turnAngleLerpVel = VehPhysGeneral_LerpToForwards(driver, (int)driftAngleCurr_og, (int)forwardDir, classSpeed_halved);
 
@@ -390,7 +390,7 @@ LAB_80060284:
 		{
 			rotCurrW_interp = CTR_MipsNegLo(rotCurrW_original);
 		}
-		rotCurrW_interp = VehCalc_InterpBySpeed(turnResistMax, CTR_FRAME_STEP(rotCurrW_interp, sdata->gGT->timer), 0);
+		rotCurrW_interp = VehCalc_InterpBySpeed(turnResistMax, CTR_FRAME_STEP(rotCurrW_interp, P32_GET(struct GameTracker *, sdata->gGT)->timer), 0);
 		forwardDir = (s16)rotCurrW_interp;
 	}
 	else
@@ -788,9 +788,9 @@ CHECK_FOR_ANY_JUMP:
 
 					// Authored adhesion is a force per retail frame. Scale after
 					// rotation to retain the retail impulse and signed rounding.
-					movement.x = CTR_MipsAddLo(movement.x, CTR_FRAME_STEP(rotated.x, sdata->gGT->timer));
-					movement.y = CTR_MipsAddLo(movement.y, CTR_FRAME_STEP(rotated.y, sdata->gGT->timer));
-					movement.z = CTR_MipsAddLo(movement.z, CTR_FRAME_STEP(rotated.z, sdata->gGT->timer));
+					movement.x = CTR_MipsAddLo(movement.x, CTR_FRAME_STEP(rotated.x, P32_GET(struct GameTracker *, sdata->gGT)->timer));
+					movement.y = CTR_MipsAddLo(movement.y, CTR_FRAME_STEP(rotated.y, P32_GET(struct GameTracker *, sdata->gGT)->timer));
+					movement.z = CTR_MipsAddLo(movement.z, CTR_FRAME_STEP(rotated.z, P32_GET(struct GameTracker *, sdata->gGT)->timer));
 				}
 			}
 

@@ -94,7 +94,7 @@ void UI_VsQuipAssign(struct Driver *driver, struct QuipMeta *meta, struct Driver
 	P32_SET(driver->EndOfRaceComment_ptrQuip, (s16 *)selected);
 	driver->EndOfRaceComment_characterID = characterID;
 
-	P32_GET(struct GameTracker *, sdata->gGT)->timerEndOfRaceVS = FPS_DOUBLE(((sdata->gGT->gameMode1 & BATTLE_MODE) != 0) ? 150 : 300);
+	P32_GET(struct GameTracker *, sdata->gGT)->timerEndOfRaceVS = FPS_DOUBLE(((P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 & BATTLE_MODE) != 0) ? 150 : 300);
 }
 
 #define UI_QUIP_DATA_BASE_PSX 0x800864dcu

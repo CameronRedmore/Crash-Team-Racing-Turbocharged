@@ -81,7 +81,7 @@ void RB_Armadillo_ThTick_Rolling(struct Thread *t)
 	if (armObj->timeRolling < 0x500)
 	{
 		// 32ms, 30fps
-		armObj->timeRolling += CTR_FRAME_STEP(0x20, sdata->gGT->timer);
+		armObj->timeRolling += CTR_FRAME_STEP(0x20, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 
 		if (armObj->direction == 0)
 		{
@@ -192,7 +192,7 @@ void RB_Armadillo_LInB(struct Instance *inst)
 	}
 
 	// puts armadillos on separate cycles
-	pointers = ST1_GETPOINTERS(sdata->gGT->level1->ptrSpawnType1);
+	pointers = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->ptrSpawnType1));
 	metaArray = (s16 *)pointers[ST1_SPAWN];
 	armObj->timeAtEdge = FPS_DOUBLE(metaArray[inst->name[strlen(inst->name) - 1] - '0']);
 }

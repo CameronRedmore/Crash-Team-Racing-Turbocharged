@@ -198,7 +198,7 @@ LAB_800ad5f8:
 
 		// add to the frame counter
 #if CTR_NATIVE_60FPS
-		if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+		if (CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer))
 		{
 			mw->numFramesOnHead += 1;
 		}
@@ -313,7 +313,7 @@ void RB_TNT_ThTick_ThrowOnHead(struct Thread *t)
 	}
 
 	// rotation
-	mw->tntSpinY += CTR_FRAME_STEP(0x100, sdata->gGT->timer);
+	mw->tntSpinY += CTR_FRAME_STEP(0x100, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 
 	// if scale is small
 	if (inst->scale.x < 0x801)
@@ -328,9 +328,9 @@ void RB_TNT_ThTick_ThrowOnHead(struct Thread *t)
 	else
 	{
 		// reduce scale
-		inst->scale.x -= CTR_FRAME_STEP(0x100, sdata->gGT->timer);
-		inst->scale.y -= CTR_FRAME_STEP(0x100, sdata->gGT->timer);
-		inst->scale.z -= CTR_FRAME_STEP(0x100, sdata->gGT->timer);
+		inst->scale.x -= CTR_FRAME_STEP(0x100, P32_GET(struct GameTracker *, sdata->gGT)->timer);
+		inst->scale.y -= CTR_FRAME_STEP(0x100, P32_GET(struct GameTracker *, sdata->gGT)->timer);
+		inst->scale.z -= CTR_FRAME_STEP(0x100, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 	}
 	return;
 }

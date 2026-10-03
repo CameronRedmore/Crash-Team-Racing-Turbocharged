@@ -228,7 +228,7 @@ void UI_Weapon_DrawBG(s16 posX, s16 posY, s16 scale, struct Driver *d)
 	int scaleInt = (int)scale;
 
 	// wumpaShineTheta (given to sine)
-	sdata->wumpaShineTheta += CTR_FRAME_STEP(UI_WEAPON_BG_SHINE_THETA_STEP, sdata->gGT->timer);
+	sdata->wumpaShineTheta += CTR_FRAME_STEP(UI_WEAPON_BG_SHINE_THETA_STEP, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 
 	int shineScale = scaleInt * UI_WEAPON_BG_SHINE_SCALE_MUL >> UI_WEAPON_BG_SHINE_SCALE_SHIFT;
 

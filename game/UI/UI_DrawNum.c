@@ -36,7 +36,7 @@ void UI_DrawNumWumpa(s16 posX, s16 posY, struct Driver *d)
 	{
 		s8 currWumpa = d->numWumpas;
 		int currWumpa10s = (currWumpa / UI_DRAWNUM_DECIMAL_BASE) * UI_DRAWNUM_SIGN_EXTEND_BYTE_MUL >> UI_DRAWNUM_SIGN_EXTEND_BYTE_SHIFT;
-		struct Icon **iconPtrArray = ICONGROUP_GETICONS(gGT->iconGroup[UI_DRAWNUM_DIGIT_ICON_GROUP]);
+		struct Icon **iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[UI_DRAWNUM_DIGIT_ICON_GROUP]));
 
 		for (int digitIndex = 0; digitIndex < UI_DRAWNUM_WUMPA_DIGIT_COUNT; digitIndex++)
 		{

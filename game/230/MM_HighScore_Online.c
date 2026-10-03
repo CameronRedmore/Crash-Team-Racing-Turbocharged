@@ -125,7 +125,7 @@ static void MM_HighScore_OnlineDraw(u16 trackIndex, s16 offsetX)
     s16 lineWidth = DecalFont_GetLineWidth(trackName, FONT_BIG) >> 1;
     s16 numColor = ((FPS_HALF(sdata->frameCounter) & MM_HIGHSCORE_FLASH_TIMER_BIT) == 0) ? RED : ORANGE;
     u32 *colorPtr = P32_GET(u32 *, data.ptrColor[numColor]);
-    struct Icon **iconPtrArray = ICONGROUP_GETICONS(gGT->iconGroup[MM_HIGHSCORE_ARROW_ICON_GROUP]);
+    struct Icon **iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[MM_HIGHSCORE_ARROW_ICON_GROUP]));
     const struct TransitionMeta *titleMeta = &D230.transitionMeta_HighScores[MM_HIGHSCORE_TITLE_META_INDEX];
     const struct TransitionMeta *bestTrackMeta = &D230.transitionMeta_HighScores[MM_HIGHSCORE_BEST_TRACK_META_INDEX];
     const struct TransitionMeta *bestLapLabelMeta = &D230.transitionMeta_HighScores[MM_HIGHSCORE_BEST_LAP_LABEL_META_INDEX];
@@ -463,7 +463,7 @@ static void MM_HighScore_OnlineMenuProc(void)
         }
     }
     // track slide steps at 30 Hz; its offsets rely on whole-step positions
-    else if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+    else if (CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer))
     {
         u8 reachedTarget = D230.highScoreTransition.trackFrame == 1;
         D230.highScoreTransition.trackFrame--;

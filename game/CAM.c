@@ -480,7 +480,7 @@ u8 CAM_Path_Move(s32 frameIndex, s16 *position, s16 *rotation, s16 *pathFlagsOut
 		return 0;
 	}
 
-	void **ptrs = ST1_GETPOINTERS(sdata->gGT->level1->ptrSpawnType1);
+	void **ptrs = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->ptrSpawnType1));
 	s16 *ptrCam = ptrs[ST1_CAMERA_PATH];
 
 	u16 pathNumNode = (u16)ptrCam[0];
@@ -800,7 +800,7 @@ static s32 CAM_FollowDriver_AngleAxis_Lerp256(s32 current, s32 previous, s32 rat
 static void CAM_FollowDriver_AngleAxis_LoadGteMatrix(MATRIX *axisMatrix, struct Driver *d)
 {
 	gte_SetRotMatrix(axisMatrix);
-	gte_SetTransVector(d->instSelf->matrix.t);
+	gte_SetTransVector(P32_GET(struct Instance *, d->instSelf)->matrix.t);
 }
 
 static void CAM_FollowDriver_AngleAxis_TransformOffset(const SVec3 *offset, Vec3 *out)
@@ -972,12 +972,12 @@ static s32 CAM_RetailFrameStep(s32 step)
 		return step;
 	}
 
-	return CTR_FRAME_STEP(step, sdata->gGT->timer);
+	return CTR_FRAME_STEP(step, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 }
 
 static b32 CAM_RetailFrameTick(void)
 {
-	return CTR_RETAIL_FRAME_TICK(sdata->gGT->timer);
+	return CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer);
 }
 
 static struct CheckpointNode *CAM_FollowDriver_TrackPath_GetNode(struct CameraDC *cDC, struct CheckpointNode *node, s32 speed)
@@ -1530,13 +1530,13 @@ void CAM_FollowDriver_Normal(struct CameraDC *cDC, struct Driver *d, SVec3 *push
 		// if frame countdown is not finished
 		if (cDC->BlastedLerp.framesRemaining != 0)
 		{
-			cam->pos.x += CTR_FRAME_STEP((cDC->BlastedLerp.desiredPos.x * cDC->BlastedLerp.framesRemaining) >> 3, sdata->gGT->timer);
-			cam->pos.y += CTR_FRAME_STEP((cDC->BlastedLerp.desiredPos.y * cDC->BlastedLerp.framesRemaining) >> 3, sdata->gGT->timer);
-			cam->pos.z += CTR_FRAME_STEP((cDC->BlastedLerp.desiredPos.z * cDC->BlastedLerp.framesRemaining) >> 3, sdata->gGT->timer);
+			cam->pos.x += CTR_FRAME_STEP((cDC->BlastedLerp.desiredPos.x * cDC->BlastedLerp.framesRemaining) >> 3, P32_GET(struct GameTracker *, sdata->gGT)->timer);
+			cam->pos.y += CTR_FRAME_STEP((cDC->BlastedLerp.desiredPos.y * cDC->BlastedLerp.framesRemaining) >> 3, P32_GET(struct GameTracker *, sdata->gGT)->timer);
+			cam->pos.z += CTR_FRAME_STEP((cDC->BlastedLerp.desiredPos.z * cDC->BlastedLerp.framesRemaining) >> 3, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 
-			cam->delta.x += CTR_FRAME_STEP((cDC->BlastedLerp.desiredRot.x * cDC->BlastedLerp.framesRemaining) >> 3, sdata->gGT->timer);
-			cam->delta.y += CTR_FRAME_STEP((cDC->BlastedLerp.desiredRot.y * cDC->BlastedLerp.framesRemaining) >> 3, sdata->gGT->timer);
-			cam->delta.z += CTR_FRAME_STEP((cDC->BlastedLerp.desiredRot.z * cDC->BlastedLerp.framesRemaining) >> 3, sdata->gGT->timer);
+			cam->delta.x += CTR_FRAME_STEP((cDC->BlastedLerp.desiredRot.x * cDC->BlastedLerp.framesRemaining) >> 3, P32_GET(struct GameTracker *, sdata->gGT)->timer);
+			cam->delta.y += CTR_FRAME_STEP((cDC->BlastedLerp.desiredRot.y * cDC->BlastedLerp.framesRemaining) >> 3, P32_GET(struct GameTracker *, sdata->gGT)->timer);
+			cam->delta.z += CTR_FRAME_STEP((cDC->BlastedLerp.desiredRot.z * cDC->BlastedLerp.framesRemaining) >> 3, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 
 			// decrease frame countdown
 			cDC->BlastedLerp.framesRemaining--;
@@ -1616,7 +1616,7 @@ LAB_8001ab04:
 
 		if (pb->rot.x < 0x800)
 		{
-			pb->rot.x += CTR_FRAME_STEP(0x10, sdata->gGT->timer);
+			pb->rot.x += CTR_FRAME_STEP(0x10, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 			if (pb->rot.x > 0x800)
 			{
 				pb->rot.x = 0x800;

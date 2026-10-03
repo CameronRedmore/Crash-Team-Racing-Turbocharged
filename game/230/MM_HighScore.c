@@ -133,7 +133,7 @@ void MM_HighScore_Draw(u16 trackIndex, u32 rowIndex, u32 posX, u32 posY)
 	s16 numColor = ((FPS_HALF(sdata->frameCounter) & MM_HIGHSCORE_FLASH_TIMER_BIT) == 0) ? RED : ORANGE;
 	u32 *colorPtr = P32_GET(u32 *, data.ptrColor[numColor]);
 
-	struct Icon **iconPtrArray = ICONGROUP_GETICONS(gGT->iconGroup[MM_HIGHSCORE_ARROW_ICON_GROUP]);
+	struct Icon **iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[MM_HIGHSCORE_ARROW_ICON_GROUP]));
 	const struct TransitionMeta *titleMeta = &D230.transitionMeta_HighScores[MM_HIGHSCORE_TITLE_META_INDEX];
 	const struct TransitionMeta *bestTrackMeta = &D230.transitionMeta_HighScores[MM_HIGHSCORE_BEST_TRACK_META_INDEX];
 	const struct TransitionMeta *bestLapLabelMeta = &D230.transitionMeta_HighScores[MM_HIGHSCORE_BEST_LAP_LABEL_META_INDEX];
@@ -185,7 +185,7 @@ void MM_HighScore_Draw(u16 trackIndex, u32 rowIndex, u32 posX, u32 posY)
 			{
 				colorPtr = P32_GET(u32 *, data.ptrColor[D230.highScoreGhostStars.colorIndex[ghostStarIndex]]);
 
-				struct Icon **ptrIconArray = ICONGROUP_GETICONS(gGT->iconGroup[MM_HIGHSCORE_GHOST_STAR_ICON_GROUP]);
+				struct Icon **ptrIconArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[MM_HIGHSCORE_GHOST_STAR_ICON_GROUP]));
 
 				DecalHUD_DrawPolyGT4(ptrIconArray[MM_HIGHSCORE_GHOST_STAR_ICON_ID],
 				                     titleMeta->currX + offsetX + (ghostStarIndex * MM_HIGHSCORE_GHOST_STAR_X_STEP) + MM_HIGHSCORE_GHOST_STAR_X_OFFSET,
@@ -417,7 +417,7 @@ LAB_OVR_230__800b3c78:
 	MM_TrackSelect_Video_State(videoState);
 }
 	// row/track slides step at 30 Hz; their offsets rely on whole-step positions
-	b32 slideTick = CTR_RETAIL_FRAME_TICK(sdata->gGT->timer);
+	b32 slideTick = CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer);
 	nextFrameCount = D230.highScoreTransition.trackFrame + -1;
 	if (D230.highScoreTransition.trackFrame == 0)
 	{

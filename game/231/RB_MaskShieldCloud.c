@@ -28,7 +28,7 @@ void RB_MaskWeapon_FadeAway(struct Thread *t)
 	mhs->posOffset.z = ((durationAdjusted * MATH_Cos(mask->rot.y)) >> 0xc);
 	mhs->posOffset.y = 0x40;
 
-	mask->rot.y += CTR_FRAME_STEP(-0x100, sdata->gGT->timer);
+	mask->rot.y += CTR_FRAME_STEP(-0x100, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 
 	struct Instance *instCurr;
 	instCurr = inst;
@@ -39,9 +39,9 @@ void RB_MaskWeapon_FadeAway(struct Thread *t)
 	{
 		LHMatrix_Parent(instCurr, driverInst, &mhs->posOffset);
 
-		instCurr->scale.x += CTR_FRAME_STEP(-0x100, sdata->gGT->timer);
-		instCurr->scale.y += CTR_FRAME_STEP(-0x100, sdata->gGT->timer);
-		instCurr->scale.z += CTR_FRAME_STEP(-0x100, sdata->gGT->timer);
+		instCurr->scale.x += CTR_FRAME_STEP(-0x100, P32_GET(struct GameTracker *, sdata->gGT)->timer);
+		instCurr->scale.y += CTR_FRAME_STEP(-0x100, P32_GET(struct GameTracker *, sdata->gGT)->timer);
+		instCurr->scale.z += CTR_FRAME_STEP(-0x100, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 
 		// position offset
 		mhs->posOffset.x = 0;
@@ -60,7 +60,7 @@ void RB_MaskWeapon_FadeAway(struct Thread *t)
 
 	if (maskBeamInst->alphaScale < 0x1000)
 	{
-		maskBeamInst->alphaScale += CTR_FRAME_STEP(0x200, sdata->gGT->timer);
+		maskBeamInst->alphaScale += CTR_FRAME_STEP(0x200, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 	}
 
 	totalTime = mask->duration;
@@ -217,7 +217,7 @@ void RB_MaskWeapon_ThTick(struct Thread *maskTh)
 	}
 
 	// adjust rotation
-	mask->rot.y += CTR_FRAME_STEP(-0x100, sdata->gGT->timer);
+	mask->rot.y += CTR_FRAME_STEP(-0x100, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 
 	// If duration is over
 	if (mask->duration == 0)
@@ -299,7 +299,7 @@ void RB_ShieldDark_ThTick_Pop(struct Thread *t)
 
 		// next frame
 #if CTR_NATIVE_60FPS
-		if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+		if (CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer))
 		{
 			sh->animFrame += 1;
 		}
@@ -361,7 +361,7 @@ void RB_ShieldDark_ThTick_Grow(struct Thread *th)
 	// if highlight cooldown is gone
 	if (shield->highlightTimer == 0)
 	{
-		shield->highlightRot.y += CTR_FRAME_STEP(0x100, sdata->gGT->timer);
+		shield->highlightRot.y += CTR_FRAME_STEP(0x100, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 
 		highlightInst->flags &= ~HIDE_MODEL;
 
@@ -474,7 +474,7 @@ void RB_ShieldDark_ThTick_Grow(struct Thread *th)
 
 		// next frame
 #if CTR_NATIVE_60FPS
-		if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+		if (CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer))
 		{
 			shield->animFrame++;
 		}
@@ -663,7 +663,7 @@ void RB_RainCloud_FadeAway(struct Thread *t)
 	struct RainCloud *rcloud;
 
 #if CTR_NATIVE_60FPS
-	if (!CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+	if (!CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer))
 	{
 		return;
 	}

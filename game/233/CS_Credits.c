@@ -179,7 +179,7 @@ void CS_Credits_Init(void)
 	advProg = &sdata->advProgress;
 	creditsObj = &creditsBSS.creditsObj;
 
-	void **pointers = ST1_GETPOINTERS(gGT->level1->ptrSpawnType1);
+	void **pointers = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *, gGT->level1)->ptrSpawnType1));
 	CLH = pointers[ST1_CREDITS];
 
 	P32_SET(creditsBSS.dancerThread, 0);
@@ -400,7 +400,7 @@ void CS_Credits_DrawNames(struct CreditsObj *co)
 	}
 
 #if CTR_NATIVE_60FPS
-	if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+	if (CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer))
 #endif
 	{
 		co->creditsPosY--;
@@ -525,7 +525,7 @@ void CS_Credits_DrawEpilogue(struct CreditsObj *co)
 	}
 
 #if CTR_NATIVE_60FPS
-	if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+	if (CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer))
 #endif
 	{
 		co->epilogueFramesLeft--;
@@ -606,7 +606,7 @@ void CS_Credits_ThTick(void)
 	b32 use30HzStep = true;
 
 #if CTR_NATIVE_60FPS
-	use30HzStep = CTR_RETAIL_FRAME_TICK(sdata->gGT->timer);
+	use30HzStep = CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer);
 #endif
 
 	P32_SET(co->creditDanceInst, danceInst);

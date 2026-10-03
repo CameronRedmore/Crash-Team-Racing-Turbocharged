@@ -57,7 +57,7 @@ double NativePhysics_ElapsedMS(double elapsedMS)
 	// The shared integer clock distributes milliseconds over successive frames.
 	// Continuous solvers keep the exact duration of an ordinary high-rate step;
 	// unusual elapsed times (pause, slow motion or replay) retain their input.
-	if (CTR_FRAMES_PER_SECOND > 60 && elapsedMS == CTR_FRAME_STEP(32, sdata->gGT->timer))
+	if (CTR_FRAMES_PER_SECOND > 60 && elapsedMS == CTR_FRAME_STEP(32, P32_GET(struct GameTracker *, sdata->gGT)->timer))
 		return 32.0 * NativePhysics_FrameScale();
 	return elapsedMS;
 }

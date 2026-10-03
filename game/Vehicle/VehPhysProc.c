@@ -1142,7 +1142,7 @@ SkipSetSteer:
 
 	// Change wheel rotation based on StickLX
 	scratchValue = VehPhysJoystick_GetStrengthAbsolute(scratchValue, VEH_PHYS_PROC_WHEEL_ROTATION_STRENGTH, P32_GET(struct RacingWheelData *, ptrgamepad->rwd));
-	driverBaseSpeedUshort = VehCalc_InterpBySpeed((int)driver->wheelRotation, CTR_FRAME_STEP(VEH_PHYS_PROC_WHEEL_ROTATION_INTERP_STEP, sdata->gGT->timer), CTR_MipsNegLo(scratchValue));
+	driverBaseSpeedUshort = VehCalc_InterpBySpeed((int)driver->wheelRotation, CTR_FRAME_STEP(VEH_PHYS_PROC_WHEEL_ROTATION_INTERP_STEP, P32_GET(struct GameTracker *, sdata->gGT)->timer), CTR_MipsNegLo(scratchValue));
 	driver->wheelRotation = (s16)driverBaseSpeedUshort;
 
 	scratchValue = (int)driver->fireSpeed;
@@ -1924,7 +1924,7 @@ void PhysLerpRot(struct Driver *driver, int targetRotW)
 	if (CTR_NATIVE_60FPS_ACTIVE)
 	{
 		if (CTR_FRAMES_PER_SECOND > 60)
-			lerpStep = CTR_FRAME_STEP(CTR_MipsSra(remainingRot, 3), sdata->gGT->timer);
+			lerpStep = CTR_FRAME_STEP(CTR_MipsSra(remainingRot, 3), P32_GET(struct GameTracker *, sdata->gGT)->timer);
 		else if ((P32_GET(struct GameTracker *, sdata->gGT)->timer & 1) != 0)
 			lerpStep = CTR_MipsSra(remainingRot, 4);
 		else
@@ -2265,12 +2265,12 @@ void VehPhysProc_SlamWall_Animate(struct Thread *t, struct Driver *d)
 #if CTR_NATIVE_60FPS
 	// The crash-fall anim is half-rate: animFrame counts 30 FPS frames, so it
 	// must step on the retail tick like the baked matrix index below.
-	if (INSTANCE_AnimFramesScaled(inst, inst->animIndex) || CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+	if (INSTANCE_AnimFramesScaled(inst, inst->animIndex) || CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer))
 #endif
 		inst->animFrame = (s16)CTR_MipsAddLo((u16)inst->animFrame, 1);
 
 #if CTR_NATIVE_60FPS
-	if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+	if (CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer))
 #endif
 		d->matrixIndex = (u8)CTR_MipsAddLo(d->matrixIndex, 1);
 
@@ -2434,7 +2434,7 @@ void VehPhysProc_SpinFirst_PhysAngular(struct Thread *t, struct Driver *d)
 	d->numFramesSpentSteering = VEH_PHYS_PROC_STEER_RESET_FRAMES;
 
 #if CTR_NATIVE_60FPS
-	if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+	if (CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer))
 #endif
 	{
 		d->rotationSpinRate = (s16)CTR_MipsSubLo((u16)d->rotationSpinRate, CTR_MipsSra(d->rotationSpinRate, 3));
@@ -2577,7 +2577,7 @@ void VehPhysProc_SpinLast_PhysAngular(struct Thread *t, struct Driver *d)
 	d->numFramesSpentSteering = VEH_PHYS_PROC_STEER_RESET_FRAMES;
 
 #if CTR_NATIVE_60FPS
-	if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+	if (CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer))
 #endif
 	{
 		d->rotationSpinRate = (s16)CTR_MipsSubLo((u16)d->rotationSpinRate, CTR_MipsSra(d->rotationSpinRate, 3));

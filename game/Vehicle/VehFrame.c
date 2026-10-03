@@ -118,7 +118,7 @@ u32 VehFrameInst_GetNumAnimFrames(struct Instance *inst, int animIndex)
 // only step at 30 Hz and index baked matrices directly.
 static int VehFrame_InterpAnimFrame(struct Instance *inst, int speed, int desired)
 {
-	if (!INSTANCE_AnimFramesScaled(inst, inst->animIndex) && !CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+	if (!INSTANCE_AnimFramesScaled(inst, inst->animIndex) && !CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer))
 	{
 		return inst->animFrame;
 	}

@@ -400,7 +400,7 @@ void RaceFlag_DrawLoadingString(void)
 	{
 		if (RACE_FLAG_LOADING_IDLE_SLIDE_LIMIT < (int)sdata->RaceFlag_Transition)
 		{
-			sdata->RaceFlag_Transition -= CTR_FRAME_STEP(RACE_FLAG_LOADING_IDLE_SLIDE_STEP, sdata->gGT->timer);
+			sdata->RaceFlag_Transition -= CTR_FRAME_STEP(RACE_FLAG_LOADING_IDLE_SLIDE_STEP, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 		}
 	}
 	else
