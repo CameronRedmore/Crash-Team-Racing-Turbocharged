@@ -142,6 +142,7 @@ void GhostTape_WriteMoves(s16 raceFinished);
 extern int gNativeGhostReplayMode;
 #if defined(CTR_NATIVE)
 extern int gNativeBootSkipRequested;
+int NativeBootSkip_StartPressed(void);
 extern int gNativeBossFightMode;
 extern int gNativeBossFightBossID;
 int NativeBossFight_GetBossCharacter(int bossID);

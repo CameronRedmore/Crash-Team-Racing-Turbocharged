@@ -68,6 +68,7 @@ build64/ctr_native --replay ".../input.ctrreplay" --replay-skip-bootstrap --repl
 ```
 
 - `--replay-skip-bootstrap` needs a replay recorded with `--record` and without `--toggle`. Both runs then boot with VBlanks driven only by the game's own VSync calls, so boot ends in the same state.
+- While recording or playing back, Start does not skip the boot intro (SCEA, copyright). Those screens poll live input outside the replay's per-frame pad stream, so a skip could not be replayed.
 - While recording or playing back, CD reads finish on the first callback pump after they are issued, so loads take the same number of frames every run.
 - `--ab-trace` writes one line per frame: timers, RNG state, per-driver position, rotation, speed and item state, then per thread bucket `count:threadHash:instFlagsHash:matrixHash:modelIndexHash`. Pointer fields are not hashed. Diff two traces to find the first frame that differs.
 - `modelIndex` hashes can differ between any two builds: some threads (`saveobj`) never set it and keep stale pool bytes.

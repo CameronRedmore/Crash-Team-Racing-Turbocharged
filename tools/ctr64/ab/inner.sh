@@ -17,9 +17,14 @@ for st in "$@"; do
     shot:*) import -window root $S/shot_${TAG}_${st#shot:}.png;;
     hold:*) k=${st#hold:}; xdotool windowfocus $W keydown ${k%%:*}; sleep ${k##*:}; xdotool keyup ${k%%:*};;
     kb1) for n in 1 2 3 4; do kblog | grep -q "player 1" && break; key F4; done;;
-    wait) for i in $(seq 1 1800); do kill -0 $P 2>/dev/null || break; sleep 1; done;;
+    menu) for n in $(seq 1 20); do import -window root $S/.menu.png; python3 $(dirname $0)/menu_visible.py $S/.menu.png && break; key Return; sleep 4; done; sleep 1;;
+    wait|wait:*) n=${st#wait}; n=${n#:}; for i in $(seq 1 ${n:-1800}); do kill -0 $P 2>/dev/null || break; sleep 1; done;;
     *) key $st;;
   esac
 done
 kill -0 $P 2>/dev/null && echo ALIVE
+# Ask the game to quit (SDL turns SIGTERM into a quit event) so stdout is flushed.
+G=$(pgrep -n -f "^$S/ctr_native")
+[ -n "$G" ] && kill -TERM $G 2>/dev/null
+for i in $(seq 1 20); do kill -0 $P 2>/dev/null || break; sleep 0.5; done
 kill $P 2>/dev/null; wait $P; echo exit=$?

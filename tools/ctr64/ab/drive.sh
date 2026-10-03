@@ -1,6 +1,8 @@
 #!/bin/bash
 # usage: BIN=/path/ctr_native GAMEARGS="..." TAG=name [GDB=1] drive.sh BOOTSECS STEP...
-#   STEP = KEY | sleep:N | shot:NAME | hold:KEY:SECS | kb1 | wait  (wait = until the game exits, max 1800 s)
+#   STEP = KEY | sleep:N | shot:NAME | hold:KEY:SECS | kb1 | menu | wait[:SECS]
+#   kb1: press F4 until the keyboard is player 1. menu: press Start until the main menu shows.
+#   wait: until the game exits (default max 1800 s). The game gets SIGTERM at the end so stdout is flushed.
 # S is a scratch dir holding config.ini.orig, debug/, memcards/, mods/, an assets symlink and inner.sh.
 export S=${S:-/tmp/ctr64-ab}
 cd $S

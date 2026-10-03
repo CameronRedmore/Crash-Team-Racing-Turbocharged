@@ -4,6 +4,10 @@
 #include "platform/native_adhoc.h"
 #endif
 
+#if defined(CTR_NATIVE) && defined(CTR_INTERNAL)
+#include <platform/native_replay_scheduler.h>
+#endif
+
 #if defined(CTR_NATIVE)
 void (*mainMenuInit[])() = {MM_JumpTo_Title_FirstTime, MM_JumpTo_Characters, MM_JumpTo_TrackSelect, MM_JumpTo_BattleSetup, CS_Garage_Init, MM_JumpTo_Scrapbook, MM_NativeBossFight_JumpToBossSelect};
 #else
@@ -12,6 +16,20 @@ void (*mainMenuInit[])() = {MM_JumpTo_Title_FirstTime, MM_JumpTo_Characters, MM_
 
 #ifdef CTR_NATIVE
 int gNativeBootSkipRequested = 0;
+
+// Start skips the boot intro. The intro loops poll live input between replay
+// frames (before frame 0, or several times within one), which replays cannot
+// reproduce, so the intro always plays in full while a replay records or plays.
+int NativeBootSkip_StartPressed(void)
+{
+#if defined(CTR_INTERNAL)
+	if (NativeReplayScheduler_Active())
+	{
+		return 0;
+	}
+#endif
+	return Platform_InputStartPressed();
+}
 
 enum
 {
@@ -91,7 +109,7 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 				while (((sdata->songPool[0].flags & 3) == 1) && (sdata->songPool[0].timeSpentPlaying < LOAD_NATIVE_NDBOX_INTRO_SONG_SYNC_TIME))
 				{
 					VSync(0);
-					if (Platform_InputStartPressed() != 0)
+					if (NativeBootSkip_StartPressed() != 0)
 					{
 						gNativeBootSkipRequested = 1;
 						break;

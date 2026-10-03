@@ -924,7 +924,7 @@ void StateZero()
 		// NOTE(aalhendi): Retail hardware interrupts keep XA/audio moving while
 		// this loop spins. Native owns VBlank in VSync(), so pump it here.
 		VSync(0);
-		if ((gNativeBootSkipRequested == 0) && (Platform_InputStartPressed() != 0))
+		if ((gNativeBootSkipRequested == 0) && (NativeBootSkip_StartPressed() != 0))
 		{
 			gNativeBootSkipRequested = 1;
 			CDSYS_XAPauseRequest();
