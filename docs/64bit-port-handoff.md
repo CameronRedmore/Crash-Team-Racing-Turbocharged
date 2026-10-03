@@ -1,14 +1,15 @@
 # 64-bit / ARM64 port: handoff
 
 Branch `64bit`, worktree `src/worktrees/64bit`, based on `turbocharged` @ 8cbfb7797.
-First written 2026-10-03, updated later the same day. Nothing is pushed.
+First written 2026-10-03, updated twice later the same day. Nothing is pushed.
 
 ## Status
 
 - The 64-bit x86-64 Linux build (clang, Debug and Release) compiles with no errors and links. `ctest` passes 5/5.
 - The 32-bit build (gcc `-m32`) compiles with no warnings and `ctest` passes 5/5 after every commit.
 - The 64-bit game (Debug and Release) boots headless through the intro and main menu, loads the adventure hub, drives into a warp pad and plays a Relic Race on Crash Cove with correct rendering and HUD. No `CtrPtr32_RangeError` aborts on that path.
-- Not yet done: A/B determinism against the 32-bit build, custom racers, other platforms. See "Next steps".
+- **A/B against 32-bit has started and is clean so far** (commit `c7940a4fa`, see "A/B testing" below). On a 12k-frame replay (boot, menus, adventure hub, warp pad, Crash Cove relic race) the 64-bit build matches a 32-bit SSE build on every frame: timers, all RNGs, driver position/rotation/speed/items, and every thread bucket's thread flags, instance flags and instance matrices. The first 11k frames of a 28k-frame idle attract-mode replay (AI hub demos with different characters) also match. No port bugs found yet.
+- Not yet done: wider A/B coverage, custom racers, other platforms. See "Next steps".
 
 ## Goal
 
@@ -67,6 +68,44 @@ Checkpoints (`platform/native_checkpoint.c`) treat "addresses" as whatever point
 7. `381a988dd` in-file pointer arrays and `LOAD_RunPtrMap`.
 8. `11659fb74` pointer/int truncation (all `-Wpointer-to-int-cast` / `-Wint-to-pointer-cast` sites).
 9. `edcbeb1fd` and its predecessor: bugs found by booting (render-bucket terminator, cutscene branch targets, particle icon reads).
+10. `c7940a4fa` cross-build replay A/B tooling (skip-bootstrap playback, deterministic boot and CD, `--ab-trace`).
+
+## A/B testing
+
+Added in `c7940a4fa` (internal builds only, documented in `docs/REPLAYS.md` under "Cross-Build A/B"):
+
+- `--replay-skip-bootstrap`: plays a replay without restoring its bootstrap checkpoint. Needed because checkpoints contain raw pointers (32-bit) or handles (64-bit) and do not restore across builds. Only accepted for replays recorded with `--record` and without `--toggle`; those are marked in header `reserved[0]` (`NATIVE_REPLAY_FROM_BOOT_MAGIC`). Use with `--replay-bypass-header`, since checkpoint sizes and build IDs differ.
+- Deterministic boot: in from-boot record and skip-bootstrap playback, `VSync()`/`Platform_WaitUntilVBlank()` skip wall-clock catch-up before frame 0 (`NativeReplayScheduler_DeterministicBoot`). Without this the boot VBlank count, and with it `frameFinishedVRAM` and the 144 Hz `callbackFrame` phase, varied per run.
+- Deterministic CD: while any replay records or plays, `NativeCD_PumpCallbacks` waits for the in-flight worker read, so loads finish on the same VBlank every run. Before this, two playbacks of one replay on the same binary diverged at the first load.
+- `--ab-trace FILE`: one line per frame from `MainReplayTrace_Frame` (`game/MAIN/MainMain.c`). Bucket field format is `count:threadHash:instFlagsHash:matrixHash:modelIndexHash`. Driver and bucket data are skipped while `Loading.stage != -1`, because buckets are stale during loads; walking them crashed. Instances are only hashed if inside the instance JitPool, because the camera thread's `inst` points elsewhere.
+
+Findings:
+
+1. **x87 vs SSE.** The default 32-bit gcc build uses x87 floats. It drifts from SSE builds in native float code (seen as a 1-unit `posCurr.z` difference in the relic race, frame 10876, config has `smoothed_collisions=1`). The 32-bit `-msse2 -mfpmath=sse` build matches 64-bit exactly. **Always A/B 64-bit against `/tmp/b32sse`, not `/tmp/b32`.** This is a pre-existing cross-platform replay and ghost determinism issue, not a port bug. The user has not been asked yet whether shipping 32-bit x86 builds should switch to SSE2.
+2. **Stale `modelIndex`.** `PROC_BirthWithObject` never sets `Thread.modelIndex`. Some threads (`saveobj` in STATIC, an unnamed OTHER thread with flags `0xc030d`) keep stale pool bytes there that look like the low half of a pointer. The value differs between any two builds, even 32-bit x87 vs SSE, so it is benign. That is why it has its own hash. The writer was not found.
+
+Harness: `tools/ctr64/ab/` (`drive.sh`, `inner.sh`, `cmp.py`). The scratch dir is `/tmp/ctr64-ab` (override with `S=`). It needs `config.ini.orig`, `debug/`, `memcards/`, `mods/` and an `assets` symlink; copy them from the game dir as in the headless-testing notes. Do not call the env var `ARGS`, because `xvfb-run` uses that name. Use `GAMEARGS`. Example:
+
+```
+cd /tmp/ctr64-ab
+# record (from boot, so no --toggle); kb1 presses F4 until the keyboard is player 1
+BIN=/tmp/b32sse/ctr_native TAG=rec GAMEARGS="--record" ./drive.sh 12 kb1 sleep:12 Return sleep:15 Return \
+  sleep:12 c sleep:5 c sleep:5 c sleep:30 hold:c:9 sleep:25 hold:c:20
+RP=$(find debug/reports -name input.ctrreplay)
+for v in b32sse b64; do BIN=/tmp/$v/ctr_native TAG=$v \
+  GAMEARGS="--replay $RP --replay-skip-bootstrap --replay-bypass-header --ab-trace /tmp/ctr64-ab/trace_$v.txt" \
+  ./drive.sh 5 wait; done
+python3 cmp.py trace_b32sse.txt trace_b64.txt   # prints differing field counts and first differing frame per field
+```
+
+Playback runs at about real time under Xvfb (Debug 64-bit is slower), so a 28k-frame replay takes more than 10 minutes per build. Run long ones in the background. Replays in `/tmp/ctr64-ab/debug/reports/` are lost on reboot. `cmp.py` ignores the last line of each trace, which may be truncated if the game was killed.
+
+Build `/tmp/b32sse` with:
+
+```
+cmake -S . -B /tmp/b32sse -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF \
+  -DCMAKE_C_FLAGS="-m32 -msse2 -mfpmath=sse" -DCMAKE_EXE_LINKER_FLAGS=-m32
+```
 
 ## Tools (`tools/ctr64/`)
 
@@ -86,14 +125,15 @@ The tools are one-shot and not idempotent; do not re-run them on converted code.
 
 ## Next steps, in order
 
-1. **A/B against the 32-bit build.** Use Scroll Lock (frozen logic) plus identical inputs/replays (`docs/REPLAYS.md`) and compare frames and state. Silent truncation and wrong-stride bugs show up as divergence, not crashes. Cover: menus, all hubs, a race per track, battle, boss, cutscenes (intro, podium, credits, garage), 2-4 player split screen, ghosts, memory card save/load, checkpoints (F-keys in internal builds).
+1. **Widen A/B coverage** with the tooling above. Done: boot, main menu, adventure hub, warp pad, Crash Cove relic race, and the first 11k frames of idle attract mode. Next: finish the idle attract replay (`/tmp/ctr64-ab/debug/reports/*/ctr-19*`, 27867 frames; the 32-bit SSE trace `idle_b32sse.txt` is already complete, so only the 64-bit playback needs rerunning). Then Arcade races with 7 AI on several tracks (AI exercises most gameplay code with just "hold accelerate"), battle, boss race, cutscenes (intro, podium, credits, garage), 2-4 player split screen, ghosts (Time Trial), memory card save/load, and checkpoints (F5/F8 within one build). Silent truncation and wrong-stride bugs show up as trace divergence, not crashes. If the trace misses something, add fields to `MainReplayTrace_Frame`. Pointer fields must stay out of hashes.
 2. **Allocations that must be inside the image.** Custom racers `malloc` model/VRM buffers and store them in handles (`platform/native_custom_racer.c`: `NativeCustomRacer_LoadQueueSlot`, `NativeCustomRacer_LoadModelNow`, VRM buffers). On 64-bit these will hit `CtrPtr32_RangeError` as soon as a custom racer is used. Replace with a static pool (e.g. a bump/free-list allocator over a static array) for anything that ends up in a game struct. Same audit for `LOAD_Assets.c` native buffers.
 3. **Stack addresses in game structs.** None hit so far. `savedStackPtr32` in the draw-level scratch stores a truncated stack address but is never read back. If one turns up, make the object static or run the game loop on a thread with a static stack.
 4. **Code not compiled by the Linux 926 build.** Inactive `#if` regions were never parsed: `game/zRegionJapan/*` and other non-926 regions, Vita-only code (`native_adhoc.c` `__vita__` block), `BUILD == SepReview` paths. Vita and web stay 32-bit, so only regions that a 64-bit target compiles matter.
 5. **Remaining warnings.** `platform/native_libgte.c` `NormalColorDpq`/`ColorDpq` pass an int where the GTE macro dereferences a pointer. They are unused and broken on every build.
-6. **Performance.** `P32_GET` adds a compare and an add per access. Not measured. Compare frame times of Release 32-bit vs 64-bit.
-7. **Other targets.** ARM64 Linux, macOS arm64 (check the +-2 GiB assumption for the Mach-O image and `__DATA` placement), Windows x64 (the MSVC `.CRT$XIU` fixup path is untested; `long` is 32-bit there, ~18 `(long)` casts, mostly fseek). Rebuild non-default configs (non-INTERNAL).
-8. **Regenerating static fixups.** `gen_fixups.py` is one-shot. Anyone editing a static initializer that contains pointers must update its `CTR_P32_STATIC_FIXUP` block by hand. A `--check` mode would help.
+6. **x87 decision.** Ask the user whether 32-bit x86 builds should use `-msse2 -mfpmath=sse` so replays and ghosts agree across platforms (see finding 1).
+7. **Performance.** `P32_GET` adds a compare and an add per access. Not measured. Compare frame times of Release 32-bit vs 64-bit.
+8. **Other targets.** ARM64 Linux, macOS arm64 (check the +-2 GiB assumption for the Mach-O image and `__DATA` placement), Windows x64 (the MSVC `.CRT$XIU` fixup path is untested; `long` is 32-bit there, ~18 `(long)` casts, mostly fseek). Rebuild non-default configs (non-INTERNAL).
+9. **Regenerating static fixups.** `gen_fixups.py` is one-shot. Anyone editing a static initializer that contains pointers must update its `CTR_P32_STATIC_FIXUP` block by hand. A `--check` mode would help.
 
 ## Open problems and risks
 
@@ -117,6 +157,7 @@ cmake -S . -B /tmp/b32 -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DCMAKE_EXP
   -DCMAKE_C_FLAGS=-m32 -DCMAKE_EXE_LINKER_FLAGS=-m32
 make -C /tmp/b64 -j && (cd /tmp/b64 && ctest)
 make -C /tmp/b32 -j && (cd /tmp/b32 && ctest)   # 32-bit must stay green
+# plus /tmp/b32sse for A/B (see "A/B testing")
 ```
 
 Pitfalls: do not use bare `git checkout game/` to "reset" while uncommitted work exists; the stash stack is shared with other sessions, so avoid it; `/tmp/p32` is an unrelated file from another session and must be left alone.
