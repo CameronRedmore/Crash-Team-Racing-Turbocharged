@@ -4,6 +4,7 @@
 #include <platform/native_custom_racer.h>
 #include <platform/native_disc_image.h>
 #include <platform/native_gpu.h>
+#include <platform/native_memory.h>
 #include <platform/native_path.h>
 #include <platform/native_renderer.h>
 
@@ -837,10 +838,10 @@ struct Model *NativeCustomRacer_GetPreviewModel(int index)
 	if (size < LOAD_MODEL_FILE_HEADER_BYTES)
 		return NULL;
 
-	u8 *fileBuf = (u8 *)malloc(size);
+	u8 *fileBuf = (u8 *)Platform_ImageAlloc(size);
 	if ((fileBuf == NULL) || !NativeCustomRacer_ReadAsset(racer, NATIVE_CUSTOM_RACER_ASSET_MODEL_HI, fileBuf))
 	{
-		free(fileBuf);
+		Platform_ImageFree(fileBuf);
 		return NULL;
 	}
 
@@ -850,7 +851,7 @@ struct Model *NativeCustomRacer_GetPreviewModel(int index)
 	{
 		if ((u32)ptrMapOffset >= size - LOAD_MODEL_FILE_HEADER_BYTES)
 		{
-			free(fileBuf);
+			Platform_ImageFree(fileBuf);
 			return NULL;
 		}
 		struct DramPointerMap *dpm = (struct DramPointerMap *)&realFileBuf[ptrMapOffset];
@@ -1493,9 +1494,10 @@ int NativeCustomRacer_LoadQueueSlot(struct LoadQueueSlot *slot)
 		setPointerTarget = P32_GET(P32(void *) *, slot->ptrDestination);
 		destination = NULL;
 	}
-	if (destination == NULL)
+	const int ownsDestination = (destination == NULL);
+	if (ownsDestination)
 	{
-		destination = malloc(size);
+		destination = Platform_ImageAlloc(size);
 		if (destination == NULL)
 		{
 			fprintf(stderr, "[CTR Native] Failed to allocate %u bytes for custom racer asset %d\n", size, assetIndex);
@@ -1507,7 +1509,8 @@ int NativeCustomRacer_LoadQueueSlot(struct LoadQueueSlot *slot)
 	if (!NativeCustomRacer_ReadAsset(racer, assetIndex, destination))
 	{
 		fprintf(stderr, "[CTR Native] Failed to read custom racer asset %d from %s\n", assetIndex, racer->path);
-		free(destination);
+		if (ownsDestination)
+			Platform_ImageFree(destination);
 		sdata->queueReady = 1;
 		return 0;
 	}
@@ -1524,13 +1527,13 @@ int NativeCustomRacer_LoadQueueSlot(struct LoadQueueSlot *slot)
 			: -1;
 		if (driverModelIndex >= 0)
 		{
-			free(s_nativeCustomRacerDriverModelStorage[driverModelIndex]);
+			Platform_ImageFree(s_nativeCustomRacerDriverModelStorage[driverModelIndex]);
 			s_nativeCustomRacerDriverModelStorage[driverModelIndex] = destination;
 		}
 		else
 		{
 			if (racer->dramStorage[assetIndex] != NULL)
-				free(racer->dramStorage[assetIndex]);
+				Platform_ImageFree(racer->dramStorage[assetIndex]);
 			racer->dramStorage[assetIndex] = destination;
 		}
 		LOAD_DramFileCallback(slot);
@@ -1548,7 +1551,8 @@ int NativeCustomRacer_LoadQueueSlot(struct LoadQueueSlot *slot)
 		return 1;
 	}
 
-	free(destination);
+	if (ownsDestination)
+		Platform_ImageFree(destination);
 	P32_SET(slot->ptrDestination, NULL);
 	sdata->queueReady = 1;
 	return 0;
@@ -1560,7 +1564,7 @@ void NativeCustomRacer_FinishQueueSlot(struct LoadQueueSlot *slot)
 		return;
 	if ((slot->type_UNUSED == LT_VRAM) && (P32_GET(void *, slot->ptrDestination) != NULL))
 	{
-		free(P32_GET(void *, slot->ptrDestination));
+		Platform_ImageFree(P32_GET(void *, slot->ptrDestination));
 		P32_SET(slot->ptrDestination, NULL);
 	}
 }
@@ -1596,12 +1600,12 @@ internal int NativeCustomRacer_LoadModelNow(int racerIndex, void **storageSlot, 
 	if (size == 0)
 		return 0;
 
-	void *storage = malloc(size);
+	void *storage = Platform_ImageAlloc(size);
 	if (storage == NULL)
 		return 0;
 	if (!NativeCustomRacer_ReadAsset(racer, NATIVE_CUSTOM_RACER_ASSET_MODEL_HI, storage))
 	{
-		free(storage);
+		Platform_ImageFree(storage);
 		return 0;
 	}
 
@@ -1623,7 +1627,7 @@ internal int NativeCustomRacer_LoadModelNow(int racerIndex, void **storageSlot, 
 		model->id = (s16)modelIDOverride;
 	}
 
-	free(*storageSlot);
+	Platform_ImageFree(*storageSlot);
 	*storageSlot = storage;
 	if (destination != NULL)
 		P32_SET(*destination, storage);
@@ -1855,7 +1859,7 @@ void NativeCustomRacer_ClearPodiumSelections(void)
 	for (int podiumRank = 0; podiumRank < NATIVE_CUSTOM_RACER_PODIUM_COUNT; podiumRank++)
 	{
 		s_nativeCustomRacerPodiumSelection[podiumRank] = -1;
-		free(s_nativeCustomRacerPodiumModelStorage[podiumRank]);
+		Platform_ImageFree(s_nativeCustomRacerPodiumModelStorage[podiumRank]);
 		s_nativeCustomRacerPodiumModelStorage[podiumRank] = NULL;
 	}
 }

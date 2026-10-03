@@ -6,6 +6,7 @@
 
 #if defined(CTR_NATIVE)
 #include <platform/native_custom_racer.h>
+#include <platform/native_memory.h>
 
 enum
 {
@@ -171,12 +172,12 @@ static b32 NativeAIRandomizer_Queue2PModels(struct BigHeader *bigfile)
 		int fileIndex = BI_RACERMODELMED + data.characterIDs[driverIndex];
 		u32 readSize = (entries[fileIndex].size + LOAD_CD_DATA_SECTOR_ROUND_MASK) & ~LOAD_CD_DATA_SECTOR_ROUND_MASK;
 
-		s_nativeAIRandomizer2PBuffers[i] = malloc((size_t)readSize);
+		s_nativeAIRandomizer2PBuffers[i] = Platform_ImageAlloc((size_t)readSize);
 		if (s_nativeAIRandomizer2PBuffers[i] == NULL)
 		{
 			for (int j = 0; j < i; j++)
 			{
-				free(s_nativeAIRandomizer2PBuffers[j]);
+				Platform_ImageFree(s_nativeAIRandomizer2PBuffers[j]);
 				s_nativeAIRandomizer2PBuffers[j] = NULL;
 			}
 			return false;
@@ -201,7 +202,7 @@ static void NativeAIRandomizer_ResetModels(void)
 	{
 		if (s_nativeAIRandomizer2PBuffers[i] != NULL)
 		{
-			free(s_nativeAIRandomizer2PBuffers[i]);
+			Platform_ImageFree(s_nativeAIRandomizer2PBuffers[i]);
 			s_nativeAIRandomizer2PBuffers[i] = NULL;
 		}
 		s_nativeAIRandomizer2PModels[i] = NULL;

@@ -39,6 +39,7 @@ union NativeScratchpadStorage
 CTR_STATIC_ASSERT(sizeof(union NativeScratchpadStorage) == CTR_SCRATCHPAD_SIZE);
 
 #include "native_ptr32.c"
+#include "native_image_heap.c"
 
 global_variable char s_mempackMemory[CTR_NATIVE_MEMPACK_BUFFER_SIZE];
 global_variable struct PlatformMempackArena s_mempackArena;
