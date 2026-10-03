@@ -125,28 +125,28 @@ static void MM_HighScore_OnlineDraw(u16 trackIndex, s16 offsetX)
     s16 lineWidth = DecalFont_GetLineWidth(trackName, FONT_BIG) >> 1;
     s16 numColor = ((FPS_HALF(sdata->frameCounter) & MM_HIGHSCORE_FLASH_TIMER_BIT) == 0) ? RED : ORANGE;
     u32 *colorPtr = P32_GET(u32 *, data.ptrColor[numColor]);
-    struct Icon **iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[MM_HIGHSCORE_ARROW_ICON_GROUP]));
+    P32(struct Icon *) *iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[MM_HIGHSCORE_ARROW_ICON_GROUP]));
     const struct TransitionMeta *titleMeta = &D230.transitionMeta_HighScores[MM_HIGHSCORE_TITLE_META_INDEX];
     const struct TransitionMeta *bestTrackMeta = &D230.transitionMeta_HighScores[MM_HIGHSCORE_BEST_TRACK_META_INDEX];
     const struct TransitionMeta *bestLapLabelMeta = &D230.transitionMeta_HighScores[MM_HIGHSCORE_BEST_LAP_LABEL_META_INDEX];
     const struct TransitionMeta *bestLapEntryMeta = &D230.transitionMeta_HighScores[MM_HIGHSCORE_BEST_LAP_ENTRY_META_INDEX];
     Color iconColor = D230.highscore_iconColor;
 
-    DecalHUD_Arrow2D(iconPtrArray[MM_HIGHSCORE_ARROW_ICON_ID], titleMeta->currX + offsetX - lineWidth + MM_HIGHSCORE_ARROW_LEFT_X_OFFSET,
+    DecalHUD_Arrow2D(P32_GET(struct Icon *, iconPtrArray[MM_HIGHSCORE_ARROW_ICON_ID]), titleMeta->currX + offsetX - lineWidth + MM_HIGHSCORE_ARROW_LEFT_X_OFFSET,
                      titleMeta->currY + MM_HIGHSCORE_ARROW_Y_OFFSET, &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT),
                      colorPtr[0], colorPtr[1], colorPtr[2], colorPtr[3], 0, MM_HIGHSCORE_ARROW_SCALE, MM_HIGHSCORE_ARROW_LEFT_ROTATION);
-    DecalHUD_Arrow2D(iconPtrArray[MM_HIGHSCORE_ARROW_ICON_ID], titleMeta->currX + offsetX + lineWidth + MM_HIGHSCORE_ARROW_RIGHT_X_OFFSET,
+    DecalHUD_Arrow2D(P32_GET(struct Icon *, iconPtrArray[MM_HIGHSCORE_ARROW_ICON_ID]), titleMeta->currX + offsetX + lineWidth + MM_HIGHSCORE_ARROW_RIGHT_X_OFFSET,
                      titleMeta->currY + MM_HIGHSCORE_ARROW_Y_OFFSET, &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT),
                      colorPtr[0], colorPtr[1], colorPtr[2], colorPtr[3], 0, MM_HIGHSCORE_ARROW_SCALE, 0);
 
     DecalFont_DrawLine(trackName, titleMeta->currX + offsetX + MM_HIGHSCORE_TITLE_X_OFFSET,
                        titleMeta->currY + MM_HIGHSCORE_TITLE_Y_OFFSET, FONT_BIG, JUSTIFY_CENTER);
-    MM_HighScore_Text3D(P32_GET(char **, sdata->lngStrings)[(s_onlineCategory == MM_HIGHSCORE_ONLINE_RELIC) ? LNG_RELIC_RACE : LNG_BEST_TRACK_TIMES],
+    MM_HighScore_Text3D(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[(s_onlineCategory == MM_HIGHSCORE_ONLINE_RELIC) ? LNG_RELIC_RACE : LNG_BEST_TRACK_TIMES]),
                         bestTrackMeta->currX + offsetX + MM_HIGHSCORE_BEST_TRACK_LABEL_X_OFFSET,
                         bestTrackMeta->currY + MM_HIGHSCORE_BEST_TRACK_LABEL_Y_OFFSET, FONT_SMALL, 0);
     if (s_onlineCategory == MM_HIGHSCORE_ONLINE_COURSE)
     {
-        MM_HighScore_Text3D(P32_GET(char **, sdata->lngStrings)[LNG_BEST_LAP_TIME], bestLapLabelMeta->currX + offsetX + MM_HIGHSCORE_BEST_LAP_LABEL_X_OFFSET,
+        MM_HighScore_Text3D(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_BEST_LAP_TIME]), bestLapLabelMeta->currX + offsetX + MM_HIGHSCORE_BEST_LAP_LABEL_X_OFFSET,
                             bestLapLabelMeta->currY + MM_HIGHSCORE_BEST_LAP_LABEL_Y_OFFSET, FONT_SMALL, 0);
     }
 

@@ -483,9 +483,9 @@ void DecalFont_DrawLineStrlen(char *str, s16 len, int posX, s16 posY, s16 fontTy
 
 				if (iconID < P32_GET(struct IconGroup *, gGT->iconGroup[iconGroupID])->numIcons)
 				{
-					struct Icon **iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[iconGroupID]));
+					P32(struct Icon *) *iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[iconGroupID]));
 
-					DecalFont_DrawGlyph(iconPtrArray[iconID],
+					DecalFont_DrawGlyph(P32_GET(struct Icon *, iconPtrArray[iconID]),
 
 					                     DECAL_FONT_DRAW_X(pixWidthExtra), posY + pixHeightExtra,
 
@@ -501,9 +501,9 @@ void DecalFont_DrawLineStrlen(char *str, s16 len, int posX, s16 posY, s16 fontTy
 
 			if (iconStruct == 0)
 			{
-				struct Icon **iconPtrArray = ICONGROUP_GETICONS(gGT->iconGroup[iconGroupID]);
+				P32(struct Icon *) *iconPtrArray = ICONGROUP_GETICONS(gGT->iconGroup[iconGroupID]);
 				if (kanaID < gGT->iconGroup[iconGroupID]->numIcons)
-					iconStruct = iconPtrArray[kanaID];
+					iconStruct = P32_GET(struct Icon *, iconPtrArray[kanaID]);
 			}
 			if (iconStruct != 0)
 			{
@@ -520,13 +520,13 @@ void DecalFont_DrawLineStrlen(char *str, s16 len, int posX, s16 posY, s16 fontTy
 
 #else // i.e. european build
 
-			struct Icon **iconPtrArray = ICONGROUP_GETICONS(gGT->iconGroup[iconGroupID]);
+			P32(struct Icon *) *iconPtrArray = ICONGROUP_GETICONS(gGT->iconGroup[iconGroupID]);
 
 			for (; numCharacters > 0; numCharacters--, pixWidthExtra += data.font_EurPixWidthExtra[fontType])
 			{
 				if (upsideDownCharacter)
 				{
-					DecalHUD_Arrow2D(iconPtrArray[iconID],
+					DecalHUD_Arrow2D(P32_GET(struct Icon *, iconPtrArray[iconID]),
 
 					                 DECAL_FONT_DRAW_X(pixWidthExtra), posY + pixHeightExtra,
 
@@ -538,7 +538,7 @@ void DecalFont_DrawLineStrlen(char *str, s16 len, int posX, s16 posY, s16 fontTy
 				}
 				else
 				{
-					DecalFont_DrawGlyph(iconPtrArray[iconID],
+					DecalFont_DrawGlyph(P32_GET(struct Icon *, iconPtrArray[iconID]),
 
 					                     DECAL_FONT_DRAW_X(pixWidthExtra), posY + pixHeightExtra,
 

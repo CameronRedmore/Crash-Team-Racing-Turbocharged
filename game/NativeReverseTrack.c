@@ -279,9 +279,9 @@ static void NativeReverseTrack_ResetHighScoreTrack(struct HighScoreTrack *track,
 			struct HighScoreEntry *entry = &track->scoreEntry[mode * MEMCARD_HIGH_SCORE_ENTRIES_PER_MODE + entryIndex];
 			entry->time = MEMCARD_HIGH_SCORE_DEFAULT_TIME;
 			entry->characterID = characterId;
-			if ((sdata != NULL) && (P32_GET(char **, sdata->lngStrings) != NULL))
+			if ((sdata != NULL) && (P32_GET(P32(char *) *, sdata->lngStrings) != NULL))
 			{
-				strcpy(entry->name, P32_GET(char **, sdata->lngStrings)[data.MetaDataCharacters[characterId].name_LNG_short]);
+				strcpy(entry->name, P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.MetaDataCharacters[characterId].name_LNG_short]));
 			}
 			else
 			{
@@ -511,7 +511,7 @@ void NativeReverseTrack_FormatName(s16 logicalId, char *dst, int dstSize)
 	}
 
 	s16 physicalId = NativeReverseTrack_GetPhysicalFromLogical(logicalId);
-	const char *baseName = P32_GET(char **, sdata->lngStrings)[data.metaDataLEV[physicalId].name_LNG];
+	const char *baseName = P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.metaDataLEV[physicalId].name_LNG]);
 	if (NativeReverseTrack_IsLogicalReverse(logicalId))
 	{
 		snprintf(dst, dstSize, "%s%s", baseName, NativeReverseTrack_GetSuffix());

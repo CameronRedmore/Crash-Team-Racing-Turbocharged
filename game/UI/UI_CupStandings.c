@@ -288,9 +288,9 @@ void UI_CupStandings_InputAndDraw(void)
 	}
 
 	// title text
-	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[titleString], drawPos.x, drawPos.y + UI_CUP_STANDINGS_TITLE_Y_OFFSET, FONT_BIG, JUSTIFY_CENTER | ORANGE);
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[titleString]), drawPos.x, drawPos.y + UI_CUP_STANDINGS_TITLE_Y_OFFSET, FONT_BIG, JUSTIFY_CENTER | ORANGE);
 
-	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_STANDINGS], drawPos.x, drawPos.y, FONT_BIG, JUSTIFY_CENTER | ORANGE);
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_STANDINGS]), drawPos.x, drawPos.y, FONT_BIG, JUSTIFY_CENTER | ORANGE);
 
 	// 24 characters, in case of other
 	// languages with longer text
@@ -299,7 +299,7 @@ void UI_CupStandings_InputAndDraw(void)
 	// TRACK 1/4, 2/4, 3/4, 4/4
 	sprintf(text, "%s %ld/4",
 
-	        P32_GET(char **, sdata->lngStrings)[LNG_TRACK],
+	        P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_TRACK]),
 
 	        // Track Index (0, 1, 2, 3) + 1
 	        CTR_PRINTF_PSX_LONG(gGT->cup.trackIndex + 1));
@@ -519,7 +519,7 @@ void UI_CupStandings_InputAndDraw(void)
 
 		        // If you are not in overall Cup standings
 		        ((sdata->menuReadyToPass & UI_CUP_STANDINGS_PAGE_OVERALL_POINTS) == 0)) &&
-		    (DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_PRESS_TO_CONTINUE], UI_CUP_STANDINGS_PRESS_X, UI_CUP_STANDINGS_PRESS_Y, FONT_BIG,
+		    (DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_PRESS_TO_CONTINUE]), UI_CUP_STANDINGS_PRESS_X, UI_CUP_STANDINGS_PRESS_Y, FONT_BIG,
 		                        JUSTIFY_CENTER | ORANGE),
 
 		     // If you press Cross or Circle

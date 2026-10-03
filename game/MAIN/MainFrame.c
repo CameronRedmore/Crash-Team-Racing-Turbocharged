@@ -297,8 +297,8 @@ void MainFrame_GameLogic(struct GameTracker *gGT, struct GamepadSystem *gGamepad
 			gGT->elapsedEventTime = 0;
 		}
 
-		CTR_CycleTex_AllModels(-1, (struct Model **)P32_GET(int **, sdata->PLYROBJECTLIST), gGT->timer);
-		CTR_CycleTex_AllModels(P32_GET(struct Level *, gGT->level1)->numModels, P32_GET(struct Model **, P32_GET(struct Level *, gGT->level1)->ptrModelsPtrArray), gGT->timer);
+		CTR_CycleTex_AllModels(-1, (P32(struct Model *) *)P32_GET(P32(int *) *, sdata->PLYROBJECTLIST), gGT->timer);
+		CTR_CycleTex_AllModels(P32_GET(struct Level *, gGT->level1)->numModels, P32_GET(P32(struct Model *) *, P32_GET(struct Level *, gGT->level1)->ptrModelsPtrArray), gGT->timer);
 
 		psVar8 = 0;
 		psVar9 = 0;
@@ -801,7 +801,7 @@ void MainFrame_VisMemFullFrame(struct GameTracker *gGT, struct Level *level)
 			P32_SET(visMem->visFaceSrc[visIndex], P32_GET(int *, camDC->visFaceSrc));
 			MainFrame_ReplacePackedVisList(P32_GET(int *, visMem->visFaceList[visIndex]), P32_GET(int *, camDC->visFaceSrc), ((mesh->numQuadBlock + 0x1f) >> 5) << 2);
 
-			if ((driverPVS == NULL) || (P32_GET(int *, driverPVS->visLeafSrc) == NULL) || (P32_GET(int *, driverPVS->visFaceSrc) == NULL) || (P32_GET(struct Instance **, driverPVS->visInstSrc) == NULL) ||
+			if ((driverPVS == NULL) || (P32_GET(int *, driverPVS->visLeafSrc) == NULL) || (P32_GET(int *, driverPVS->visFaceSrc) == NULL) || (P32_GET(P32(struct Instance *) *, driverPVS->visInstSrc) == NULL) ||
 			    MainFrame_VisMemHasQuad(P32_GET(int *, visMem->visFaceList[visIndex]), driverQuad, mesh))
 			{
 				camDC->flags &= ~0x2000;
@@ -872,7 +872,7 @@ void MainFrame_VisMemFullFrame(struct GameTracker *gGT, struct Level *level)
 		{
 			int hadDriverPVS = (camDC->flags & 0x2000) != 0;
 			int needsDriverPVS =
-			    (driverPVS != NULL) && (P32_GET(int *, driverPVS->visLeafSrc) != NULL) && (P32_GET(int *, driverPVS->visFaceSrc) != NULL) && (P32_GET(struct Instance **, driverPVS->visInstSrc) != NULL) &&
+			    (driverPVS != NULL) && (P32_GET(int *, driverPVS->visLeafSrc) != NULL) && (P32_GET(int *, driverPVS->visFaceSrc) != NULL) && (P32_GET(P32(struct Instance *) *, driverPVS->visInstSrc) != NULL) &&
 			    (P32_GET(int *, camDC->visLeafSrc) != NULL) && (P32_GET(int *, camDC->visFaceSrc) != NULL) &&
 			    ((P32_GET(int *, camDC->visLeafSrc) != P32_GET(int *, driverPVS->visLeafSrc)) || (P32_GET(int *, camDC->visFaceSrc) != P32_GET(int *, driverPVS->visFaceSrc)));
 
@@ -922,9 +922,9 @@ void MainFrame_VisMemFullFrame(struct GameTracker *gGT, struct Level *level)
 			MainFrame_VisMemAddDriverPVS(gGT, playerIndex, visIndex);
 		}
 
-		if ((camDC->cameraMode == 0) && ((camDC->flags & 0x2000) != 0) && (driverPVS != NULL) && (P32_GET(struct Instance **, driverPVS->visInstSrc) != NULL))
+		if ((camDC->cameraMode == 0) && ((camDC->flags & 0x2000) != 0) && (driverPVS != NULL) && (P32_GET(P32(struct Instance *) *, driverPVS->visInstSrc) != NULL))
 		{
-			P32_SET(camDC->visInstSrc, P32_GET(struct Instance **, driverPVS->visInstSrc));
+			P32_SET(camDC->visInstSrc, P32_GET(P32(struct Instance *) *, driverPVS->visInstSrc));
 		}
 
 		if ((level->configFlags & 4) == 0)

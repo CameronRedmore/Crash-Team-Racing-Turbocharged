@@ -362,12 +362,12 @@ static char *RECTMENU_GetString(s16 stringIndex)
 		int volumeType = nativeStringIndex - NATIVE_MENU_STRING_AUDIO_FX;
 		static const s16 volumeLabel[3] = {LNG_FX, LNG_MUSIC, LNG_VOICE};
 		int percent = ((howl_VolumeGet(volumeType) & 0xff) * 100 + 127) / 255;
-		snprintf(audioRow, sizeof(audioRow), "%s %d%%", P32_GET(char **, sdata->lngStrings)[volumeLabel[volumeType]], percent);
+		snprintf(audioRow, sizeof(audioRow), "%s %d%%", P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[volumeLabel[volumeType]]), percent);
 		return audioRow;
 	}
 	case NATIVE_MENU_STRING_AUDIO_MODE:
-		snprintf(audioRow, sizeof(audioRow), "%s %s", P32_GET(char **, sdata->lngStrings)[LNG_MODE],
-		         P32_GET(char **, sdata->lngStrings)[howl_ModeGet() ? LNG_STEREO : LNG_MONO]);
+		snprintf(audioRow, sizeof(audioRow), "%s %s", P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_MODE]),
+		         P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[howl_ModeGet() ? LNG_STEREO : LNG_MONO]));
 		return audioRow;
 	case NATIVE_MENU_STRING_DEFAULT_CAMERA:
 		return (char *)defaultCamera[languageRow][gNativeDefaultCameraFar != 0];
@@ -455,7 +455,7 @@ static char *RECTMENU_GetString(s16 stringIndex)
 	case NATIVE_MENU_STRING_TRACK_ALTERNATIVE:
 		return (char *)trackAlternative[languageRow];
 	default:
-		return P32_GET(char **, sdata->lngStrings)[stringIndex & MENU_ROW_LNG_MASK];
+		return P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[stringIndex & MENU_ROW_LNG_MASK]);
 	}
 }
 

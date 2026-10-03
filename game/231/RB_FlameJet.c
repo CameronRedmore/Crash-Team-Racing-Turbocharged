@@ -461,8 +461,8 @@ void RB_FlameJet_LInB(struct Instance *inst)
 	if (P32_GET(struct SpawnType1 *, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->ptrSpawnType1)->count > 0)
 	{
 		// put on separate cycles
-		void **pointers = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->ptrSpawnType1));
-		metaArray = (s16 *)pointers[ST1_SPAWN];
+		P32(void *) *pointers = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->ptrSpawnType1));
+		metaArray = (s16 *)P32_GET(void *, pointers[ST1_SPAWN]);
 
 		fjID = inst->name[strlen(inst->name) - 1] - '0';
 		fjObj->cooldown = FPS_DOUBLE(metaArray[fjID]);

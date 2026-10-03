@@ -267,7 +267,7 @@ LAB_80055930:
 			posX = introPB->rect.x + ((introPB->rect.w << 0x10) >> 0x11);
 
 			// string of top title bar
-			titleText = P32_GET(char **, sdata->lngStrings)[textID];
+			titleText = P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[textID]);
 
 			// Y-value that transitions title text to off-screen
 			titleY = introPB->rect.y - (barTransition - UI_RACE_START_TITLE_TOP_Y_BIAS);
@@ -279,7 +279,7 @@ LAB_80055930:
 			// Name of Cup
 
 			// uVar9 * 4
-			DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[textID],
+			DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[textID]),
 
 			                   introPB->rect.x + ((introPB->rect.w << 0x10) >> 0x11),
 
@@ -289,7 +289,7 @@ LAB_80055930:
 			// Track 1/4, 2/4, 3/4, 4/4 in cup
 			sprintf(trackText, "%s %ld/4",
 
-			        P32_GET(char **, sdata->lngStrings)[LNG_TRACK],
+			        P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_TRACK]),
 
 			        // Track Index (0, 1, 2, 3) + 1
 			        CTR_PRINTF_PSX_LONG((gGT->cup.trackIndex) + 1));
@@ -318,7 +318,7 @@ LAB_80055930:
 		    // 8d878 + 110*4 -> Dingo Canyon
 
 		    // Level ID
-		    P32_GET(char **, sdata->lngStrings)[data.metaDataLEV[gGT->levelID].name_LNG],
+		    P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.metaDataLEV[gGT->levelID].name_LNG]),
 
 		    introPB->rect.x + ((introPB->rect.w << 0x10) >> 0x11),
 

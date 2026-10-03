@@ -179,8 +179,8 @@ void CS_Credits_Init(void)
 	advProg = &sdata->advProgress;
 	creditsObj = &creditsBSS.creditsObj;
 
-	void **pointers = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *, gGT->level1)->ptrSpawnType1));
-	CLH = pointers[ST1_CREDITS];
+	P32(void *) *pointers = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *, gGT->level1)->ptrSpawnType1));
+	CLH = P32_GET(void *, pointers[ST1_CREDITS]);
 
 	P32_SET(creditsBSS.dancerThread, 0);
 
@@ -248,16 +248,17 @@ void CS_Credits_Init(void)
 
 	creditsBSS.numStrings = creditsDst->numStrings;
 
-	char **ptrStrings = (char **)CREDITSHEADER_GETSTRINGS(creditsDst);
+	P32(char *) *ptrStrings = (P32(char *) *)CREDITSHEADER_GETSTRINGS(creditsDst);
 	P32_SET(creditsBSS.ptrStrings, ptrStrings);
 
 	for (i = 0; i < creditsBSS.numStrings; i++)
 	{
-		ptrStrings[i] = (char *)((u32)ptrStrings[i] + (u32)creditsDst);
+		// Entries hold offsets from the start of the copied header.
+		P32_SET(ptrStrings[i], (char *)creditsDst + *(u32 *)&ptrStrings[i]);
 	}
 
 	creditsObj->creditsPosY = CS_CREDITS_NAME_START_Y;
-	P32_SET(creditsObj->creditsTopString, ptrStrings[CS_CREDITS_TEXT_START_STRING_INDEX]);
+	P32_SET(creditsObj->creditsTopString, P32_GET(char *, ptrStrings[CS_CREDITS_TEXT_START_STRING_INDEX]));
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b92a0-0x800b92cc
@@ -294,20 +295,20 @@ void CS_Credits_NewDancer(struct Thread *dancerTh, int dancerModelID)
 
 	creditsObj->countdown = CS_CREDITS_COUNTDOWN_FRAMES;
 
-	char **ptrStrings = P32_GET(char **, creditsBSS.ptrStrings);
+	P32(char *) *ptrStrings = P32_GET(P32(char *) *, creditsBSS.ptrStrings);
 
 	// less than TAWNA1
 	if (dancerModelID < STATIC_TAWNA1)
 	{
 		// subtract CRASHDANCE
-		P32_SET(creditsObj->epilogueTopString, ptrStrings[dancerModelID - STATIC_CRASHDANCE]);
+		P32_SET(creditsObj->epilogueTopString, P32_GET(char *, ptrStrings[dancerModelID - STATIC_CRASHDANCE]));
 	}
 
 	// TAWNA
 	else
 	{
 		// subtract an extra cause of GARAGE_TOP
-		P32_SET(creditsObj->epilogueTopString, ptrStrings[(dancerModelID - STATIC_CRASHDANCE) - 1]);
+		P32_SET(creditsObj->epilogueTopString, P32_GET(char *, ptrStrings[(dancerModelID - STATIC_CRASHDANCE) - 1]));
 	}
 
 	creditsObj->epilogueFramesLeft = CS_CREDITS_EPILOGUE_DURATION_FRAMES;

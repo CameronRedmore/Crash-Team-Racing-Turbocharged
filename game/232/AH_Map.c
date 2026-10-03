@@ -768,8 +768,8 @@ void AH_Map_Main(void)
 
 	if (P32_GET(struct SpawnType1 *, P32_GET(struct Level *, gGT->level1)->ptrSpawnType1)->count != 0)
 	{
-		void **pointers = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *, gGT->level1)->ptrSpawnType1));
-		map = pointers[ST1_MAP];
+		P32(void *) *pointers = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *, gGT->level1)->ptrSpawnType1));
+		map = P32_GET(void *, pointers[ST1_MAP]);
 	}
 
 	// if game is not paused

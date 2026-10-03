@@ -45,7 +45,7 @@ void TT_EndEvent_DrawMenu(void)
 	s16 endX;
 	SVec2 pos;
 	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
-	char **lngStrings = P32_GET(char **, sdata->lngStrings);
+	P32(char *) *lngStrings = P32_GET(P32(char *) *, sdata->lngStrings);
 	u32 gameModeEnd = gGT->gameModeEnd;
 
 	sdata->flags_timeTrialEndOfRace |= TT_CLOCK_DISPLAY_FLAG;
@@ -126,7 +126,7 @@ void TT_EndEvent_DrawMenu(void)
 		{
 			UI_Lerp2D_Linear(pos.v, 0x264, 122, 0x100, 122, elapsedFrames, FPS_DOUBLE(TT_LERP_FRAMES));
 
-			DecalFont_DrawLine(lngStrings[LNG_NEW_HIGH_SCORE], pos.x, pos.y, FONT_BIG, textColor);
+			DecalFont_DrawLine(P32_GET(char *, lngStrings[LNG_NEW_HIGH_SCORE]), pos.x, pos.y, FONT_BIG, textColor);
 
 			// Total time should flash
 			sdata->flags_timeTrialEndOfRace |= TT_TOTAL_TIME_FLASH_FLAG;
@@ -143,7 +143,7 @@ void TT_EndEvent_DrawMenu(void)
 		{
 			UI_Lerp2D_Linear(pos.v, -0x64, 142, 0x100, 142, elapsedFrames, FPS_DOUBLE(TT_LERP_FRAMES));
 
-			DecalFont_DrawLine(lngStrings[LNG_NEW_BEST_LAP], pos.x, pos.y, FONT_BIG, textColor);
+			DecalFont_DrawLine(P32_GET(char *, lngStrings[LNG_NEW_BEST_LAP]), pos.x, pos.y, FONT_BIG, textColor);
 
 			if ((u32)gGT->lapIndexNewBest < 3)
 			{
@@ -168,17 +168,17 @@ void TT_EndEvent_DrawMenu(void)
 			char *nTropyString;
 			if ((gameModeEnd & NTROPY_JUST_OPENED) != 0)
 			{
-				nTropyString = lngStrings[LNG_N_TROPY_OPENED];
+				nTropyString = P32_GET(char *, lngStrings[LNG_N_TROPY_OPENED]);
 			}
 			else
 			{
-				nTropyString = lngStrings[LNG_N_TROPY_BEATEN];
+				nTropyString = P32_GET(char *, lngStrings[LNG_N_TROPY_BEATEN]);
 			}
 
 			DecalFont_DrawLine(nTropyString, pos.x, pos.y, FONT_BIG, textColor);
 		}
 
-		DecalFont_DrawLine(lngStrings[LNG_PRESS_TO_CONTINUE], 0x100, 0xbe, FONT_BIG, 0xffff8000);
+		DecalFont_DrawLine(P32_GET(char *, lngStrings[LNG_PRESS_TO_CONTINUE]), 0x100, 0xbe, FONT_BIG, 0xffff8000);
 
 		// If you press Cross or Circle
 		if ((sdata->AnyPlayerTap & TT_CONFIRM_BUTTON_MASK) != 0)
@@ -241,7 +241,7 @@ void TT_EndEvent_DrawMenu(void)
 
 			TT_EndEvent_DisplayTime(pos.x, pos.y, sdata->flags_timeTrialEndOfRace);
 
-			DecalFont_DrawLine(lngStrings[LNG_PRESS_TO_CONTINUE], 0x100, 0xbe, FONT_BIG, 0xffff8000);
+			DecalFont_DrawLine(P32_GET(char *, lngStrings[LNG_PRESS_TO_CONTINUE]), 0x100, 0xbe, FONT_BIG, 0xffff8000);
 
 			// ==== Pause Timer until Press X =======
 			// Cross or Circle, or if timer drags on too long
@@ -289,22 +289,22 @@ void TT_EndEvent_DisplayTime(int paramX, s16 paramY, u32 raceClockFlags)
 
 	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	struct Driver *d = P32_GET(struct Driver *, gGT->drivers[0]);
-	s16 startTextWidth = DecalFont_GetLineWidth(P32_GET(char **, sdata->lngStrings)[LNG_TOTAL], FONT_BIG);
-	s16 endTextWidth = DecalFont_GetLineWidth(P32_GET(char **, sdata->lngStrings)[LNG_TOTAL], FONT_BIG);
+	s16 startTextWidth = DecalFont_GetLineWidth(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_TOTAL]), FONT_BIG);
+	s16 endTextWidth = DecalFont_GetLineWidth(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_TOTAL]), FONT_BIG);
 
 	// === Naughty Dog Bug ===
 	// Start and End is the same
 	UI_Lerp2D_Linear(pos.v, (paramX - (0x88 - startTextWidth) / 2), paramY, (paramX - (0x88 - endTextWidth) / 2), paramY, sdata->framesSinceRaceEnded,
 	                 FPS_DOUBLE(TT_LERP_FRAMES));
 
-	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_YOUR_TIME], paramX, ((u32)pos.y - 0x4c), FONT_BIG, (JUSTIFY_CENTER | ORANGE));
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_YOUR_TIME]), paramX, ((u32)pos.y - 0x4c), FONT_BIG, (JUSTIFY_CENTER | ORANGE));
 
 	UI_DrawRaceClock(pos.x, pos.y, raceClockFlags, d);
 
-	rectangle.x = (pos.x - DecalFont_GetLineWidth(P32_GET(char **, sdata->lngStrings)[LNG_TOTAL], FONT_BIG)) - 6;
+	rectangle.x = (pos.x - DecalFont_GetLineWidth(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_TOTAL]), FONT_BIG)) - 6;
 	rectangle.y = pos.y - 0x50;
 
-	rectangle.w = DecalFont_GetLineWidth(P32_GET(char **, sdata->lngStrings)[LNG_TOTAL], FONT_BIG) + 0x94;
+	rectangle.w = DecalFont_GetLineWidth(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_TOTAL]), FONT_BIG) + 0x94;
 	rectangle.h = 99;
 
 	// Draw 2D Menu rectangle background
@@ -343,7 +343,7 @@ void TT_EndEvent_DrawHighScore(s16 startX, int startY, s16 scoreMode)
 	// interpolate fly-in
 	UI_Lerp2D_Linear(pos.v, startX, startY, startX, startY, sdata->framesSinceRaceEnded, FPS_DOUBLE(TT_LERP_FRAMES));
 
-	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_BEST_TIMES], pos.x, pos.y, FONT_BIG, 0xffff8000);
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_BEST_TIMES]), pos.x, pos.y, FONT_BIG, 0xffff8000);
 
 	// Draw icon, name, and time of the
 	// 5 best times in Time Trial
@@ -406,7 +406,7 @@ void TT_EndEvent_DrawHighScore(s16 startX, int startY, s16 scoreMode)
 		// Change the way text flickers
 		timeColor = 0xffff8000;
 
-		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_BEST_LAP], startX, startY + 0x95, FONT_BIG, timeColor);
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_BEST_LAP]), startX, startY + 0x95, FONT_BIG, timeColor);
 
 		// If you got a new best lap
 		if (((gGT->gameModeEnd & NEW_BEST_LAP) != 0) && ((FPS_HALF(gGT->timer) & TT_HIGH_SCORE_FLASH_TIMER_BIT) != 0))
@@ -418,7 +418,7 @@ void TT_EndEvent_DrawHighScore(s16 startX, int startY, s16 scoreMode)
 	}
 	else
 	{
-		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_YOUR_TIME], startX, startY + 0x95, FONT_BIG, 0xffff8000);
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_YOUR_TIME]), startX, startY + 0x95, FONT_BIG, 0xffff8000);
 
 		timeString = RECTMENU_DrawTime(d->timeElapsedInRace);
 		timeColor = 0xffff8000;

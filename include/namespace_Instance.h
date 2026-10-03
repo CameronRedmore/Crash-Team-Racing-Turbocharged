@@ -332,7 +332,7 @@ struct ModelAnim
 	// then verts, then next ModelFrame, then verts, etc...
 };
 
-#define MODELANIM_GETFRAME(x) ((u32)x + sizeof(struct ModelAnim))
+#define MODELANIM_GETFRAME(x) ((uintptr_t)(x) + sizeof(struct ModelAnim))
 
 struct ModelHeader
 {
@@ -691,6 +691,6 @@ static inline u32 INST_CompressNormalVectorAndDriverIndex(s32 normalX, s32 norma
 	return INST_CompressNormalVector(normalX, normalY, normalZ) | (((u32)driverID + INST_COMPRESSED_DRIVER_INDEX_OFFSET) << INST_COMPRESSED_DRIVER_INDEX_SHIFT);
 }
 
-#define INST_GETIDPP(x) (struct InstDrawPerPlayer *)((u32)x + sizeof(struct Instance))
+#define INST_GETIDPP(x) (struct InstDrawPerPlayer *)((uintptr_t)(x) + sizeof(struct Instance))
 
 #endif

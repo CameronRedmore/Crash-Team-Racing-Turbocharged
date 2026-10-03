@@ -1682,7 +1682,7 @@ thTick_subtitles:
 		int textHeight;
 		RECT textRect;
 
-		textHeight = DecalFont_DrawMultiLine(P32_GET(char **, sdata->lngStrings)[cs->Subtitles.lngIndex], cs->Subtitles.textPos.x, cs->Subtitles.textPos.y,
+		textHeight = DecalFont_DrawMultiLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[cs->Subtitles.lngIndex]), cs->Subtitles.textPos.x, cs->Subtitles.textPos.y,
 		                                     CS_SUBTITLE_TEXT_MAX_WIDTH, cs->Subtitles.font, cs->Subtitles.colors);
 
 		textRect.x = (s16)((u16)cs->Subtitles.textPos.x - CS_SUBTITLE_BOX_HALF_WIDTH);

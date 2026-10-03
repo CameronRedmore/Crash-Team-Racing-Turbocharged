@@ -36,7 +36,7 @@ void UI_DrawNumWumpa(s16 posX, s16 posY, struct Driver *d)
 	{
 		s8 currWumpa = d->numWumpas;
 		int currWumpa10s = (currWumpa / UI_DRAWNUM_DECIMAL_BASE) * UI_DRAWNUM_SIGN_EXTEND_BYTE_MUL >> UI_DRAWNUM_SIGN_EXTEND_BYTE_SHIFT;
-		struct Icon **iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[UI_DRAWNUM_DIGIT_ICON_GROUP]));
+		P32(struct Icon *) *iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[UI_DRAWNUM_DIGIT_ICON_GROUP]));
 
 		for (int digitIndex = 0; digitIndex < UI_DRAWNUM_WUMPA_DIGIT_COUNT; digitIndex++)
 		{
@@ -46,7 +46,7 @@ void UI_DrawNumWumpa(s16 posX, s16 posY, struct Driver *d)
 				iconID = currWumpa + currWumpa10s * -UI_DRAWNUM_DECIMAL_BASE;
 			}
 
-			DecalHUD_DrawPolyGT4(iconPtrArray[iconID], posX + UI_DRAWNUM_WUMPA_DIGIT_SPACING_X * digitIndex, posY, &P32_GET(struct DB *, gGT->backBuffer)->primMem,
+			DecalHUD_DrawPolyGT4(P32_GET(struct Icon *, iconPtrArray[iconID]), posX + UI_DRAWNUM_WUMPA_DIGIT_SPACING_X * digitIndex, posY, &P32_GET(struct DB *, gGT->backBuffer)->primMem,
 			                     P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), P32_GET(u32 *, data.ptrColor[ORANGE])[0], P32_GET(u32 *, data.ptrColor[ORANGE])[1], P32_GET(u32 *, data.ptrColor[ORANGE])[2],
 			                     P32_GET(u32 *, data.ptrColor[ORANGE])[3], 0, FP(1.0));
 		}

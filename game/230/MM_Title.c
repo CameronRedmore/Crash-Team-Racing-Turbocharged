@@ -536,10 +536,10 @@ void MM_Title_Init(void)
 
 		gGT->pushBuffer[0].distanceToScreen_CURR = TITLE_INTRO_DISTANCE_TO_SCREEN;
 
-		void **pointers = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *, gGT->level1)->ptrSpawnType1));
+		P32(void *) *pointers = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *, gGT->level1)->ptrSpawnType1));
 
 		// pointer to Intro Cam, to view Crash holding Trophy in main menu
-		P32_SET(D230.titleIntroCameraPath, pointers[ST1_CAMERA_PATH]);
+		P32_SET(D230.titleIntroCameraPath, P32_GET(void *, pointers[ST1_CAMERA_PATH]));
 
 		struct Thread *t = PROC_BirthWithObject(SIZE_RELATIVE_POOL_BUCKET(sizeof(struct Title), NONE, MEDIUM, OTHER), MM_Title_ThTick, 0, 0);
 

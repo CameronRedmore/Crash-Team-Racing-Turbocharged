@@ -348,7 +348,7 @@ void RR_EndEvent_DrawMenu(void)
 
 			UI_Lerp2D_Linear(pos.v, startX, 0, endX, 0, elapsedFrames, FPS_DOUBLE(RR_LERP_FRAMES));
 
-			DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_PERFECT], pos.x, 0x8a, 1, textColor);
+			DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_PERFECT]), pos.x, 0x8a, 1, textColor);
 		}
 
 		// copy to local frame counter
@@ -450,7 +450,7 @@ void RR_EndEvent_DrawMenu(void)
 		// interpolate fly-in
 		UI_Lerp2D_Linear(pos.v, startX, 0x50, endX, 0x50, elapsedFrames, FPS_DOUBLE(RR_LERP_FRAMES));
 
-		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_RELIC_AWARDED], pos.x, pos.y, 1, textColor);
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_RELIC_AWARDED]), pos.x, pos.y, 1, textColor);
 	}
 
 skipRelicAwarded:
@@ -480,7 +480,7 @@ skipRelicAwarded:
 		// Interpolate fly-in
 		UI_Lerp2D_Linear(pos.v, startX, 0x50, endX, 0x50, elapsedFrames, FPS_DOUBLE(RR_LERP_FRAMES));
 
-		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_NEW_HIGH_SCORE], pos.x, pos.y, 1, textColor);
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_NEW_HIGH_SCORE]), pos.x, pos.y, 1, textColor);
 	}
 
 
@@ -518,7 +518,7 @@ skipRelicAwarded:
 	{
 		RR_EndEvent_DrawHighScore(0x100, 10, RR_SCORE_MODE_RELIC_RACE);
 
-		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_PRESS_TO_CONTINUE], 0x100, 0xbe, 1, 0xffff8000);
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_PRESS_TO_CONTINUE]), 0x100, 0xbe, 1, 0xffff8000);
 
 		if ((sdata->AnyPlayerTap & RR_CONFIRM_BUTTON_MASK) != 0)
 		{
@@ -578,7 +578,7 @@ void RR_EndEvent_DrawHighScore(s16 startX, int startY, s16 scoreMode)
 	// interpolate fly-in
 	UI_Lerp2D_Linear(pos.v, startX, startY, startX, startY, sdata->framesSinceRaceEnded, FPS_DOUBLE(RR_LERP_FRAMES));
 
-	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_BEST_TIMES], pos.x, pos.y, 1, 0xffff8000);
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_BEST_TIMES]), pos.x, pos.y, 1, 0xffff8000);
 
 	// Draw icon, name, and time of the
 	// 5 best times in Time Trial
@@ -648,7 +648,7 @@ void RR_EndEvent_DrawHighScore(s16 startX, int startY, s16 scoreMode)
 		// Change the way text flickers
 		timeColor = 0xffff8000;
 
-		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_BEST_LAP], startX, startY + 0x95, 1, timeColor);
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_BEST_LAP]), startX, startY + 0x95, 1, timeColor);
 
 		// If you got a new best lap
 		if (((gGT->gameModeEnd & NEW_BEST_LAP) != 0) && ((FPS_HALF(gGT->timer) & RR_HIGH_SCORE_FLASH_TIMER_BIT) != 0))
@@ -661,7 +661,7 @@ void RR_EndEvent_DrawHighScore(s16 startX, int startY, s16 scoreMode)
 	}
 	else
 	{
-		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_YOUR_TIME], startX, startY + 0x95, 1, 0xffff8000);
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_YOUR_TIME]), startX, startY + 0x95, 1, 0xffff8000);
 
 		// make a string for your current track time
 		timeString = RECTMENU_DrawTime(driver->timeElapsedInRace);

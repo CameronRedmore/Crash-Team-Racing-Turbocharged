@@ -568,16 +568,16 @@ struct Model *VehBirth_GetModelByName(char *searchName)
 		}
 	}
 
-	struct Model **models = (struct Model **)P32_GET(int **, sdata->PLYROBJECTLIST);
+	P32(struct Model *) *models = (P32(struct Model *) *)P32_GET(P32(int *) *, sdata->PLYROBJECTLIST);
 
 	if (
 	    // list is valid, and first element is valid
-	    (models != NULL) && (models[0] != NULL))
+	    (models != NULL) && (P32_GET(struct Model *, models[0]) != NULL))
 	{
 		// loop until all strings are checked (until current is not nullptr)
-		for (int i = 0; models[i] != NULL; i++)
+		for (int i = 0; P32_GET(struct Model *, models[i]) != NULL; i++)
 		{
-			struct Model *m = models[i];
+			struct Model *m = P32_GET(struct Model *, models[i]);
 
 			if (VehBirth_ModelNameEquals(m, searchName))
 			{
@@ -669,7 +669,7 @@ void VehBirth_TireSprites(struct Thread *t)
 	struct IconGroup *tireAnim = P32_GET(struct IconGroup *, gGT->iconGroup[0]);
 	int driverID = d->driverID;
 
-	struct Icon **tire = ICONGROUP_GETICONS(tireAnim);
+	P32(struct Icon *) *tire = ICONGROUP_GETICONS(tireAnim);
 	P32_SET(d->wheelSprites, tire);
 
 	d->wheelSize = VEH_BIRTH_WHEEL_SIZE;

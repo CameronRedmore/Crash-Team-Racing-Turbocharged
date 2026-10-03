@@ -1451,11 +1451,11 @@ internal void NativeCheckpoint_RelocateLanguagePointers(const struct NativeCheck
 	NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &sdata_static.lngStrings);
 
 	if ((sdata_static.numLngStrings > 0) && ((u32)sdata_static.numLngStrings <= NATIVE_CHECKPOINT_LNG_STRING_CAP) &&
-	    NativeCheckpoint_IsLivePointer(liveHeader, P32_GET(char **, sdata_static.lngStrings)))
+	    NativeCheckpoint_IsLivePointer(liveHeader, P32_GET(P32(char *) *, sdata_static.lngStrings)))
 	{
 		for (s32 i = 0; i < sdata_static.numLngStrings; i++)
 		{
-			NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &P32_GET(char **, sdata_static.lngStrings)[i]);
+			NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &P32_GET(P32(char *) *, sdata_static.lngStrings)[i]);
 		}
 	}
 }
@@ -1740,11 +1740,11 @@ internal void NativeCheckpoint_RelocateCreditsPointers(const struct NativeCheckp
 	NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &creditsBSS.ptrStrings);
 
 	if ((creditsBSS.numStrings > 0) && ((u32)creditsBSS.numStrings <= NATIVE_CHECKPOINT_CREDITS_STRING_CAP) &&
-	    NativeCheckpoint_IsLivePointer(liveHeader, P32_GET(char **, creditsBSS.ptrStrings)))
+	    NativeCheckpoint_IsLivePointer(liveHeader, P32_GET(P32(char *) *, creditsBSS.ptrStrings)))
 	{
 		for (s32 i = 0; i < creditsBSS.numStrings; i++)
 		{
-			NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &P32_GET(char **, creditsBSS.ptrStrings)[i]);
+			NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &P32_GET(P32(char *) *, creditsBSS.ptrStrings)[i]);
 		}
 	}
 

@@ -211,7 +211,7 @@ void RB_Orca_LInB(struct Instance *inst)
 	struct Orca *orcaObj;
 	struct SpawnType2 *spawnType2;
 	struct Thread *t;
-	void **pointers;
+	P32(void *) *pointers;
 	s16 *metaArray;
 	int orcaID;
 
@@ -273,7 +273,7 @@ void RB_Orca_LInB(struct Instance *inst)
 	}
 
 	pointers = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->ptrSpawnType1));
-	metaArray = (s16 *)pointers[ST1_SPAWN];
+	metaArray = (s16 *)P32_GET(void *, pointers[ST1_SPAWN]);
 	orcaObj->cooldown = metaArray[orcaObj->orcaID];
 
 	if (orcaObj->cooldown != 0)

@@ -151,7 +151,7 @@ struct AnimTex
 	// struct IconGroup4* ptrarray[0];
 };
 
-#define ANIMTEX_GETARRAY(x) (struct IconGroup4 **)((u32)x + sizeof(struct AnimTex))
+#define ANIMTEX_GETARRAY(x) ((P32(struct IconGroup4 *) *)((uintptr_t)(x) + sizeof(struct AnimTex)))
 
 struct PVS
 {
@@ -629,7 +629,7 @@ struct SpawnType1
 
 	// void* pointers[0];
 };
-#define ST1_GETPOINTERS(x) (void **)((u32)x + sizeof(struct SpawnType1))
+#define ST1_GETPOINTERS(x) ((P32(void *) *)((uintptr_t)(x) + sizeof(struct SpawnType1)))
 
 struct SpawnPosRot
 {
@@ -702,7 +702,7 @@ struct Skybox
 
 	// struct SkyboxFace allFaces[0];
 };
-#define SKY_GETFACES(x) ((u32)x + sizeof(struct Skybox))
+#define SKY_GETFACES(x) ((uintptr_t)(x) + sizeof(struct Skybox))
 
 struct LevTexLookup
 {

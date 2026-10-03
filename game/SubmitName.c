@@ -160,7 +160,7 @@ s16 SubmitName_DrawMenu(u16 string)
 		}
 	}
 
-	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_PLEASE_ENTER_YOUR_NAME], SUBMIT_NAME_TITLE_X, SUBMIT_NAME_TITLE_Y, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_PLEASE_ENTER_YOUR_NAME]), SUBMIT_NAME_TITLE_X, SUBMIT_NAME_TITLE_Y, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
 
 	// player name
 	DecalFont_DrawLine(gGT->currNameEntered, SUBMIT_NAME_TYPED_NAME_X, SUBMIT_NAME_TYPED_NAME_Y, FONT_BIG, WHITE);
@@ -182,7 +182,7 @@ s16 SubmitName_DrawMenu(u16 string)
 	}
 
 	// SAVE button draw
-	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[stringCopy], SUBMIT_NAME_ACTION_X, SUBMIT_NAME_ACTION_Y, FONT_BIG, (JUSTIFY_RIGHT | strColorBlink));
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[stringCopy]), SUBMIT_NAME_ACTION_X, SUBMIT_NAME_ACTION_Y, FONT_BIG, (JUSTIFY_RIGHT | strColorBlink));
 
 	// CANCEL button blink
 	strColorBlink = 0;
@@ -191,7 +191,7 @@ s16 SubmitName_DrawMenu(u16 string)
 		strColorBlink = blinkWhite;
 	}
 
-	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_CANCEL], SUBMIT_NAME_CANCEL_X, SUBMIT_NAME_ACTION_Y, 1, strColorBlink);
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_CANCEL]), SUBMIT_NAME_CANCEL_X, SUBMIT_NAME_ACTION_Y, 1, strColorBlink);
 
 	// leftX = 32 (256-224)
 	// rightX = 480 (256+224)

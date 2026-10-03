@@ -306,7 +306,7 @@ void CS_Camera_ThTick_Podium(struct Thread *th)
 			goto check_skip_button;
 		}
 
-		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_PRESS_TO_CONTINUE], CS_PODIUM_CONTINUE_TEXT_X, CS_PODIUM_CONTINUE_TEXT_Y, FONT_BIG, JUSTIFY_CENTER | ORANGE);
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_PRESS_TO_CONTINUE]), CS_PODIUM_CONTINUE_TEXT_X, CS_PODIUM_CONTINUE_TEXT_Y, FONT_BIG, JUSTIFY_CENTER | ORANGE);
 	}
 
 	if (((gGT->gameMode2 & CUP_NEW_WIN) == 0) && P32_GET(struct RectMenu *, sdata->ptrActiveMenu) == NULL)

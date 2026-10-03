@@ -336,7 +336,7 @@ void RefreshCard_GhostEncodeProfile(u32 slotIndex, u16 characterID, u16 levelID,
 	description[0] = '\0';
 
 	s16 physicalLevelID = NativeReverseTrack_GetPhysicalFromLogical((s16)levelID);
-	strcat(&description[strlen(description)], P32_GET(char **, sdata->lngStrings)[data.metaDataLEV[physicalLevelID].name_LNG]);
+	strcat(&description[strlen(description)], P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.metaDataLEV[physicalLevelID].name_LNG]));
 	if (NativeReverseTrack_IsLogicalReverse((s16)levelID))
 	{
 		strcat(description, NativeReverseTrack_GetSuffix());
@@ -346,7 +346,7 @@ void RefreshCard_GhostEncodeProfile(u32 slotIndex, u16 characterID, u16 levelID,
 		strcat(description, NativeReverseTrack_GetAlternativeSuffix());
 	}
 	strcat(description, sdata->strcatData1_colon);
-	strcat(&description[strlen(description)], P32_GET(char **, sdata->lngStrings)[data.MetaDataCharacters[(s16)characterID].name_LNG_short]);
+	strcat(&description[strlen(description)], P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.MetaDataCharacters[(s16)characterID].name_LNG_short]));
 	strcat(description, sdata->strcatData1_colon);
 	strcat(description, (char *)RECTMENU_DrawTime(time));
 

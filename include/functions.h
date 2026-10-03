@@ -47,7 +47,7 @@ struct MetaDataMODEL *COLL_LevModelMeta(u32 id);
 void COLL_SearchBSP_CallbackQUADBLK(const SVec3 *top, const SVec3 *bottom, struct ScratchpadStruct *sps, s32 hitRadius);
 void COLL_SearchBSP_CallbackPARAM(struct BSP *root, struct BoundingBox *bbox, CollBspLeafCallback callback, struct ScratchpadStruct *sps);
 
-void CTR_CycleTex_AllModels(u32 numModels, struct Model **pModelArray, int timer);
+void CTR_CycleTex_AllModels(u32 numModels, P32(struct Model *) *pModelArray, int timer);
 void CTR_CycleTex_LEV(struct AnimTex *animtex, int timer);
 void CTR_ErrorScreen(u8 r, u8 g, u8 b);
 void CTR_CycleTex_Model(struct AnimTex *animtex, int timer);
@@ -1349,7 +1349,7 @@ void GAMEPROG_NewProfile_OutsideAdv(struct GameProgress *gameProg);
 int LOAD_FindFile(char *filename, CdlFILE *cdlFile);
 int LOAD_HowlHeaderSectors(CdlFILE *cdlFileHWL, void *ptrDestination, int firstSector, int numSector);
 int CDSYS_XASeek(b32 boolCdControl, int categoryID, int xaID);
-void LibraryOfModels_Store(struct GameTracker *gGT, u32 numModels, struct Model **ptrModelArray);
+void LibraryOfModels_Store(struct GameTracker *gGT, u32 numModels, P32(struct Model *) *ptrModelArray);
 void LOAD_DramFileCallback(struct LoadQueueSlot *lqs);
 int LOAD_GetBigfileIndex(u32 levelID, int lod, int fileIndexInGroup);
 void LOAD_HubSwapPtrs(struct GameTracker *gGT);

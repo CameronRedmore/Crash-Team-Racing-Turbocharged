@@ -530,7 +530,7 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 		// if level is not nullptr
 		if (lev != 0)
 		{
-			LibraryOfModels_Store(gGT, lev->numModels, P32_GET(struct Model **, lev->ptrModelsPtrArray));
+			LibraryOfModels_Store(gGT, lev->numModels, P32_GET(P32(struct Model *) *, lev->ptrModelsPtrArray));
 
 			gGT->ptrCircle = (u32)DecalGlobal_FindInLEV(lev, rdata.s_circle);
 			gGT->ptrClod = (u32)DecalGlobal_FindInLEV(lev, rdata.s_clod);

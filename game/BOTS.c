@@ -131,12 +131,12 @@ void BOTS_InitNavPath(struct GameTracker *gGT, s16 index)
 {
 	(void)gGT;
 	struct NavHeader *nh = 0;
-	struct NavHeader **LevNavTable = P32_GET(struct NavHeader **, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->LevNavTable);
+	P32(struct NavHeader *) *LevNavTable = P32_GET(P32(struct NavHeader *) *, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->LevNavTable);
 
 	if (LevNavTable != 0)
 	{
 		// nullptr on Nitro Court
-		nh = LevNavTable[index];
+		nh = P32_GET(struct NavHeader *, LevNavTable[index]);
 	}
 
 	// if path exists

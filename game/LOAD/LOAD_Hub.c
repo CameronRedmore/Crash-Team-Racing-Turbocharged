@@ -75,7 +75,7 @@ void LOAD_Hub_SwapNow()
 	}
 	*/
 
-	if (P32_GET(int **, sdata->PLYROBJECTLIST) != 0)
+	if (P32_GET(P32(int *) *, sdata->PLYROBJECTLIST) != 0)
 	{
 		LOAD_GlobalModelPtrs_MPK();
 	}
@@ -92,7 +92,7 @@ void LOAD_Hub_SwapNow()
 
 	if (level1 != 0)
 	{
-		LibraryOfModels_Store(gGT, level1->numModels, P32_GET(struct Model **, level1->ptrModelsPtrArray));
+		LibraryOfModels_Store(gGT, level1->numModels, P32_GET(P32(struct Model *) *, level1->ptrModelsPtrArray));
 
 		INSTANCE_LevInitAll(P32_GET(struct InstDef *, level1->ptrInstDefs), level1->numInstances);
 

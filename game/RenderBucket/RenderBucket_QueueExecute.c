@@ -625,7 +625,7 @@ static struct ModelAnim *RenderBucket_GetAnim(struct Instance *inst, struct Mode
 	}
 #endif
 
-	return P32_GET(struct ModelAnim **, mh->ptrAnimations)[inst->animIndex];
+	return P32_GET(struct ModelAnim *, P32_GET(P32(struct ModelAnim *) *, mh->ptrAnimations)[inst->animIndex]);
 }
 
 static u32 RenderBucket_PackXY(int x, int y)
@@ -1120,9 +1120,9 @@ static int RenderBucket_NativeAnimationFraction(struct Instance *inst)
 	if (CTR_FRAMES_PER_SECOND > 60 && INSTANCE_Use60FpsAnimation(inst))
 	{
 		struct ModelHeader *header = P32_GET(struct ModelHeader *, P32_GET(struct Model *, inst->model)->headers);
-		if (P32_GET(struct ModelAnim **, header->ptrAnimations) && inst->animIndex < header->numAnimations)
+		if (P32_GET(P32(struct ModelAnim *) *, header->ptrAnimations) && inst->animIndex < header->numAnimations)
 		{
-			struct ModelAnim *anim = P32_GET(struct ModelAnim **, header->ptrAnimations)[inst->animIndex];
+			struct ModelAnim *anim = P32_GET(struct ModelAnim *, P32_GET(P32(struct ModelAnim *) *, header->ptrAnimations)[inst->animIndex]);
 			if (anim && (anim->numFrames & 0x8000) == 0)
 				return (int)(((u32)(u16)inst->animFrame * FPS % CTR_FRAMES_PER_SECOND) * 4096 / CTR_FRAMES_PER_SECOND);
 		}
@@ -2192,7 +2192,7 @@ static struct ModelFrame *RenderBucket_GetFrame(struct Instance *inst, struct Mo
 	*deltaArrayOut = 0;
 	*lastFrameAdvanceOut = -1;
 
-	if (P32_GET(struct ModelAnim **, mh->ptrAnimations) == 0)
+	if (P32_GET(P32(struct ModelAnim *) *, mh->ptrAnimations) == 0)
 	{
 		*deltaArrayOut = mh->unk3;
 		return P32_GET(struct ModelFrame *, mh->ptrFrameData);
@@ -2438,7 +2438,7 @@ static struct RenderBucketEntry *RenderBucket_QueueDraw(struct Instance *inst, s
 	idpp->unkF0 = uncompressFunc;
 	RenderBucket_WriteInstanceCallbackLabels(inst, queuedFlags);
 	idpp->ptrCommandList = mh->ptrCommandList;
-	P32_SET(idpp->ptrTexLayout, P32_GET(struct TextureLayout **, mh->ptrTexLayout));
+	P32_SET(idpp->ptrTexLayout, P32_GET(P32(struct TextureLayout *) *, mh->ptrTexLayout));
 	idpp->ptrColorLayout = (u32)P32_GET(u32 *, mh->ptrColors);
 	idpp->instFlags = queuedFlags;
 	return rbi + 1;
@@ -2470,7 +2470,7 @@ void *RenderBucket_QueueLevInstances(struct CameraDC *cDC, struct OTMem *otState
 	if (NativeAdhoc_IsSingleViewRenderActive())
 	{
 		int player = NativeAdhoc_GetLocalPlayerIndex();
-		struct Instance **visInstSrc = cDC[player].visInstSrc;
+		P32(struct Instance *) *visInstSrc = cDC[player].visInstSrc;
 
 		if (visInstSrc != 0)
 		{
@@ -2484,16 +2484,16 @@ void *RenderBucket_QueueLevInstances(struct CameraDC *cDC, struct OTMem *otState
 #endif
 	for (int player = count - 1; player >= 0; player--)
 	{
-		struct Instance **visInstSrc = P32_GET(struct Instance **, cDC[player].visInstSrc);
+		P32(struct Instance *) *visInstSrc = P32_GET(P32(struct Instance *) *, cDC[player].visInstSrc);
 
 		if (visInstSrc == 0)
 		{
 			continue;
 		}
 
-		for (; *visInstSrc != 0; visInstSrc++)
+		for (; P32_GET(struct Instance *, *visInstSrc) != 0; visInstSrc++)
 		{
-			entry = RenderBucket_QueueDraw(*visInstSrc, entry, player, lodMask, gameMode1, &queueState);
+			entry = RenderBucket_QueueDraw(P32_GET(struct Instance *, *visInstSrc), entry, player, lodMask, gameMode1, &queueState);
 		}
 	}
 
@@ -3189,7 +3189,7 @@ static struct TextureLayout *RenderBucket_GetCommandTexture(struct RenderBucketD
 		return 0;
 	}
 
-	if (P32_GET(struct TextureLayout **, ctx->idpp->ptrTexLayout) == 0)
+	if (P32_GET(P32(struct TextureLayout *) *, ctx->idpp->ptrTexLayout) == 0)
 	{
 		*isValid = 0;
 		return 0;
@@ -3198,7 +3198,7 @@ static struct TextureLayout *RenderBucket_GetCommandTexture(struct RenderBucketD
 	// NOTE(aalhendi): Retail only uses texture index zero as the explicit G3
 	// path, but a null texture-table entry also reaches DrawInstPrim_Normal as
 	// `a2 == 0` and emits G3. Do not reject that case here.
-	return P32_GET(struct TextureLayout **, ctx->idpp->ptrTexLayout)[texIndex - 1];
+	return P32_GET(struct TextureLayout *, P32_GET(P32(struct TextureLayout *) *, ctx->idpp->ptrTexLayout)[texIndex - 1]);
 }
 
 static int RenderBucket_OTEntryPassesDpctGate(const uint32_t *otEntry)

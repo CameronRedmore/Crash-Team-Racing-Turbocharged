@@ -43,7 +43,7 @@ void DecalGlobal_Clear(struct GameTracker *gGT)
 void DecalGlobal_Store(struct GameTracker *gGT, struct LevTexLookup *LTL)
 {
 	struct Icon *currIcon;
-	struct IconGroup **currGroup;
+	P32(struct IconGroup *) *currGroup;
 
 	if (LTL == 0)
 	{
@@ -63,12 +63,13 @@ void DecalGlobal_Store(struct GameTracker *gGT, struct LevTexLookup *LTL)
 
 	for (
 	    // array of POINTER to iconGroup
-	    currGroup = &P32_GET(struct IconGroup **, LTL->firstIconGroupPtr)[0]; currGroup < &P32_GET(struct IconGroup **, LTL->firstIconGroupPtr)[LTL->numIconGroup]; currGroup++)
+	    currGroup = &P32_GET(P32(struct IconGroup *) *, LTL->firstIconGroupPtr)[0]; currGroup < &P32_GET(P32(struct IconGroup *) *, LTL->firstIconGroupPtr)[LTL->numIconGroup]; currGroup++)
 	{
 		// use '[0]' to dereference pointer
-		if ((u32)currGroup[0]->groupID < 0x11)
+		struct IconGroup *group = P32_GET(struct IconGroup *, currGroup[0]);
+		if ((u32)group->groupID < 0x11)
 		{
-			P32_SET(gGT->iconGroup[currGroup[0]->groupID], currGroup[0]);
+			P32_SET(gGT->iconGroup[group->groupID], group);
 		}
 	}
 }
@@ -84,12 +85,12 @@ int *DecalGlobal_FindInLEV(struct Level *level, char *str)
 		return NULL;
 	}
 
-	struct IconGroup **curr = P32_GET(struct IconGroup **, ltl->firstIconGroupPtr);
-	struct IconGroup **end = &P32_GET(struct IconGroup **, ltl->firstIconGroupPtr)[ltl->numIconGroup];
+	P32(struct IconGroup *) *curr = P32_GET(P32(struct IconGroup *) *, ltl->firstIconGroupPtr);
+	P32(struct IconGroup *) *end = &P32_GET(P32(struct IconGroup *) *, ltl->firstIconGroupPtr)[ltl->numIconGroup];
 
 	for (; curr < end; curr++)
 	{
-		struct IconGroup *group = *curr;
+		struct IconGroup *group = P32_GET(struct IconGroup *, *curr);
 
 		if (DecalGlobal_NameEquals(group->name, str))
 		{

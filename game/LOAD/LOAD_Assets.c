@@ -284,7 +284,10 @@ void LOAD_RunPtrMap(char *origin, int *patchArr, int numPtrs)
 	for (ptrCurrOffset = &patchArr[0]; ptrCurrOffset < &patchArr[numPtrs]; ptrCurrOffset++)
 	{
 		int offset = (*ptrCurrOffset >> 2) << 2;
-		*(int *)&origin[offset] = *(int *)&origin[offset] + (int)origin;
+		int *slot = (int *)&origin[offset];
+		// File pointers are offsets from origin; store them as retail pointer
+		// slots (a raw address on 32-bit, a CtrPtr32 handle on 64-bit).
+		*slot = (int)P32_ENC(origin + *slot);
 #if defined(CTR_NATIVE) && defined(CTR_INTERNAL)
 		NativeCheckpoint_RegisterPointerSlot(&origin[offset]);
 #endif
@@ -585,7 +588,7 @@ void LOAD_LangFile(int bigfilePtr, int lang)
 
 	int i;
 	int numStrings;
-	char **strArray;
+	P32(char *) *strArray;
 
 #if BUILD == EurRetail
 	// This is to turn the screen black for a bit (optional)
@@ -623,14 +626,15 @@ void LOAD_LangFile(int bigfilePtr, int lang)
 	}
 
 	numStrings = lngFile->numStrings;
-	strArray = (char **)((u32)lngFile + lngFile->offsetToPtrArr);
+	strArray = (P32(char *) *)((char *)lngFile + lngFile->offsetToPtrArr);
 
 	sdata->numLngStrings = numStrings;
 	P32_SET(sdata->lngStrings, strArray);
 
 	for (i = 0; i < numStrings; i++)
 	{
-		strArray[i] = (char *)((u32)strArray[i] + (u32)lngFile);
+		// Entries hold offsets from the start of the file.
+		P32_SET(strArray[i], (char *)lngFile + *(u32 *)&strArray[i]);
 	}
 #if defined(CTR_NATIVE)
 	NativeAudio_SetVoiceLanguage(lang);

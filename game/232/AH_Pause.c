@@ -153,7 +153,7 @@ void AH_Pause_Draw(s32 pageID, s32 posX)
 		lngIndex = data.metaDataLEV[levelID].name_LNG;
 	}
 
-	char *titleString = P32_GET(char **, sdata->lngStrings)[lngIndex];
+	char *titleString = P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[lngIndex]);
 
 	DecalFont_DrawLine(titleString, posX + AH_PAUSE_TITLE_CENTER_X, AH_PAUSE_TITLE_Y, FONT_BIG, 0xffff8000);
 
@@ -173,10 +173,10 @@ void AH_Pause_Draw(s32 pageID, s32 posX)
 	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	struct PrimMem *primMem = &P32_GET(struct DB *, gGT->backBuffer)->primMem;
 
-	struct Icon **iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[AH_PAUSE_ICON_GROUP_HUD]));
+	P32(struct Icon *) *iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[AH_PAUSE_ICON_GROUP_HUD]));
 
 	// Draw arrow pointing Left
-	DecalHUD_Arrow2D(iconPtrArray[AH_PAUSE_HUD_ICON_PAGE_ARROW], (posX - titleHalfWidth) + AH_PAUSE_ARROW_LEFT_X_OFFSET, AH_PAUSE_ARROW_Y,
+	DecalHUD_Arrow2D(P32_GET(struct Icon *, iconPtrArray[AH_PAUSE_HUD_ICON_PAGE_ARROW]), (posX - titleHalfWidth) + AH_PAUSE_ARROW_LEFT_X_OFFSET, AH_PAUSE_ARROW_Y,
 
 	                 primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT),
 
@@ -185,7 +185,7 @@ void AH_Pause_Draw(s32 pageID, s32 posX)
 	                 0, AH_PAUSE_ARROW_SCALE, AH_PAUSE_ARROW_LEFT_ROT_Y);
 
 	// Draw arrow pointing Right
-	DecalHUD_Arrow2D(iconPtrArray[AH_PAUSE_HUD_ICON_PAGE_ARROW], (posX + titleHalfWidth) + AH_PAUSE_ARROW_RIGHT_X_OFFSET, AH_PAUSE_ARROW_Y,
+	DecalHUD_Arrow2D(P32_GET(struct Icon *, iconPtrArray[AH_PAUSE_HUD_ICON_PAGE_ARROW]), (posX + titleHalfWidth) + AH_PAUSE_ARROW_RIGHT_X_OFFSET, AH_PAUSE_ARROW_Y,
 
 	                 primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT),
 
@@ -244,7 +244,7 @@ void AH_Pause_Draw(s32 pageID, s32 posX)
 			s32 rowY = rowBase + rowIndex * AH_PAUSE_ROW_STEP_Y;
 			rowIndex++;
 
-			DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[mdLev->name_LNG], posX + textX, rowY + AH_PAUSE_ROW_TEXT_Y, FONT_BIG, 0);
+			DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[mdLev->name_LNG]), posX + textX, rowY + AH_PAUSE_ROW_TEXT_Y, FONT_BIG, 0);
 
 			if (hubID != 0)
 			{
@@ -307,7 +307,7 @@ void AH_Pause_Draw(s32 pageID, s32 posX)
 		s32 bossRowY = rowBase + rowIndex * AH_PAUSE_ROW_STEP_Y;
 		s32 bossID = D232.advPausePages[pageID].characterID_Boss;
 
-		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[data.MetaDataCharacters[bossID].name_LNG_long], posX + textX, bossRowY + AH_PAUSE_ROW_TEXT_Y, FONT_BIG, WHITE);
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.MetaDataCharacters[bossID].name_LNG_long]), posX + textX, bossRowY + AH_PAUSE_ROW_TEXT_Y, FONT_BIG, WHITE);
 
 		if (hubID == 0)
 		{
@@ -324,9 +324,9 @@ void AH_Pause_Draw(s32 pageID, s32 posX)
 
 			u32 *starColor = P32_GET(u32 *, data.ptrColor[bossStarColor]);
 
-			struct Icon **iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[AH_PAUSE_ICON_GROUP_MISC]));
+			P32(struct Icon *) *iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[AH_PAUSE_ICON_GROUP_MISC]));
 
-			DecalHUD_DrawPolyGT4(iconPtrArray[AH_PAUSE_HUD_ICON_BOSS_STAR],
+			DecalHUD_DrawPolyGT4(P32_GET(struct Icon *, iconPtrArray[AH_PAUSE_HUD_ICON_BOSS_STAR]),
 
 			                     posX + iconX + AH_PAUSE_BOSS_STAR_X_OFFSET, bossRowY + AH_PAUSE_BOSS_STAR_Y_OFFSET,
 
@@ -375,7 +375,7 @@ void AH_Pause_Draw(s32 pageID, s32 posX)
 				struct MetaDataLEV *mdLev = &data.metaDataLEV[crystalID];
 				s32 crystalRowY = bossRowY + AH_PAUSE_ROW_STEP_Y;
 
-				DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[mdLev->name_LNG], posX + textX, crystalRowY + AH_PAUSE_ROW_TEXT_Y, FONT_BIG, PERIWINKLE);
+				DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[mdLev->name_LNG]), posX + textX, crystalRowY + AH_PAUSE_ROW_TEXT_Y, FONT_BIG, PERIWINKLE);
 
 				member = &ptrPauseObject->members[pauseIndex];
 				inst = P32_GET(struct Instance *, member->inst);
@@ -482,7 +482,7 @@ void AH_Pause_Draw(s32 pageID, s32 posX)
 
 		relicTotal = relicTotals[0] + relicTotals[1] + relicTotals[2];
 
-		sprintf(totalString, "%s %d", P32_GET(char **, sdata->lngStrings)[LNG_TOTAL], relicTotal);
+		sprintf(totalString, "%s %d", P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_TOTAL]), relicTotal);
 
 		DecalFont_DrawLine(totalString, posX + AH_PAUSE_TITLE_CENTER_X, AH_PAUSE_TOTAL_TEXT_Y, FONT_BIG, 0xffff8000);
 	}

@@ -147,9 +147,9 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 		statBarPosX = 393;
 	}
 
-	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_SPEED], statNamePosX, GARAGE_STAT_NAME_SPEED_Y, FONT_BIG, JUSTIFY_RIGHT | ORANGE_RED);
-	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_ACCEL], statNamePosX, GARAGE_STAT_NAME_ACCEL_Y, FONT_BIG, JUSTIFY_RIGHT | LIME_GREEN);
-	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_TURN], statNamePosX, GARAGE_STAT_NAME_TURN_Y, FONT_BIG, JUSTIFY_RIGHT | BLUE);
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_SPEED]), statNamePosX, GARAGE_STAT_NAME_SPEED_Y, FONT_BIG, JUSTIFY_RIGHT | ORANGE_RED);
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_ACCEL]), statNamePosX, GARAGE_STAT_NAME_ACCEL_Y, FONT_BIG, JUSTIFY_RIGHT | LIME_GREEN);
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_TURN]), statNamePosX, GARAGE_STAT_NAME_TURN_Y, FONT_BIG, JUSTIFY_RIGHT | BLUE);
 
 	int engineID = MDC->engineID;
 
@@ -176,7 +176,7 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 	u16 statBarShadows_Y = GARAGE_STAT_BAR_SHADOW_Y;
 
 	// Draw class name
-	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[gGarage.classStringIDs[classStringIndex]], classNamePosX, GARAGE_CLASS_NAME_Y, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[gGarage.classStringIDs[classStringIndex]]), classNamePosX, GARAGE_CLASS_NAME_Y, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
 
 	// bar length (animated)
 
@@ -280,7 +280,7 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 
 	for (int i = 0; i < 3; i++)
 	{
-		int classWidth = DecalFont_GetLineWidth(P32_GET(char **, sdata->lngStrings)[gGarage.classStringIDs[i]], FONT_BIG);
+		int classWidth = DecalFont_GetLineWidth(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[gGarage.classStringIDs[i]]), FONT_BIG);
 		int classLeft = classNamePosX - (classWidth >> 1);
 		int classRight = classLeft + classWidth;
 
@@ -293,7 +293,7 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 	const int statStringIDs[3] = {LNG_SPEED, LNG_ACCEL, LNG_TURN};
 	for (int i = 0; i < 3; i++)
 	{
-		int statWidth = DecalFont_GetLineWidth(P32_GET(char **, sdata->lngStrings)[statStringIDs[i]], FONT_BIG);
+		int statWidth = DecalFont_GetLineWidth(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[statStringIDs[i]]), FONT_BIG);
 		int statLeft = (int)statNamePosX - statWidth;
 
 		if (statLeft < boxLeft)
@@ -324,7 +324,7 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 	// Draw 2D Menu rectangle background
 	RECTMENU_DrawInnerRect(&r, 4, P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT));
 
-	char *name = P32_GET(char **, sdata->lngStrings)[nameIndex];
+	char *name = P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[nameIndex]);
 
 	// Draw character name
 	DecalFont_DrawLine(name, GARAGE_CHARACTER_NAME_X, GARAGE_CHARACTER_NAME_Y, FONT_BIG, 0xffff8000);
@@ -345,11 +345,11 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 	int arrowPos[2] = {GARAGE_CHARACTER_ARROW_LEFT_BASE_X - nameLen, nameLen + GARAGE_CHARACTER_ARROW_RIGHT_BASE_X};
 	int arrowRot[2] = {GARAGE_CHARACTER_ARROW_ROT_LEFT, 0};
 
-	struct Icon **iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[4]));
+	P32(struct Icon *) *iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[4]));
 
 	for (int i = 0; i < 2; i++)
 	{
-		DecalHUD_Arrow2D(iconPtrArray[GARAGE_CHARACTER_ARROW_ICON_INDEX], arrowPos[i], GARAGE_CHARACTER_ARROW_Y,
+		DecalHUD_Arrow2D(P32_GET(struct Icon *, iconPtrArray[GARAGE_CHARACTER_ARROW_ICON_INDEX]), arrowPos[i], GARAGE_CHARACTER_ARROW_Y,
 
 		                 primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT),
 

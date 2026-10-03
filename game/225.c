@@ -150,9 +150,9 @@ void VB_EndEvent_DrawMenu(void)
 	s32 rowY = titleY + VB_TITLE_TO_ROWS_Y;
 
 	// "Versus" or "Battle"
-	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[titleString], pos.x, pos.y, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[titleString]), pos.x, pos.y, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
 
-	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_STANDINGS], pos.x, pos.y + VB_STANDINGS_SUBTITLE_Y, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_STANDINGS]), pos.x, pos.y + VB_STANDINGS_SUBTITLE_Y, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
 
 	s32 visiblePlaces = VB_STANDINGS_VISIBLE_PLACES_MIN;
 	if (standingsEntryCount >= 3)
@@ -231,7 +231,7 @@ void VB_EndEvent_DrawMenu(void)
 					placeTextColor = (FPS_HALF(gGT->timer) & 1) ? (JUSTIFY_RIGHT | RED) : (JUSTIFY_RIGHT | WHITE);
 			}
 
-			sprintf(text, "%d%s-%2.02ld", place + 1, P32_GET(char **, sdata->lngStrings)[VB_STANDINGS_SUFFIX_FIRST + place],
+			sprintf(text, "%d%s-%2.02ld", place + 1, P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[VB_STANDINGS_SUFFIX_FIRST + place]),
 			        CTR_PRINTF_PSX_LONG(gGT->standingsPoints[entityID * VB_STANDINGS_POINTS_PER_ENTRY + place]));
 
 			DecalFont_DrawLine(text, pos.x + VB_STANDINGS_TEXT_X_OFFSET,
@@ -253,7 +253,7 @@ void VB_EndEvent_DrawMenu(void)
 		rowDelay += FPS_DOUBLE(VB_ROW_STAGGER_FRAMES);
 
 		previousStandingsScore = (s16)gGT->battleSetup.standingsScore[entityID];
-		sprintf(text, "%d%s", displayedRank + 1, P32_GET(char **, sdata->lngStrings)[VB_STANDINGS_SUFFIX_FIRST + displayedRank]);
+		sprintf(text, "%d%s", displayedRank + 1, P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[VB_STANDINGS_SUFFIX_FIRST + displayedRank]));
 
 		DecalFont_DrawLine(text, pos.x + VB_STANDINGS_RANK_X_OFFSET, rankTextY + VB_STANDINGS_RANK_Y_OFFSET, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
 	}

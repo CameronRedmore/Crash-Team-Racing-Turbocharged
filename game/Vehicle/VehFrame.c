@@ -94,12 +94,12 @@ u32 VehFrameInst_GetNumAnimFrames(struct Instance *inst, int animIndex)
 	{
 		return 0;
 	}
-	if (P32_GET(struct ModelAnim **, mh->ptrAnimations) == NULL)
+	if (P32_GET(P32(struct ModelAnim *) *, mh->ptrAnimations) == NULL)
 	{
 		return 0;
 	}
 
-	struct ModelAnim *anim = P32_GET(struct ModelAnim **, mh->ptrAnimations)[animIndex];
+	struct ModelAnim *anim = P32_GET(struct ModelAnim *, P32_GET(P32(struct ModelAnim *) *, mh->ptrAnimations)[animIndex]);
 
 	if (anim == NULL)
 	{

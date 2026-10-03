@@ -6,11 +6,11 @@ enum LibraryOfModelsConstants
 };
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8003147c-0x800314c0.
-void LibraryOfModels_Store(struct GameTracker *gGT, u32 numModels, struct Model **ptrModelArray)
+void LibraryOfModels_Store(struct GameTracker *gGT, u32 numModels, P32(struct Model *) *ptrModelArray)
 {
 	while (numModels != 0)
 	{
-		struct Model *m = *ptrModelArray;
+		struct Model *m = P32_GET(struct Model *, *ptrModelArray);
 		if (m == NULL)
 		{
 			return;

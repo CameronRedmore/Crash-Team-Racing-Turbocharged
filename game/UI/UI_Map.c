@@ -93,8 +93,8 @@ void UI_Map_DrawMap(struct Icon *mapTop, struct Icon *mapBottom, s16 posX, s16 p
 
 	if (P32_GET(struct SpawnType1 *, P32_GET(struct Level *, gGT->level1)->ptrSpawnType1) != 0)
 	{
-		void **pointers = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *, gGT->level1)->ptrSpawnType1));
-		mapMetadata = pointers[ST1_MAP];
+		P32(void *) *pointers = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *, gGT->level1)->ptrSpawnType1));
+		mapMetadata = P32_GET(void *, pointers[ST1_MAP]);
 	}
 
 	// position of the bottom margin of the primitive for the bottom half of the minimap
@@ -162,8 +162,8 @@ void UI_Map_DrawMap_ExtraFunc(struct Icon *icon, POLY_FT4 *p, s16 posX, s16 empt
 	// map around that same origin so its route icons remain registered.
 	if (((P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 & MAIN_MENU) == 0) && (P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1) != NULL) && (P32_GET(struct SpawnType1 *, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->ptrSpawnType1) != NULL))
 	{
-		void **pointers = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->ptrSpawnType1));
-		struct UIMap *map = pointers[ST1_MAP];
+		P32(void *) *pointers = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->ptrSpawnType1));
+		struct UIMap *map = P32_GET(void *, pointers[ST1_MAP]);
 		if (map != NULL)
 		{
 			int centerY = 0;
@@ -353,12 +353,12 @@ void UI_Map_DrawRawIcon(struct UIMap *map, const s32 worldPos[3], int iconID, in
 
 	ptrColor = P32_GET(u32 *, data.ptrColor[colorID]);
 
-	struct Icon **iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, P32_GET(struct GameTracker *, sdata->gGT)->iconGroup[UI_MAP_ICON_GROUP]));
+	P32(struct Icon *) *iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, P32_GET(struct GameTracker *, sdata->gGT)->iconGroup[UI_MAP_ICON_GROUP]));
 
 #if defined(CTR_NATIVE)
 	POLY_GT4 *p = P32_GET(void *, P32_GET(struct DB *, gGT->backBuffer)->primMem.cursor);
 #endif
-	DecalHUD_DrawPolyGT4(iconPtrArray[iconID], posX, posY, &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), ptrColor[0], ptrColor[1], ptrColor[2],
+	DecalHUD_DrawPolyGT4(P32_GET(struct Icon *, iconPtrArray[iconID]), posX, posY, &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), ptrColor[0], ptrColor[1], ptrColor[2],
 	                     ptrColor[3], 0, (int)scale);
 #if defined(CTR_NATIVE)
 	if (gNativePreciseMinimapEnabled && NATIVE_PGXP_SUPPORTED && P32_GET(void *, P32_GET(struct DB *, gGT->backBuffer)->primMem.cursor) == p + 1)

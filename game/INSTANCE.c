@@ -416,12 +416,12 @@ b32 INSTANCE_AnimFramesScaled(struct Instance *inst, int animIndex)
 	}
 
 	struct ModelHeader *header = P32_GET(struct ModelHeader *, P32_GET(struct Model *, inst->model)->headers);
-	if ((P32_GET(struct ModelAnim **, header->ptrAnimations) == NULL) || (animIndex < 0) || (animIndex >= (int)header->numAnimations))
+	if ((P32_GET(P32(struct ModelAnim *) *, header->ptrAnimations) == NULL) || (animIndex < 0) || (animIndex >= (int)header->numAnimations))
 	{
 		return false;
 	}
 
-	struct ModelAnim *anim = P32_GET(struct ModelAnim **, header->ptrAnimations)[animIndex];
+	struct ModelAnim *anim = P32_GET(struct ModelAnim *, P32_GET(P32(struct ModelAnim *) *, header->ptrAnimations)[animIndex]);
 	return (anim != NULL) && ((anim->numFrames & 0x8000) == 0);
 }
 
@@ -453,13 +453,13 @@ u16 INSTANCE_GetNumAnimFrames(struct Instance *pInstance, int animIndex)
 			if (pHeader = P32_GET(struct ModelHeader *, pModel->headers), pHeader != NULL)
 			{
 				// if header got animations
-				if (P32_GET(struct ModelAnim **, pHeader->ptrAnimations) != NULL)
+				if (P32_GET(P32(struct ModelAnim *) *, pHeader->ptrAnimations) != NULL)
 				{
 					// validate anim index param
 					if (animIndex < (int)pHeader->numAnimations)
 					{
 						// get proper animation ptr and validate
-						if (pAnim = *(P32_GET(struct ModelAnim **, pHeader->ptrAnimations) + animIndex), pAnim != NULL)
+						if (pAnim = P32_GET(struct ModelAnim *, P32_GET(P32(struct ModelAnim *) *, pHeader->ptrAnimations)[animIndex]), pAnim != NULL)
 						{
 							// we're finally there, get number of frames
 							// remember it's masked due to interp flag

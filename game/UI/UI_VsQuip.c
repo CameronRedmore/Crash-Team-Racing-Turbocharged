@@ -509,7 +509,7 @@ void UI_VsQuipDrawAll(void)
 		if ((printArr[1] & 1) == 0)
 		{
 			// Print the string as a comment
-			print = P32_GET(char **, sdata->lngStrings)[printArr[0]];
+			print = P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[printArr[0]]);
 		}
 
 		// if the comment is conjoined
@@ -520,12 +520,12 @@ void UI_VsQuipDrawAll(void)
 
 			        // Contains '%s' format:
 			        // Original end-of-race comment
-			        P32_GET(char **, sdata->lngStrings)[printArr[0]],
+			        P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[printArr[0]]),
 
 			        // second part of comment,
 			        // lngIndex of driver,
 			        // for stuff like "hit by Crash Bandicoot" or something
-			        P32_GET(char **, sdata->lngStrings)[data.MetaDataCharacters[d->EndOfRaceComment_characterID].name_LNG_long]);
+			        P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.MetaDataCharacters[d->EndOfRaceComment_characterID].name_LNG_long]));
 
 			print = printBuffer;
 		}
@@ -631,7 +631,7 @@ void UI_VsWaitForPressX(void)
 			{
 				int promptString = LNG_YOU_HIT + (*pressState & UI_VS_WAIT_STAT_MODE_HIT_YOU);
 
-				DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[promptString],
+				DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[promptString]),
 
 				                   // Midpoint between pushBuffer Start X and End X
 				                   viewport->x + (viewport->w >> 1),

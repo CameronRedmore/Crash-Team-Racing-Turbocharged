@@ -7,7 +7,7 @@ void CTR_CycleTex_LEV(struct AnimTex *animtex, int timer)
 	struct AnimTex *curAnimTex = animtex;
 
 	// Termination is determined by pointer to First AnimTex
-	while (*(int *)curAnimTex != (int)animtex)
+	while (*(u32 *)curAnimTex != P32_ENC(animtex))
 	{
 		// which texture to draw this frame
 		frameCurr = FPS_HALF(timer) + curAnimTex->frameOffset;
@@ -21,11 +21,11 @@ void CTR_CycleTex_LEV(struct AnimTex *animtex, int timer)
 		// save result
 		curAnimTex->frameCurr = frameCurr;
 
-		struct IconGroup4 **ptrArray = ANIMTEX_GETARRAY(curAnimTex);
+		P32(struct IconGroup4 *) *ptrArray = ANIMTEX_GETARRAY(curAnimTex);
 
 		// Save new frame
 		// For levels, this is just a pointer
-		P32_SET(curAnimTex->ptrActiveTex, (int *)ptrArray[frameCurr]);
+		P32_SET(curAnimTex->ptrActiveTex, (int *)P32_GET(struct IconGroup4 *, ptrArray[frameCurr]));
 
 		// Go to next AnimTex, which comes after this AnimTex's ptrarray
 		curAnimTex = (struct AnimTex *)&ptrArray[curAnimTex->numFrames];
@@ -39,7 +39,7 @@ void CTR_CycleTex_Model(struct AnimTex *animtex, int timer)
 	struct AnimTex *curAnimTex = animtex;
 
 	// Termination is determined by pointer to First AnimTex
-	while (*(int *)curAnimTex != (int)animtex)
+	while (*(u32 *)curAnimTex != P32_ENC(animtex))
 	{
 		// which texture to draw this frame
 		frameCurr = FPS_HALF(timer) + curAnimTex->frameOffset;
@@ -53,11 +53,11 @@ void CTR_CycleTex_Model(struct AnimTex *animtex, int timer)
 		// save result
 		curAnimTex->frameCurr = frameCurr;
 
-		struct IconGroup4 **ptrArray = ANIMTEX_GETARRAY(curAnimTex);
+		P32(struct IconGroup4 *) *ptrArray = ANIMTEX_GETARRAY(curAnimTex);
 
 		// Save new frame
 		// For Model, this is a pointer to a pointer
-		*P32_GET(int *, curAnimTex->ptrActiveTex) = (int)ptrArray[frameCurr];
+		*P32_GET(u32 *, curAnimTex->ptrActiveTex) = P32_ENC(P32_GET(struct IconGroup4 *, ptrArray[frameCurr]));
 
 		// Go to next AnimTex, which comes after this AnimTex's ptrarray
 		curAnimTex = (struct AnimTex *)&ptrArray[curAnimTex->numFrames];
@@ -65,7 +65,7 @@ void CTR_CycleTex_Model(struct AnimTex *animtex, int timer)
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80021ac0-0x80021b94.
-void CTR_CycleTex_AllModels(u32 numModels, struct Model **pModelArray, int timer)
+void CTR_CycleTex_AllModels(u32 numModels, P32(struct Model *) *pModelArray, int timer)
 {
 	struct Model *pModel;
 	struct ModelHeader *pHeader;
@@ -82,7 +82,7 @@ void CTR_CycleTex_AllModels(u32 numModels, struct Model **pModelArray, int timer
 
 	while (true)
 	{
-		pModel = *pModelArray;
+		pModel = P32_GET(struct Model *, *pModelArray);
 		if (pModel == NULL)
 		{
 			return;

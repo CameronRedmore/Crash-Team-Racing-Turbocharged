@@ -387,7 +387,7 @@ static struct DrawTiresSolidProjectedWheel DrawTiresSolid_SelectProjectedWheel(s
 		selected.jumpIndex += 4;
 	}
 
-	selected.wheelSprite = P32_GET(struct Icon **, scratch->wheelSprites)[spriteIndex];
+	selected.wheelSprite = P32_GET(struct Icon *, P32_GET(P32(struct Icon *) *, scratch->wheelSprites)[spriteIndex]);
 
 	return selected;
 }
@@ -717,7 +717,7 @@ static int DrawTiresSolid_StagePlayer(struct DrawTiresScratch *scratch, struct D
 		return 0;
 	}
 
-	P32_SET(scratch->wheelSprites, P32_GET(struct Icon **, driver->wheelSprites));
+	P32_SET(scratch->wheelSprites, P32_GET(P32(struct Icon *) *, driver->wheelSprites));
 	scratch->tireColor = ((flags & PUSHBUFFER_EXISTS) != 0) ? 0x2e808080 : driver->tireColor;
 
 	if (pb == 0)
@@ -1087,7 +1087,7 @@ static struct DrawTiresReflectionProjectedWheel DrawTiresReflection_SelectProjec
 		selected.jumpIndex += 4;
 	}
 
-	selected.wheelSprite = P32_GET(struct Icon **, scratch->wheelSprites)[spriteIndex];
+	selected.wheelSprite = P32_GET(struct Icon *, P32_GET(P32(struct Icon *) *, scratch->wheelSprites)[spriteIndex]);
 
 	return selected;
 }
@@ -1317,7 +1317,7 @@ static int DrawTiresReflection_StagePlayer(struct DrawTiresScratch *scratch, str
 		return 0;
 	}
 
-	P32_SET(scratch->wheelSprites, P32_GET(struct Icon **, driver->wheelSprites));
+	P32_SET(scratch->wheelSprites, P32_GET(P32(struct Icon *) *, driver->wheelSprites));
 	scratch->tireColor = ((flags & PUSHBUFFER_EXISTS) != 0) ? 0x2e808080 : driver->tireColor;
 
 	DrawTiresReflection_BuildWheelLocalPairs(scratch, driver, inst, idpp);

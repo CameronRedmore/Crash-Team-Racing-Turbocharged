@@ -22,9 +22,9 @@ void LOAD_GlobalModelPtrs_MPK()
 		P32_SET(gGT->modelPtr[m->id], m);
 	}
 
-	if (P32_GET(int **, sdata->PLYROBJECTLIST) != 0)
+	if (P32_GET(P32(int *) *, sdata->PLYROBJECTLIST) != 0)
 	{
-		LibraryOfModels_Store(gGT, -1, (struct Model **)P32_GET(int **, sdata->PLYROBJECTLIST));
+		LibraryOfModels_Store(gGT, -1, (P32(struct Model *) *)P32_GET(P32(int *) *, sdata->PLYROBJECTLIST));
 	}
 }
 

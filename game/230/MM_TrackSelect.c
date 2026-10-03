@@ -1010,9 +1010,9 @@ void MM_TrackSelect_MenuProc(struct RectMenu *menu)
 					// pointer to color data of star
 					u32 *starColor = P32_GET(u32 *, data.ptrColor[D230.timeTrialStars.colorIndex[starIndex]]);
 
-					struct Icon **iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[MM_TRACK_SELECT_TT_STAR_ICON_GROUP]));
+					P32(struct Icon *) *iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[MM_TRACK_SELECT_TT_STAR_ICON_GROUP]));
 
-					DecalHUD_DrawPolyGT4(iconPtrArray[MM_TRACK_SELECT_TT_STAR_ICON], rowX + MM_TRACK_SELECT_ROW_W + MM_TRACK_SELECT_STAR_X_OFFSET,
+					DecalHUD_DrawPolyGT4(P32_GET(struct Icon *, iconPtrArray[MM_TRACK_SELECT_TT_STAR_ICON]), rowX + MM_TRACK_SELECT_ROW_W + MM_TRACK_SELECT_STAR_X_OFFSET,
 					                     (int)rowY + starIndex * MM_TRACK_SELECT_STAR_Y_STEP + MM_TRACK_SELECT_STAR_Y_OFFSET,
 
 					                     // pointer to PrimMem struct
@@ -1035,7 +1035,7 @@ void MM_TrackSelect_MenuProc(struct RectMenu *menu)
 		}
 
 		// Draw string
-		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[data.metaDataLEV[selectMenu[currTrack].levID].name_LNG], (rowX + MM_TRACK_SELECT_ROW_NAME_X_OFFSET),
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.metaDataLEV[selectMenu[currTrack].levID].name_LNG]), (rowX + MM_TRACK_SELECT_ROW_NAME_X_OFFSET),
 		                   (rowBaseY + MM_TRACK_SELECT_ROW_NAME_Y_OFFSET), FONT_BIG, ORANGE);
 
 		if ((D230.trackSelect.trackChangeFrames == 0) && ((s16)rowIndex == MM_TRACK_SELECT_CENTER_ROW))
@@ -1062,7 +1062,7 @@ void MM_TrackSelect_MenuProc(struct RectMenu *menu)
 						ghostTextFlags = (JUSTIFY_CENTER | PERIWINKLE);
 					}
 
-					DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_GHOST_DATA_EXISTS],
+					DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_GHOST_DATA_EXISTS]),
 					                   (rowX + MM_TRACK_SELECT_ROW_NAME_X_OFFSET + MM_TRACK_SELECT_GHOST_TEXT_FROM_NAME_X),
 					                   (rowBaseY + MM_TRACK_SELECT_GHOST_TEXT_Y_OFFSET), FONT_SMALL, ghostTextFlags);
 				}
@@ -1123,10 +1123,10 @@ void MM_TrackSelect_MenuProc(struct RectMenu *menu)
 			// Keep the preview area clear while either the lap or Reverse chooser is open.
 			if (!rightSideMenuOpen)
 			{
-				DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_SELECT_LEVEL_SELECT], (D230.trackSelect_titleTransition.currX + MM_TRACK_SELECT_TITLE_X),
+				DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_SELECT_LEVEL_SELECT]), (D230.trackSelect_titleTransition.currX + MM_TRACK_SELECT_TITLE_X),
 				                   (D230.trackSelect_titleTransition.currY + (u32)previewRect.y), FONT_BIG, (JUSTIFY_CENTER | ORANGE));
 
-				DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_LEVEL], (D230.trackSelect_titleTransition.currX + MM_TRACK_SELECT_TITLE_X),
+				DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_LEVEL]), (D230.trackSelect_titleTransition.currX + MM_TRACK_SELECT_TITLE_X),
 				                   (D230.trackSelect_titleTransition.currY + (u32)previewRect.y + MM_TRACK_SELECT_LEVEL_TEXT_Y_STEP), FONT_BIG,
 				                   (JUSTIFY_CENTER | ORANGE));
 			}

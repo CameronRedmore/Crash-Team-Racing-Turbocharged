@@ -200,7 +200,7 @@ void CC_EndEvent_DrawMenu()
 
 	// fly in from left
 	UI_Lerp2D_Linear(pos.v, -0x64, 0x18, 0x100, 0x18, elapsedFrames, FPS_DOUBLE(CC_FLY_IN_FRAMES));
-	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_TIME_REMAINING], pos.x, pos.y, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_TIME_REMAINING]), pos.x, pos.y, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
 	UI_DrawLimitClock(pos.x - 0x33, pos.y + 0x11, FONT_BIG);
 
 	// fly in from right
@@ -223,7 +223,7 @@ void CC_EndEvent_DrawMenu()
 	}
 
 	// YOU WIN, or TRY AGAIN
-	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[resultStringIndex], pos.x + 0x33, pos.y + 8, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[resultStringIndex]), pos.x + 0x33, pos.y + 8, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
 
 	// if a token is not newly-unlocked
 	if (didLose || CC_EndEvent_HasRewardBit(adv, tokenRewardBit))
@@ -234,7 +234,7 @@ void CC_EndEvent_DrawMenu()
 			return;
 		}
 
-		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_PRESS_TO_CONTINUE], 0x100, 0xbe, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_PRESS_TO_CONTINUE]), 0x100, 0xbe, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
 
 		if ((sdata->AnyPlayerTap & CC_CONFIRM_BUTTON_MASK) == 0)
 		{
@@ -258,7 +258,7 @@ void CC_EndEvent_DrawMenu()
 
 	UI_Lerp2D_Linear(pos.v, -0x64, 0xA2, 0x100, 0xA2, elapsedFrames, FPS_DOUBLE(CC_FLY_IN_FRAMES));
 
-	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_CTR_TOKEN_AWARDED], pos.x, pos.y, FONT_BIG, color);
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_CTR_TOKEN_AWARDED]), pos.x, pos.y, FONT_BIG, color);
 #if defined(CTR_NATIVE)
 	if (token != NULL)
 #endif
@@ -288,7 +288,7 @@ void CC_EndEvent_DrawMenu()
 		OtherFX_Play(0x67, 1);
 	}
 
-	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_PRESS_TO_CONTINUE], 0x100, 0xbe, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_PRESS_TO_CONTINUE]), 0x100, 0xbe, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
 
 	// if still waiting to press X/O, quit function
 	if ((sdata->AnyPlayerTap & CC_CONFIRM_BUTTON_MASK) == 0)

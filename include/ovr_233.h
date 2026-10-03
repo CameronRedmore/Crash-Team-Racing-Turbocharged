@@ -887,7 +887,7 @@ struct CreditsLevHeader
 	// char* ptrStrings[0];
 };
 
-#define CREDITSHEADER_GETSTRINGS(x) ((u32)x + sizeof(struct CreditsLevHeader))
+#define CREDITSHEADER_GETSTRINGS(x) ((uintptr_t)(x) + sizeof(struct CreditsLevHeader))
 
 #ifndef CTR_NATIVE
 CTR_STATIC_ASSERT(OFFSETOF(struct CreditsLevHeader, numStrings) == 0x4);

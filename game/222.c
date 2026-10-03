@@ -250,7 +250,7 @@ void AA_EndEvent_DrawMenu(void)
 
 					s32 textColor = (FPS_HALF(gGT->timer) & 1) ? (JUSTIFY_CENTER | RED) : (JUSTIFY_CENTER | WHITE);
 
-					DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_CTR_TOKEN_AWARDED], textPos.x, textPos.y, FONT_BIG, textColor);
+					DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_CTR_TOKEN_AWARDED]), textPos.x, textPos.y, FONT_BIG, textColor);
 				}
 			}
 		}
@@ -393,7 +393,7 @@ void AA_EndEvent_DrawMenu(void)
 		// but text near middle of screen
 		s16 pressContinueY = (numPlayers == 2) ? 100 : 0xbe;
 
-		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_PRESS_TO_CONTINUE], 0x100, pressContinueY, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_PRESS_TO_CONTINUE]), 0x100, pressContinueY, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
 
 		// If you do not "Press X to continue"
 		if ((sdata->AnyPlayerTap & AA_CONFIRM_BUTTON_MASK) == 0)
@@ -456,7 +456,7 @@ void AA_EndEvent_DrawMenu(void)
 		return;
 	}
 
-	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_PRESS_TO_CONTINUE], 0x100, 0xbe, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_PRESS_TO_CONTINUE]), 0x100, 0xbe, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
 
 	// If you have not pressed X
 	if ((sdata->AnyPlayerTap & AA_CONFIRM_BUTTON_MASK) == 0)
@@ -745,7 +745,7 @@ void AA_EndEvent_DisplayTime(s16 driverId, s16 timeOffsetFrames)
 
 	UI_DrawRaceClock(pos.x, pos.y, UI_RACE_CLOCK_SHOW_RESULTS, driver);
 
-	s16 totalTextWidth = DecalFont_GetLineWidth(P32_GET(char **, sdata->lngStrings)[LNG_TOTAL], FONT_BIG);
+	s16 totalTextWidth = DecalFont_GetLineWidth(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_TOTAL]), FONT_BIG);
 
 	timeBoxRect.x = (pos.x - totalTextWidth) + -6;
 	timeBoxRect.y = (pos.y - timeBoxRect.h) + 0xd;

@@ -248,12 +248,12 @@ static void MM_Characters_NativeDrawStats(void)
 		classIndex = 1;
 	}
 
-	char *classText = P32_GET(char **, sdata->lngStrings)[s_nativeCharacterSelectClassStrings[classIndex]];
+	char *classText = P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[s_nativeCharacterSelectClassStrings[classIndex]]);
 	char *statTexts[3] =
 	{
-		P32_GET(char **, sdata->lngStrings)[LNG_SPEED],
-		P32_GET(char **, sdata->lngStrings)[LNG_ACCEL],
-		P32_GET(char **, sdata->lngStrings)[LNG_TURN],
+		P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_SPEED]),
+		P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_ACCEL]),
+		P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_TURN]),
 	};
 
 	s32 contentLeft = barX;
@@ -618,18 +618,18 @@ static void MM_Characters_NativeDrawPageHints(void)
 	struct IconGroup *fontIconGroup = P32_GET(struct IconGroup *, gGT->iconGroup[4]);
 	if (fontIconGroup != NULL)
 	{
-		struct Icon **iconPtrArray = ICONGROUP_GETICONS(fontIconGroup);
+		P32(struct Icon *) *iconPtrArray = ICONGROUP_GETICONS(fontIconGroup);
 		const s32 halfLetterWidth = DecalFont_GetLineWidth("L", FONT_BIG) >> 1;
 		u32 *arrowColors = P32_GET(u32 *, data.ptrColor[ORANGE]);
 
-		DecalHUD_Arrow2D(iconPtrArray[MM_CHARACTER_SELECT_PAGE_HINT_ARROW_ICON],
+		DecalHUD_Arrow2D(P32_GET(struct Icon *, iconPtrArray[MM_CHARACTER_SELECT_PAGE_HINT_ARROW_ICON]),
 		                 leftX - halfLetterWidth - MM_CHARACTER_SELECT_PAGE_HINT_ARROW_LEFT_GAP,
 		                 hintY + MM_CHARACTER_SELECT_PAGE_HINT_ARROW_Y_OFFSET + MM_CHARACTER_SELECT_PAGE_HINT_ARROW_LEFT_Y_NUDGE,
 		                 &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT),
 		                 arrowColors[0], arrowColors[1], arrowColors[2], arrowColors[3],
 		                 0, MM_CHARACTER_SELECT_PAGE_HINT_ARROW_SCALE, MM_CHARACTER_SELECT_PAGE_HINT_ARROW_LEFT_ROTATION);
 
-		DecalHUD_Arrow2D(iconPtrArray[MM_CHARACTER_SELECT_PAGE_HINT_ARROW_ICON],
+		DecalHUD_Arrow2D(P32_GET(struct Icon *, iconPtrArray[MM_CHARACTER_SELECT_PAGE_HINT_ARROW_ICON]),
 		                 rightX + halfLetterWidth + MM_CHARACTER_SELECT_PAGE_HINT_ARROW_RIGHT_GAP,
 		                 hintY + MM_CHARACTER_SELECT_PAGE_HINT_ARROW_Y_OFFSET,
 		                 &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT),
@@ -1094,7 +1094,7 @@ b32 MM_Characters_boolIsInvalid(s16 *iconPerPlayer, s16 characterID, s16 player)
 // specific to main menu lev, altered in oxide mod
 struct Model *MM_Characters_GetModelByName(const char *name)
 {
-	struct Model **models;
+	P32(struct Model *) *models;
 	struct Model *model;
 	struct Level *level1 = P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1);
 
@@ -1104,7 +1104,7 @@ struct Model *MM_Characters_GetModelByName(const char *name)
 		return NULL;
 	}
 
-	models = P32_GET(struct Model **, level1->ptrModelsPtrArray);
+	models = P32_GET(P32(struct Model *) *, level1->ptrModelsPtrArray);
 	if (models == NULL)
 	{
 		return NULL;
@@ -1114,7 +1114,7 @@ struct Model *MM_Characters_GetModelByName(const char *name)
 	// terminator. A missing preview must not read past the table.
 	for (u32 modelIndex = 0; modelIndex < level1->numModels; modelIndex++)
 	{
-		model = models[modelIndex];
+		model = P32_GET(struct Model *, models[modelIndex]);
 		if (model == NULL)
 		{
 			continue;
@@ -1837,11 +1837,11 @@ void MM_Characters_MenuProc(struct RectMenu *menu)
 			goto dontDrawSelectCharacter;
 		}
 
-		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_SELECT_CHARACTER_SELECT], posX + MM_CHARACTER_SELECT_3P_TITLE_X, posY + MM_CHARACTER_SELECT_3P_SELECT_Y,
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_SELECT_CHARACTER_SELECT]), posX + MM_CHARACTER_SELECT_3P_TITLE_X, posY + MM_CHARACTER_SELECT_3P_SELECT_Y,
 		                   FONT_BIG, (JUSTIFY_CENTER | ORANGE));
 		characterSelectType = FONT_BIG;
 
-		characterSelectString = P32_GET(char **, sdata->lngStrings)[LNG_CHARACTER];
+		characterSelectString = P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_CHARACTER]);
 
 		posX = posX + MM_CHARACTER_SELECT_3P_TITLE_X;
 		posY = posY + MM_CHARACTER_SELECT_3P_CHARACTER_Y;
@@ -1856,11 +1856,11 @@ void MM_Characters_MenuProc(struct RectMenu *menu)
 			goto dontDrawSelectCharacter;
 		}
 
-		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_SELECT_CHARACTER_SELECT], posX + MM_CHARACTER_SELECT_4P_TITLE_X, posY + MM_CHARACTER_SELECT_4P_SELECT_Y,
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_SELECT_CHARACTER_SELECT]), posX + MM_CHARACTER_SELECT_4P_TITLE_X, posY + MM_CHARACTER_SELECT_4P_SELECT_Y,
 		                   FONT_CREDITS, (JUSTIFY_CENTER | ORANGE));
 		characterSelectType = FONT_CREDITS;
 
-		characterSelectString = P32_GET(char **, sdata->lngStrings)[LNG_CHARACTER];
+		characterSelectString = P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_CHARACTER]);
 
 		posX = posX + MM_CHARACTER_SELECT_4P_TITLE_X;
 		posY = posY + MM_CHARACTER_SELECT_4P_CHARACTER_Y;
@@ -1872,7 +1872,7 @@ void MM_Characters_MenuProc(struct RectMenu *menu)
 	case MM_CHARACTER_SELECT_LAYOUT_2P_LIMITED:
 		characterSelectType = FONT_BIG;
 
-		characterSelectString = P32_GET(char **, sdata->lngStrings)[LNG_SELECT_CHARACTER];
+		characterSelectString = P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_SELECT_CHARACTER]);
 
 		posX = posX + MM_CHARACTER_SELECT_LIMITED_TITLE_X;
 		posY = posY + MM_CHARACTER_SELECT_LIMITED_TITLE_Y;
@@ -2326,7 +2326,7 @@ dontDrawSelectCharacter:
 			s16 characterID = data.characterIDs[playerIndex];
 			if (playerCharacterMeta != NULL)
 				characterID = playerCharacterMeta->characterID;
-			const char *characterName = P32_GET(char **, sdata->lngStrings)[data.MetaDataCharacters[characterID].name_LNG_long];
+			const char *characterName = P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.MetaDataCharacters[characterID].name_LNG_long]);
 #if defined(CTR_NATIVE)
 			const int customRacerIndex = NativeCustomRacer_GetPlayerSelection(playerIndex);
 			if (customRacerIndex >= 0)

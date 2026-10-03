@@ -237,7 +237,7 @@ force_inline void AH_MaskHint_DrawRepeatPrompt(void)
 	r.x = -10;
 	r.y = 0xb0;
 	r.w = 0x214;
-	r.h = 8 + DecalFont_DrawMultiLine(P32_GET(char **, sdata->lngStrings)[lngIndex], 0x100, 0xb4, 400, 2, 0xffff8000);
+	r.h = 8 + DecalFont_DrawMultiLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[lngIndex]), 0x100, 0xb4, 400, 2, 0xffff8000);
 
 	RECTMENU_DrawInnerRect(&r, 4, P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT));
 }

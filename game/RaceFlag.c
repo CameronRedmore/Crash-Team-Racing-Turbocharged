@@ -379,7 +379,7 @@ void RaceFlag_DrawLoadingString(void)
 	u32 *oldOT;
 	u8 glyph[2];
 
-	loadingText = P32_GET(char **, sdata->lngStrings)[LNG_LOADING];
+	loadingText = P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_LOADING]);
 
 	// pointer to OT mem
 	oldOT = (u32 *)P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT);

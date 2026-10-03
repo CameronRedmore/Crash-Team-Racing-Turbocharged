@@ -174,6 +174,6 @@ struct GhostHeader
 	// char recordBuffer[0]; // yes, zero bytes
 };
 
-#define GHOSTHEADER_GETRECORDBUFFER(x) (char *)((u32)x + sizeof(struct GhostHeader))
+#define GHOSTHEADER_GETRECORDBUFFER(x) (char *)((uintptr_t)(x) + sizeof(struct GhostHeader))
 
 #endif

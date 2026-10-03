@@ -445,8 +445,8 @@ s32 CAM_Path_GetNumPoints(void)
 		return 0;
 	}
 
-	void **ptrs = ST1_GETPOINTERS(ptrSpawnType1);
-	introCam = ptrs[ST1_CAMERA_PATH];
+	P32(void *) *ptrs = ST1_GETPOINTERS(ptrSpawnType1);
+	introCam = P32_GET(void *, ptrs[ST1_CAMERA_PATH]);
 	if (introCam == NULL)
 	{
 		return 0;
@@ -480,8 +480,8 @@ u8 CAM_Path_Move(s32 frameIndex, s16 *position, s16 *rotation, s16 *pathFlagsOut
 		return 0;
 	}
 
-	void **ptrs = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->ptrSpawnType1));
-	s16 *ptrCam = ptrs[ST1_CAMERA_PATH];
+	P32(void *) *ptrs = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->ptrSpawnType1));
+	s16 *ptrCam = P32_GET(void *, ptrs[ST1_CAMERA_PATH]);
 
 	u16 pathNumNode = (u16)ptrCam[0];
 	u16 pathFlags = (u16)ptrCam[1];
@@ -1765,8 +1765,8 @@ LAB_8001ab04:
 		else
 		{
 			struct SpawnType1 *st1 = P32_GET(struct SpawnType1 *, P32_GET(struct Level *, gGT->level1)->ptrSpawnType1);
-			void **pointers = ST1_GETPOINTERS(st1);
-			u8 *cameraPath = pointers[ST1_CAMERA_PATH];
+			P32(void *) *pointers = ST1_GETPOINTERS(st1);
+			u8 *cameraPath = P32_GET(void *, pointers[ST1_CAMERA_PATH]);
 			s32 flyInDone = 0;
 
 			// No camera + No ghosts (battle maps)
@@ -1958,7 +1958,7 @@ void CAM_ThTick(struct Thread *t)
 	u32 uVar10;
 	struct PVS *psVar11;
 	s32 *piVar12;
-	struct Instance **ppsVar13;
+	P32(struct Instance *) *ppsVar13;
 	struct SpawnType1 *psVar14;
 	struct CheckpointNode *psVar15;
 	u32 uVar16;
@@ -2039,8 +2039,8 @@ void CAM_ThTick(struct Thread *t)
 		goto SkipNewCameraEOR;
 	}
 
-	void **ptrs = ST1_GETPOINTERS(psVar14);
-	psVar19 = ptrs[ST1_CAMERA_EOR];
+	P32(void *) *ptrs = ST1_GETPOINTERS(psVar14);
+	psVar19 = P32_GET(void *, ptrs[ST1_CAMERA_EOR]);
 
 	// number of EOR cameras
 	sVar6 = *psVar19;
@@ -2499,7 +2499,7 @@ LAB_8001c150:
 			if (P32_GET(struct QuadBlock *, cDC->ptrQuadBlock) != 0)
 			{
 				psVar11 = P32_GET(struct PVS *, P32_GET(struct QuadBlock *, cDC->ptrQuadBlock)->pvs);
-				if ((psVar11 != 0) && (ppsVar13 = P32_GET(struct Instance **, psVar11->visInstSrc), ppsVar13 != 0))
+				if ((psVar11 != 0) && (ppsVar13 = P32_GET(P32(struct Instance *) *, psVar11->visInstSrc), ppsVar13 != 0))
 				{
 					P32_SET(cDC->visInstSrc, ppsVar13);
 				}

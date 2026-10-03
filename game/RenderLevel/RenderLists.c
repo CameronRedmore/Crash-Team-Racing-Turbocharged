@@ -157,14 +157,14 @@ static int RenderLists_Select1P2PSlot(const struct BSP *bsp, struct PushBuffer *
 	return RENDER_LIST_SLOT_DYNAMIC_SUBDIV;
 }
 
-static struct VisMemBspListNode **RenderLists_Get1P2PHead(void *LevRenderList, int slotIndex)
+static P32(struct VisMemBspListNode *) *RenderLists_Get1P2PHead(void *LevRenderList, int slotIndex)
 {
 	if (slotIndex == RENDER_LIST_SLOT_FULL_DYNAMIC)
 	{
-		return (struct VisMemBspListNode **)((char *)LevRenderList + 0x28);
+		return (P32(struct VisMemBspListNode *) *)((char *)LevRenderList + 0x28);
 	}
 
-	return (struct VisMemBspListNode **)((char *)LevRenderList + slotIndex * 8 + 4);
+	return (P32(struct VisMemBspListNode *) *)((char *)LevRenderList + slotIndex * 8 + 4);
 }
 
 static int RenderLists_Select3P4PSlot(const struct BSP *bsp)
@@ -187,15 +187,15 @@ static int RenderLists_Select3P4PSlot(const struct BSP *bsp)
 	return 1;
 }
 
-static void RenderLists_LinkBsp(struct BSP *bspRoot, struct BSP *bsp, struct VisMemBspListNode **head, struct VisMemBspListNode *bspList)
+static void RenderLists_LinkBsp(struct BSP *bspRoot, struct BSP *bsp, P32(struct VisMemBspListNode *) *head, struct VisMemBspListNode *bspList)
 {
 	struct VisMemBspListNode *node;
 	int bspIndex = bsp - bspRoot;
 
 	node = &bspList[bspIndex];
 
-	P32_SET(node->next, *head);
-	*head = node;
+	P32_SET(node->next, P32_GET(struct VisMemBspListNode *, *head));
+	P32_SET(*head, node);
 }
 
 static void RenderLists_PushChild(struct BSP *bspRoot, const int *visLeafList, struct PushBuffer *pb, BspChildId childID,
@@ -304,7 +304,7 @@ static int RenderLists_Walk3P4P(struct BSP *bspRoot, const int *visLeafList, str
 	if ((bspRoot->flag & BSP_NODE_FLAG_LEAF) != 0)
 	{
 		int slotIndex = RenderLists_Select3P4PSlot(bspRoot);
-		struct VisMemBspListNode **head = (struct VisMemBspListNode **)((char *)LevRenderList + slotIndex * 8 + 4);
+		P32(struct VisMemBspListNode *) *head = (P32(struct VisMemBspListNode *) *)((char *)LevRenderList + slotIndex * 8 + 4);
 
 		RenderLists_LinkBsp(bspRoot, bspRoot, head, bspList);
 		return 1;
@@ -332,7 +332,7 @@ static int RenderLists_Walk3P4P(struct BSP *bspRoot, const int *visLeafList, str
 			}
 
 			int slotIndex = RenderLists_Select3P4PSlot(bsp);
-			struct VisMemBspListNode **head = (struct VisMemBspListNode **)((char *)LevRenderList + slotIndex * 8 + 4);
+			P32(struct VisMemBspListNode *) *head = (P32(struct VisMemBspListNode *) *)((char *)LevRenderList + slotIndex * 8 + 4);
 
 			RenderLists_LinkBsp(bspRoot, bsp, head, bspList);
 			count++;

@@ -518,7 +518,7 @@ u32 main(void)
 							uVar12 = 100;
 						}
 
-						DecalFont_DrawMultiLine(P32_GET(char **, sdata->lngStrings)[LNG_DEMO_MODE_PRESS_ANY_BUTTON_TO_EXIT], 0x100, uVar12, 0x200, 2, 0xffff8000);
+						DecalFont_DrawMultiLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_DEMO_MODE_PRESS_ANY_BUTTON_TO_EXIT]), 0x100, uVar12, 0x200, 2, 0xffff8000);
 					}
 
 					if ((gGT->gameMode1 & LOADING) == 0

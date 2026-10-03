@@ -140,7 +140,7 @@ void AH_WarpPad_SetNumModelData(struct Instance *inst, struct ModelHeader *mh)
 
 	idpp[0].ptrCommandList = mh->ptrCommandList;
 	idpp[0].ptrColorLayout = (u32)P32_GET(u32 *, mh->ptrColors);
-	P32_SET(idpp[0].ptrTexLayout, P32_GET(struct TextureLayout **, mh->ptrTexLayout));
+	P32_SET(idpp[0].ptrTexLayout, P32_GET(P32(struct TextureLayout *) *, mh->ptrTexLayout));
 	P32_SET(idpp[0].ptrCurrFrame, P32_GET(struct ModelFrame *, mh->ptrFrameData));
 }
 
@@ -225,7 +225,7 @@ void AH_WarpPad_ThTick(struct Thread *t)
 	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	struct WarpPad *warppadObj = P32_GET(void *, t->object);
 	struct Instance *warppadInst = P32_GET(struct Instance *, t->inst);
-	struct Instance **visInstSrc = P32_GET(struct Instance **, gGT->cameraDC[0].visInstSrc);
+	P32(struct Instance *) *visInstSrc = P32_GET(P32(struct Instance *) *, gGT->cameraDC[0].visInstSrc);
 	P32(struct Instance *) *instArr = &warppadObj->inst[0];
 	MATRIX *warppadMatrix = &warppadInst->matrix;
 
@@ -256,9 +256,9 @@ void AH_WarpPad_ThTick(struct Thread *t)
 	if (visInstSrc != NULL)
 #endif
 	{
-		while (visInstSrc[0] != 0)
+		while (P32_GET(struct Instance *, visInstSrc[0]) != 0)
 		{
-			if (visInstSrc[0] == warppadInst)
+			if (P32_GET(struct Instance *, visInstSrc[0]) == warppadInst)
 			{
 				boolOpen = true;
 				break;
@@ -332,12 +332,12 @@ void AH_WarpPad_ThTick(struct Thread *t)
 				// default
 				if (levelID < AH_WP_ID_FIRST_GEM_CUP)
 				{
-					warppadLNG = P32_GET(char **, sdata->lngStrings)[data.metaDataLEV[levelID].name_LNG];
+					warppadLNG = P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.metaDataLEV[levelID].name_LNG]);
 				}
 				// gem cups
 				else
 				{
-					warppadLNG = P32_GET(char **, sdata->lngStrings)[data.AdvCups[levelID - AH_WP_ID_FIRST_GEM_CUP].lngIndex_CupName];
+					warppadLNG = P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.AdvCups[levelID - AH_WP_ID_FIRST_GEM_CUP].lngIndex_CupName]);
 				}
 
 				// midpoing X,

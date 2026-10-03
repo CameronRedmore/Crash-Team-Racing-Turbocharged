@@ -82,7 +82,7 @@ struct NavHeader
 	// 0x4C
 	// struct NavFrame frame[0];
 };
-#define NAVHEADER_GETFRAME(x)    ((struct NavFrame *)((u32)x + sizeof(struct NavHeader)))
+#define NAVHEADER_GETFRAME(x)    ((struct NavFrame *)((uintptr_t)(x) + sizeof(struct NavHeader)))
 
 #define NAVFRAME_GETNEXTFRAME(x) (((struct NavFrame *)x) + 1)
 

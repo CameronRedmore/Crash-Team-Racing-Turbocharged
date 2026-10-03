@@ -133,19 +133,19 @@ void MM_HighScore_Draw(u16 trackIndex, u32 rowIndex, u32 posX, u32 posY)
 	s16 numColor = ((FPS_HALF(sdata->frameCounter) & MM_HIGHSCORE_FLASH_TIMER_BIT) == 0) ? RED : ORANGE;
 	u32 *colorPtr = P32_GET(u32 *, data.ptrColor[numColor]);
 
-	struct Icon **iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[MM_HIGHSCORE_ARROW_ICON_GROUP]));
+	P32(struct Icon *) *iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[MM_HIGHSCORE_ARROW_ICON_GROUP]));
 	const struct TransitionMeta *titleMeta = &D230.transitionMeta_HighScores[MM_HIGHSCORE_TITLE_META_INDEX];
 	const struct TransitionMeta *bestTrackMeta = &D230.transitionMeta_HighScores[MM_HIGHSCORE_BEST_TRACK_META_INDEX];
 	const struct TransitionMeta *bestLapLabelMeta = &D230.transitionMeta_HighScores[MM_HIGHSCORE_BEST_LAP_LABEL_META_INDEX];
 	const struct TransitionMeta *bestLapEntryMeta = &D230.transitionMeta_HighScores[MM_HIGHSCORE_BEST_LAP_ENTRY_META_INDEX];
 
 	// Draw arrow pointing Left
-	DecalHUD_Arrow2D(iconPtrArray[MM_HIGHSCORE_ARROW_ICON_ID], titleMeta->currX + (offsetX - lineWidth) + MM_HIGHSCORE_ARROW_LEFT_X_OFFSET,
+	DecalHUD_Arrow2D(P32_GET(struct Icon *, iconPtrArray[MM_HIGHSCORE_ARROW_ICON_ID]), titleMeta->currX + (offsetX - lineWidth) + MM_HIGHSCORE_ARROW_LEFT_X_OFFSET,
 	                 titleMeta->currY + offsetY + MM_HIGHSCORE_ARROW_Y_OFFSET, &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), colorPtr[0], colorPtr[1],
 	                 colorPtr[2], colorPtr[3], 0, MM_HIGHSCORE_ARROW_SCALE, MM_HIGHSCORE_ARROW_LEFT_ROTATION);
 
 	// Draw arrow pointing Right
-	DecalHUD_Arrow2D(iconPtrArray[MM_HIGHSCORE_ARROW_ICON_ID], titleMeta->currX + (lineWidth + offsetX) + MM_HIGHSCORE_ARROW_RIGHT_X_OFFSET,
+	DecalHUD_Arrow2D(P32_GET(struct Icon *, iconPtrArray[MM_HIGHSCORE_ARROW_ICON_ID]), titleMeta->currX + (lineWidth + offsetX) + MM_HIGHSCORE_ARROW_RIGHT_X_OFFSET,
 	                 titleMeta->currY + offsetY + MM_HIGHSCORE_ARROW_Y_OFFSET, &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), colorPtr[0], colorPtr[1],
 	                 colorPtr[2], colorPtr[3], 0, MM_HIGHSCORE_ARROW_SCALE, 0);
 
@@ -155,7 +155,7 @@ void MM_HighScore_Draw(u16 trackIndex, u32 rowIndex, u32 posX, u32 posY)
 
 	Color iconColor = D230.highscore_iconColor;
 
-	MM_HighScore_Text3D(P32_GET(char **, sdata->lngStrings)[LNG_BEST_TRACK_TIMES], bestTrackMeta->currX + offsetX + MM_HIGHSCORE_BEST_TRACK_LABEL_X_OFFSET,
+	MM_HighScore_Text3D(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_BEST_TRACK_TIMES]), bestTrackMeta->currX + offsetX + MM_HIGHSCORE_BEST_TRACK_LABEL_X_OFFSET,
 	                    bestTrackMeta->currY + offsetY + MM_HIGHSCORE_BEST_TRACK_LABEL_Y_OFFSET, FONT_SMALL, 0);
 
 	// first entry: Time Trial or Relic
@@ -185,9 +185,9 @@ void MM_HighScore_Draw(u16 trackIndex, u32 rowIndex, u32 posX, u32 posY)
 			{
 				colorPtr = P32_GET(u32 *, data.ptrColor[D230.highScoreGhostStars.colorIndex[ghostStarIndex]]);
 
-				struct Icon **ptrIconArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[MM_HIGHSCORE_GHOST_STAR_ICON_GROUP]));
+				P32(struct Icon *) *ptrIconArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[MM_HIGHSCORE_GHOST_STAR_ICON_GROUP]));
 
-				DecalHUD_DrawPolyGT4(ptrIconArray[MM_HIGHSCORE_GHOST_STAR_ICON_ID],
+				DecalHUD_DrawPolyGT4(P32_GET(struct Icon *, ptrIconArray[MM_HIGHSCORE_GHOST_STAR_ICON_ID]),
 				                     titleMeta->currX + offsetX + (ghostStarIndex * MM_HIGHSCORE_GHOST_STAR_X_STEP) + MM_HIGHSCORE_GHOST_STAR_X_OFFSET,
 				                     titleMeta->currY + offsetY + MM_HIGHSCORE_GHOST_STAR_Y_OFFSET,
 				                     // pointer to PrimMem struct
@@ -200,7 +200,7 @@ void MM_HighScore_Draw(u16 trackIndex, u32 rowIndex, u32 posX, u32 posY)
 		gGT->levelID = prevLevelID;
 		GAMEPROG_GetPtrHighScoreTrack();
 
-		MM_HighScore_Text3D(P32_GET(char **, sdata->lngStrings)[LNG_BEST_LAP_TIME], bestLapLabelMeta->currX + offsetX + MM_HIGHSCORE_BEST_LAP_LABEL_X_OFFSET,
+		MM_HighScore_Text3D(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_BEST_LAP_TIME]), bestLapLabelMeta->currX + offsetX + MM_HIGHSCORE_BEST_LAP_LABEL_X_OFFSET,
 		                    bestLapLabelMeta->currY + offsetY + MM_HIGHSCORE_BEST_LAP_LABEL_Y_OFFSET, FONT_SMALL, 0);
 
 		// Character Name

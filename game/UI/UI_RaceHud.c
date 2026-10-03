@@ -592,7 +592,7 @@ void UI_DrawPosSuffix(s16 posX, s16 posY, struct Driver *d, s16 flags)
 	}
 
 	// Draw the suffix of your current position
-	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[data.stringIndexSuffix[currRank]], posX, posY, FONT_BIG, flags);
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.stringIndexSuffix[currRank]]), posX, posY, FONT_BIG, flags);
 
 	// setting posZ changes which number draws
 	if (P32_GET(struct Instance *, d->instBigNum) != 0)
@@ -635,7 +635,7 @@ void UI_DrawLapCount(s16 posX, int posY, int unusedScale, struct Driver *d)
 	// 1P or 2P
 	if (numPlyrCurrGame < UI_LAP_COUNT_SPLIT_PLAYER_COUNT)
 	{
-		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_LAP], posX, posY, FONT_SMALL, (JUSTIFY_RIGHT | PERIWINKLE));
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_LAP]), posX, posY, FONT_SMALL, (JUSTIFY_RIGHT | PERIWINKLE));
 
 		sprintf(&message[0], &sdata->s_intDividing[0], currLap, numLaps);
 		str = &message[0];

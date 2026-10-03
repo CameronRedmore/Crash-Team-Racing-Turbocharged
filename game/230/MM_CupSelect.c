@@ -291,7 +291,7 @@ static void MM_CupSelect_CustomCups_Update(struct RectMenu *menu)
 	{
 		s16 trackID = data.ArcadeCups[customCups.modifiedCup].CupTrack[trackIndex].trackID;
 
-		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[data.metaDataLEV[trackID].name_LNG], textX, textY + 0x10 * trackIndex, FONT_SMALL, ORANGE);
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.metaDataLEV[trackID].name_LNG]), textX, textY + 0x10 * trackIndex, FONT_SMALL, ORANGE);
 	}
 
 	RECT selectedCupWindow = {
@@ -427,7 +427,7 @@ void MM_CupSelect_MenuProc(struct RectMenu *menu)
 
 	D230.cupSelectTransition.frame = elapsedFrames;
 
-	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_SELECT_CUP_RACE], D230.transitionMeta_cupSel[MM_CUP_SELECT_TITLE_META_INDEX].currX + MM_CUP_SELECT_TITLE_X_OFFSET,
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_SELECT_CUP_RACE]), D230.transitionMeta_cupSel[MM_CUP_SELECT_TITLE_META_INDEX].currX + MM_CUP_SELECT_TITLE_X_OFFSET,
 	                   D230.transitionMeta_cupSel[MM_CUP_SELECT_TITLE_META_INDEX].currY + MM_CUP_SELECT_TITLE_Y_OFFSET, FONT_BIG, MM_CUP_SELECT_TEXT_COLOR);
 
 	// Loop through all four cups
@@ -450,7 +450,7 @@ void MM_CupSelect_MenuProc(struct RectMenu *menu)
 		int startY = (s16)D230.transitionMeta_cupSel[cupIndex].currY + (cupIndex >> 1) * MM_CUP_SELECT_ROW_HEIGHT;
 
 		// draw the name of the cup
-		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[data.ArcadeCups[cupIndex].lngIndex_CupName], startX + MM_CUP_SELECT_NAME_X_OFFSET,
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.ArcadeCups[cupIndex].lngIndex_CupName]), startX + MM_CUP_SELECT_NAME_X_OFFSET,
 		                   startY + MM_CUP_SELECT_NAME_Y_OFFSET, FONT_CREDITS, txtColor);
 
 		startX = startX + MM_CUP_SELECT_CONTENT_X_OFFSET;
@@ -464,9 +464,9 @@ void MM_CupSelect_MenuProc(struct RectMenu *menu)
 			{
 				u32 *starColor = P32_GET(u32 *, data.ptrColor[D230.cupSelectStars.colorIndex[starIndex]]);
 
-				struct Icon **iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[MM_CUP_SELECT_STAR_ICON_GROUP]));
+				P32(struct Icon *) *iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[MM_CUP_SELECT_STAR_ICON_GROUP]));
 
-				DecalHUD_DrawPolyGT4(iconPtrArray[MM_CUP_SELECT_STAR_ICON_ID],
+				DecalHUD_DrawPolyGT4(P32_GET(struct Icon *, iconPtrArray[MM_CUP_SELECT_STAR_ICON_ID]),
 				                     startX + (cupIndex & 1) * MM_CUP_SELECT_STAR_COLUMN_BIAS + MM_CUP_SELECT_STAR_X_OFFSET,
 				                     startY + starIndex * MM_CUP_SELECT_STAR_Y_STEP + MM_CUP_SELECT_STAR_Y_OFFSET, &P32_GET(struct DB *, gGT->backBuffer)->primMem,
 				                     P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), starColor[0], starColor[1], starColor[2], starColor[3], 0, FP(1.0));

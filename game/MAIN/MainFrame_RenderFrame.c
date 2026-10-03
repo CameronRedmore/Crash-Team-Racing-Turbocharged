@@ -404,13 +404,13 @@ void DrawUnpluggedMsg(struct GameTracker *gGT, struct GamepadSystem *gGamepads)
 
 		// if controller is unplugged
 
-		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[data.lngIndex_gamepadUnplugged[lngArrStart + i]], 0x100, posY + window.h, FONT_SMALL, (JUSTIFY_CENTER | ORANGE));
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.lngIndex_gamepadUnplugged[lngArrStart + i]]), 0x100, posY + window.h, FONT_SMALL, (JUSTIFY_CENTER | ORANGE));
 
 		// add for each line
 		window.h += 8;
 	}
 
-	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_PLEASE_INSERT_A_CONTROLLER], 0x100, posY + window.h, FONT_SMALL, (JUSTIFY_CENTER | ORANGE));
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_PLEASE_INSERT_A_CONTROLLER]), 0x100, posY + window.h, FONT_SMALL, (JUSTIFY_CENTER | ORANGE));
 
 	// add for each line
 	window.h += 8;
@@ -500,7 +500,7 @@ void DrawFinalLap(struct GameTracker *gGT)
 
 		// need to specify OT, or else "FINAL LAP" will draw on top of character icons,
 		// and by doing this, "FINAL LAP" draws under the character icons instead
-		DecalFont_DrawLineOT(P32_GET(char **, sdata->lngStrings)[LNG_FINAL_LAP], resultPos.x, resultPos.y, FONT_BIG, (JUSTIFY_CENTER | ORANGE), P32_GET(uint32_t *, pb->ptrOT));
+		DecalFont_DrawLineOT(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_FINAL_LAP]), resultPos.x, resultPos.y, FONT_BIG, (JUSTIFY_CENTER | ORANGE), P32_GET(uint32_t *, pb->ptrOT));
 
 		sdata->finalLapTextTimer[i]--;
 	}

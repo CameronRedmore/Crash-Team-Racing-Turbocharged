@@ -472,8 +472,8 @@ void RB_Plant_LInB(struct Instance *inst)
 	if (ptrSpawnType1->count > 0)
 	{
 		// puts plants on separate cycles
-		void **pointers = ST1_GETPOINTERS(ptrSpawnType1);
-		metaArray = (s16 *)pointers[ST1_SPAWN];
+		P32(void *) *pointers = ST1_GETPOINTERS(ptrSpawnType1);
+		metaArray = (s16 *)P32_GET(void *, pointers[ST1_SPAWN]);
 
 		plantID = inst->name[strlen(inst->name) - 1] - '0';
 		plantObj->cooldown = FPS_DOUBLE(metaArray[plantID * 2 + 0]);

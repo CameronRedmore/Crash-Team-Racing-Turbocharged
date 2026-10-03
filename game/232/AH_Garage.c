@@ -257,7 +257,7 @@ LAB_800aec34:
 		// draw string, lng_challenge
 		DecalFont_DrawLine(
 
-		    P32_GET(char **, sdata->lngStrings)[data.lng_challenge[R232.bossCharacterIDs[hubID]]],
+		    P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.lng_challenge[R232.bossCharacterIDs[hubID]]]),
 
 		    view.x + (view.w >> 1), ((view.y + view.h) - 0x1e), 1, 0xffff8000);
 	}

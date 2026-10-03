@@ -332,7 +332,7 @@ void LevInstDef_UnPack(struct mesh_info *ptr_mesh_info)
 	int numQuadBlock;
 	struct QuadBlock *ptrQuadBlockArray;
 	struct QuadBlock *qbCurr;
-	struct InstDef **visInstSrc;
+	P32(struct InstDef *) *visInstSrc;
 	struct Level *level1;
 
 	numQuadBlock = ptr_mesh_info->numQuadBlock;
@@ -347,10 +347,10 @@ void LevInstDef_UnPack(struct mesh_info *ptr_mesh_info)
 	{
 		qbCurr = &ptrQuadBlockArray[i];
 
-		if ((P32_GET(struct PVS *, qbCurr->pvs) != 0) && (P32_GET(struct Instance **, P32_GET(struct PVS *, qbCurr->pvs)->visInstSrc) != 0))
+		if ((P32_GET(struct PVS *, qbCurr->pvs) != 0) && (P32_GET(P32(struct Instance *) *, P32_GET(struct PVS *, qbCurr->pvs)->visInstSrc) != 0))
 		{
 			// loop through all instance pointers visible on quadblock
-			for (visInstSrc = (struct InstDef **)P32_GET(struct Instance **, P32_GET(struct PVS *, qbCurr->pvs)->visInstSrc); visInstSrc[0] != NULL; visInstSrc++)
+			for (visInstSrc = (P32(struct InstDef *) *)P32_GET(P32(struct Instance *) *, P32_GET(struct PVS *, qbCurr->pvs)->visInstSrc); P32_GET(struct InstDef *, visInstSrc[0]) != NULL; visInstSrc++)
 			{
 				//ND BUG: This operation is not idempotent. The outer for loop means we will do this operation multiple times
 				//on the same pointer, so we keep switching it from an InstDef pointer to an Instance pointer and back again.
@@ -358,19 +358,19 @@ void LevInstDef_UnPack(struct mesh_info *ptr_mesh_info)
 				//quadblocks), but we need to keep this in mind. The easiest solution I can think of is to keep track of which
 				//InstDefs have been unpacked and only unpack them once, but that requires a lot of extra bookkeeping and wouldn't.
 				//be "vanilla".
-				visInstSrc[0] = (struct InstDef *)P32_GET(struct Instance *, visInstSrc[0]->ptrInstance);
+				P32_SET(visInstSrc[0], (struct InstDef *)P32_GET(struct Instance *, P32_GET(struct InstDef *, visInstSrc[0])->ptrInstance));
 			}
 		}
 	}
 
 	level1 = P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1);
 
-	if (P32_GET(struct InstDef **, level1->ptrInstDefPtrArray) != 0)
+	if (P32_GET(P32(struct InstDef *) *, level1->ptrInstDefPtrArray) != 0)
 	{
 		// loop through all instDef pointers in the LEV
-		for (visInstSrc = P32_GET(struct InstDef **, level1->ptrInstDefPtrArray); visInstSrc[0] != 0; visInstSrc++)
+		for (visInstSrc = P32_GET(P32(struct InstDef *) *, level1->ptrInstDefPtrArray); P32_GET(struct InstDef *, visInstSrc[0]) != 0; visInstSrc++)
 		{
-			visInstSrc[0] = (struct InstDef *)P32_GET(struct Instance *, visInstSrc[0]->ptrInstance);
+			P32_SET(visInstSrc[0], (struct InstDef *)P32_GET(struct Instance *, P32_GET(struct InstDef *, visInstSrc[0])->ptrInstance));
 		}
 	}
 }
@@ -383,7 +383,7 @@ void LevInstDef_RePack(struct mesh_info *ptr_mesh_info, b32 boolAdvHub)
 	int numQuadBlock;
 	struct QuadBlock *ptrQuadBlockArray;
 	struct QuadBlock *qbCurr;
-	struct Instance **visInstSrc;
+	P32(struct Instance *) *visInstSrc;
 	struct Level *level1;
 	struct Thread *th;
 
@@ -395,24 +395,24 @@ void LevInstDef_RePack(struct mesh_info *ptr_mesh_info, b32 boolAdvHub)
 	{
 		qbCurr = &ptrQuadBlockArray[i];
 
-		if ((P32_GET(struct PVS *, qbCurr->pvs) != 0) && (P32_GET(struct Instance **, P32_GET(struct PVS *, qbCurr->pvs)->visInstSrc) != 0))
+		if ((P32_GET(struct PVS *, qbCurr->pvs) != 0) && (P32_GET(P32(struct Instance *) *, P32_GET(struct PVS *, qbCurr->pvs)->visInstSrc) != 0))
 		{
 			// loop through all instance pointers visible on quadblock
-			for (visInstSrc = P32_GET(struct Instance **, P32_GET(struct PVS *, qbCurr->pvs)->visInstSrc); visInstSrc[0] != NULL; visInstSrc++)
+			for (visInstSrc = P32_GET(P32(struct Instance *) *, P32_GET(struct PVS *, qbCurr->pvs)->visInstSrc); P32_GET(struct Instance *, visInstSrc[0]) != NULL; visInstSrc++)
 			{
-				visInstSrc[0] = (struct Instance *)P32_GET(struct InstDef *, visInstSrc[0]->instDef); // maybe `visInstSrc[0]->instDef->ptrInstance`?
+				P32_SET(visInstSrc[0], (struct Instance *)P32_GET(struct InstDef *, P32_GET(struct Instance *, visInstSrc[0])->instDef)); // maybe `P32_GET(struct Instance *, visInstSrc[0])->instDef->ptrInstance`?
 			}
 		}
 	}
 
 	level1 = P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1);
 
-	if (P32_GET(struct InstDef **, level1->ptrInstDefPtrArray) != 0)
+	if (P32_GET(P32(struct InstDef *) *, level1->ptrInstDefPtrArray) != 0)
 	{
 		// loop through all instDef pointers in the LEV
-		for (visInstSrc = (struct Instance **)P32_GET(struct InstDef **, level1->ptrInstDefPtrArray); visInstSrc[0] != NULL; visInstSrc++)
+		for (visInstSrc = (P32(struct Instance *) *)P32_GET(P32(struct InstDef *) *, level1->ptrInstDefPtrArray); P32_GET(struct Instance *, visInstSrc[0]) != NULL; visInstSrc++)
 		{
-			struct Instance *inst = visInstSrc[0];
+			struct Instance *inst = P32_GET(struct Instance *, visInstSrc[0]);
 			struct InstDef *instDef = P32_GET(struct InstDef *, inst->instDef);
 
 			// if on adv hub
@@ -429,7 +429,7 @@ void LevInstDef_RePack(struct mesh_info *ptr_mesh_info, b32 boolAdvHub)
 			}
 
 			// go back to instDef
-			visInstSrc[0] = (struct Instance *)instDef;
+			P32_SET(visInstSrc[0], (struct Instance *)instDef);
 		}
 	}
 

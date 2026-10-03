@@ -427,7 +427,7 @@ struct CseqSongHeader
 	// each seq is an array of SongNote
 	// s16 seqOffsetArr[0];
 };
-#define SONGHEADER_GETSEQOFFARR(x) ((u32)x + sizeof(struct CseqSongHeader))
+#define SONGHEADER_GETSEQOFFARR(x) ((uintptr_t)(x) + sizeof(struct CseqSongHeader))
 
 // right before first note
 struct SongNoteHeader
@@ -439,7 +439,7 @@ struct SongNoteHeader
 
 	// char notes[0];
 };
-#define NOTEHEADER_GETNOTES(x) ((u32)x + sizeof(struct SongNoteHeader))
+#define NOTEHEADER_GETNOTES(x) ((uintptr_t)(x) + sizeof(struct SongNoteHeader))
 
 struct SongSeq
 {
@@ -565,7 +565,7 @@ struct SampleBlockHeader
 
 	// s16 spuIndexArr[0];
 };
-#define SBHEADER_GETARR(x) (s16 *)((u32)x + sizeof(struct SampleBlockHeader))
+#define SBHEADER_GETARR(x) (s16 *)((uintptr_t)(x) + sizeof(struct SampleBlockHeader))
 
 struct SpuAddrEntry
 {

@@ -1624,7 +1624,7 @@ void MM_MenuProc_Main(struct RectMenu *mainMenu)
 		    // main menu, "title" exists, and timer >= 230
 		    (D230.titleMenuState == TITLE_MENU_STATE_IN_MENU) && (P32_GET(struct Title *, D230.titleObj) != NULL) && (FPS_DOUBLE(TITLE_INTRO_TM_DRAW_MIN_FRAME) < D230.titleIntroFrame))
 		{
-			DecalFont_DrawLineOT(P32_GET(char **, sdata->lngStrings)[LNG_TM], MM_TITLE_TM_X, MM_TITLE_TM_Y, FONT_SMALL, ORANGE,
+			DecalFont_DrawLineOT(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_TM]), MM_TITLE_TM_X, MM_TITLE_TM_Y, FONT_SMALL, ORANGE,
 			                     &P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT)[MM_TITLE_TM_OT_INDEX]);
 
 #if defined(CTR_NATIVE)

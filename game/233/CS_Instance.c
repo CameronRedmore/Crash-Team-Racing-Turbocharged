@@ -28,7 +28,7 @@ void CS_Instance_GetFrameData(struct Instance *inst, int animIndex, u32 animFram
 	int deltaDX, deltaDY, deltaDZ;
 
 	headers = P32_GET(struct ModelHeader *, P32_GET(struct Model *, inst->model)->headers);
-	ptrAnim = P32_GET(struct ModelAnim **, headers->ptrAnimations)[animIndex];
+	ptrAnim = P32_GET(struct ModelAnim *, P32_GET(P32(struct ModelAnim *) *, headers->ptrAnimations)[animIndex]);
 
 	if ((int)animFrame < 0)
 	{
@@ -166,12 +166,12 @@ int CS_Instance_GetNumAnimFrames(struct Instance *modelInst, int animIndex, int 
 		return 0;
 	}
 
-	if (P32_GET(struct ModelAnim **, header->ptrAnimations) == NULL)
+	if (P32_GET(P32(struct ModelAnim *) *, header->ptrAnimations) == NULL)
 	{
 		return 0;
 	}
 
-	anim = P32_GET(struct ModelAnim **, header->ptrAnimations)[animIndex];
+	anim = P32_GET(struct ModelAnim *, P32_GET(P32(struct ModelAnim *) *, header->ptrAnimations)[animIndex]);
 	if (anim == NULL)
 	{
 		return 0;
@@ -217,7 +217,7 @@ int CS_Instance_SafeCheckAnimFrame(struct Instance *inst, int animIndex, int LOD
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800ac694-0x800ac714
 b32 CS_Instance_BoolPlaySound(struct CutsceneObj *cs, struct Instance *desiredInst)
 {
-	struct Instance **visInstSrc;
+	P32(struct Instance *) *visInstSrc;
 	struct InstDrawPerPlayer *idpp;
 
 	if ((desiredInst == NULL) || ((cs->flags & CS_FLAG_SOUND_ONSCREEN_ONLY) == 0))
@@ -226,7 +226,7 @@ b32 CS_Instance_BoolPlaySound(struct CutsceneObj *cs, struct Instance *desiredIn
 	}
 
 	// pointer to array of visible instances
-	visInstSrc = P32_GET(struct Instance **, P32_GET(struct GameTracker *, sdata->gGT)->cameraDC[0].visInstSrc);
+	visInstSrc = P32_GET(P32(struct Instance *) *, P32_GET(struct GameTracker *, sdata->gGT)->cameraDC[0].visInstSrc);
 
 #if defined(CTR_NATIVE)
 	// NOTE(aalhendi): Same native low-RAM guard as AH_WarpPad_ThTick:
@@ -238,9 +238,9 @@ b32 CS_Instance_BoolPlaySound(struct CutsceneObj *cs, struct Instance *desiredIn
 #endif
 
 	// Same code as warppad_thtick
-	while (visInstSrc[0] != 0)
+	while (P32_GET(struct Instance *, visInstSrc[0]) != 0)
 	{
-		if (visInstSrc[0] == desiredInst)
+		if (P32_GET(struct Instance *, visInstSrc[0]) == desiredInst)
 		{
 			idpp = INST_GETIDPP(desiredInst);
 			return (idpp[0].instFlags & DRAW_SUCCESSFUL) != 0;

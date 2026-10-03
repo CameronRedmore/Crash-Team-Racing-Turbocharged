@@ -138,7 +138,7 @@ void RB_Armadillo_LInB(struct Instance *inst)
 	struct Armadillo *armObj;
 	SVECTOR rot;
 	s16 *metaArray;
-	void **pointers;
+	P32(void *) *pointers;
 	struct Thread *t;
 
 	if (P32_GET(struct Thread *, inst->thread) != 0)
@@ -193,6 +193,6 @@ void RB_Armadillo_LInB(struct Instance *inst)
 
 	// puts armadillos on separate cycles
 	pointers = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->ptrSpawnType1));
-	metaArray = (s16 *)pointers[ST1_SPAWN];
+	metaArray = (s16 *)P32_GET(void *, pointers[ST1_SPAWN]);
 	armObj->timeAtEdge = FPS_DOUBLE(metaArray[inst->name[strlen(inst->name) - 1] - '0']);
 }

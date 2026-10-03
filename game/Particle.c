@@ -380,11 +380,11 @@ void Particle_FuncPtr_ExhaustUnderwater(struct Particle *p)
 
 		if (icon != NULL)
 		{
-			struct Icon **ptrIconArray = ICONGROUP_GETICONS(icon);
+			P32(struct Icon *) *ptrIconArray = ICONGROUP_GETICONS(icon);
 
 			// actually the first icon pointer in the array,
 			// not the pointer to the array itself
-			P32_SET(p->ptrIconArray, ptrIconArray[0]);
+			P32_SET(p->ptrIconArray, P32_GET(struct Icon *, ptrIconArray[0]));
 		}
 
 		p->axis[PARTICLE_AXIS_ROT_Y_OR_LINE_PREV_Z].startVal = MixRNG_Scramble() & PARTICLE_EXHAUST_ROTATION_RANDOM_MASK;

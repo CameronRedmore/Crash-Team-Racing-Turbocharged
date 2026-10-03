@@ -107,12 +107,12 @@ void AH_HintMenu_MenuProc(struct RectMenu *menu)
 			VehTalkMask_End();
 		}
 
-		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[lngIndex + 0], 0x100, 0x2c, 1, 0xffff8000);
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[lngIndex + 0]), 0x100, 0x2c, 1, 0xffff8000);
 
 		// height of multiLine
-		int textHeight = DecalFont_DrawMultiLine(P32_GET(char **, sdata->lngStrings)[lngIndex + 1], 0x96, 0x3f, 0x14e, 2, 0);
+		int textHeight = DecalFont_DrawMultiLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[lngIndex + 1]), 0x96, 0x3f, 0x14e, 2, 0);
 
-		char *strExit = P32_GET(char **, sdata->lngStrings)[LNG_HINT_EXIT];
+		char *strExit = P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_HINT_EXIT]);
 
 		DecalFont_DrawLine(strExit, 0x100, textHeight + 0x4f, 1, 0xffff8000);
 
@@ -257,7 +257,7 @@ LAB_800b38cc:
 	isGoodMask = VehPickupItem_MaskBoolGoodGuy(P32_GET(struct Driver *, gGT->drivers[0]));
 
 	// Draw the "Hints" string
-	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_AKU_AKU_HINTS_MENU + (isGoodMask == 0)], 0x100, 0x2c, 1, 0xffff8000);
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_AKU_AKU_HINTS_MENU + (isGoodMask == 0)]), 0x100, 0x2c, 1, 0xffff8000);
 
 	if (D232.hintMenu_scrollIndex + AH_HINTMENU_VISIBLE_ROWS <= menu->rowSelected)
 	{
@@ -300,7 +300,7 @@ LAB_800b38cc:
 			menuHeight = menuHeight + 0x10;
 
 			// "EXIT"
-			DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[rowLngIndex], 0x100, rowPosY, 1, 0xffff8000);
+			DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[rowLngIndex]), 0x100, rowPosY, 1, 0xffff8000);
 
 			visibleRowIndex = visibleRowIndex + 1;
 		} while (visibleRowIndex < visibleRows);

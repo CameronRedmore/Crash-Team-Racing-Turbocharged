@@ -200,8 +200,8 @@ void UI_RenderFrame_Racing()
 	if (gGT->level1->ptrSpawnType1->count != 0)
 #endif
 	{
-		void **pointers = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *, gGT->level1)->ptrSpawnType1));
-		levPtrMap = pointers[ST1_MAP];
+		P32(void *) *pointers = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *, gGT->level1)->ptrSpawnType1));
+		levPtrMap = P32_GET(void *, pointers[ST1_MAP]);
 	}
 
 	// If you are not in Relic Race, and not in battle mode,
@@ -273,7 +273,7 @@ void UI_RenderFrame_Racing()
 					// if "Time on clock" last 0xXX u8 is greater than 0x80 and less than 0xFF
 					if ((gGT->elapsedEventTime & 0x80) != 0)
 					{
-						DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_WRONG_WAY],
+						DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_WRONG_WAY]),
 
 						                   // midpointX
 						                   pb->rect.x + (pb->rect.w >> 1),
@@ -396,10 +396,10 @@ void UI_RenderFrame_Racing()
 						playerStruct->PickupWumpaHUD.cooldown = partTimeVariable1;
 					}
 
-					struct Icon **iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[0xB]));
+					P32(struct Icon *) *iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[0xB]));
 
 					// "wumpaposter" icon group
-					DecalHUD_DrawPolyFT4(iconPtrArray[0], (int)wumpaModelPos.x, (int)wumpaModelPos.y,
+					DecalHUD_DrawPolyFT4(P32_GET(struct Icon *, iconPtrArray[0]), (int)wumpaModelPos.x, (int)wumpaModelPos.y,
 
 					                     // pointer to PrimMem struct
 					                     &P32_GET(struct DB *, gGT->backBuffer)->primMem,
@@ -845,14 +845,14 @@ void UI_RenderFrame_Racing()
 					sprintf((char *)&string[0], &sdata->s_999[0]);
 				}
 
-				i = DecalFont_GetLineWidth(P32_GET(char **, sdata->lngStrings)[LNG_TURBOS], 1);
+				i = DecalFont_GetLineWidth(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_TURBOS]), 1);
 
 				// Draw the string
 				DecalFont_DrawLine((char *)&string[0], (int)(((u32)turboCountPos.x - i) * 0x10000) >> 0x10, (int)turboCountPos.y, FONT_BIG,
 				                   (JUSTIFY_RIGHT | ORANGE_RED));
 
 
-				sprintf((char *)&string[0], &sdata->s_str[0], P32_GET(char **, sdata->lngStrings)[LNG_TURBOS]);
+				sprintf((char *)&string[0], &sdata->s_str[0], P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_TURBOS]));
 
 				// Draw the string
 				DecalFont_DrawLine((char *)&string[0], (int)(s16)turboCountPos.x, (int)turboCountPos.y, FONT_BIG, (JUSTIFY_RIGHT | ORANGE));
@@ -1001,13 +1001,13 @@ void UI_RenderFrame_Racing()
 				    // (winner of battle wont use this function)
 				    ((gameMode1 & BATTLE_MODE) == 0))
 				{
-					pbVar6 = P32_GET(char **, sdata->lngStrings)[LNG_FINISHED];
+					pbVar6 = P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_FINISHED]);
 				}
 
 				// If you came in last place, or you're in battle
 				else
 				{
-					pbVar6 = P32_GET(char **, sdata->lngStrings)[LNG_LOSER];
+					pbVar6 = P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_LOSER]);
 				}
 
 				DecalFont_DrawLine(pbVar6,
@@ -1132,7 +1132,7 @@ void UI_RenderFrame_CrystChall(void)
 	// Draw weapon and number of wumpa fruit in HUD
 	UI_Weapon_DrawSelf(hudStructPtr[UI_HUD_SLOT_WEAPON].x, hudStructPtr[UI_HUD_SLOT_WEAPON].y, hudStructPtr[UI_HUD_SLOT_WEAPON].scale, player);
 
-	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_TIME], 0x14, 8, FONT_SMALL, ORANGE);
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_TIME]), 0x14, 8, FONT_SMALL, ORANGE);
 
 	// "TIME" and the actual time are printed at the same
 	// X-coordinate, so we know 0x14 is the X, which only

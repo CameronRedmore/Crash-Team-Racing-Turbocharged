@@ -190,7 +190,7 @@ void SelectProfile_DrawAdvProfile(struct AdvProgress *adv, int posX, int posY, s
 
 	if (adv->characterID < 0)
 	{
-		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_EMPTY], posX + 0x6c, posY + 0x17, FONT_BIG, emptyColor | 0xffff8000);
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_EMPTY]), posX + 0x6c, posY + 0x17, FONT_BIG, emptyColor | 0xffff8000);
 	}
 	else
 	{
@@ -479,7 +479,7 @@ void SelectProfile_DrawGhostProfile(struct GhostProfile *profile, int posX, int 
 
 	if (isUnavailable != 0)
 	{
-		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_NOT_AVAILABLE], posX + 0x64, posY + 0x11, FONT_SMALL, 0xffff8016);
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_NOT_AVAILABLE]), posX + 0x64, posY + 0x11, FONT_SMALL, 0xffff8016);
 		Color redColor = {.self = (u32)sdata->redColor};
 		CTR_Box_DrawClearBox(&innerRect, &redColor, ADD_DECAL, P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT));
 	}
@@ -513,7 +513,7 @@ void SelectProfile_DrawGhostProfile(struct GhostProfile *profile, int posX, int 
 		int lngIndex = (isLoading != 0) ? 0x6c : 0xb5;
 		int color = (isLoading != 0) ? 0xffff8001 : 0xffff8003;
 
-		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[lngIndex], posX + 0x64, posY + 0x11, FONT_SMALL, color);
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[lngIndex]), posX + 0x64, posY + 0x11, FONT_SMALL, color);
 	}
 
 	if (isHighlighted != 0)
@@ -930,7 +930,7 @@ static void SelectProfile_DrawGhostRows(struct RectMenu *menu, int rowCount, int
 
 	// NOTE(aalhendi): Retail tests the Adventure subtitle table here, but
 	// draws the Ghost subtitle table below.
-	subtitleVisible = strlen(P32_GET(char **, sdata->lngStrings)[data.lngStringsSaveLoadDelete[(sdata->memcardAction * 2) + 1]]) != 0;
+	subtitleVisible = strlen(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.lngStringsSaveLoadDelete[(sdata->memcardAction * 2) + 1]])) != 0;
 
 	if (rowCount < 7)
 	{
@@ -938,7 +938,7 @@ static void SelectProfile_DrawGhostRows(struct RectMenu *menu, int rowCount, int
 		yBase = 0x12;
 		if (sdata->memcardAction != SELECT_PROFILE_ACTION_SAVE)
 		{
-			DecalFont_DrawMultiLine(P32_GET(char **, sdata->lngStrings)[LNG_INSERT_ANY_MEMORY_CARD_WITH_GHOST_DATA_IN], 0x100, 0xbe, 0x1ce, FONT_SMALL, color | 0xffff8000);
+			DecalFont_DrawMultiLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_INSERT_ANY_MEMORY_CARD_WITH_GHOST_DATA_IN]), 0x100, 0xbe, 0x1ce, FONT_SMALL, color | 0xffff8000);
 		}
 	}
 	else
@@ -949,12 +949,12 @@ static void SelectProfile_DrawGhostRows(struct RectMenu *menu, int rowCount, int
 
 	titleEndY = yBase + lineGap;
 
-	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[data.lngIndex_LoadSave[sdata->memcardAction * 2]], 0x100, yBase, rowCount < 7 ? FONT_BIG : FONT_SMALL,
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.lngIndex_LoadSave[sdata->memcardAction * 2]]), 0x100, yBase, rowCount < 7 ? FONT_BIG : FONT_SMALL,
 	                   JUSTIFY_CENTER | color);
 
 	if (subtitleVisible != 0)
 	{
-		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[data.lngIndex_LoadSave[(sdata->memcardAction * 2) + 1]], 0x100, yBase + lineGap,
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.lngIndex_LoadSave[(sdata->memcardAction * 2) + 1]]), 0x100, yBase + lineGap,
 		                   rowCount < 7 ? FONT_BIG : FONT_SMALL, JUSTIFY_CENTER | color);
 		titleEndY += lineGap;
 	}
@@ -1013,7 +1013,7 @@ static void SelectProfile_DrawGhostRows(struct RectMenu *menu, int rowCount, int
 static void SelectProfile_DrawAdvRows(struct RectMenu *menu, int color)
 {
 	int i;
-	int subtitleVisible = strlen(P32_GET(char **, sdata->lngStrings)[data.lngStringsSaveLoadDelete[(sdata->memcardAction * 2) + 1]]) != 0;
+	int subtitleVisible = strlen(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.lngStringsSaveLoadDelete[(sdata->memcardAction * 2) + 1]])) != 0;
 	struct MemcardProfile *memcard = SelectProfile_MemcardProfile();
 #if defined(CTR_NATIVE)
 	b32 autoSave = SelectProfile_AutoSaveRowVisible();
@@ -1024,23 +1024,23 @@ static void SelectProfile_DrawAdvRows(struct RectMenu *menu, int color)
 	if (autoSave)
 	{
 		// Compressed layout so a fifth, centered row fits in the 216 line screen.
-		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[data.lngStringsSaveLoadDelete[sdata->memcardAction * 2]], 0x100, subtitleVisible ? 2 : 6, FONT_BIG,
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.lngStringsSaveLoadDelete[sdata->memcardAction * 2]]), 0x100, subtitleVisible ? 2 : 6, FONT_BIG,
 		                   JUSTIFY_CENTER | color);
 
 		if (subtitleVisible != 0)
 		{
-			DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[data.lngStringsSaveLoadDelete[(sdata->memcardAction * 2) + 1]], 0x100, 0x12, FONT_SMALL,
+			DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.lngStringsSaveLoadDelete[(sdata->memcardAction * 2) + 1]]), 0x100, 0x12, FONT_SMALL,
 			                   JUSTIFY_CENTER | color);
 		}
 	}
 	else
 	{
-		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[data.lngStringsSaveLoadDelete[sdata->memcardAction * 2]], 0x100, subtitleVisible ? 0x12 : 0x1a, FONT_BIG,
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.lngStringsSaveLoadDelete[sdata->memcardAction * 2]]), 0x100, subtitleVisible ? 0x12 : 0x1a, FONT_BIG,
 		                   JUSTIFY_CENTER | color);
 
 		if (subtitleVisible != 0)
 		{
-			DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[data.lngStringsSaveLoadDelete[(sdata->memcardAction * 2) + 1]], 0x100, 0x22, FONT_BIG,
+			DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.lngStringsSaveLoadDelete[(sdata->memcardAction * 2) + 1]]), 0x100, 0x22, FONT_BIG,
 			                   JUSTIFY_CENTER | color);
 		}
 	}
@@ -1068,7 +1068,7 @@ static void SelectProfile_DrawAdvRows(struct RectMenu *menu, int color)
 
 	if ((sdata->memcardAction == SELECT_PROFILE_ACTION_SAVE) && (sdata->boolMemcardDataValid != 0))
 	{
-		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_DATA_ON_MEMORY_CARD_IS_OUT_OF_DATE], 0x100, 0xc3, FONT_SMALL, JUSTIFY_CENTER | RED);
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_DATA_ON_MEMORY_CARD_IS_OUT_OF_DATE]), 0x100, 0xc3, FONT_SMALL, JUSTIFY_CENTER | RED);
 	}
 }
 
@@ -1387,7 +1387,7 @@ static void SelectProfile_DrawMemcardMessage(int screen, int color, int menuFlag
 
 	if ((*SelectProfile_AllProfiles_Mode() != SELECT_PROFILE_SCREEN_GHOST) && (screen == MC_SCREEN_ERROR_NODATA) && (sdata->boolMemcardDataValid != 0))
 	{
-		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_DATA_ON_MEMORY_CARD_IS_OUT_OF_DATE], 0x100, 0xc3, FONT_SMALL, JUSTIFY_CENTER | RED);
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_DATA_ON_MEMORY_CARD_IS_OUT_OF_DATE]), 0x100, 0xc3, FONT_SMALL, JUSTIFY_CENTER | RED);
 	}
 
 	if ((sdata->memcardAction == SELECT_PROFILE_ACTION_DELETE) && (firstString == 0xea))
@@ -1397,13 +1397,13 @@ static void SelectProfile_DrawMemcardMessage(int screen, int color, int menuFlag
 
 	if (multiLine == 0)
 	{
-		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[firstString], 0x108, 0x12, FONT_BIG, JUSTIFY_CENTER | color);
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[firstString]), 0x108, 0x12, FONT_BIG, JUSTIFY_CENTER | color);
 	}
 	else
 	{
 		for (i = 0; i < 9; i++)
 		{
-			char *line = P32_GET(char **, sdata->lngStrings)[firstString + i];
+			char *line = P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[firstString + i]);
 
 			if (strlen(line) != 0)
 			{
@@ -1508,7 +1508,7 @@ static void SelectProfile_DrawAll(struct RectMenu *menu, int rowCount, int saved
 		    (*SelectProfile_AllProfiles_TimerSaveComplete() != 0))
 		{
 			int saveColor = ((FPS_HALF(sdata->frameCounter) & 4) == 0) ? (JUSTIFY_CENTER | ORANGE) : (JUSTIFY_CENTER | WHITE);
-			DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_SAVE_COMPLETED], 0x108, 0x64, FONT_BIG, saveColor);
+			DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_SAVE_COMPLETED]), 0x108, 0x64, FONT_BIG, saveColor);
 		}
 		else
 		{

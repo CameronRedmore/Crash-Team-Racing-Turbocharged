@@ -29,8 +29,8 @@ void GhostReplay_ThTick(struct Thread *t)
 			color = 0xFFFF8003;
 		}
 
-		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_GHOST_DATA_OVERFLOW], 0x100, 0x28, 2, color);
-		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_CAN_NOT_SAVE_GHOST_DATA], 0x100, 0x32, 2, color);
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_GHOST_DATA_OVERFLOW]), 0x100, 0x28, 2, color);
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_CAN_NOT_SAVE_GHOST_DATA]), 0x100, 0x32, 2, color);
 
 		sdata->ghostOverflowTextTimer--;
 	}
@@ -370,9 +370,9 @@ void GhostReplay_Init1(void)
 		else
 		{
 			s32 timeTrialFlags = sdata->gameProgress.highScoreTracks[gGT->levelID].timeTrialFlags;
-			void **pointers = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *, gGT->level1)->ptrSpawnType1));
+			P32(void *) *pointers = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *, gGT->level1)->ptrSpawnType1));
 
-			gh = ((timeTrialFlags & TT_NTROPY_BEATEN) != 0) ? pointers[ST1_NOXIDE] : pointers[ST1_NTROPY];
+			gh = ((timeTrialFlags & TT_NTROPY_BEATEN) != 0) ? P32_GET(void *, pointers[ST1_NOXIDE]) : P32_GET(void *, pointers[ST1_NTROPY]);
 		}
 
 		recordBuffer = GHOSTHEADER_GETRECORDBUFFER(gh);

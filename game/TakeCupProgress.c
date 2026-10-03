@@ -21,7 +21,7 @@ void TakeCupProgress_MenuProc(struct RectMenu *menu)
 		s16 stringIndex = sdata->stringIndexSaveCupProgress;
 		if (stringIndex != 0)
 		{
-			DecalFont_DrawMultiLine(P32_GET(char **, sdata->lngStrings)[stringIndex], 0x100, 0x3c, 0x1cc, FONT_BIG, JUSTIFY_CENTER);
+			DecalFont_DrawMultiLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[stringIndex]), 0x100, 0x3c, 0x1cc, FONT_BIG, JUSTIFY_CENTER);
 		}
 		return;
 	}

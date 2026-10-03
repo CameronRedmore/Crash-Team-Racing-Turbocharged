@@ -96,7 +96,7 @@ static void UI_DrawRelicTargets(u16 labelPosX, u16 labelPosY, struct Driver *dri
 
 		int color = driver->timeElapsedInRace > target ? GRAY : colors[tier];
 		int rowY = (int)(s16)labelPosY + row * UI_RACE_CLOCK_RELIC_ROW_Y_STEP;
-		DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[labels[tier]], (int)(s16)labelPosX,
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[labels[tier]]), (int)(s16)labelPosX,
 		                   rowY + UI_RACE_CLOCK_RELIC_HUD_LABEL_Y_OFFSET, FONT_SMALL, color);
 		DecalFont_DrawLine(RECTMENU_DrawTime(target), (int)(s16)labelPosX,
 		                   rowY + UI_RACE_CLOCK_RELIC_HUD_TIME_Y_OFFSET, FONT_BIG, color);
@@ -113,7 +113,7 @@ static void UI_DrawRelicTargets(u16 labelPosX, u16 labelPosY, struct Driver *dri
 
 void UI_NativeRaceClock_GetTwoColumnLayout(int centerX, int *leftAnchorX, int *rightAnchorX, int *contentLeftX, int *contentWidth)
 {
-	int labelWidth = DecalFont_GetLineWidth(P32_GET(char **, sdata->lngStrings)[LNG_LAP], FONT_SMALL);
+	int labelWidth = DecalFont_GetLineWidth(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_LAP]), FONT_SMALL);
 	int digitWidth = data.font_charPixWidth[FONT_SMALL];
 	int timeWidth = DecalFont_GetLineWidth((char *)s_resultsMaxLapTime, FONT_SMALL);
 	int labelExtent = labelWidth + digitWidth;
@@ -339,7 +339,7 @@ void UI_DrawRaceClock(u16 labelPosX, u16 labelPosY, u32 flags, struct Driver *dr
 	textPosX = labelPosX;
 	textPosY = labelPosY;
 
-	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[lngIndex], (int)(s16)labelPosX, (int)(s16)labelPosY, fontType, (int)labelFlags);
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[lngIndex]), (int)(s16)labelPosX, (int)(s16)labelPosY, fontType, (int)labelFlags);
 
 	// set string to use data.ptrColor[1], which is the periwinkle gradient seen in the LAP text on the HUD
 	// particularly used for relic race when the time is frozen
@@ -541,7 +541,7 @@ void UI_DrawRaceClock(u16 labelPosX, u16 labelPosY, u32 flags, struct Driver *dr
 					// draw string
 					DecalFont_DrawLine(lapNumberString, lapDrawX, lapDrawY, lapFontType, (JUSTIFY_RIGHT | RED));
 
-					DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[LNG_LAP], lapDrawX - (int)data.font_charPixWidth[lapFontType], lapDrawY, lapFontType, (JUSTIFY_RIGHT | RED));
+					DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_LAP]), lapDrawX - (int)data.font_charPixWidth[lapFontType], lapDrawY, lapFontType, (JUSTIFY_RIGHT | RED));
 
 					stringColor = (int)(s16)lapOrRelicColor;
 					iVar7 = lapDrawY;
@@ -652,7 +652,7 @@ LAB_8004f378:
 		relicTimeX = textPosX + UI_RACE_CLOCK_RESULTS_TIME_X_OFFSET;
 	}
 
-	DecalFont_DrawLine(P32_GET(char **, sdata->lngStrings)[lngIndex], (int)(s16)textPosX, (int)relicLabelY, fontType, (int)(s16)lapOrRelicColor);
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[lngIndex]), (int)(s16)textPosX, (int)relicLabelY, fontType, (int)(s16)lapOrRelicColor);
 
 	// Convert each number from the binary
 	// version of Relic Time to the ascii version
