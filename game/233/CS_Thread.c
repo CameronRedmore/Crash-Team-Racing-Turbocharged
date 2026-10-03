@@ -549,7 +549,7 @@ processOpcode:
 
 	case CS_OPCODE_GOTO:
 		opcodeChanged = 1;
-		CS_ScriptCmd_OpcodeAt(cs, P32_GET(char *, opcodeMeta->arg1.ptr));
+		CS_ScriptCmd_OpcodeAt(cs, CS_OPCODE_ARG_TARGET(opcodeMeta->arg1));
 		goto finishOpcodeStep;
 
 	case CS_OPCODE_HIDE_INSTANCE_AND_END_THREAD:
@@ -596,7 +596,7 @@ processOpcode:
 		}
 		else
 		{
-			CS_ScriptCmd_OpcodeAt(cs, P32_GET(char *, opcodeMeta->arg1.ptr));
+			CS_ScriptCmd_OpcodeAt(cs, CS_OPCODE_ARG_TARGET(opcodeMeta->arg1));
 		}
 		opcodeChanged = 1;
 		goto finishOpcodeStep;
@@ -942,7 +942,7 @@ processOpcode:
 		{
 			if ((opcodeMeta->arg0.i != (int)gGarage.garageCharacterIDs[sdata->advCharSelectIndex_curr]) || (gGarage.boolSelected == 0))
 			{
-				opcodeAt = P32_GET(char *, opcodeMeta->arg1.ptr);
+				opcodeAt = CS_OPCODE_ARG_TARGET(opcodeMeta->arg1);
 			branchToGarageOpcode:
 				opcodeChanged = 1;
 				CS_ScriptCmd_OpcodeAt(cs, opcodeAt);
@@ -952,7 +952,7 @@ processOpcode:
 		{
 			if ((opcodeMeta->arg0.i == (int)gGarage.garageCharacterIDs[sdata->advCharSelectIndex_curr]) && (gGarage.boolSelected == 1))
 			{
-				opcodeAt = P32_GET(char *, opcodeMeta->arg1.ptr);
+				opcodeAt = CS_OPCODE_ARG_TARGET(opcodeMeta->arg1);
 				goto branchToGarageOpcode;
 			}
 		}

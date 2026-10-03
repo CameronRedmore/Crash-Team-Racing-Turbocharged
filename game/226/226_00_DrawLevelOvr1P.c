@@ -379,7 +379,7 @@ static struct TextureLayout *DrawLevelOvr1P_ResolveTexturePointer(uintptr_t text
 
 	if ((texturePtr & 1) != 0)
 	{
-		return *(struct TextureLayout **)(texturePtr - 1);
+		return P32_DEC(struct TextureLayout *, *(const u32 *)(texturePtr - 1));
 	}
 
 	return (struct TextureLayout *)texturePtr;

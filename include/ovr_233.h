@@ -134,9 +134,12 @@ CTR_STATIC_ASSERT(sizeof(struct CsParticleConfig) == 0xc);
 union CsOpcodeArg
 {
 	int i;
+	// Branch targets are retail overlay addresses; CS_ScriptCmd_OpcodeAt
+	// translates them (CS_OPCODE_ARG_TARGET).
 	u32 u;
-	P32(char *) ptr;
 };
+
+#define CS_OPCODE_ARG_TARGET(arg) ((char *)(uintptr_t)(arg).u)
 
 union CsOpcodeMeta
 {

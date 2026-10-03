@@ -1497,7 +1497,7 @@ void Particle_RenderList(struct PushBuffer *pb, void *particleList)
 					goto next_particle;
 				}
 
-				icon = ((struct Icon **)ICONGROUP_GETICONS(iconGroup))[frame];
+				icon = P32_GET(struct Icon *, ICONGROUP_GETICONS(iconGroup)[frame]);
 				P32_SET(particle->ptrIconArray, icon);
 			}
 
@@ -1811,7 +1811,7 @@ struct Particle *Particle_Init(u32 param_1, struct IconGroup *ig, struct Particl
 	P32_SET(p->ptrIconGroup, ig);
 	if (ig != NULL && ig->numIcons != 0 && ig->numIcons > 0)
 	{
-		P32_SET(p->ptrIconArray, ((struct Icon **)ICONGROUP_GETICONS(ig))[0]);
+		P32_SET(p->ptrIconArray, P32_GET(struct Icon *, ICONGROUP_GETICONS(ig)[0]));
 	}
 	else
 	{
