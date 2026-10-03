@@ -1,7 +1,14 @@
 # 64-bit / ARM64 port: handoff
 
 Branch `64bit`, worktree `src/worktrees/64bit`, based on `turbocharged` @ 8cbfb7797.
-Written 2026-10-03. Nothing is pushed. The working tree was clean when this was written, apart from the new `tools/ctr64/` scripts and this file.
+First written 2026-10-03, updated later the same day. Nothing is pushed.
+
+## Status
+
+- The 64-bit x86-64 Linux build (clang, Debug and Release) compiles with no errors and links. `ctest` passes 5/5.
+- The 32-bit build (gcc `-m32`) compiles with no warnings and `ctest` passes 5/5 after every commit.
+- The 64-bit game (Debug and Release) boots headless through the intro and main menu, loads the adventure hub, drives into a warp pad and plays a Relic Race on Crash Cove with correct rendering and HUD. No `CtrPtr32_RangeError` aborts on that path.
+- Not yet done: A/B determinism against the 32-bit build, custom racers, other platforms. See "Next steps".
 
 ## Goal
 
@@ -9,7 +16,7 @@ Build and run the game on 64-bit targets (x86-64 Linux first, then ARM64, macOS,
 
 ## Design
 
-Retail-shaped structs keep their 4-byte pointer fields. On 64-bit builds each such field is a `CtrPtr32` handle holding a signed 32-bit offset from `gCtrPtr32Anchor`. Handle 0 is NULL. Because layouts are identical, hex offsets, JitPool item sizes, the 501 `CTR_STATIC_ASSERT`s and in-place file patching (`LOAD_RunPtrMap`) all keep working.
+Retail-shaped structs keep their 4-byte pointer fields. On 64-bit builds each such field is a `CtrPtr32` handle holding a signed 32-bit offset from an origin inside `gCtrPtr32Anchor`. Because layouts are identical, hex offsets, JitPool item sizes, the `CTR_STATIC_ASSERT`s and in-place file patching keep working.
 
 Handles only work if every pointee is within +-2 GiB of the anchor. That holds for statics, string literals, functions and the mempack arena (a static array). It does NOT hold for `malloc`ed buffers, stack addresses or SDL memory, so those cannot be stored in game structs (see "Open problems").
 
@@ -19,91 +26,97 @@ API, all in `include/ctr_ptr32.h` (identity on 32-bit):
 |---|---|
 | `P32(T)` | declare a pointer field of type `T` (`T` is the full pointer type, e.g. `struct Model *`) |
 | `P32_FNPTR(ret, name, (args))` | declare a raw function-pointer field |
-| `P32_GET(T, lv)` | read `lv` as a pointer of type `T` |
+| `P32_GET(T, lv)` | read `lv` as a pointer of type `T` (casts on both builds) |
 | `P32_SET(lv, v)` | store pointer `v` into `lv` (statement use only; its value is not a pointer) |
 | `P32_ENC(v)` / `P32_DEC(T, h)` | convert a raw pointer to/from a handle kept in an int |
+| `P32_TRY_ENC(v, &out)` | like `P32_ENC`, but returns 0 instead of aborting |
 | `P32_DEFER(e)` | static-initializer value: `(e)` on 32-bit, `0` on 64-bit |
 | `CTR_P32_STATIC_FIXUP(name)` | constructor that stores deferred static pointers at startup |
 | `CTR_P32_MUTABLE` | `const` on 32-bit, empty on 64-bit (for data patched at startup) |
 
-`gCtrPtr32Anchor` and `CtrPtr32_RangeError` live in `platform/native_memory.c`. The range check aborts if a pointer is outside +-2 GiB.
+Properties the code relies on:
+
+- **Sentinels.** Values in [-16, 16] are stored as themselves, so `(fnptr)-2` (`LOAD_QUEUE_CALLBACK_SET_POINTER`), `(char *)-1` and small integers round-trip. The origin is `&gCtrPtr32Anchor.bytes[32]`, so no real object is that close to it.
+- **Linearity.** `enc(p + k) == enc(p) + k`, so int arithmetic and comparisons on handles behave like they did on addresses.
+- **Low bits.** The anchor is 8-byte aligned, so `h & 3` equals `p & 3` (alignment tests and low-bit tags work on handles).
+- **Stability.** Handles to objects in the image do not change between runs (PIE moves the whole image), which the checkpoint code uses.
+
+`gCtrPtr32Anchor` and `CtrPtr32_RangeError` live in `platform/native_ptr32.c` (included by `native_memory.c` and by standalone tests). The range check aborts with the offending pointer; it is the main tool for finding anything missed.
+
+### Rules used throughout
+
+1. **Pointer fields in retail-shaped structs** (`include/`): `P32(T)`.
+2. **Pointers to arrays of retail pointer slots** (in-file tables, `ICONGROUP_GETICONS`, `ST1_GETPOINTERS`, `ANIMTEX_GETARRAY`, `lngStrings`, `visInstSrc`, `ptrModelsPtrArray`, ...): walk them as `P32(T) *` and read elements with `P32_GET`. A `T **` view would use an 8-byte stride.
+3. **Ints that carry pointers in retail-shaped storage** (`int`/`u32` fields, scratchpad `*Ptr32` words, `sdata->ptrMPK`, `idpp->otRangeNormal`, ...): hold a handle. Convert with `P32_ENC`/`P32_DEC` at the boundary.
+4. **Purely local address arithmetic**: `char *` or `uintptr_t`.
+5. **Fields that hold retail codes, not host pointers**: plain `u32`. Found so far: `Instance.funcPtr[]` (retail draw-function addresses used as dispatch codes), `ChannelAttr.spuStartAddr` (SPU RAM address), cutscene `CsOpcodeArg` branch targets (retail overlay addresses, translated by `CS_ScriptCmd_OpcodeAt`).
+6. **Native-only structs** that never alias retail memory keep real pointers (`RenderBucketEntry`, RenderBucket contexts, `NativeDrawLevel`, audio, CD). Native structs that overlay retail memory (scratchpad, `gGT->DecalMP`) use `P32`: `ParticleRenderListScratch`, `VehGroundShadowEntry/Scratch`, `DecalMPEntry`.
+
+`LOAD_RunPtrMap` stores `P32_ENC(origin + offset)` into each patched slot. Level words that the renderer interprets as pointers (texture/mosaic words, quadblock texture slots) are decoded with `P32_DEC`.
+
+Checkpoints (`platform/native_checkpoint.c`) treat "addresses" as whatever pointer slots hold: raw addresses on 32-bit, handles on 64-bit (`NativeCheckpoint_PtrToU32` uses `P32_TRY_ENC`). Region starts and the code anchor are recorded the same way, so the relocation logic is unchanged.
 
 ## Commits on this branch
 
 1. `8e110e4b7` adds the `CTR_NATIVE_64BIT` CMake option, relaxes the `sizeof(void *) == 4` guards, and adds the `linux-x64-debug` preset.
 2. `380bbb142` converts about 440 pointer fields in `include/` to `P32` and rewrites about 13k access sites.
 3. `687779622` moves 775 static pointer initializers into startup fixups.
-
-After each commit the 32-bit build (`/tmp/b32`, gcc `-m32`) compiled and `ctest` passed 5/5. The 32-bit **game has not been run** since the conversion. It should be identical, but verify.
-
-## What was converted, and what was left alone
-
-Converted: every pointer field in structs under `include/`, except `include/psx/`, `include/psn00bsdk/`, `include/platform/`, `include/platform.h`. Native-only structs defined in `.c` files (RenderBucket contexts, `NativeDrawLevel`, audio, CD, etc.) are intentionally left as real pointers.
-
-Not touched by the rewrite: `platform/native_checkpoint.c` (needs hand work, see below).
+4. `bf2c94784` pass 2: macro-argument sites (426 errors to 131).
+5. `4322dc925` hand-converted sites: `T **` aliases, scratch overlays, rendered-quadblock lists, load-queue set-pointer targets, sentinels, deferred fixups.
+6. `8aae6ca94` checkpoint handles; the build links and tests pass.
+7. `381a988dd` in-file pointer arrays and `LOAD_RunPtrMap`.
+8. `11659fb74` pointer/int truncation (all `-Wpointer-to-int-cast` / `-Wint-to-pointer-cast` sites).
+9. `edcbeb1fd` and its predecessor: bugs found by booting (render-bucket terminator, cutscene branch targets, particle icon reads).
 
 ## Tools (`tools/ctr64/`)
 
-They need libclang (`python3 -c "import clang.cindex"` works on this machine) and a configured 64-bit build dir with `compile_commands.json`. They hard-code `/tmp/b64` and the worktree path in `common.py`.
+They need libclang (`python3 -c "import clang.cindex"`) and a configured 64-bit build dir with `compile_commands.json`. `common.py` hard-codes `/tmp/b64` and the worktree path.
 
-- `common.py` parses `main.c` (the project is a unity build, so one TU covers almost everything).
-- `rewrite.py` is pass 1: field declarations plus access sites. It is already applied and committed; re-running it on the current tree would double-wrap. It is kept as a record.
-- `rewrite2.py` is pass 2: remaining sites, mainly inside macro arguments. Dry run by default (`--apply` to edit). Writes `/tmp/ctr64-tools/report2.txt`. **Not applied yet.** Last dry run: 350 edits in 56 files plus a manual list (see below).
-- `gen_fixups.py` is the static-initializer pass (applied). It reads the clang JSON AST. Quirk: array elements are under `array_filler[1:]` when a filler exists.
-- `b64.sh [n] [m]` builds `/tmp/b64` and summarises the errors. `/tmp/b64` is configured with `-DCTR_NATIVE_64BIT=ON -DCMAKE_C_COMPILER=clang -DCMAKE_C_FLAGS="-ferror-limit=0 -fno-color-diagnostics" -DBUILD_TESTING=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`.
-- `step2.py`, `manual1.py`, `staticvars.py` are small one-offs. Do NOT re-run `manual1.py`: it duplicates edits already committed.
+- `common.py` parses `main.c` (unity build).
+- `rewrite2.py` pass 2 (applied). Dedupes sites a macro expands more than once.
+- `rewrite_ckpt.py` pass 2 restricted to `native_checkpoint.c` (applied).
+- `gen_fixups.py` static-initializer pass (applied, one-shot).
+- `alias.py FILE A B VAR 'T *'`: rewrites `VAR[i]` reads/writes inside a line range.
+- `retype_arrays.py`: retypes locals reported as `T ** = CtrPtr32 *` errors in `/tmp/b64.log`.
+- `p32_arrays.py FIELD... -- FILE...`: fields that point at slot arrays.
+- `uintptr_casts.py FILE...`: `(u32)(uintptr_t)p` to `P32_ENC`, `(T *)(uintptr_t)w` to `P32_DEC`.
+- `b64.sh` builds `/tmp/b64` and summarises errors.
 
-`/tmp` does not survive a reboot. The scripts are copies; the originals are in `/tmp/ctr64-tools`.
-
-## Current state of the 64-bit build
-
-`/tmp/ctr64-tools/b64.sh` reports **426 errors**, all from sites the first pass could not convert:
-
-- about 137 `member reference type 'CtrPtr32' is not a pointer` and 42 `operand ... where arithmetic or pointer type is required`: unconverted accesses, mostly inside macro arguments (`ST1_GETPOINTERS(sdata->gGT->...)`, `gte_SetTransVector(d->instSelf->matrix.t)`, `CTR_FRAME_STEP(step, sdata->gGT->timer)`).
-- about 77 in `platform/native_checkpoint.c`.
-- the rest are address-of uses, array decays, int-typed pointer carriers and a few size asserts (below).
+The tools are one-shot and not idempotent; do not re-run them on converted code.
 
 ## Next steps, in order
 
-1. **Apply `rewrite2.py`.** Run it dry first and check `report2.txt`. It uses spelling locations to rewrite macro-argument sites. Spot-check a few diffs (`game/CAM.c:483`, `game/223.c:277`). Rebuild 32-bit and 64-bit, then commit.
-2. **Hand-fix the manual list** (`report.txt` from pass 1 and `report2.txt`):
-   - About 40 address-of sites (`&x->ptrField`) passed as `void **` or `T **`, e.g. `LOAD_Assets.c` `fileBase`, `LOAD_TenStages.c` podium models, `PROC.c` thread links, `Particle.c` list heads, `HOWL_Channel.c`. Use a local `T *tmp`, call, then `P32_SET`, or change the callee.
-   - About 40 array-decay uses (`R233.introCutsceneOpcodes`, `gGT->ptrIcons`, `sdata_static.quadBlocksRendered`, `visOVertList`): the array of `CtrPtr32` is passed where `T **` is expected.
-   - About 490 "macro body" sites: expected to be a few macro definitions that mention a field (`OVR233_GARAGE_INITIALIZER` in `game/233/D233.c`, and anything in headers). Fix the macro bodies by hand. Many reported entries (`uiOT`, `instSelf`, `level1`) point at macros defined outside the converted headers; check each.
-   - `D233.c` garage initializer: its pointer leaves are inside a macro body, so `gen_fixups.py` skipped them (2 manual). Handle `s_gGarageInitialState` and `gGarage` by hand.
-   - 1 chained assignment: `tests/native_physics_test.c:563`.
-3. **Int-typed pointer carriers.** The decomp stores addresses in `int`/`u32` and casts back (`(int)&x`, `(u32)ptr`, about 290 sign-extending round trips such as `INSTANCE.c:234`, `HOWL_Load.c:144`). Convert each to `P32_ENC`/`P32_DEC` (stored in a struct) or `uintptr_t` (local arithmetic). Known sites: `PushBuffer.c` `(int)&field + off`, `MainFrame_RenderFrame.c` passing `(u32)&...`, `zGlobal_DATA.c:3372` `voiceSetPtr`, `MEMPACK.c` `(u32)` subtractions, `GhostReplay.c:179`, `CS_Credits.c:256`, `LOAD_Assets.c:627`. The 64-bit warning list (`-Wpointer-to-int-cast`, `-Wint-to-pointer-cast`) gives the full set once the hard errors are gone.
-4. **Remaining static asserts**: `RenderBucketEntry`, `VehGroundShadowEntry` (these are native structs in `.c` files that had pointers; decide whether they should be converted or their asserts made 64-bit aware), `DriverModelExtraSlot == sizeof(void *)` (`regionsEXE.h:97`), `offsetof(struct Data, currSlot)` (`regionsEXE.h:2792`), `Driver.funcPtrs`, `NavHeader`, `CameraDC`. Most of the earlier 361-assert baseline disappeared with the P32 conversion; re-check what is left.
-5. **Fix `*(void **)dest = file` style hidden 8-byte writes**: `LOAD_File.c:187,280`, `LOAD_TenStages.c:613-633`. Also grep `memcpy`/`sizeof(void *)` that touch converted fields.
-6. **Checkpoint code (`platform/native_checkpoint.c`, `native_checkpoint_file.c`)**: it stores pointers as `u32`, rejects values above 4 GB (`:122-133`) and stores a code address (`:2039`). With handles it can serialise the raw handle values, which are stable across runs. `struct PlatformMempackArena` (`include/platform.h`) holds three `void *` that go into the checkpoint header, so checkpoints will not move between 32- and 64-bit builds; make those `u32` handles if cross-build A/B is wanted.
-7. **Allocations that must be inside the image** (see Open problems): `LOAD_Assets.c:174`, `native_custom_racer.c:837/854` (this one also runs `LOAD_RunPtrMap`), VRM buffers (`LOAD_Assets.c:882`, `:1745`), any `malloc` whose result is stored in a game struct.
-8. **Get it to link and boot**, then run the headless recipe from the `headless-ab-testing` memory in a scratch copy of the game dir. `CtrPtr32_RangeError` will abort with the offending pointer, which is the main tool for finding anything missed.
-9. **A/B against the 32-bit build** using Scroll Lock (frozen logic) plus identical inputs/replays (`docs/REPLAYS.md`) and compare frames and state. Silent truncation shows up as gameplay divergence, not crashes.
-10. **Tests**: `tests/*` include `zGlobal_DATA.c`, so every error shows up there twice; they also need the fixup constructors, which live next to the data definitions and should run automatically.
-11. **Other targets**: ARM64 Linux, macOS arm64 (check the +-2 GiB assumption holds for the Mach-O image), Windows x64 (MSVC `.CRT$XIU` fixup path is written but untested; `long` is 32-bit there, about 18 `(long)` casts, mostly harmless fseek). Web (wasm32) and Vita stay 32-bit and use the identity macros. Remember to rebuild the non-default configs (non-INTERNAL, Vita-conditional code): inactive `#if` regions were never parsed by the rewriter.
+1. **A/B against the 32-bit build.** Use Scroll Lock (frozen logic) plus identical inputs/replays (`docs/REPLAYS.md`) and compare frames and state. Silent truncation and wrong-stride bugs show up as divergence, not crashes. Cover: menus, all hubs, a race per track, battle, boss, cutscenes (intro, podium, credits, garage), 2-4 player split screen, ghosts, memory card save/load, checkpoints (F-keys in internal builds).
+2. **Allocations that must be inside the image.** Custom racers `malloc` model/VRM buffers and store them in handles (`platform/native_custom_racer.c`: `NativeCustomRacer_LoadQueueSlot`, `NativeCustomRacer_LoadModelNow`, VRM buffers). On 64-bit these will hit `CtrPtr32_RangeError` as soon as a custom racer is used. Replace with a static pool (e.g. a bump/free-list allocator over a static array) for anything that ends up in a game struct. Same audit for `LOAD_Assets.c` native buffers.
+3. **Stack addresses in game structs.** None hit so far. `savedStackPtr32` in the draw-level scratch stores a truncated stack address but is never read back. If one turns up, make the object static or run the game loop on a thread with a static stack.
+4. **Code not compiled by the Linux 926 build.** Inactive `#if` regions were never parsed: `game/zRegionJapan/*` and other non-926 regions, Vita-only code (`native_adhoc.c` `__vita__` block), `BUILD == SepReview` paths. Vita and web stay 32-bit, so only regions that a 64-bit target compiles matter.
+5. **Remaining warnings.** `platform/native_libgte.c` `NormalColorDpq`/`ColorDpq` pass an int where the GTE macro dereferences a pointer. They are unused and broken on every build.
+6. **Performance.** `P32_GET` adds a compare and an add per access. Not measured. Compare frame times of Release 32-bit vs 64-bit.
+7. **Other targets.** ARM64 Linux, macOS arm64 (check the +-2 GiB assumption for the Mach-O image and `__DATA` placement), Windows x64 (the MSVC `.CRT$XIU` fixup path is untested; `long` is 32-bit there, ~18 `(long)` casts, mostly fseek). Rebuild non-default configs (non-INTERNAL).
+8. **Regenerating static fixups.** `gen_fixups.py` is one-shot. Anyone editing a static initializer that contains pointers must update its `CTR_P32_STATIC_FIXUP` block by hand. A `--check` mode would help.
 
 ## Open problems and risks
 
-- **Stack addresses stored in structs**: the stack is outside +-2 GiB. Either audit those stores or run the game loop on a thread whose stack is allocated from a static buffer.
-- **`malloc`ed pointers**: same issue; small `brk` heap allocations may land near the image by luck on Linux, which makes bugs intermittent. Allocate from static pools instead.
-- **Sentinel "pointers"** (small integers or `-1` cast to a pointer) do not survive `ctr_p32_enc`; they hit `CtrPtr32_RangeError` and must be handled.
-- **Regenerating static fixups**: `gen_fixups.py` is one-shot. If someone edits a static initializer that contains pointers, they must update the generated `CTR_P32_STATIC_FIXUP` block by hand. A `--check` mode that diffs against the source would be worth adding. Fixups write into the data at startup, so anything that later re-copies pristine data must also copy pointers correctly (handles are plain `u32` in memory, so struct copies are fine).
-- **`P32_GET` on hot paths** adds a branch and an add per access. Not measured yet.
-- **Wrong-type decoding**: `P32_SET` takes any pointer, so a mismatched pointee type is no longer caught by the compiler.
-- `include/psx/*` structs (TMD, TIM, EVCB) were left as native pointers; they are not retail layout but check nothing relies on their size.
+- **Fields that hold non-pointers.** The rewriter converted every pointer-typed field. Any that actually hold integers (like the three in rule 5) abort in `CtrPtr32_RangeError` when the value is large, or pass silently when it is within +-16. More may exist on paths not yet exercised.
+- **Casts hide stride bugs.** `(T **)x` on a slot array compiles without warning. A grep for `\w+ \*\*)` casts in `game/` and `platform/` was clean at the time of writing.
+- **Wrong-type decoding.** `P32_SET` takes any pointer and `P32_GET` casts to whatever is written, so mismatched pointee types are no longer caught.
+- `include/psx/*` structs (TMD, TIM, EVCB) were left as native pointers; they are not retail layout.
+
+## Headless testing
+
+Run a scratch copy (binary, `config.ini`, `debug/`, `memcards/`, `mods/`, `assets` symlink) under `xvfb-run` and `bwrap` with `/dev/input` hidden, as in the `headless-ab-testing` memory. With no gamepad visible the keyboard starts as player 3, so press F4 twice to make it player 1. Debug builds boot slowly; this sequence reaches the hub: boot 12 s, `F4 F4`, wait 12, `Return`, wait 15, `Return`, wait 12, `c`, wait 5, `c`, wait 5, `c`, wait 40. Holding `c` for 9 s from the hub spawn drives into the Crash Cove warp pad.
 
 ## How to resume
 
 ```
-cd "…/CTR Turbocharged/src/worktrees/64bit"
-cp tools/ctr64/*.py tools/ctr64/b64.sh /tmp/ctr64-tools/   # if /tmp was wiped
+cd ".../CTR Turbocharged/src/worktrees/64bit"
+mkdir -p /tmp/ctr64-tools && cp tools/ctr64/* /tmp/ctr64-tools/
 cmake -S . -B /tmp/b64 -DCTR_NATIVE_64BIT=ON -DCMAKE_C_COMPILER=clang -DCMAKE_BUILD_TYPE=Debug \
   -DBUILD_TESTING=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_C_FLAGS="-ferror-limit=0 -fno-color-diagnostics"
 cmake -S . -B /tmp/b32 -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
   -DCMAKE_C_FLAGS=-m32 -DCMAKE_EXE_LINKER_FLAGS=-m32
-/tmp/ctr64-tools/b64.sh          # error summary for the 64-bit build
-make -C /tmp/b32 && (cd /tmp/b32 && ctest)   # 32-bit must stay green
-python3 /tmp/ctr64-tools/rewrite2.py         # dry run of pass 2
+make -C /tmp/b64 -j && (cd /tmp/b64 && ctest)
+make -C /tmp/b32 -j && (cd /tmp/b32 && ctest)   # 32-bit must stay green
 ```
 
-Pitfalls hit so far: do not use bare `git checkout game/` to "reset" while uncommitted work exists (it wiped uncommitted edits once); the stash stack is shared with other sessions, so avoid it; `/tmp/p32` is an unrelated file from another session and must be left alone.
+Pitfalls: do not use bare `git checkout game/` to "reset" while uncommitted work exists; the stash stack is shared with other sessions, so avoid it; `/tmp/p32` is an unrelated file from another session and must be left alone.
