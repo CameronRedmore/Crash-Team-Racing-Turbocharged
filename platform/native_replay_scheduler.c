@@ -44,6 +44,8 @@
 #define NATIVE_REPLAY_PLAYBACK_MEMCARD_NAME      "memcard.playback"
 #define NATIVE_REPLAY_REPORT_METADATA_NAME       "metadata.txt"
 #define NATIVE_REPLAY_REPORT_LOG_NAME            "ctr-native.log"
+// NOTE: Stored in header reserved[0]; marks replays whose frame 0 is the first frame after boot.
+#define NATIVE_REPLAY_FROM_BOOT_MAGIC            0x544f4f42u
 
 enum NativeReplaySchedulerMode
 {
@@ -126,6 +128,8 @@ global_variable char *s_reportLogPath;
 global_variable char *s_playbackMemcardPath;
 global_variable s32 s_memcardSandboxActive;
 global_variable s32 s_recordStartDeferredLogged;
+global_variable s32 s_skipBootstrapCheckpoint;
+global_variable FILE *s_traceFile;
 
 internal void NativeReplayScheduler_ResetVSyncPackets(void)
 {
@@ -1164,6 +1168,7 @@ cleanup:
 internal s32 NativeReplayScheduler_OpenRecord(const char *replayPath, const char *checkpointPath)
 {
 	NativeReplayScheduler_InitHeader(&s_header);
+	s_header.reserved[0] = (s_reportManualStart == 0) ? NATIVE_REPLAY_FROM_BOOT_MAGIC : 0u;
 	if (!NativeReplayScheduler_ActivateRecordMemcardSandbox())
 	{
 		return 0;
@@ -1279,7 +1284,19 @@ internal s32 NativeReplayScheduler_OpenPlayback(const char *path, s32 bypassHead
 		Platform_Log("[CTR Replay] bypassing replay header identity mismatch: %s\n", path);
 	}
 
-	if (!NativeReplayScheduler_PrepareBootstrapCheckpoint(path))
+	if (s_skipBootstrapCheckpoint != 0)
+	{
+		// NOTE: Checkpoints hold raw pointers or 64-bit handles and do not restore across builds.
+		// A replay recorded from boot can instead start from this process's own boot state.
+		if (s_header.reserved[0] != NATIVE_REPLAY_FROM_BOOT_MAGIC)
+		{
+			Platform_Log("[CTR Replay] --replay-skip-bootstrap needs a replay recorded from boot (--record without --toggle): %s\n", path);
+			NativeReplayScheduler_CloseFiles();
+			return 0;
+		}
+		Platform_Log("[CTR Replay] skipping bootstrap checkpoint; replay starts from boot\n");
+	}
+	else if (!NativeReplayScheduler_PrepareBootstrapCheckpoint(path))
 	{
 		NativeReplayScheduler_CloseFiles();
 		return 0;
@@ -1346,10 +1363,17 @@ int NativeReplayScheduler_ConfigureFromArgs(int argc, char **argv)
 	const s32 bypassHeaderIdentity = NativeReplayScheduler_ArgPresent(argc, argv, "--replay-bypass-header");
 	s32 toggle = NativeReplayScheduler_ArgPresent(argc, argv, "--toggle");
 	s32 detailed = NativeReplayScheduler_ArgPresent(argc, argv, "--detailed");
+	const s32 skipBootstrap = NativeReplayScheduler_ArgPresent(argc, argv, "--replay-skip-bootstrap");
+	const char *tracePath = NativeReplayScheduler_ArgValue(argc, argv, "--ab-trace");
 
 	if (NativeReplayScheduler_ArgMissingValue(argc, argv, "--replay"))
 	{
 		Platform_Log("[CTR Replay] missing replay command value\n");
+		return 1;
+	}
+	if (NativeReplayScheduler_ArgMissingValue(argc, argv, "--ab-trace"))
+	{
+		Platform_Log("[CTR Replay] missing --ab-trace path\n");
 		return 1;
 	}
 
@@ -1368,6 +1392,25 @@ int NativeReplayScheduler_ConfigureFromArgs(int argc, char **argv)
 		Platform_Log("[CTR Replay] --replay-bypass-header only applies to --replay\n");
 		return 1;
 	}
+	if ((skipBootstrap != 0) && (playback == 0))
+	{
+		Platform_Log("[CTR Replay] --replay-skip-bootstrap only applies to --replay\n");
+		return 1;
+	}
+	if (tracePath != NULL)
+	{
+		if (s_traceFile != NULL)
+		{
+			fclose(s_traceFile);
+		}
+		s_traceFile = fopen(tracePath, "w");
+		if (s_traceFile == NULL)
+		{
+			Platform_Log("[CTR Replay] failed to open A/B trace: %s\n", tracePath);
+			return 1;
+		}
+		Platform_Log("[CTR Replay] writing A/B trace: %s\n", tracePath);
+	}
 
 	if ((recordReport != 0) && (s_reportEnabled == 0) && !NativeReplayScheduler_PrepareReportPaths(NATIVE_REPLAY_DEFAULT_REPORT_ROOT))
 	{
@@ -1379,6 +1422,7 @@ int NativeReplayScheduler_ConfigureFromArgs(int argc, char **argv)
 	s_startRequested = 0;
 	s_reportCompleted = 0;
 	s_reportManualStart = 0;
+	s_skipBootstrapCheckpoint = skipBootstrap;
 	s_checkpointPolicy = (recordReport != 0) ? NATIVE_REPLAY_CHECKPOINT_POLICY_BOOTSTRAP_ONLY : NATIVE_REPLAY_CHECKPOINT_POLICY_ROLLING;
 	if (detailed != 0)
 	{
@@ -1409,7 +1453,48 @@ void NativeReplayScheduler_Shutdown(void)
 	NativeReplayScheduler_ResetMemcardSandbox();
 	NativeReplayScheduler_FreeReportPaths();
 	Platform_InputClearInstalledPadSnapshots();
+	if (s_traceFile != NULL)
+	{
+		fclose(s_traceFile);
+		s_traceFile = NULL;
+	}
 	s_mode = NATIVE_REPLAY_MODE_NONE;
+}
+
+int NativeReplayScheduler_Active(void)
+{
+	return (s_mode == NATIVE_REPLAY_MODE_RECORD) || (s_mode == NATIVE_REPLAY_MODE_PLAYBACK);
+}
+
+int NativeReplayScheduler_DeterministicBoot(void)
+{
+	// NOTE: Without a bootstrap checkpoint, playback must reproduce boot exactly, so VBlanks
+	// before frame 0 follow the game's VSync requests instead of wall-clock catch-up.
+	if ((s_replayFrame != 0) || (s_beginOpen != 0))
+	{
+		return 0;
+	}
+	if (s_mode == NATIVE_REPLAY_MODE_RECORD)
+	{
+		return s_header.reserved[0] == NATIVE_REPLAY_FROM_BOOT_MAGIC;
+	}
+	return (s_mode == NATIVE_REPLAY_MODE_PLAYBACK) && (s_skipBootstrapCheckpoint != 0);
+}
+
+int NativeReplayScheduler_TraceEnabled(void)
+{
+	return s_traceFile != NULL;
+}
+
+void NativeReplayScheduler_TraceFrame(const char *line)
+{
+	if ((s_traceFile == NULL) || (line == NULL))
+	{
+		return;
+	}
+
+	// NOTE: Indexed by replay frame during playback/record so traces from different builds line up.
+	fprintf(s_traceFile, "%u %s\n", (s_mode == NATIVE_REPLAY_MODE_NONE) ? 0u : s_replayFrame, line);
 }
 
 int NativeReplayScheduler_RequestStart(void)

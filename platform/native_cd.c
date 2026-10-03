@@ -3,6 +3,7 @@
 #include <platform/native_cd.h>
 #include <platform/native_disc_image.h>
 #include <platform/native_path.h>
+#include <platform/native_replay_scheduler.h>
 #include <psx/libcd.h>
 
 #include <SDL3/SDL.h>
@@ -382,6 +383,16 @@ void NativeCD_PumpCallbacks(void)
 	}
 
 	SDL_LockMutex(s_nativeCdReadWorker.mutex);
+#if defined(CTR_INTERNAL)
+	// Replays need reads to finish on the same VBlank every run, not whenever the worker is done.
+	if (NativeReplayScheduler_Active())
+	{
+		while (s_nativeCdReadWorker.pending || s_nativeCdReadWorker.busy)
+		{
+			SDL_WaitCondition(s_nativeCdReadWorker.condition, s_nativeCdReadWorker.mutex);
+		}
+	}
+#endif
 	if (s_nativeCdReadWorker.complete)
 	{
 		success = s_nativeCdReadWorker.success;
