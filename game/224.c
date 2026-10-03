@@ -545,12 +545,19 @@ struct RectMenu menu224 = {
     .unk1 = 0,
 
     .state = RECTMENU_STATE_SMALL_EXEC_CENTERED,
-    .rows = rowsWithSave,
-    .funcPtr = UI_RaceEnd_MenuProc,
+    .rows = P32_DEFER(rowsWithSave),
+    .funcPtr = P32_DEFER(UI_RaceEnd_MenuProc),
     .drawStyle = 4,
 
     // rest of variables all default zero
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(menu224)
+{
+	P32_SET(menu224.rows, rowsWithSave);
+	P32_SET(menu224.funcPtr, UI_RaceEnd_MenuProc);
+}
+#endif
 
 struct RectMenu menu224NoSave = {
     .stringIndexTitle = RECTMENU_STRING_NONE,
@@ -560,12 +567,19 @@ struct RectMenu menu224NoSave = {
     .unk1 = 0,
 
     .state = RECTMENU_STATE_SMALL_EXEC_CENTERED,
-    .rows = rowsNoSave,
-    .funcPtr = UI_RaceEnd_MenuProc,
+    .rows = P32_DEFER(rowsNoSave),
+    .funcPtr = P32_DEFER(UI_RaceEnd_MenuProc),
     .drawStyle = 4,
 
     // rest of variables all default zero
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(menu224NoSave)
+{
+	P32_SET(menu224NoSave.rows, rowsNoSave);
+	P32_SET(menu224NoSave.funcPtr, UI_RaceEnd_MenuProc);
+}
+#endif
 struct MenuRow rowsGhostReplay[4] = {
     {
         .stringIndex = LNG_RESTART,
@@ -602,10 +616,17 @@ struct RectMenu menu224GhostReplay = {
     .posY_curr = 0xA0,
     .unk1 = 0,
     .state = RECTMENU_STATE_SMALL_EXEC_CENTERED,
-    .rows = rowsGhostReplay,
-    .funcPtr = UI_RaceEnd_MenuProc,
+    .rows = P32_DEFER(rowsGhostReplay),
+    .funcPtr = P32_DEFER(UI_RaceEnd_MenuProc),
     .drawStyle = 4,
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(menu224GhostReplay)
+{
+	P32_SET(menu224GhostReplay.rows, rowsGhostReplay);
+	P32_SET(menu224GhostReplay.funcPtr, UI_RaceEnd_MenuProc);
+}
+#endif
 
 struct MenuRow rowsLeaderboardGhostReplay[5] = {
     {
@@ -650,7 +671,14 @@ struct RectMenu menu224LeaderboardGhostReplay = {
     .posY_curr = 0xA0,
     .unk1 = 0,
     .state = RECTMENU_STATE_SMALL_EXEC_CENTERED,
-    .rows = rowsLeaderboardGhostReplay,
-    .funcPtr = UI_RaceEnd_MenuProc,
+    .rows = P32_DEFER(rowsLeaderboardGhostReplay),
+    .funcPtr = P32_DEFER(UI_RaceEnd_MenuProc),
     .drawStyle = 4,
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(menu224LeaderboardGhostReplay)
+{
+	P32_SET(menu224LeaderboardGhostReplay.rows, rowsLeaderboardGhostReplay);
+	P32_SET(menu224LeaderboardGhostReplay.funcPtr, UI_RaceEnd_MenuProc);
+}
+#endif

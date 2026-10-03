@@ -149,8 +149,14 @@ static struct RectMenu s_reverseVariantMenu =
 	.posX_curr = 0x18c,
 	.posY_curr = 0x7c,
 	.state = USE_SMALL_FONT | CENTER_ON_X,
-	.rows = s_reverseVariantRows,
+	.rows = P32_DEFER(s_reverseVariantRows),
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(s_reverseVariantMenu)
+{
+	P32_SET(s_reverseVariantMenu.rows, s_reverseVariantRows);
+}
+#endif
 
 static b32 s_reverseVariantOpen;
 

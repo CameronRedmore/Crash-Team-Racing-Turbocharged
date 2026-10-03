@@ -71,9 +71,15 @@ static struct RectMenu s_nativeCupLapMenu =
 	.posX_curr = 0x100,
 	.posY_curr = 0x6c,
 	.state = CENTER_ON_COORDS | USE_SMALL_FONT | BIG_TEXT_IN_TITLE | EXECUTE_FUNCPTR,
-	.rows = NULL,
-	.funcPtr = MM_CupSelect_LapMenuProc,
+	.rows = P32_DEFER(NULL),
+	.funcPtr = P32_DEFER(MM_CupSelect_LapMenuProc),
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(s_nativeCupLapMenu)
+{
+	P32_SET(s_nativeCupLapMenu.funcPtr, MM_CupSelect_LapMenuProc);
+}
+#endif
 
 static void MM_CupSelect_StartPendingCup(struct RectMenu *lapMenu)
 {

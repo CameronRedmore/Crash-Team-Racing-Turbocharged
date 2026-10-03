@@ -375,11 +375,18 @@ global_variable struct RectMenu menuVS = {
     .posY_curr = 162,
     .unk1 = 0,
     .state = RECTMENU_STATE_SMALL_EXEC_CENTERED,
-    .rows = rowsVS,
-    .funcPtr = UI_RaceEnd_MenuProc,
+    .rows = P32_DEFER(rowsVS),
+    .funcPtr = P32_DEFER(UI_RaceEnd_MenuProc),
     .drawStyle = 4,
     // rest of variables all default zero
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(menuVS)
+{
+	P32_SET(menuVS.rows, rowsVS);
+	P32_SET(menuVS.funcPtr, UI_RaceEnd_MenuProc);
+}
+#endif
 
 global_variable struct MenuRow rowsBattle[6] = {
     // Retry
@@ -437,8 +444,15 @@ global_variable struct RectMenu menuBattle = {
     .posY_curr = 166,
     .unk1 = 0,
     .state = RECTMENU_STATE_SMALL_EXEC_CENTERED,
-    .rows = rowsBattle,
-    .funcPtr = UI_RaceEnd_MenuProc,
+    .rows = P32_DEFER(rowsBattle),
+    .funcPtr = P32_DEFER(UI_RaceEnd_MenuProc),
     .drawStyle = 4,
     // rest of variables all default zero
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(menuBattle)
+{
+	P32_SET(menuBattle.rows, rowsBattle);
+	P32_SET(menuBattle.funcPtr, UI_RaceEnd_MenuProc);
+}
+#endif

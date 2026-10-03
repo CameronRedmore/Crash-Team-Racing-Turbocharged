@@ -43,8 +43,8 @@ struct OverlayDATA_232
                     .posY_curr = 0x6c,
                     .unk1 = 0,
                     .state = RECTMENU_STATE_CENTERED | MENU_CANT_GO_BACK,
-                    .rows = &D232.rowsTokenRelic[0],
-                    .funcPtr = AH_WarpPad_MenuProc,
+                    .rows = P32_DEFER(&D232.rowsTokenRelic[0]),
+                    .funcPtr = P32_DEFER(AH_WarpPad_MenuProc),
                     .drawStyle = 4,
                 },
 
@@ -112,11 +112,11 @@ struct OverlayDATA_232
 
             .hubItemsXY_ptrArray =
                 {
-                    &D232.hubItems_hub1[0],
-                    &D232.hubItems_hub2[0],
-                    &D232.hubItems_hub3[0],
-                    &D232.hubItems_hub4[0],
-                    &D232.hubItems_hub5[0],
+                    P32_DEFER(&D232.hubItems_hub1[0]),
+                    P32_DEFER(&D232.hubItems_hub2[0]),
+                    P32_DEFER(&D232.hubItems_hub3[0]),
+                    P32_DEFER(&D232.hubItems_hub4[0]),
+                    P32_DEFER(&D232.hubItems_hub5[0]),
                 },
 
             .hubArrowInnerOffset = {{{3, 4}}, {{6, 2}}, {{5, 4}}},
@@ -225,7 +225,7 @@ struct OverlayDATA_232
 
                     .state = RECTMENU_STATE_SMALL_CALLBACK_CENTERED,
                     .rows = 0,
-                    .funcPtr = AH_HintMenu_MenuProc,
+                    .funcPtr = P32_DEFER(AH_HintMenu_MenuProc),
                     .drawStyle = 4,
 
                     // rest of variables all default zero
@@ -568,6 +568,19 @@ struct OverlayDATA_232
 
             // the rest all initialize to zeros
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(D232)
+{
+	P32_SET(D232.menuTokenRelic.rows, &D232.rowsTokenRelic[0]);
+	P32_SET(D232.menuTokenRelic.funcPtr, AH_WarpPad_MenuProc);
+	P32_SET(D232.hubItemsXY_ptrArray[0], &D232.hubItems_hub1[0]);
+	P32_SET(D232.hubItemsXY_ptrArray[1], &D232.hubItems_hub2[0]);
+	P32_SET(D232.hubItemsXY_ptrArray[2], &D232.hubItems_hub3[0]);
+	P32_SET(D232.hubItemsXY_ptrArray[3], &D232.hubItems_hub4[0]);
+	P32_SET(D232.hubItemsXY_ptrArray[4], &D232.hubItems_hub5[0]);
+	P32_SET(D232.menuHintMenu.funcPtr, AH_HintMenu_MenuProc);
+}
+#endif
 
 #ifdef CTR_NATIVE
 static struct OverlayDATA_232 s_d232InitialState;

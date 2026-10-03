@@ -14,12 +14,17 @@ enum PlantAnim
 	PlantAnim_Spit
 };
 
-struct HitboxDesc plantBoxDesc = {.inst = (struct Instance *)0,
-                                  .thread = (struct Thread *)0,
-                                  .bucket = (struct Thread *)0,
+struct HitboxDesc plantBoxDesc = {.inst = P32_DEFER((struct Instance *)0),
+                                  .thread = P32_DEFER((struct Thread *)0),
+                                  .bucket = P32_DEFER((struct Thread *)0),
                                   .bbox = {.min = {{0xFFC0, 0xFFC0, 0}}, .max = {{0x40, 0x80, 0x1E0}}},
-                                  .threadHit = (struct Thread *)0,
-                                  .funcThCollide = (void *)0};
+                                  .threadHit = P32_DEFER((struct Thread *)0),
+                                  .funcThCollide = P32_DEFER((void *)0)};
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(plantBoxDesc)
+{
+}
+#endif
 
 extern struct ParticleEmitter emSet_PlantTires[8];
 

@@ -858,10 +858,17 @@ struct RectMenu menu222BossFight =
     .posX_curr = 256,
     .posY_curr = 154,
     .state = RECTMENU_STATE_SMALL_CENTERED,
-    .rows = rows222BossFight,
-    .funcPtr = UI_RaceEnd_MenuProc,
+    .rows = P32_DEFER(rows222BossFight),
+    .funcPtr = P32_DEFER(UI_RaceEnd_MenuProc),
     .drawStyle = 4,
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(menu222BossFight)
+{
+	P32_SET(menu222BossFight.rows, rows222BossFight);
+	P32_SET(menu222BossFight.funcPtr, UI_RaceEnd_MenuProc);
+}
+#endif
 
 struct RectMenu menu222 = {
     .stringIndexTitle = RECTMENU_STRING_NONE,
@@ -869,11 +876,18 @@ struct RectMenu menu222 = {
     .posY_curr = 170,
     .unk1 = 0,
     .state = RECTMENU_STATE_SMALL_CENTERED,
-    .rows = rows222,
-    .funcPtr = UI_RaceEnd_MenuProc,
+    .rows = P32_DEFER(rows222),
+    .funcPtr = P32_DEFER(UI_RaceEnd_MenuProc),
     .drawStyle = 4,
     // rest of variables all default zero
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(menu222)
+{
+	P32_SET(menu222.rows, rows222);
+	P32_SET(menu222.funcPtr, UI_RaceEnd_MenuProc);
+}
+#endif
 
 struct RectMenu menu222_2P = {
     .stringIndexTitle = RECTMENU_STRING_NONE,
@@ -881,8 +895,15 @@ struct RectMenu menu222_2P = {
     .posY_curr = 108,
     .unk1 = 0,
     .state = RECTMENU_STATE_SMALL_CENTERED,
-    .rows = rows222,
-    .funcPtr = UI_RaceEnd_MenuProc,
+    .rows = P32_DEFER(rows222),
+    .funcPtr = P32_DEFER(UI_RaceEnd_MenuProc),
     .drawStyle = 4,
     // rest of variables all default zero
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(menu222_2P)
+{
+	P32_SET(menu222_2P.rows, rows222);
+	P32_SET(menu222_2P.funcPtr, UI_RaceEnd_MenuProc);
+}
+#endif

@@ -91,9 +91,16 @@ static struct RectMenu s_nativeExtraDifficultyMenu =
 {
 	.stringIndexTitle = LNG_DIFFICULTY,
 	.state = CENTER_ON_X | USE_SMALL_FONT | BIG_TEXT_IN_TITLE,
-	.rows = s_nativeExtraDifficultyRows,
-	.funcPtr = MM_MenuProc_Difficulty,
+	.rows = P32_DEFER(s_nativeExtraDifficultyRows),
+	.funcPtr = P32_DEFER(MM_MenuProc_Difficulty),
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(s_nativeExtraDifficultyMenu)
+{
+	P32_SET(s_nativeExtraDifficultyMenu.rows, s_nativeExtraDifficultyRows);
+	P32_SET(s_nativeExtraDifficultyMenu.funcPtr, MM_MenuProc_Difficulty);
+}
+#endif
 
 static struct MenuRow s_nativeLanguageRows[MM_NATIVE_LANGUAGE_COUNT + 1] =
 {
@@ -342,20 +349,34 @@ static struct RectMenu s_nativeLanguageBootMenu =
 	.posX_curr = 256,
 	.posY_curr = 118,
 	.state = RECTMENU_STATE_EXEC_CENTERED,
-	.rows = s_nativeLanguageRows,
-	.funcPtr = MM_NativeLanguageBootMenuProc,
+	.rows = P32_DEFER(s_nativeLanguageRows),
+	.funcPtr = P32_DEFER(MM_NativeLanguageBootMenuProc),
 #if CTR_NATIVE_WIDESCREEN
 	.drawStyle = MM_NATIVE_LANGUAGE_DRAWSTYLE_WIDESCREEN,
 #endif
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(s_nativeLanguageBootMenu)
+{
+	P32_SET(s_nativeLanguageBootMenu.rows, s_nativeLanguageRows);
+	P32_SET(s_nativeLanguageBootMenu.funcPtr, MM_NativeLanguageBootMenuProc);
+}
+#endif
 
 static struct RectMenu s_nativeLanguageMainMenu =
 {
 	.stringIndexTitle = RECTMENU_STRING_NONE,
 	.state = CENTER_ON_X | USE_SMALL_FONT,
-	.rows = s_nativeLanguageRows,
-	.funcPtr = MM_NativeLanguageMainMenuProc,
+	.rows = P32_DEFER(s_nativeLanguageRows),
+	.funcPtr = P32_DEFER(MM_NativeLanguageMainMenuProc),
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(s_nativeLanguageMainMenu)
+{
+	P32_SET(s_nativeLanguageMainMenu.rows, s_nativeLanguageRows);
+	P32_SET(s_nativeLanguageMainMenu.funcPtr, MM_NativeLanguageMainMenuProc);
+}
+#endif
 
 static void MM_NativeTimeTrialRefreshOnlineRow(void)
 {
@@ -372,37 +393,65 @@ static struct RectMenu s_nativeTimeTrialMenu =
 {
 	.stringIndexTitle = LNG_TIME_TRIAL,
 	.state = CENTER_ON_X,
-	.rows = s_nativeTimeTrialRows,
-	.funcPtr = MM_NativeTimeTrialMenuProc,
+	.rows = P32_DEFER(s_nativeTimeTrialRows),
+	.funcPtr = P32_DEFER(MM_NativeTimeTrialMenuProc),
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(s_nativeTimeTrialMenu)
+{
+	P32_SET(s_nativeTimeTrialMenu.rows, s_nativeTimeTrialRows);
+	P32_SET(s_nativeTimeTrialMenu.funcPtr, MM_NativeTimeTrialMenuProc);
+}
+#endif
 
 static struct RectMenu s_nativeOptionsMenu =
 {
 	.stringIndexTitle = RECTMENU_STRING_NONE,
 	.state = CENTER_ON_X | USE_SMALL_FONT | BIG_TEXT_IN_TITLE,
-	.rows = s_nativeOptionsRows,
-	.funcPtr = MM_NativeOptionsMenuProc,
+	.rows = P32_DEFER(s_nativeOptionsRows),
+	.funcPtr = P32_DEFER(MM_NativeOptionsMenuProc),
 	.drawStyle = RECTMENU_DRAW_STYLE_NATIVE_OPTIONS,
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(s_nativeOptionsMenu)
+{
+	P32_SET(s_nativeOptionsMenu.rows, s_nativeOptionsRows);
+	P32_SET(s_nativeOptionsMenu.funcPtr, MM_NativeOptionsMenuProc);
+}
+#endif
 
 #ifndef __vita__
 static struct RectMenu s_nativeEnhancementsMenu =
 {
 	.stringIndexTitle = NATIVE_MENU_STRING_ENHANCEMENTS,
 	.state = CENTER_ON_X | USE_SMALL_FONT | BIG_TEXT_IN_TITLE,
-	.rows = s_nativeEnhancementsRows,
-	.funcPtr = MM_NativeOptionsMenuProc,
+	.rows = P32_DEFER(s_nativeEnhancementsRows),
+	.funcPtr = P32_DEFER(MM_NativeOptionsMenuProc),
 	.drawStyle = RECTMENU_DRAW_STYLE_NATIVE_OPTIONS,
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(s_nativeEnhancementsMenu)
+{
+	P32_SET(s_nativeEnhancementsMenu.rows, s_nativeEnhancementsRows);
+	P32_SET(s_nativeEnhancementsMenu.funcPtr, MM_NativeOptionsMenuProc);
+}
+#endif
 #endif
 
 static struct RectMenu s_nativeCheatsMenu =
 {
 	.stringIndexTitle = NATIVE_MENU_STRING_CHEATS,
 	.state = CENTER_ON_X | USE_SMALL_FONT | BIG_TEXT_IN_TITLE,
-	.rows = s_nativeCheatsRows,
-	.funcPtr = MM_NativeCheatsMenuProc,
+	.rows = P32_DEFER(s_nativeCheatsRows),
+	.funcPtr = P32_DEFER(MM_NativeCheatsMenuProc),
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(s_nativeCheatsMenu)
+{
+	P32_SET(s_nativeCheatsMenu.rows, s_nativeCheatsRows);
+	P32_SET(s_nativeCheatsMenu.funcPtr, MM_NativeCheatsMenuProc);
+}
+#endif
 
 static struct RectMenu s_nativeControlsMenu =
 {
@@ -410,10 +459,17 @@ static struct RectMenu s_nativeControlsMenu =
 	.posX_curr = 256,
 	.posY_curr = 120,
 	.state = CENTER_ON_COORDS | USE_SMALL_FONT | BIG_TEXT_IN_TITLE | RECTMENU_DRAW_CALLBACK_FLAGS,
-	.rows = s_nativeControlsRows,
-	.funcPtr = MM_NativeControlsMenuProc,
+	.rows = P32_DEFER(s_nativeControlsRows),
+	.funcPtr = P32_DEFER(MM_NativeControlsMenuProc),
 	.rowSelected = 1,
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(s_nativeControlsMenu)
+{
+	P32_SET(s_nativeControlsMenu.rows, s_nativeControlsRows);
+	P32_SET(s_nativeControlsMenu.funcPtr, MM_NativeControlsMenuProc);
+}
+#endif
 
 static struct RectMenu s_nativeBossFightMenu =
 {
@@ -421,9 +477,16 @@ static struct RectMenu s_nativeBossFightMenu =
 	.posX_curr = 256,
 	.posY_curr = 82,
 	.state = RECTMENU_STATE_EXEC_CENTERED | USE_SMALL_FONT | BIG_TEXT_IN_TITLE,
-	.rows = s_nativeBossFightRows,
-	.funcPtr = MM_NativeBossFightMenuProc,
+	.rows = P32_DEFER(s_nativeBossFightRows),
+	.funcPtr = P32_DEFER(MM_NativeBossFightMenuProc),
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(s_nativeBossFightMenu)
+{
+	P32_SET(s_nativeBossFightMenu.rows, s_nativeBossFightRows);
+	P32_SET(s_nativeBossFightMenu.funcPtr, MM_NativeBossFightMenuProc);
+}
+#endif
 
 s32 s_nativeLanguageChosen = 0;
 static s32 s_nativeLanguageTimer;

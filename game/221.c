@@ -346,9 +346,16 @@ struct RectMenu menu221 = {
     .unk1 = 0,
 
     .state = RECTMENU_STATE_CENTERED,
-    .rows = rows221,
-    .funcPtr = UI_RaceEnd_MenuProc,
+    .rows = P32_DEFER(rows221),
+    .funcPtr = P32_DEFER(UI_RaceEnd_MenuProc),
     .drawStyle = 4,
 
     // rest of variables all default zero
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(menu221)
+{
+	P32_SET(menu221.rows, rows221);
+	P32_SET(menu221.funcPtr, UI_RaceEnd_MenuProc);
+}
+#endif

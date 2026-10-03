@@ -26,8 +26,14 @@ static struct RectMenu s_onlineGhostMenu =
     .posX_curr = 0x17c,
     .posY_curr = 0xaf,
     .state = USE_SMALL_FONT | CENTER_ON_X,
-    .rows = s_onlineGhostRows,
+    .rows = P32_DEFER(s_onlineGhostRows),
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(s_onlineGhostMenu)
+{
+	P32_SET(s_onlineGhostMenu.rows, s_onlineGhostRows);
+}
+#endif
 
 static int s_onlineHighScoreState;
 enum NativeHighScoreOnlineCategory

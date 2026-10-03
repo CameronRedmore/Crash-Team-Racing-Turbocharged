@@ -659,7 +659,7 @@ struct OverlayRDATA_233
 	// 800b7780
 };
 
-extern const struct OverlayRDATA_233 R233;
+extern CTR_P32_MUTABLE struct OverlayRDATA_233 R233;
 
 struct OverlayDATA_233
 {

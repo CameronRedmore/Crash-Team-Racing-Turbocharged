@@ -7,7 +7,7 @@ struct OverlayRDATA_231 R231 = {
                 {
                     .flags = 1,
                     .initOffset = 0xc,
-                    .InitTypes.FuncInit.particle_funcPtr = NULL,
+                    .InitTypes.FuncInit.particle_funcPtr = P32_DEFER(NULL),
                     .InitTypes.FuncInit.particle_colorFlags = 0,
                     .InitTypes.FuncInit.particle_lifespan = 5,
                     .InitTypes.FuncInit.particle_Type = 1,
@@ -77,3 +77,8 @@ struct OverlayRDATA_231 R231 = {
             -8, -4, -2, 0,  977, 1835, 1792, 2936, 2205, 2095, 2335, 1254, 1884, 1612, 1433, 1971, 1612, 1881, 1792, 1792,
         },
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(R231)
+{
+}
+#endif
