@@ -266,6 +266,7 @@ if(BUILD_TESTING AND NOT EMSCRIPTEN)
         platform/native_draw3d.c
         platform/native_aspect.c
         platform/native_projection.c
+        platform/native_visibility_stats.c
         platform/native_gte_core.c
         platform/native_inline_c.c
     )
@@ -283,7 +284,7 @@ if(BUILD_TESTING AND NOT EMSCRIPTEN)
     endif()
     add_test(NAME ctr_native_physics COMMAND ctr_native_physics_test)
     add_executable(ctr_native_draw3d_test tests/native_draw3d_test.c platform/native_draw3d.c)
-    target_sources(ctr_native_draw3d_test PRIVATE platform/native_aspect.c platform/native_projection.c)
+    target_sources(ctr_native_draw3d_test PRIVATE platform/native_aspect.c platform/native_projection.c platform/native_visibility_stats.c)
     target_include_directories(ctr_native_draw3d_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
     target_compile_definitions(ctr_native_draw3d_test PRIVATE CTR_NATIVE BUILD=926)
     if(NOT CTR_NATIVE_MSVC_FRONTEND)

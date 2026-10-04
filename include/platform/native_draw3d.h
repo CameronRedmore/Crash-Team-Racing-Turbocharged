@@ -104,6 +104,9 @@ enum NativeDraw3DDiagnosticEvent
 	NATIVE_DRAW3D_DIAG_OVERLAY_TARGET,
 	NATIVE_DRAW3D_DIAG_OVERLAY_FRAMEBUFFER,
 	NATIVE_DRAW3D_DIAG_PROJECTED_PACKET,
+	// A scenery instance was dropped because the render bucket entry array was
+	// full, so the model is missing from the frame.
+	NATIVE_DRAW3D_DIAG_MODEL_QUEUE_FULL,
 	NATIVE_DRAW3D_DIAG_COUNT,
 };
 

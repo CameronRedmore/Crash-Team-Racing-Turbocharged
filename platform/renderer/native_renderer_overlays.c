@@ -22,6 +22,7 @@
 #include "platform/native_perf.h"
 #include "platform/native_pgxp.h"
 #include "platform/native_renderer_internal.h"
+#include "platform/native_visibility_stats.h"
 
 #ifdef __vita__
 #include <png.h>
@@ -286,6 +287,27 @@ internal int NativeRenderer_BuildDebugOverlayLines(char lines[][NATIVE_DEBUG_OVE
 	         NativeRenderer_DebugOnOff(gNativePgxpIntegerNclipEnabled));
 	DBG_LINE("Depth buf %s", NativeRenderer_DebugOnOff(NATIVE_DEPTH_BUFFER_ACTIVE()));
 	DBG_LINE("Max LOD %s", NativeRenderer_DebugOnOff(gNativeMaxLodEnabled));
+	DBG_LINE("-- Visibility --");
+	{
+		u64 vis[NATIVE_VIS_COUNTER_COUNT];
+		char fovText[16];
+		NativeVisibilityLastFrame(vis);
+		if (gNativeFovDegrees == 0)
+		{
+			snprintf(fovText, sizeof(fovText), "Original");
+		}
+		else
+		{
+			snprintf(fovText, sizeof(fovText), "%d deg", gNativeFovDegrees);
+		}
+		DBG_LINE("FOV %s  aspect %s  expanded %s", fovText, NativeAspect_GetLabel(gNativeAspectRatio),
+		         NativeRenderer_DebugOnOff(NativeAspect_UsesExpandedVisibility()));
+		DBG_LINE("BSP tested %llu  pushed %llu", (unsigned long long)vis[NATIVE_VIS_BSP_CHILDREN_TESTED],
+		         (unsigned long long)vis[NATIVE_VIS_BSP_CHILDREN_PUSHED]);
+		DBG_LINE("Leaves %llu  rejected %llu", (unsigned long long)vis[NATIVE_VIS_BSP_LEAVES_LINKED], (unsigned long long)vis[NATIVE_VIS_BSP_LEAVES_REJECTED]);
+		DBG_LINE("Quads %llu / %llu", (unsigned long long)vis[NATIVE_VIS_QUAD_BLOCKS_EMITTED], (unsigned long long)vis[NATIVE_VIS_QUAD_BLOCKS_TESTED]);
+		DBG_LINE("Inst %llu  dropped %llu", (unsigned long long)vis[NATIVE_VIS_INSTANCES_QUEUED], (unsigned long long)vis[NATIVE_VIS_INSTANCES_DROPPED]);
+	}
 	DBG_LINE("-- Look --");
 	DBG_LINE("Colour %s", gNativeColorDepth == NATIVE_COLOR_DEPTH_15BIT ? "15-bit" : "24-bit");
 	DBG_LINE("Dither  %s", NativeRenderer_DebugOnOff(gNativeDitheringEnabled));

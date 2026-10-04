@@ -9,6 +9,7 @@
 #include <time.h>
 
 #include "platform/native_log.h"
+#include "platform/native_visibility_stats.h"
 
 int gNativeRendererMode = NATIVE_RENDERER_CLASSIC;
 int gNativeColorDepth = NATIVE_COLOR_DEPTH_TRUE;
@@ -54,6 +55,7 @@ static const char *const s_draw3dDiagnosticNames[NATIVE_DRAW3D_DIAG_COUNT] = {
     "overlay drawn without depth: unexpected target",
     "overlay drawn without depth: incomplete framebuffer",
     "projected polygon packet using geometry recovery",
+    "model dropped: render bucket entries exhausted",
 };
 static u64 s_draw3dDiagnosticTotals[NATIVE_DRAW3D_DIAG_COUNT];
 static u64 s_draw3dDiagnosticInterval[NATIVE_DRAW3D_DIAG_COUNT];
@@ -89,6 +91,7 @@ void NativeDraw3D_BeginFrame(void)
 {
 	// Report recovery events before releasing the completed frame.
 	NativeDraw3D_ReportDiagnostics();
+	NativeVisibility_ReportFrameBoundary();
 	s_draw3dTriangleCount = 0;
 	s_draw3dLayerCount = 0;
 }
