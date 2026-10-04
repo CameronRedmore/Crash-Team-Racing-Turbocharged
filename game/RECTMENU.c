@@ -423,6 +423,11 @@ static char *NativeRow(const char *label, const char *value)
 	return row;
 }
 
+// Translation tables for the native menus. Language order matches the retail menus:
+// EN, FR, DE, IT, ES, NL, so one row per language is the readable layout and it is
+// what a translator diffs against. clang-format would pack several languages onto one
+// line, so this block is excluded from formatting rather than realigned.
+// clang-format off
 static const char *ghostReplay[6] =
 {
 	"GHOST REPLAY",
@@ -671,6 +676,7 @@ static const char *controlAction[6][PLATFORM_INPUT_BIND_ACTION_COUNT] =
 	{"* ACELERAR", "[ FRENO/REVERSA", "@ USAR POWER-UP", "^ CAMBIAR HUD", "SALTO / DERRAPE L1", "SALTO / DERRAPE R1", "CAMBIAR CAMARA", "VISTA TRASERA", "DPAD ARRIBA", "DPAD ABAJO", "DPAD IZQUIERDA", "DPAD DERECHA", "START / PAUSA"},
 	{"* GAS", "[ REM/ACHTERUIT", "@ POWER-UP GEBR.", "^ HUD WISSELEN", "SPRONG / DRIFT L1", "SPRONG / DRIFT R1", "CAMERA WISSEL", "ACHTERUITZICHT", "DPAD OMHOOG", "DPAD OMLAAG", "DPAD LINKS", "DPAD RECHTS", "START / PAUZE"},
 };
+// clang-format on
 
 // Options menu presentation.
 //
@@ -731,8 +737,7 @@ static char *NativeOptionFormatAspectRatio(int languageRow)
 
 static char *NativeOptionFormatFieldOfView(int languageRow)
 {
-	snprintf(s_optionLabelRow, sizeof(s_optionLabelRow), "%s%s", s_txtFieldOfView[languageRow],
-	         NATIVE_DRAW3D_ACTIVE() ? "" : " (NATIVE)");
+	snprintf(s_optionLabelRow, sizeof(s_optionLabelRow), "%s%s", s_txtFieldOfView[languageRow], NATIVE_DRAW3D_ACTIVE() ? "" : " (NATIVE)");
 	if (gNativeFovDegrees == 0)
 	{
 		return NativeRow(s_optionLabelRow, "ORIGINAL");
@@ -749,23 +754,20 @@ static char *NativeOptionFormatProjection(int languageRow)
 	{
 		mode = NATIVE_PROJECTION_PERSPECTIVE;
 	}
-	snprintf(s_optionLabelRow, sizeof(s_optionLabelRow), "%s%s", s_txtProjection[languageRow],
-	         NATIVE_DRAW3D_ACTIVE() ? "" : " (NATIVE)");
+	snprintf(s_optionLabelRow, sizeof(s_optionLabelRow), "%s%s", s_txtProjection[languageRow], NATIVE_DRAW3D_ACTIVE() ? "" : " (NATIVE)");
 	return NativeRow(s_optionLabelRow, projectionNames[mode]);
 }
 
 static char *NativeOptionFormatProjectionStrength(int languageRow)
 {
-	snprintf(s_optionLabelRow, sizeof(s_optionLabelRow), "%s%s", s_txtProjectionStrength[languageRow],
-	         NATIVE_DRAW3D_ACTIVE() ? "" : " (NATIVE)");
+	snprintf(s_optionLabelRow, sizeof(s_optionLabelRow), "%s%s", s_txtProjectionStrength[languageRow], NATIVE_DRAW3D_ACTIVE() ? "" : " (NATIVE)");
 	snprintf(s_optionValueText, sizeof(s_optionValueText), "%d", gNativeProjectionStrength);
 	return NativeRow(s_optionLabelRow, s_optionValueText);
 }
 
 static char *NativeOptionFormatColorDepth(int languageRow)
 {
-	return NativeRow(s_txtColourDepth[languageRow],
-	                 gNativeColorDepth == NATIVE_COLOR_DEPTH_15BIT ? "15-BIT PS1" : "24-BIT");
+	return NativeRow(s_txtColourDepth[languageRow], gNativeColorDepth == NATIVE_COLOR_DEPTH_15BIT ? "15-BIT PS1" : "24-BIT");
 }
 
 static char *NativeOptionFormatHdPause(int languageRow)
@@ -791,8 +793,7 @@ static char *NativeOptionFormatKartHue(int languageRow)
 	static char kartHueRow[96];
 	if (gNativeKartHue == 0)
 	{
-		snprintf(kartHueRow, sizeof(kartHueRow), "%s (%s): %s", s_txtKartHue[languageRow], s_txtExperimental[languageRow],
-		         s_txtOriginal[languageRow]);
+		snprintf(kartHueRow, sizeof(kartHueRow), "%s (%s): %s", s_txtKartHue[languageRow], s_txtExperimental[languageRow], s_txtOriginal[languageRow]);
 	}
 	else
 	{
@@ -811,69 +812,54 @@ static char *NativeOptionFormatFont(int languageRow)
 }
 
 static const struct NativeOptionRow s_nativeOptionRows[] = {
-	{NATIVE_MENU_STRING_MIRROR_MODE, NULL, &gNativeMirrorModeEnabled, NATIVE_OPTION_VALUE_LOCALIZED_ENUM,
-	 (const char *const *)mirrorMode, 2, NULL, NULL, NULL, 1},
-	{NATIVE_MENU_STRING_FRAME_RATE, NULL, &gNative60FpsEnabled, NATIVE_OPTION_VALUE_PLAIN_ENUM, frameRate, 0, NULL, NULL,
+    {NATIVE_MENU_STRING_MIRROR_MODE, NULL, &gNativeMirrorModeEnabled, NATIVE_OPTION_VALUE_LOCALIZED_ENUM, (const char *const *)mirrorMode, 2, NULL, NULL, NULL,
+	 1},
+    {NATIVE_MENU_STRING_FRAME_RATE, NULL, &gNative60FpsEnabled, NATIVE_OPTION_VALUE_PLAIN_ENUM, frameRate, 0, NULL, NULL, NULL, 1},
+    {NATIVE_MENU_STRING_ASPECT_RATIO, NULL, &gNativeAspectRatio, NATIVE_OPTION_VALUE_FORMATTED, NULL, 0, NULL, NULL, NativeOptionFormatAspectRatio, 1},
+    {NATIVE_MENU_STRING_FIELD_OF_VIEW, NULL, &gNativeFovDegrees, NATIVE_OPTION_VALUE_FORMATTED, NULL, 0, NULL, NULL, NativeOptionFormatFieldOfView, 1},
+    {NATIVE_MENU_STRING_PROJECTION, NULL, &gNativeProjectionMode, NATIVE_OPTION_VALUE_FORMATTED, NULL, 0, NULL, NULL, NativeOptionFormatProjection, 1},
+    {NATIVE_MENU_STRING_PROJECTION_STRENGTH, NULL, &gNativeProjectionStrength, NATIVE_OPTION_VALUE_FORMATTED, NULL, 0, NULL, NULL,
+	 NativeOptionFormatProjectionStrength, 1},
+    {NATIVE_MENU_STRING_DEFAULT_CAMERA, NULL, &gNativeDefaultCameraFar, NATIVE_OPTION_VALUE_LOCALIZED_ENUM, (const char *const *)defaultCamera, 2, NULL, NULL,
 	 NULL, 1},
-	{NATIVE_MENU_STRING_ASPECT_RATIO, NULL, &gNativeAspectRatio, NATIVE_OPTION_VALUE_FORMATTED, NULL, 0, NULL, NULL,
-	 NativeOptionFormatAspectRatio, 1},
-	{NATIVE_MENU_STRING_FIELD_OF_VIEW, NULL, &gNativeFovDegrees, NATIVE_OPTION_VALUE_FORMATTED, NULL, 0, NULL, NULL,
-	 NativeOptionFormatFieldOfView, 1},
-	{NATIVE_MENU_STRING_PROJECTION, NULL, &gNativeProjectionMode, NATIVE_OPTION_VALUE_FORMATTED, NULL, 0, NULL, NULL,
-	 NativeOptionFormatProjection, 1},
-	{NATIVE_MENU_STRING_PROJECTION_STRENGTH, NULL, &gNativeProjectionStrength, NATIVE_OPTION_VALUE_FORMATTED, NULL, 0,
-	 NULL, NULL, NativeOptionFormatProjectionStrength, 1},
-	{NATIVE_MENU_STRING_DEFAULT_CAMERA, NULL, &gNativeDefaultCameraFar, NATIVE_OPTION_VALUE_LOCALIZED_ENUM,
-	 (const char *const *)defaultCamera, 2, NULL, NULL, NULL, 1},
-	{NATIVE_MENU_STRING_DEFAULT_HUD, NULL, &gNativeDefaultHudSpeedometer, NATIVE_OPTION_VALUE_LOCALIZED_ENUM,
-	 (const char *const *)defaultHud, 2, NULL, NULL, NULL, 1},
-	{NATIVE_MENU_STRING_AI_RACERS, NULL, &gNativeAIRacersMode, NATIVE_OPTION_VALUE_LOCALIZED_ENUM,
-	 (const char *const *)aiRacers, NATIVE_AI_RACERS_MODE_COUNT, NULL, NULL, NULL, 1},
-	{NATIVE_MENU_STRING_SKIP_MASK_HINTS, s_txtSkipMaskHints, &gNativeSkipMaskHints, NATIVE_OPTION_VALUE_LABELLED_PAIR,
-	 NULL, 0, s_txtOn, s_txtOff, NULL, 1},
-#ifndef __vita__
-	{NATIVE_MENU_STRING_ANTI_ALIASING, NULL, &gNativeAntiAliasingMode, NATIVE_OPTION_VALUE_PLAIN_ENUM, antiAliasing, 0,
+    {NATIVE_MENU_STRING_DEFAULT_HUD, NULL, &gNativeDefaultHudSpeedometer, NATIVE_OPTION_VALUE_LOCALIZED_ENUM, (const char *const *)defaultHud, 2, NULL, NULL,
+	 NULL, 1},
+    {NATIVE_MENU_STRING_AI_RACERS, NULL, &gNativeAIRacersMode, NATIVE_OPTION_VALUE_LOCALIZED_ENUM, (const char *const *)aiRacers, NATIVE_AI_RACERS_MODE_COUNT,
 	 NULL, NULL, NULL, 1},
-	{NATIVE_MENU_STRING_DITHERING, NULL, &gNativeDitheringEnabled, NATIVE_OPTION_VALUE_LOCALIZED_ENUM,
-	 (const char *const *)dithering, 2, NULL, NULL, NULL, 1},
-	{NATIVE_MENU_STRING_BORDERLESS, s_txtDisplay, &gNativeBorderlessEnabled, NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0,
-	 s_txtBorderless, s_txtWindowed, NULL, 1},
-	{NATIVE_MENU_STRING_PGXP, s_txtClassicPgxp, &gNativePgxpMode, NATIVE_OPTION_VALUE_LABELLED_ENUM,
-	 (const char *const *)s_txtPgxpMode, NATIVE_PGXP_MODE_COUNT, NULL, NULL, NULL, 1},
-	{NATIVE_MENU_STRING_DEPTH_BUFFER, s_txtClassicDepth, &gNativeDepthBufferEnabled, NATIVE_OPTION_VALUE_LABELLED_PAIR,
-	 NULL, 0, s_txtOn, s_txtOff, NULL, 1},
-	{NATIVE_MENU_STRING_RENDERER, s_txtRenderer, &gNativeRendererMode, NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0,
-	 s_txtRendererNative, s_txtRendererClassic, NULL, 1},
-	{NATIVE_MENU_STRING_COLOR_DEPTH, NULL, &gNativeColorDepth, NATIVE_OPTION_VALUE_FORMATTED, NULL, 0, NULL, NULL,
-	 NativeOptionFormatColorDepth, 1},
-	{NATIVE_MENU_STRING_TEXTURE_FILTER, s_txtTextures, &g_cfg_bilinearFiltering, NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL,
-	 0, s_txtBilinear, s_txtNearest, NULL, 1},
-	{NATIVE_MENU_STRING_HD_PAUSE, NULL, &gNativeHdPauseMode, NATIVE_OPTION_VALUE_FORMATTED, NULL, 0, NULL, NULL,
-	 NativeOptionFormatHdPause, 1},
-	{NATIVE_MENU_STRING_PRECISE_MINIMAP, s_txtPreciseMinimap, &gNativePreciseMinimapEnabled,
-	 NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0, s_txtOn, s_txtOff, NULL, 1},
-	{NATIVE_MENU_STRING_MODERN_MAP, s_txtModernMinimap, &gNativeModernMapEnabled, NATIVE_OPTION_VALUE_LABELLED_PAIR,
-	 NULL, 0, s_txtOn, s_txtOff, NULL, 1},
-	{NATIVE_MENU_STRING_MODERN_HUD_ICONS, s_txtModernHudIcons, &gNativeModernHudIconsEnabled,
-	 NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0, s_txtOn, s_txtOff, NULL, 1},
-	{NATIVE_MENU_STRING_ADDITIONAL_UNLOCKS, s_txtAdditionalUnlocks, &gNativeAdditionalUnlocksEnabled,
-	 NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0, s_txtOn, s_txtOff, NULL, 1},
-	{NATIVE_MENU_STRING_ENGINE_SELECTION, s_txtEngineSelection, &gNativeEngineSelectionEnabled,
-	 NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0, s_txtOn, s_txtOff, NULL, 1},
-	{NATIVE_MENU_STRING_KART_HUE, NULL, &gNativeKartHue, NATIVE_OPTION_VALUE_FORMATTED, NULL, 0, NULL, NULL,
-	 NativeOptionFormatKartHue, 1},
-	{NATIVE_MENU_STRING_FONT, NULL, &gNativeFont, NATIVE_OPTION_VALUE_FORMATTED, NULL, 0, NULL, NULL,
-	 NativeOptionFormatFont, 1},
-	{NATIVE_MENU_STRING_AI_PHYSICS, s_txtAi, &gNativeSmoothedAIEnabled, NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0,
-	 s_txtSmoothed, s_txtOriginal, NULL, 1},
-	{NATIVE_MENU_STRING_COLLISION_PHYSICS, s_txtCollisions, &gNativeSmoothedCollisionEnabled,
-	 NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0, s_txtSmoothed, s_txtOriginal, NULL, 1},
-	{NATIVE_MENU_STRING_STEERING_PHYSICS, s_txtSteering, &gNativeSmoothedSteeringEnabled,
-	 NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0, s_txtSmoothed, s_txtOriginal, NULL, 1},
-	{NATIVE_MENU_STRING_PHYSICS, s_txtPlayerPhysics, &gNativeSmoothedPhysicsEnabled, NATIVE_OPTION_VALUE_LABELLED_PAIR,
-	 NULL, 0, s_txtSmoothed, s_txtOriginal, NULL, 1},
-	{NATIVE_MENU_STRING_MAX_LOD, NULL, &gNativeMaxLodEnabled, NATIVE_OPTION_VALUE_LOCALIZED_ENUM,
-	 (const char *const *)maxLod, 2, NULL, NULL, NULL, 1},
+    {NATIVE_MENU_STRING_SKIP_MASK_HINTS, s_txtSkipMaskHints, &gNativeSkipMaskHints, NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0, s_txtOn, s_txtOff, NULL, 1},
+#ifndef __vita__
+    {NATIVE_MENU_STRING_ANTI_ALIASING, NULL, &gNativeAntiAliasingMode, NATIVE_OPTION_VALUE_PLAIN_ENUM, antiAliasing, 0, NULL, NULL, NULL, 1},
+    {NATIVE_MENU_STRING_DITHERING, NULL, &gNativeDitheringEnabled, NATIVE_OPTION_VALUE_LOCALIZED_ENUM, (const char *const *)dithering, 2, NULL, NULL, NULL, 1},
+    {NATIVE_MENU_STRING_BORDERLESS, s_txtDisplay, &gNativeBorderlessEnabled, NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0, s_txtBorderless, s_txtWindowed, NULL,
+	 1},
+    {NATIVE_MENU_STRING_PGXP, s_txtClassicPgxp, &gNativePgxpMode, NATIVE_OPTION_VALUE_LABELLED_ENUM, (const char *const *)s_txtPgxpMode, NATIVE_PGXP_MODE_COUNT,
+	 NULL, NULL, NULL, 1},
+    {NATIVE_MENU_STRING_DEPTH_BUFFER, s_txtClassicDepth, &gNativeDepthBufferEnabled, NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0, s_txtOn, s_txtOff, NULL, 1},
+    {NATIVE_MENU_STRING_RENDERER, s_txtRenderer, &gNativeRendererMode, NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0, s_txtRendererNative, s_txtRendererClassic,
+	 NULL, 1},
+    {NATIVE_MENU_STRING_COLOR_DEPTH, NULL, &gNativeColorDepth, NATIVE_OPTION_VALUE_FORMATTED, NULL, 0, NULL, NULL, NativeOptionFormatColorDepth, 1},
+    {NATIVE_MENU_STRING_TEXTURE_FILTER, s_txtTextures, &g_cfg_bilinearFiltering, NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0, s_txtBilinear, s_txtNearest, NULL,
+	 1},
+    {NATIVE_MENU_STRING_HD_PAUSE, NULL, &gNativeHdPauseMode, NATIVE_OPTION_VALUE_FORMATTED, NULL, 0, NULL, NULL, NativeOptionFormatHdPause, 1},
+    {NATIVE_MENU_STRING_PRECISE_MINIMAP, s_txtPreciseMinimap, &gNativePreciseMinimapEnabled, NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0, s_txtOn, s_txtOff,
+	 NULL, 1},
+    {NATIVE_MENU_STRING_MODERN_MAP, s_txtModernMinimap, &gNativeModernMapEnabled, NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0, s_txtOn, s_txtOff, NULL, 1},
+    {NATIVE_MENU_STRING_MODERN_HUD_ICONS, s_txtModernHudIcons, &gNativeModernHudIconsEnabled, NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0, s_txtOn, s_txtOff,
+	 NULL, 1},
+    {NATIVE_MENU_STRING_ADDITIONAL_UNLOCKS, s_txtAdditionalUnlocks, &gNativeAdditionalUnlocksEnabled, NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0, s_txtOn,
+	 s_txtOff, NULL, 1},
+    {NATIVE_MENU_STRING_ENGINE_SELECTION, s_txtEngineSelection, &gNativeEngineSelectionEnabled, NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0, s_txtOn, s_txtOff,
+	 NULL, 1},
+    {NATIVE_MENU_STRING_KART_HUE, NULL, &gNativeKartHue, NATIVE_OPTION_VALUE_FORMATTED, NULL, 0, NULL, NULL, NativeOptionFormatKartHue, 1},
+    {NATIVE_MENU_STRING_FONT, NULL, &gNativeFont, NATIVE_OPTION_VALUE_FORMATTED, NULL, 0, NULL, NULL, NativeOptionFormatFont, 1},
+    {NATIVE_MENU_STRING_AI_PHYSICS, s_txtAi, &gNativeSmoothedAIEnabled, NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0, s_txtSmoothed, s_txtOriginal, NULL, 1},
+    {NATIVE_MENU_STRING_COLLISION_PHYSICS, s_txtCollisions, &gNativeSmoothedCollisionEnabled, NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0, s_txtSmoothed,
+	 s_txtOriginal, NULL, 1},
+    {NATIVE_MENU_STRING_STEERING_PHYSICS, s_txtSteering, &gNativeSmoothedSteeringEnabled, NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0, s_txtSmoothed,
+	 s_txtOriginal, NULL, 1},
+    {NATIVE_MENU_STRING_PHYSICS, s_txtPlayerPhysics, &gNativeSmoothedPhysicsEnabled, NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0, s_txtSmoothed, s_txtOriginal,
+	 NULL, 1},
+    {NATIVE_MENU_STRING_MAX_LOD, NULL, &gNativeMaxLodEnabled, NATIVE_OPTION_VALUE_LOCALIZED_ENUM, (const char *const *)maxLod, 2, NULL, NULL, NULL, 1},
 #endif
 };
 
