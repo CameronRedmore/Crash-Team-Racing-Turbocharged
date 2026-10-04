@@ -19,7 +19,9 @@ enum RenderListsScratchOffset
 struct RenderListsScratchRecord
 {
 	BspChildId childID;
-	s16 unused;
+	// Set when PushChild already ran the camera frustum test on this box, so the
+	// leaf pop below does not repeat it. Always 0 on the retail path.
+	s16 frustumTested;
 	struct BoundingBox box;
 };
 
@@ -226,6 +228,27 @@ static void RenderLists_PushChild(struct BSP *bspRoot, const int *visLeafList, s
 		return;
 	}
 
+	int frustumTested = 0;
+#if defined(CTR_NATIVE)
+	// The retail camera-cell mask prunes this descent for free. Once expanded
+	// visibility removes it, the pushbuffer AABB above is the only gate left on
+	// the way down, and at wide FOV that AABB spans the whole level, so the walk
+	// descends every branch in the tree and only culls at the leaves. Test the
+	// child box against the camera frustum here instead: a rejected subtree is
+	// then never descended at all. This is the same predicate the leaf pop
+	// applies, so it cannot drop a leaf the leaf test would have kept as long as
+	// child boxes stay inside their parent box, which the pushbuffer AABB test
+	// above already relies on.
+	if (NativeAspect_UsesExpandedVisibility())
+	{
+		if (!RenderLists_BoxPassesFrustum(pb, &child->box))
+		{
+			return;
+		}
+		frustumTested = 1;
+	}
+#endif
+
 	if (*stack >= stackEnd)
 	{
 		return;
@@ -233,7 +256,7 @@ static void RenderLists_PushChild(struct BSP *bspRoot, const int *visLeafList, s
 
 	record = *stack;
 	record->childID = childID;
-	record->unused = 0;
+	record->frustumTested = (s16)frustumTested;
 	record->box = child->box;
 	*stack = record + 1;
 }
@@ -277,7 +300,7 @@ static int RenderLists_Walk1P2P(struct BSP *bspRoot, const int *visLeafList, str
 				goto nextBranch;
 			}
 
-			if (!RenderLists_BoxPassesFrustum(pb, &record.box))
+			if (!record.frustumTested && !RenderLists_BoxPassesFrustum(pb, &record.box))
 			{
 				continue;
 			}
@@ -332,7 +355,7 @@ static int RenderLists_Walk3P4P(struct BSP *bspRoot, const int *visLeafList, str
 				goto nextBranch;
 			}
 
-			if (!RenderLists_BoxPassesFrustum(pb, &record.box))
+			if (!record.frustumTested && !RenderLists_BoxPassesFrustum(pb, &record.box))
 			{
 				continue;
 			}
