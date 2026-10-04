@@ -459,7 +459,7 @@ static void test_registry_is_well_formed(void)
 		if (option->kind == NATIVE_OPTION_ENUM || option->kind == NATIVE_OPTION_RANGE)
 		{
 			assert(option->minInclusive < option->maxExclusive);
-			assert(option->defaultValue >= option->minInclusive && option->defaultValue <= option->maxExclusive - 1);
+			assert(option->defaultValue >= option->minInclusive && option->defaultValue <= NativeOption_MaxValue(option));
 		}
 
 		for (unsigned int j = i + 1; j < g_nativeOptionCount; j++)
@@ -686,6 +686,60 @@ static void test_parse_round_trips_what_write_all_emits(void)
 	}
 }
 
+// The registry's defaultValue is documentation plus a save-time fallback, not
+// the initialiser. Several defaults are genuinely platform-conditional at the
+// definition site -- gNativeDepthBufferEnabled is 1 on PC and 0 on Vita,
+// gNativePgxpMode is PERSPECTIVE where NATIVE_PGXP_SUPPORTED is set and OFF
+// where it is not -- so a single registry row cannot be the source of truth
+// without flattening that. What can be pinned is that every recorded default is
+// a value the option actually accepts, and that saving it reproduces it.
+static void test_registry_default_is_accepted_and_round_trips(void)
+{
+	ResetToDefaults();
+	for (unsigned int i = 0; i < g_nativeOptionCount; i++)
+	{
+		const struct NativeOption *option = &g_nativeOptions[i];
+		if (option->kind != NATIVE_OPTION_ENUM && option->kind != NATIVE_OPTION_RANGE)
+		{
+			continue;
+		}
+		assert(option->value != NULL);
+
+		*option->value = option->defaultValue;
+		assert(NativeOption_Apply(option, option->defaultValue));
+		assert(*option->value == option->defaultValue);
+
+		int written = 0;
+		assert(NativeOption_WriteValue(option, &written));
+		assert(written == option->defaultValue);
+	}
+	ResetToDefaults();
+}
+
+// Storage below minInclusive is saved as the default; storage above the maximum
+// is clamped to the maximum rather than replaced. That asymmetry came from the
+// original parser and is only visible if it is pinned.
+static void test_below_minimum_saves_the_default_not_the_stored_value(void)
+{
+	const struct NativeOption *option = NativeOption_Find("projection_strength");
+	int written = 0;
+
+	assert(option != NULL);
+	assert(option->minInclusive == 0);
+	assert(NativeOption_MaxValue(option) == 100);
+
+	ResetToDefaults();
+	*option->value = -7;
+	assert(NativeOption_WriteValue(option, &written));
+	assert(written == option->defaultValue);
+
+	*option->value = 500;
+	assert(NativeOption_WriteValue(option, &written));
+	assert(written == NativeOption_MaxValue(option));
+
+	ResetToDefaults();
+}
+
 int main(void)
 {
 	ResetToDefaults();
@@ -711,6 +765,8 @@ int main(void)
 	test_parse_rejects_bad_values_and_keeps_the_previous();
 	test_parse_terminates_on_empty_and_garbage_files();
 	test_parse_round_trips_what_write_all_emits();
+	test_registry_default_is_accepted_and_round_trips();
+	test_below_minimum_saves_the_default_not_the_stored_value();
 	printf("native_options: all checks passed (%u settings)\n", g_nativeOptionCount);
 	return 0;
 }

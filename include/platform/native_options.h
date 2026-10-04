@@ -103,10 +103,20 @@ struct NativeOption
 	// Storage for BOOL/ENUM/RANGE; NULL for CUSTOM, which writes its own target.
 	int *value;
 	int minInclusive;
-	int maxExclusive; // inclusive upper bound for NATIVE_OPTION_RANGE
-	// Default used when the key is absent. Documents the intended default and
-	// backs NativeOptions_ResetDefaults; the definition site remains the
-	// authoritative initialiser.
+	// Exclusive upper bound, for every kind. ENUM rows state it as the enum's
+	// _COUNT sentinel; RANGE rows state one past the largest accepted value
+	// (0..100 is written 0,101). Use NativeOption_MaxValue() for the largest
+	// accepted value rather than subtracting here.
+	int maxExclusive;
+	// The value this setting is documented to start at, and the value written
+	// when storage is found below minInclusive.
+	//
+	// This is documentation plus a save-time fallback, NOT the initialiser.
+	// The authoritative default is the global's definition site, deliberately:
+	// several defaults are genuinely platform-conditional and a single registry
+	// row cannot express both. gNativeDepthBufferEnabled is 1 on PC and 0 on
+	// Vita, and gNativePgxpMode is PERSPECTIVE where NATIVE_PGXP_SUPPORTED and
+	// OFF where it is not. Moving defaults into the registry would flatten that.
 	int defaultValue;
 	// NATIVE_OPTION_CUSTOM only: validates and applies rawValue. Returns 1 when
 	// the value was accepted.
@@ -128,6 +138,11 @@ extern const unsigned int g_nativeOptionCount;
 
 // Finds an option by config.ini key. Returns NULL when no option owns the key.
 const struct NativeOption *NativeOption_Find(const char *key);
+
+// Largest value an ENUM or RANGE option accepts. maxExclusive is one past it,
+// so this exists to keep the subtraction in one place instead of open-coding
+// `maxExclusive - 1` at each clamp.
+int NativeOption_MaxValue(const struct NativeOption *option);
 
 // Validates and applies rawValue to option. Returns 1 when accepted.
 int NativeOption_Apply(const struct NativeOption *option, int rawValue);

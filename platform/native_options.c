@@ -560,6 +560,15 @@ const struct NativeOption *NativeOption_Find(const char *key)
 	return NULL;
 }
 
+int NativeOption_MaxValue(const struct NativeOption *option)
+{
+	if (option == NULL)
+	{
+		return 0;
+	}
+	return option->maxExclusive - 1;
+}
+
 int NativeOption_Apply(const struct NativeOption *option, int rawValue)
 {
 	if (option == NULL)
@@ -593,7 +602,7 @@ int NativeOption_Apply(const struct NativeOption *option, int rawValue)
 		// Clamped: the only RANGE rows are numeric overrides whose out-of-range
 		// history is benign, and hd_pause_screen clamped in the original parser.
 		*option->value =
-		    (rawValue < option->minInclusive) ? option->minInclusive : ((rawValue > option->maxExclusive - 1) ? option->maxExclusive - 1 : rawValue);
+		    (rawValue < option->minInclusive) ? option->minInclusive : ((rawValue > NativeOption_MaxValue(option)) ? NativeOption_MaxValue(option) : rawValue);
 		return 1;
 
 	case NATIVE_OPTION_CUSTOM:
@@ -632,8 +641,9 @@ static int NativeOption_WriteValue(const struct NativeOption *option, int *outVa
 		return 1;
 	case NATIVE_OPTION_ENUM:
 	case NATIVE_OPTION_RANGE:
-		*outValue = (*option->value < option->minInclusive) ? option->defaultValue
-		                                                    : ((*option->value > option->maxExclusive - 1) ? option->maxExclusive - 1 : *option->value);
+		*outValue = (*option->value < option->minInclusive)
+		                ? option->defaultValue
+		                : ((*option->value > NativeOption_MaxValue(option)) ? NativeOption_MaxValue(option) : *option->value);
 		return 1;
 	case NATIVE_OPTION_CUSTOM:
 		// A CUSTOM row must name its encoder; there is no way to infer storage.
