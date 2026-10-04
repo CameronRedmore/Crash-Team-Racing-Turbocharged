@@ -170,6 +170,13 @@ extern int g_dbg_texturelessMode;
 extern int g_cfg_bilinearFiltering;
 
 // gpu_state: last value pushed to GL, so repeated state changes stay cheap.
+// Writes go through the setters or the Invalidate* helpers below. These are
+// shared rather than private because native_renderer_targets.c parks and
+// restores the whole set around LoadRenderTargetFromVRAM; its save/restore is
+// close to BeginUtilityPass/EndUtilityPass but not identical -- it leaves the
+// framebuffer bound and writes depth with depth-write on -- so the two are not
+// yet one function. The scissor and stencil caches, by contrast, are private to
+// gpu_state.
 global_variable BlendMode s_previousBlendMode;
 global_variable int s_previousMixedSTPBlend;
 global_variable int s_previousDepthMode;
@@ -290,6 +297,12 @@ internal void NativeRenderer_InitVRAMPipelines(void);
 internal void NativeRenderer_InitRG8LUT(void);
 
 // native_renderer_gpu_state.c -- cached GL state.
+// The caches themselves are private to that module; these are how the rest of
+// the renderer drops them when it changes GL state behind a setter's back.
+internal void NativeRenderer_InvalidateTextureBinding(void);
+internal void NativeRenderer_InvalidateTextureBindingIfCurrent(TextureID texture);
+internal void NativeRenderer_InvalidateBindingCache(void);
+internal void NativeRenderer_ResetTextureBinding(void);
 internal void NativeRenderer_InvalidateScissorRectCache(void);
 internal void NativeRenderer_SetScissorState(int enable);
 internal void NativeRenderer_EnableDepth(int enable);

@@ -408,7 +408,7 @@ internal void NativeRenderer_DrawDebugOverlay(void)
 	{
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, texW, texH, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 	}
-	s_lastBoundTexture = (TextureID)-1;
+	NativeRenderer_InvalidateTextureBinding();
 
 	// Integer scale, kept small: 1x until the window is tall enough for 2x.
 	const int scale = (s_presentViewport.h >= 1440) ? 2 : 1;
@@ -438,8 +438,7 @@ internal void NativeRenderer_DrawDebugOverlay(void)
 	}
 	glBindVertexArray(0);
 	glBindTexture(GL_TEXTURE_2D, 0);
-	s_previousShader = (ShaderID)-1;
-	s_lastBoundTexture = (TextureID)-1;
+	NativeRenderer_InvalidateBindingCache();
 }
 #endif
 
@@ -598,8 +597,7 @@ void NativeRenderer_DrawGhostReplayOverlay(void)
 #endif
 	NativeRenderer_SetViewPort(s_presentViewport.x, s_presentViewport.y, s_presentViewport.w, s_presentViewport.h);
 	glBindVertexArray(0);
-	s_previousShader = (ShaderID)-1;
-	s_lastBoundTexture = (TextureID)-1;
+	NativeRenderer_InvalidateBindingCache();
 }
 
 internal void NativeRenderer_DestroyGhostReplayTextures(void)

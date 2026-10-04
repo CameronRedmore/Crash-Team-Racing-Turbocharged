@@ -563,8 +563,7 @@ int NativeRenderer_RestoreVRAMState(const void *src, int srcSize)
 	s_offscreenRenderTarget.logicalHeight = 0;
 	s_previousOffscreen = zeroRect;
 	s_previousOffscreenState = 0;
-	s_previousShader = (ShaderID)-1;
-	s_lastBoundTexture = (TextureID)-1;
+	NativeRenderer_InvalidateBindingCache();
 	return 1;
 }
 
@@ -612,7 +611,7 @@ void NativeRenderer_UpdateVRAM(void)
 	}
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 #endif
-	s_lastBoundTexture = (TextureID)-1;
+	NativeRenderer_InvalidateTextureBinding();
 
 	NativePerf_EndScope(NATIVE_PERF_BUCKET_RENDERER_UPDATE_VRAM);
 }
@@ -642,6 +641,5 @@ void NativeRenderer_PresentVRAMRect(int displayX, int displayY, int displayW, in
 	}
 	glBindVertexArray(0);
 
-	s_previousShader = (ShaderID)-1;
-	s_lastBoundTexture = (TextureID)-1;
+	NativeRenderer_InvalidateBindingCache();
 }

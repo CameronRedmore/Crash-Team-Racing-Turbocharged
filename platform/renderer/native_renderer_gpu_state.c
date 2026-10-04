@@ -142,6 +142,38 @@ void NativeRenderer_SetupClipMode(const RECT16 *rect, const DISPENV *displayEnv,
 	NativeRenderer_SetScissorRectCached(scissorX, scissorY, scissorRight - scissorX, scissorTop - scissorY);
 }
 
+// The caches above remember the last value each setter pushed to GL. Anything
+// that changes GL state behind a setter's back -- destroying a texture,
+// rebinding a framebuffer, compiling or deleting a shader -- has to drop the
+// memory, or the next draw compares against a stale value and skips a GL call
+// it does need. Other modules drop it through these rather than writing the
+// caches themselves.
+internal void NativeRenderer_InvalidateTextureBinding(void)
+{
+	s_lastBoundTexture = (TextureID)-1;
+}
+
+internal void NativeRenderer_InvalidateTextureBindingIfCurrent(TextureID texture)
+{
+	if (s_lastBoundTexture == texture)
+	{
+		s_lastBoundTexture = (TextureID)-1;
+	}
+}
+
+internal void NativeRenderer_InvalidateBindingCache(void)
+{
+	s_previousShader = (ShaderID)-1;
+	s_lastBoundTexture = (TextureID)-1;
+}
+
+// A new scene starts with no texture bound at all, which is a known state
+// rather an unknown one, so this records GL texture 0 instead of -1.
+internal void NativeRenderer_ResetTextureBinding(void)
+{
+	s_lastBoundTexture = 0;
+}
+
 internal void NativeRenderer_SetShader(const ShaderID shader)
 {
 	if (s_previousShader != shader)
@@ -649,4 +681,79 @@ internal void NativeRenderer_SetWireframe(int enable)
 #else
 	glPolygonMode(GL_FRONT_AND_BACK, enable ? GL_LINE : GL_FILL);
 #endif
+}
+
+// ---------------------------------------------------------------------------
+// Scoped full-screen passes.
+//
+// A utility pass rebinds the framebuffer and pushes a fresh shader, blend and
+// depth state, then puts the submit run's state back afterwards. That is this
+// module's business, so the save/restore lives here and the passes module just
+// calls it; keeping it in native_renderer_passes.c is what forced the caches
+// above to be shared.
+// ---------------------------------------------------------------------------
+
+internal void NativeRenderer_BeginUtilityPass(struct NativeRendererPassState *state, GLuint framebuffer, int x, int y, int width, int height)
+{
+	state->shader = s_previousShader;
+	state->texture = s_lastBoundTexture;
+	state->blendMode = s_previousBlendMode;
+	state->mixedSTPBlend = s_previousMixedSTPBlend;
+	state->depthMode = s_previousDepthMode;
+	state->depthWrite = s_previousDepthWrite;
+	state->scissorState = s_previousScissorState;
+	state->stencilEnabled = glIsEnabled(GL_STENCIL_TEST);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+	NativeRenderer_SetDepthState(0, 0);
+	glDisable(GL_BLEND);
+	glDisable(GL_SCISSOR_TEST);
+	glDisable(GL_STENCIL_TEST);
+	glViewport(x, y, width, height);
+}
+
+internal void NativeRenderer_EndUtilityPass(const struct NativeRendererPassState *state)
+{
+	if (s_boundVertexBuffer >= 0)
+	{
+		glBindVertexArray(s_glVertexArray[s_boundVertexBuffer]);
+	}
+	else
+	{
+		glBindVertexArray(0);
+	}
+
+	if (s_previousOffscreenState)
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, s_offscreenRenderTarget.framebuffer);
+		glViewport(0, 0, s_offscreenRenderTarget.width, s_offscreenRenderTarget.height);
+	}
+	else
+	{
+		NativeRenderer_BindMainRenderTarget();
+		glViewport(0, 0, s_mainRenderTarget.width, s_mainRenderTarget.height);
+	}
+	if (state->stencilEnabled)
+	{
+		glEnable(GL_STENCIL_TEST);
+	}
+
+	glUseProgram(state->shader == (ShaderID)-1 ? 0 : state->shader);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, state->texture == (TextureID)-1 ? 0 : state->texture);
+	s_previousShader = state->shader;
+	s_lastBoundTexture = state->texture;
+	s_previousBlendMode = BM_NONE;
+	s_previousMixedSTPBlend = 0;
+	s_previousScissorState = 0;
+	if (state->mixedSTPBlend)
+	{
+		NativeRenderer_SetMixedSTPBlendMode(state->blendMode);
+	}
+	else
+	{
+		NativeRenderer_SetBlendMode(state->blendMode);
+	}
+	NativeRenderer_SetDepthState(state->depthMode, state->depthWrite);
+	NativeRenderer_SetScissorState(state->scissorState);
 }

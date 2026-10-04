@@ -36,7 +36,7 @@ TextureID NativeRenderer_CreateStreamingTexture(int width, int height)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-	s_lastBoundTexture = (TextureID)-1;
+	NativeRenderer_InvalidateTextureBinding();
 	return texture;
 }
 
@@ -50,7 +50,7 @@ void NativeRenderer_UpdateStreamingTexture(TextureID texture, int width, int hei
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texture);
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, rgbaPixels);
-	s_lastBoundTexture = (TextureID)-1;
+	NativeRenderer_InvalidateTextureBinding();
 }
 
 void NativeRenderer_DestroyStreamingTexture(TextureID texture)
@@ -60,10 +60,7 @@ void NativeRenderer_DestroyStreamingTexture(TextureID texture)
 		return;
 	}
 
-	if (s_lastBoundTexture == texture)
-	{
-		s_lastBoundTexture = (TextureID)-1;
-	}
+	NativeRenderer_InvalidateTextureBindingIfCurrent(texture);
 	glDeleteTextures(1, &texture);
 }
 
@@ -162,7 +159,7 @@ internal TextureID NativeRenderer_CreateGhostReplayTexture(int width, int height
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-	s_lastBoundTexture = (TextureID)-1;
+	NativeRenderer_InvalidateTextureBinding();
 	return texture;
 }
 
@@ -191,7 +188,7 @@ u32 NativeRenderer_CreateFontAtlasTexture(int width, int height, const u8 *pixel
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, pixels);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 	glGenerateMipmap(GL_TEXTURE_2D);
-	s_lastBoundTexture = (TextureID)-1;
+	NativeRenderer_InvalidateTextureBinding();
 	return texture;
 }
 
@@ -199,6 +196,6 @@ void NativeRenderer_DestroyFontAtlasTexture(u32 texture)
 {
 	TextureID id = texture;
 	glDeleteTextures(1, &id);
-	s_lastBoundTexture = (TextureID)-1;
+	NativeRenderer_InvalidateTextureBinding();
 }
 #endif

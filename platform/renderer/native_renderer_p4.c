@@ -213,7 +213,7 @@ internal int NativeRenderer_EnsureP4Buffer(struct NativeP4CacheEntry *entry, int
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	s_lastBoundTexture = (TextureID)-1;
+	NativeRenderer_InvalidateTextureBinding();
 	return 1;
 }
 
@@ -256,7 +256,7 @@ internal void NativeRenderer_UpdateP4Buffer(struct NativeP4CacheEntry *entry, in
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, entry->texture[bufferIndex]);
 	glCompressedTexImage2D(GL_TEXTURE_2D, 0, GL_PALETTE4_RGBA8_OES, TPAGE_WIDTH, TPAGE_HEIGHT, 0, NATIVE_P4_UPLOAD_BYTES, s_p4UploadData);
-	s_lastBoundTexture = (TextureID)-1;
+	NativeRenderer_InvalidateTextureBinding();
 	entry->bufferPageVersion[bufferIndex] = entry->pageVersion;
 	entry->bufferPaletteVersion[bufferIndex] = entry->paletteVersion;
 }

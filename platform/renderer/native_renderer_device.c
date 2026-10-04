@@ -254,7 +254,7 @@ void NativeRenderer_BeginScene(void)
 #ifdef __vita__
 	NativeRenderer_BeginP4Frame();
 #endif
-	s_lastBoundTexture = 0;
+	NativeRenderer_ResetTextureBinding();
 
 	NativeRenderer_UpdateGamePresentationAspect();
 	NativeRenderer_UpdatePresentationViewport();

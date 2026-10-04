@@ -276,7 +276,7 @@ internal void NativeRenderer_EnsureRenderTarget(struct NativeRenderTarget *targe
 
 	target->width = width;
 	target->height = height;
-	s_lastBoundTexture = (TextureID)-1;
+	NativeRenderer_InvalidateTextureBinding();
 }
 
 internal void NativeRenderer_BindMainRenderTarget(void)
@@ -618,8 +618,7 @@ void NativeRenderer_PresentMainRenderTarget(void)
 	}
 	glBindVertexArray(0);
 
-	s_previousShader = (ShaderID)-1;
-	s_lastBoundTexture = (TextureID)-1;
+	NativeRenderer_InvalidateBindingCache();
 }
 
 void NativeRenderer_GetStreamingViewport(int contentHeight, int displayHeight, int *x, int *y, int *width, int *height)
@@ -704,8 +703,7 @@ void NativeRenderer_PresentStreamingTexture(TextureID texture, int contentHeight
 		glEnable(GL_STENCIL_TEST);
 	}
 	glBindVertexArray(0);
-	s_previousShader = (ShaderID)-1;
-	s_lastBoundTexture = (TextureID)-1;
+	NativeRenderer_InvalidateBindingCache();
 }
 
 void NativeRenderer_PresentVRAMDisplay(void)
