@@ -1,7 +1,10 @@
 /*
  * GPU state: the cached blend/depth/stencil/scissor/viewport setters the PSX
  * submit run drives, draw-environment projection and clipping, texture and
- * shader selection, and the isolated-depth overlay pass.
+ * shader selection, the isolated-depth overlay pass, and the save/restore that
+ * wraps a full-screen utility pass. The caches behind the setters live here and
+ * are not written directly by other modules; they invalidate through the
+ * Invalidate and Reset entry points instead.
  *
  * Derived from REDRIVER2/PsyCross MIT source:
  * externals/PsyCross/src/render/PsyX_render.cpp

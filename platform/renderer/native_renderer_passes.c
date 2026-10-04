@@ -1,7 +1,9 @@
 /*
- * Full-screen offscreen passes: saving and restoring the PSX submit state
- * around them, packing a render target back into VRAM, the projected-world
- * world pass and the pause backdrop.
+ * Full-screen offscreen passes: packing a render target back into VRAM, the
+ * projected-world world pass and the pause backdrop. The save/restore of the
+ * PSX submit state that wraps a pass lives with the state itself, in
+ * native_renderer_gpu_state.c, so these passes just call BeginUtilityPass and
+ * EndUtilityPass.
  *
  * Derived from REDRIVER2/PsyCross MIT source:
  * externals/PsyCross/src/render/PsyX_render.cpp
