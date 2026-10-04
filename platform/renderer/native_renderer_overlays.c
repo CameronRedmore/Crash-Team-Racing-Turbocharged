@@ -296,7 +296,7 @@ internal int NativeRenderer_BuildDebugOverlayLines(char lines[][NATIVE_DEBUG_OVE
 	DBG_LINE("PGXP  %s  int-nclip %s", ((gNativePgxpMode >= 0) && (gNativePgxpMode < NATIVE_PGXP_MODE_COUNT)) ? pgxpNames[gNativePgxpMode] : "?",
 	         NativeRenderer_DebugOnOff(gNativePgxpIntegerNclipEnabled));
 	DBG_LINE("Depth buf %s", NativeRenderer_DebugOnOff(NATIVE_DEPTH_BUFFER_ACTIVE()));
-	DBG_LINE("Max LOD %s", NativeRenderer_DebugOnOff(gNativeMaxLodEnabled));
+	DBG_LINE("Max LOD %s%s", NativeRenderer_DebugOnOff(CTR_NATIVE_MAX_LOD_ACTIVE), (CTR_NATIVE_MAX_LOD_ACTIVE && !gNativeMaxLodEnabled) ? " (Native)" : "");
 	DBG_LINE("-- Look --");
 	DBG_LINE("Colour %s", gNativeColorDepth == NATIVE_COLOR_DEPTH_15BIT ? "15-bit" : "24-bit");
 	DBG_LINE("Dither  %s", NativeRenderer_DebugOnOff(gNativeDitheringEnabled));

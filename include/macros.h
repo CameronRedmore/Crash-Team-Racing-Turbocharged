@@ -108,9 +108,12 @@ extern int gNativeGhostReplayFpsOverride;
 #endif
 
 // Max detail option: level geometry and models always use their highest LOD.
+// The Native renderer always draws at max detail (its static level geometry
+// depends on it); the option applies to Classic.
 #if defined(CTR_NATIVE) && !defined(__vita__)
-// gNativeMaxLodEnabled is declared in platform/native_options.h.
-#define CTR_NATIVE_MAX_LOD_ACTIVE (gNativeMaxLodEnabled != 0)
+// gNativeMaxLodEnabled is declared in platform/native_options.h,
+// NATIVE_DRAW3D_ACTIVE in platform/native_draw3d.h.
+#define CTR_NATIVE_MAX_LOD_ACTIVE ((gNativeMaxLodEnabled != 0) || NATIVE_DRAW3D_ACTIVE())
 #else
 #define CTR_NATIVE_MAX_LOD_ACTIVE 0
 #endif

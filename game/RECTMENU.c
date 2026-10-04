@@ -735,6 +735,20 @@ static char *NativeOptionFormatAspectRatio(int languageRow)
 	return NativeRow(s_optionLabelRow, NativeAspect_GetLabel(gNativeAspectRatio));
 }
 
+#ifndef __vita__
+// Native always draws at max detail, so the stored choice is Classic's.
+static char *NativeOptionFormatMaxLod(int languageRow)
+{
+	const int value = gNativeMaxLodEnabled != 0;
+	if (!NATIVE_DRAW3D_ACTIVE())
+	{
+		return (char *)maxLod[languageRow][value];
+	}
+	snprintf(s_optionLabelRow, sizeof(s_optionLabelRow), "%s (CLASSIC)", maxLod[languageRow][value]);
+	return s_optionLabelRow;
+}
+#endif
+
 static char *NativeOptionFormatFieldOfView(int languageRow)
 {
 	snprintf(s_optionLabelRow, sizeof(s_optionLabelRow), "%s%s", s_txtFieldOfView[languageRow], NATIVE_DRAW3D_ACTIVE() ? "" : " (NATIVE)");
@@ -859,7 +873,7 @@ static const struct NativeOptionRow s_nativeOptionRows[] = {
 	 s_txtOriginal, NULL, 1},
     {NATIVE_MENU_STRING_PHYSICS, s_txtPlayerPhysics, &gNativeSmoothedPhysicsEnabled, NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0, s_txtSmoothed, s_txtOriginal,
 	 NULL, 1},
-    {NATIVE_MENU_STRING_MAX_LOD, NULL, &gNativeMaxLodEnabled, NATIVE_OPTION_VALUE_LOCALIZED_ENUM, (const char *const *)maxLod, 2, NULL, NULL, NULL, 1},
+    {NATIVE_MENU_STRING_MAX_LOD, NULL, &gNativeMaxLodEnabled, NATIVE_OPTION_VALUE_FORMATTED, NULL, 0, NULL, NULL, NativeOptionFormatMaxLod, 1},
 #endif
 };
 
