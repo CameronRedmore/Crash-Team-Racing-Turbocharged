@@ -125,7 +125,21 @@ int gNativeRelicRaceResultTier = -1;
 #include "platform/native_perf.c"
 #include "platform/native_platform.c"
 #include "platform/native_replay_scheduler.c"
-#include "platform/native_renderer.c"
+// The renderer is split into subsystems that share one translation unit with
+// the rest of the game; platform/native_renderer_internal.h is their contract.
+// Order carries no meaning beyond readability -- the header declares the
+// shared state and the cross-module operations.
+#include "platform/renderer/native_renderer_core.c"
+#include "platform/renderer/native_renderer_shaders.c"
+#include "platform/renderer/native_renderer_textures.c"
+#include "platform/renderer/native_renderer_submit.c"
+#include "platform/renderer/native_renderer_targets.c"
+#include "platform/renderer/native_renderer_vram.c"
+#include "platform/renderer/native_renderer_p4.c"
+#include "platform/renderer/native_renderer_gpu_state.c"
+#include "platform/renderer/native_renderer_passes.c"
+#include "platform/renderer/native_renderer_overlays.c"
+#include "platform/renderer/native_renderer_device.c"
 #include "platform/native_font.c"
 #include "platform/native_kart_color.c"
 #include "platform/native_minimap.c"
