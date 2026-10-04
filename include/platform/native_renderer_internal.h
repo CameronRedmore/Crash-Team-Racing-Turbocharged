@@ -187,10 +187,9 @@ global_variable int s_previousOffscreenState;
 global_variable RECT16 s_previousOffscreen;
 global_variable ShaderID s_previousShader;
 
-// vram.
+// vram: the CPU mirror of PSX VRAM. Vita's transfer scratch buffer lives in
+// native_renderer_vram.c, which is its only user.
 global_variable struct NativeVramState s_vram;
-#ifdef __vita__
-#endif
 
 // targets: presentation size and aspect.
 global_variable struct NativeRenderTarget s_mainRenderTarget;
