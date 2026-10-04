@@ -216,7 +216,7 @@ if(MINGW)
 endif()
 
 include(CTest)
-option(CTR_NATIVE_RENDERER_TESTS "Build OpenGL renderer integration tests (requires a display)" OFF)
+option(CTR_NATIVE_RENDERER_TESTS "Build the renderer integration tests (the gpu-labelled subset needs a GL context; the rest run headless)" OFF)
 if(BUILD_TESTING AND NOT EMSCRIPTEN)
     add_executable(ctr_native_unlock_test tests/native_unlock_test.c)
     target_include_directories(ctr_native_unlock_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
@@ -309,6 +309,29 @@ if(BUILD_TESTING AND NOT EMSCRIPTEN)
         if(WIN32)
             target_sources(ctr_native_depth_renderer_test PRIVATE platform/native_http_win32.c)
         endif()
+
+        # One executable, one mode flag per check. The modes split into two
+        # groups, labelled so CI can select between them:
+        #
+        #   unlabelled  - never create a GL context. They run anywhere, with no
+        #                 display and no GPU, and must not skip: a skip here is
+        #                 a real loss of coverage.
+        #   LABELS gpu  - call NativeRenderer_InitialiseRender and need a GL
+        #                 context. They return 77 where none can be created,
+        #                 which ctest treats as a skip rather than a failure.
+        #
+        # Everything runs on a runner that can provide a context; `ctest -LE gpu`
+        # runs the display-independent subset anywhere. Keeping the split in
+        # labels rather than in a second build option means the headless checks
+        # do not depend on the GPU ones sharing a target.
+        set(ctr_gpu_tests
+            ctr_native_depth_renderer
+            ctr_native_projection_renderer
+            ctr_native_aspect_renderer
+            ctr_native_hud_icons
+            ctr_native_engine_save
+        )
+
         add_test(NAME ctr_native_depth_renderer COMMAND ctr_native_depth_renderer_test)
         # Headless: renders every options-menu row's text for all six languages
         # and every accepted value, before any GL context is created.
@@ -316,9 +339,7 @@ if(BUILD_TESTING AND NOT EMSCRIPTEN)
         add_test(NAME ctr_native_aspect_game COMMAND ctr_native_depth_renderer_test --aspect-only)
         add_test(NAME ctr_native_projection_game COMMAND ctr_native_depth_renderer_test --projection-only)
         add_test(NAME ctr_native_projection_renderer COMMAND ctr_native_depth_renderer_test --projection-renderer-only)
-        set_tests_properties(ctr_native_projection_renderer PROPERTIES SKIP_RETURN_CODE 77)
         add_test(NAME ctr_native_aspect_renderer COMMAND ctr_native_depth_renderer_test --aspect-renderer-only)
-        set_tests_properties(ctr_native_aspect_renderer PROPERTIES SKIP_RETURN_CODE 77)
         add_test(NAME ctr_native_oxide_unlock COMMAND ctr_native_depth_renderer_test --oxide-unlock-only)
         add_test(NAME ctr_native_engine_physics COMMAND ctr_native_depth_renderer_test --engine-physics-only)
         add_test(NAME ctr_native_unlock_menu COMMAND ctr_native_depth_renderer_test --unlock-menu-only)
@@ -326,10 +347,9 @@ if(BUILD_TESTING AND NOT EMSCRIPTEN)
         add_test(NAME ctr_native_engine_lifecycle COMMAND ctr_native_depth_renderer_test --engine-lifecycle-only)
         add_test(NAME ctr_native_engine_save COMMAND ctr_native_depth_renderer_test --engine-save-only "${CMAKE_CURRENT_BINARY_DIR}/engine-save-test-memcards")
         add_test(NAME ctr_native_hud_icons COMMAND ctr_native_depth_renderer_test --hud-icons-only)
-        set_tests_properties(ctr_native_hud_icons PROPERTIES SKIP_RETURN_CODE 77)
         add_test(NAME ctr_native_minimap COMMAND ctr_native_depth_renderer_test --minimap-only)
         add_test(NAME ctr_native_level_sky_order COMMAND ctr_native_depth_renderer_test --sky-order-only)
         add_test(NAME ctr_native_model_submission COMMAND ctr_native_depth_renderer_test --model-submission-only)
-        set_tests_properties(ctr_native_depth_renderer PROPERTIES SKIP_RETURN_CODE 77)
+        set_tests_properties(${ctr_gpu_tests} PROPERTIES LABELS gpu SKIP_RETURN_CODE 77)
     endif()
 endif()
