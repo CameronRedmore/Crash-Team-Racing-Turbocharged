@@ -1434,8 +1434,168 @@ static void UnlockMenuTest(void)
 	sdata->ptrDesiredMenu = NULL;
 }
 
+static void EngineTest_SavePersistence(const char *root)
+{
+	struct GameTracker tracker = {0};
+	struct MemcardProfile card = {0};
+	tracker.numPlyrCurrGame = 1;
+	sdata->gGT = &tracker;
+	sdata->ptrToMemcardBuffer2 = &card;
+	sdata->gameProgress.unlockFlags |= UNLOCK_PENTA;
+	gNativeEngineSelectionEnabled = 1;
+	GAMEPROG_NewProfile_InsideAdv(&sdata->advProgress);
+	sdata->advProgress.characterID = CRASH_BANDICOOT;
+	strcpy(sdata->advProgress.name, "ENGINE TEST");
+	data.characterIDs[0] = CRASH_BANDICOOT;
+	assert(NativeMemcard_SetRoot(root) == NATIVE_MEMCARD_OK);
+
+	for (int profile = NATIVE_ENGINE_DEFAULT; profile < NATIVE_ENGINE_COUNT; profile++)
+	{
+		NativeEngine_SetSelectedProfile(0, profile);
+		SelectProfile_SaveAdvProfile(0);
+		assert(NativeMemcard_WriteSaveData("ENGINE-TEST-SLOTS", "", 0,
+			(const u8 *)&card, sizeof(card)) == NATIVE_MEMCARD_OK);
+		memset(&card, 0, sizeof(card));
+		assert(NativeMemcard_ReadSaveData("ENGINE-TEST-SLOTS", (u8 *)&card,
+			sizeof(card), 0) == NATIVE_MEMCARD_OK);
+		NativeEngine_SetSelectedProfile(0, NATIVE_ENGINE_SPEED);
+		NativeEngine_SetReplayOverride(0, NATIVE_ENGINE_TURN);
+		SelectProfile_LoadAdvProfile(0);
+		assert(NativeEngine_GetSelectedProfile(0) == profile);
+		const char markers[] = {'B', 'A', 'S', 'T', 'P'};
+		assert(SelectProfile_AdventureEngineMarker(&card.advProgress[0])[0]
+			== markers[profile == NATIVE_ENGINE_DEFAULT ? NATIVE_ENGINE_BALANCED : profile]);
+		assert(NativeEngine_GetEffectiveProfile(0) == (profile == NATIVE_ENGINE_DEFAULT
+			? NATIVE_ENGINE_BALANCED : profile));
+
+		NativeAutoSave_SetExitPortal(GEM_STONE_VALLEY, 3);
+		assert(NativeAutoSave_Write());
+		NativeEngine_SetSelectedProfile(0, NATIVE_ENGINE_SPEED);
+		NativeAutoSave_Refresh();
+		assert(NativeAutoSave_QuickLoad());
+		assert(NativeEngine_GetSelectedProfile(0) == profile);
+		assert(NativeAutoSave_GetExitPortal(GEM_STONE_VALLEY) == 3);
+	}
+
+	// Toggling the option off must not erase the selected engine.
+	gNativeEngineSelectionEnabled = 0;
+	NativeEngine_SetSelectedProfile(0, NATIVE_ENGINE_ACCEL);
+	assert(NativeAutoSave_Write());
+	NativeEngine_SetSelectedProfile(0, NATIVE_ENGINE_SPEED);
+	NativeAutoSave_Refresh();
+	assert(NativeAutoSave_Apply());
+	assert(NativeEngine_GetSelectedProfile(0) == NATIVE_ENGINE_ACCEL);
+	assert(NativeEngine_GetEffectiveProfile(0) == NATIVE_ENGINE_BALANCED);
+	gNativeEngineSelectionEnabled = 1;
+	assert(NativeEngine_GetEffectiveProfile(0) == NATIVE_ENGINE_ACCEL);
+
+	// Old data, invalid tags and locked Penta must reset a stale selection.
+	const u32 words[] = {0, 0x12345678,
+		NATIVE_ENGINE_METADATA_TAG | NATIVE_ENGINE_COUNT,
+		NativeEngineMetadata_EncodeWord(NATIVE_ENGINE_PENTA)};
+	sdata->gameProgress.unlockFlags &= ~UNLOCK_PENTA;
+	card.gameProgress.unlockFlags &= ~UNLOCK_PENTA;
+	for (u32 i = 0; i < len(words); i++)
+	{
+		card.advProgress[0] = sdata->advProgress;
+		card.advProgress[0].reservedRewardFlags = words[i];
+		NativeEngine_SetSelectedProfile(0, NATIVE_ENGINE_SPEED);
+		SelectProfile_LoadAdvProfile(0);
+		assert(NativeEngine_GetSelectedProfile(0) == NATIVE_ENGINE_DEFAULT);
+		assert(SelectProfile_AdventureEngineMarker(&card.advProgress[0])[0] == 'B');
+	}
+
+	// Both existing autosave versions retain their checksum and portal behavior.
+	for (int version = 1; version <= 2; version++)
+	{
+		struct NativeAutoSaveFile legacy = s_nativeAutoSave;
+		legacy.version = version;
+		legacy.size = version == 1 ? OFFSETOF(struct NativeAutoSaveFile, exitPortalHub) : sizeof(legacy);
+		legacy.adv.reservedRewardFlags = 0;
+		legacy.exitPortalHub = GEM_STONE_VALLEY;
+		legacy.exitPortalID = 3;
+		legacy.checksum = NativeAutoSave_Checksum(&legacy);
+		assert(NativeMemcard_WriteSaveData(NATIVE_AUTOSAVE_NAME, "", 0,
+			(const u8 *)&legacy, legacy.size) == NATIVE_MEMCARD_OK);
+		NativeEngine_SetSelectedProfile(0, NATIVE_ENGINE_SPEED);
+		NativeAutoSave_Refresh();
+		assert(NativeAutoSave_Apply());
+		assert(NativeEngine_GetSelectedProfile(0) == NATIVE_ENGINE_DEFAULT);
+		assert(NativeAutoSave_GetExitPortal(GEM_STONE_VALLEY) == (version == 1 ? -1 : 3));
+		legacy.adv.reservedRewardFlags ^= 1;
+		assert(NativeMemcard_WriteSaveData(NATIVE_AUTOSAVE_NAME, "", 0,
+			(const u8 *)&legacy, legacy.size) == NATIVE_MEMCARD_OK);
+		NativeAutoSave_Refresh();
+		assert(!NativeAutoSave_Exists());
+	}
+	assert(NativeMemcard_RemoveRoot(root) == NATIVE_MEMCARD_OK);
+	NativeMemcard_ClearRoot();
+	sdata->ptrToMemcardBuffer2 = 0;
+	sdata->gGT = NULL;
+}
+
+#include "native_aspect_game_checks.h"
+#include "native_projection_game_checks.h"
+#include "native_projection_renderer_checks.h"
+
 int main(int argc, char **argv)
 {
+	if (argc == 2 && strcmp(argv[1], "--projection-only") == 0)
+	{
+		ProjectionTest_GamePaths();
+		puts("Projection camera, OT boundaries and menu checks passed");
+		return 0;
+	}
+	if (argc == 4 && strcmp(argv[1], "--projection-config-check") == 0)
+	{
+		load_config();
+		assert(gNativeProjectionMode == atoi(argv[2]));
+		assert(gNativeProjectionStrength == atoi(argv[3]));
+		gNativePresetPending = 0;
+		save_config();
+		gNativeProjectionMode = gNativeProjectionStrength = -1;
+		load_config();
+		assert(gNativeProjectionMode == atoi(argv[2]));
+		assert(gNativeProjectionStrength == atoi(argv[3]));
+		puts("Projection config persistence passed");
+		return 0;
+	}
+	if (argc == 2 && strcmp(argv[1], "--aspect-only") == 0)
+	{
+		AspectTest_GamePaths();
+		puts("Aspect projection, culling, presentation and menu checks passed");
+		return 0;
+	}
+	if (argc == 3 && strcmp(argv[1], "--aspect-config-check") == 0)
+	{
+		load_config();
+		assert(gNativeAspectRatio == atoi(argv[2]));
+		gNativePresetPending = 0;
+		save_config();
+		gNativeAspectRatio = -1;
+		load_config();
+		assert(gNativeAspectRatio == atoi(argv[2]));
+		puts("Aspect setting persistence passed");
+		return 0;
+	}
+	if (argc == 3 && strcmp(argv[1], "--fov-config-check") == 0)
+	{
+		load_config();
+		assert(gNativeFovDegrees == atoi(argv[2]));
+		gNativePresetPending = 0;
+		save_config();
+		gNativeFovDegrees = -1;
+		load_config();
+		assert(gNativeFovDegrees == atoi(argv[2]));
+		puts("FOV setting persistence passed");
+		return 0;
+	}
+	if (argc == 3 && strcmp(argv[1], "--engine-save-only") == 0)
+	{
+		EngineTest_SavePersistence(argv[2]);
+		puts("Engine manual save and autosave persistence checks passed");
+		return 0;
+	}
 	if (argc == 2 && strcmp(argv[1], "--unlock-menu-only") == 0)
 	{
 		UnlockMenuTest();
@@ -1525,6 +1685,26 @@ int main(int argc, char **argv)
 	if (!NativeRenderer_InitialiseRender("CTR depth test", 320, 240, 0)) return 77;
 	SDL_HideWindow(g_window);
 	assert(NativeRenderer_InitialisePSX());
+	if (argc == 2 && strcmp(argv[1], "--projection-renderer-only") == 0)
+	{
+		ProjectionTest_Resolve();
+		ProjectionTest_Barriers();
+		ProjectionTest_PauseTransitions();
+		NativeRenderer_Shutdown();
+		SDL_DestroyWindow(g_window);
+		SDL_Quit();
+		puts("Projection framebuffer sampling, AA and HUD checks passed");
+		return 0;
+	}
+	if (argc == 2 && strcmp(argv[1], "--aspect-renderer-only") == 0)
+	{
+		AspectTest_RenderTargets();
+		NativeRenderer_Shutdown();
+		SDL_DestroyWindow(g_window);
+		SDL_Quit();
+		puts("Aspect framebuffer proportions passed for all five ratios");
+		return 0;
+	}
 	if (argc == 2 && strcmp(argv[1], "--hud-icons-only") == 0)
 	{
 		DepthTest_HudIcons();

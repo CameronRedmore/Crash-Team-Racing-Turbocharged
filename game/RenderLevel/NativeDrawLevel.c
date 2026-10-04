@@ -621,6 +621,7 @@ enum NativeDrawLevelKind
 static void NativeDrawLevel_BspList(const struct NativeDrawLevelContext *ctx, const struct VisMemBspListNode *node, const int *visFaceList,
                                     enum NativeDrawLevelKind kind)
 {
+	const int expandedVisibility = NativeAspect_UsesExpandedVisibility();
 	for (; node != NULL; node = node->next)
 	{
 		const struct BSP *bsp = node->bsp;
@@ -636,7 +637,7 @@ static void NativeDrawLevel_BspList(const struct NativeDrawLevelContext *ctx, co
 		NativeDrawLevel_SeedVisibility(&vis, visFaceList, block);
 		for (; quadCount > 0; quadCount--, block++)
 		{
-			if (!NativeDrawLevel_ConsumeVisibility(&vis))
+			if (!NativeDrawLevel_ConsumeVisibility(&vis) && !expandedVisibility)
 			{
 				continue;
 			}

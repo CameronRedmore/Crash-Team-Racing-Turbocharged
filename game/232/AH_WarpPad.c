@@ -69,6 +69,15 @@ s16 *AH_WarpPad_GetSpawnPosRot(s16 *posData)
 	struct GameTracker *gGT = sdata->gGT;
 	struct Thread *t = gGT->threadBuckets[WARPPAD].thread;
 
+	int exitLevelID = gGT->prevLEV;
+#if defined(CTR_NATIVE)
+	int savedPortalID = NativeAutoSave_GetExitPortal(gGT->levelID);
+	if (savedPortalID >= 0)
+	{
+		exitLevelID = savedPortalID;
+	}
+#endif
+
 	// check all warppads
 	while (1)
 	{
@@ -80,7 +89,7 @@ s16 *AH_WarpPad_GetSpawnPosRot(s16 *posData)
 		}
 
 		// if warppad found that matches level exited
-		if (((struct WarpPad *)t->object)->levelID == gGT->prevLEV)
+		if (((struct WarpPad *)t->object)->levelID == exitLevelID)
 		{
 			// end loop
 			break;
@@ -693,6 +702,9 @@ void AH_WarpPad_ThTick(struct Thread *t)
 				// Rem Adventure Arena
 				sdata->Loading.OnBegin.RemBitsConfig0 |= ADVENTURE_ARENA;
 
+#if defined(CTR_NATIVE)
+				NativeAutoSave_SetExitPortal(gGT->levelID, warppadObj->levelID);
+#endif
 				MainRaceTrack_RequestLoad(levelID);
 				goto WarpPad_TrophyAnimateOnly;
 			}
@@ -718,6 +730,9 @@ void AH_WarpPad_ThTick(struct Thread *t)
 	}
 
 WarpPad_RequestLoad:
+#if defined(CTR_NATIVE)
+	NativeAutoSave_SetExitPortal(gGT->levelID, warppadObj->levelID);
+#endif
 
 	// Rem Adventure Arena
 	sdata->Loading.OnBegin.RemBitsConfig0 |= ADVENTURE_ARENA;

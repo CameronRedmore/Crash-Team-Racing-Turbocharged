@@ -19,6 +19,8 @@
 #define ExitCriticalSection()
 
 #include "platform/native_assets.h"
+#include "platform/native_aspect.h"
+#include "platform/native_projection.h"
 #include "platform/native_log.h"
 #include "platform/native_memory.h"
 #include "platform/native_perf.h"
@@ -95,6 +97,8 @@ int gNativeRelicRaceResultTier = -1;
 #include "platform/native_gte_core.c"
 #include "platform/native_pgxp.c"
 #include "platform/native_draw3d.c"
+#include "platform/native_aspect.c"
+#include "platform/native_projection.c"
 #include "platform/native_physics.c"
 #include "platform/native_collision.c"
 #if !defined(__EMSCRIPTEN__)
@@ -272,6 +276,10 @@ void load_config(void)
 {
 	char buffer[30];
 	int value;
+	gNativeAspectRatio = NATIVE_ASPECT_16_9;
+	gNativeFovDegrees = 0;
+	gNativeProjectionMode = NATIVE_PROJECTION_PERSPECTIVE;
+	gNativeProjectionStrength = 50;
 #ifndef __vita__
 	int minimapPriority = 0;
 #endif
@@ -283,7 +291,23 @@ void load_config(void)
 	{
 		while (EOF != fscanf(config, "%[^=]=%d\n", buffer, &value))
 		{
-			if (strcmp("language", buffer) == 0)
+			if (strcmp("aspect_ratio", buffer) == 0)
+			{
+				gNativeAspectRatio = (value >= 0 && value < NATIVE_ASPECT_COUNT) ? value : NATIVE_ASPECT_16_9;
+			}
+			else if (strcmp("fov_degrees", buffer) == 0)
+			{
+				gNativeFovDegrees = (value == 0 || (value >= 45 && value <= 100)) ? value : 0;
+			}
+			else if (strcmp("projection_mode", buffer) == 0)
+			{
+				gNativeProjectionMode = (value >= 0 && value < NATIVE_PROJECTION_MODE_COUNT) ? value : NATIVE_PROJECTION_PERSPECTIVE;
+			}
+			else if (strcmp("projection_strength", buffer) == 0)
+			{
+				gNativeProjectionStrength = (value >= 0 && value <= 100) ? value : 50;
+			}
+			else if (strcmp("language", buffer) == 0)
 			{
 				cfg_language = value;
 				s_nativeLanguageChosen = 1;
@@ -467,6 +491,10 @@ void save_config(void)
 	if (config != NULL)
 	{
 		fprintf(config, "%s=%d\n", "language", cfg_language);
+		fprintf(config, "%s=%d\n", "aspect_ratio", (gNativeAspectRatio >= 0 && gNativeAspectRatio < NATIVE_ASPECT_COUNT) ? gNativeAspectRatio : NATIVE_ASPECT_16_9);
+		fprintf(config, "%s=%d\n", "fov_degrees", (gNativeFovDegrees == 0 || (gNativeFovDegrees >= 45 && gNativeFovDegrees <= 100)) ? gNativeFovDegrees : 0);
+		fprintf(config, "%s=%d\n", "projection_mode", (gNativeProjectionMode >= 0 && gNativeProjectionMode < NATIVE_PROJECTION_MODE_COUNT) ? gNativeProjectionMode : NATIVE_PROJECTION_PERSPECTIVE);
+		fprintf(config, "%s=%d\n", "projection_strength", (gNativeProjectionStrength >= 0 && gNativeProjectionStrength <= 100) ? gNativeProjectionStrength : 50);
 		fprintf(config, "%s=%d\n", "preset_seen", 1);
 		fprintf(config, "%s=%d\n", "mirror_mode", gNativeMirrorModeEnabled != 0);
 		fprintf(config, "%s=%d\n", "60fps", gNative60FpsEnabled != 0);
@@ -644,6 +672,9 @@ int main(int argc, char *argv[])
 	}
 #endif
 
+#if NATIVE_DRAW3D_SUPPORTED
+	NativeRenderer_EnableGamePresentation(1);
+#endif
 	Platform_InitScratchpad();
 	Platform_RepairResidentPointers(0);
 

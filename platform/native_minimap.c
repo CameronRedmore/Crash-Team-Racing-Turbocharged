@@ -623,6 +623,14 @@ static int NativeMinimap_Draw(const struct NativeMinimapImage *image, float left
 	return 1;
 }
 
+float NativeMinimap_GetAnchorOffsetX(const struct UIMap *map)
+{
+	if (!map || !NativeAspect_IsActive() || !sdata || !sdata->gGT ||
+	    (sdata->gGT->gameMode1 & MAIN_MENU)) return 0.0f;
+	const double origin = map->iconStartX - (sdata->gGT->numPlyrCurrGame == 3 ? 60 : 0);
+	return (float)((SCREEN_WIDTH - origin) * (1.0 - NativeAspect_GetScaleX()));
+}
+
 int NativeMinimap_DrawLive(struct PrimMem *primMem, u32 *ot, u32 colorID)
 {
 	if (!gNativeModernMapEnabled || !sdata || !sdata->gGT) return 0;
@@ -648,9 +656,9 @@ int NativeMinimap_DrawLive(struct PrimMem *primMem, u32 *ot, u32 colorID)
 	}
 	float aspect = 1;
 #if CTR_NATIVE_WIDESCREEN
-	aspect = 34.0f / 45.0f;
+	aspect = (float)NativeAspect_GetScaleX();
 #endif
-	const float x = map->iconStartX + s_nativeMinimapLive.left * aspect - (gt->numPlyrCurrGame == 3 ? 60 : 0);
+	const float x = map->iconStartX + NativeMinimap_GetAnchorOffsetX(map) + s_nativeMinimapLive.left * aspect - (gt->numPlyrCurrGame == 3 ? 60 : 0);
 	const float y = map->iconStartY + s_nativeMinimapLive.top - 16 + (gt->numPlyrCurrGame == 3 ? 10 : 0);
 	return NativeMinimap_Draw(&s_nativeMinimapLive, x, y, s_nativeMinimapLive.width * aspect,
 	                          s_nativeMinimapLive.height, primMem, ot, colorID);
@@ -676,7 +684,7 @@ int NativeMinimap_DrawPreview(int levelID, int right, int bottom, int width, int
 	const float scale = fminf(width / image->width, height / image->height);
 	float aspect = 1;
 #if CTR_NATIVE_WIDESCREEN
-	aspect = 34.0f / 45.0f;
+	aspect = (float)NativeAspect_GetScaleX();
 #endif
 	const float w = image->width * scale * aspect, h = image->height * scale;
 	const float left = right - width * 0.5f - w * 0.5f, top = bottom - height * 0.5f - h * 0.5f;

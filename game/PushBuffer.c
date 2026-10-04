@@ -1,8 +1,22 @@
 #include <common.h>
 #if defined(CTR_NATIVE)
 #include <platform/native_pgxp.h>
+#include <platform/native_aspect.h>
+#include <platform/native_projection.h>
+#include <math.h>
 #endif
 
+#if defined(CTR_NATIVE)
+static int PushBuffer_IsWorldCamera(const struct PushBuffer *pb)
+{
+	if (sdata->gGT == NULL || pb == NULL) return 0;
+	for (int i = 0; i < 4; ++i)
+	{
+		if (pb == &sdata->gGT->pushBuffer[i]) return 1;
+	}
+	return 0;
+}
+#endif
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800426f8-0x80042910.
 void PushBuffer_Init(struct PushBuffer *pb, int id, int total)
@@ -432,6 +446,21 @@ void PushBuffer_SetMatrixVP(struct PushBuffer *pb)
 	pb->matrix_ViewProj.m[0][1] = CTR_WIDESCREEN_SCALE_X(pb->matrix_ViewProj.m[0][1]);
 	pb->matrix_ViewProj.m[0][2] = CTR_WIDESCREEN_SCALE_X(pb->matrix_ViewProj.m[0][2]);
 #endif
+#if defined(CTR_NATIVE)
+	const int applyFov = NativeAspect_IsActive() && PushBuffer_IsWorldCamera(pb);
+	if (applyFov)
+	{
+		const double focalScale = NativeAspect_GetFocalScale();
+		const double overscan = NativeProjection_GetWorldOverscan();
+		pb->matrix_ViewProj.t[0] = (s32)(pb->matrix_ViewProj.t[0] * focalScale / overscan);
+		pb->matrix_ViewProj.t[1] = (s32)(pb->matrix_ViewProj.t[1] * focalScale);
+		for (int col = 0; col < 3; ++col)
+		{
+			pb->matrix_ViewProj.m[0][col] = (s16)(pb->matrix_ViewProj.m[0][col] * focalScale / overscan);
+			pb->matrix_ViewProj.m[1][col] = (s16)(pb->matrix_ViewProj.m[1][col] * focalScale);
+		}
+	}
+#endif
 
 #if defined(CTR_NATIVE)
 	if (NATIVE_PGXP_ACTIVE() || NATIVE_DRAW3D_ACTIVE())
@@ -457,9 +486,22 @@ void PushBuffer_SetMatrixVP(struct PushBuffer *pb)
 		for (int col = 0; col < 3; col++) view[3+col] *= (double)r360 / r600;
 		translation[1] *= (double)r360 / r600;
 #if CTR_NATIVE_WIDESCREEN
-		for (int col = 0; col < 3; col++) view[col] *= 34.0 / 45.0;
-		translation[0] *= 34.0 / 45.0;
+		const double aspectScaleX = NativeAspect_GetScaleX();
+		for (int col = 0; col < 3; col++) view[col] *= aspectScaleX;
+		translation[0] *= aspectScaleX;
 #endif
+		if (applyFov)
+		{
+			const double focalScale = NativeAspect_GetFocalScale();
+			const double overscan = NativeProjection_GetWorldOverscan();
+			for (int col = 0; col < 3; ++col)
+			{
+				view[col] *= focalScale / overscan;
+				view[3 + col] *= focalScale;
+			}
+			translation[0] *= focalScale / overscan;
+			translation[1] *= focalScale;
+		}
 		NativePgxp_SetTransform(&pb->matrix_ViewProj, &pb->matrix_ViewProj.m[0][0], pb->matrix_ViewProj.t, view, translation);
 	}
 #endif
@@ -655,9 +697,23 @@ void PushBuffer_UpdateFrustum(struct PushBuffer *pb)
 	// Match visibility culling to the wider projection.
 	val_X = CTR_WIDESCREEN_EXPAND_X(val_X);
 #endif
+#if defined(CTR_NATIVE)
+	if (NativeAspect_IsActive() && PushBuffer_IsWorldCamera(pb))
+	{
+		const double focalScale = NativeAspect_GetFocalScale();
+		val_X = (int)ceil((double)val_X * NativeProjection_GetWorldOverscan() / focalScale);
+	}
+#endif
 
 	val_Y = ((pb->rect.h * 0x600) / 0x360);
 	val_Y = val_Y / 2;
+#if defined(CTR_NATIVE)
+	if (NativeAspect_IsActive() && PushBuffer_IsWorldCamera(pb))
+	{
+		const double focalScale = NativeAspect_GetFocalScale();
+		val_Y = (int)ceil((double)val_Y / focalScale);
+	}
+#endif
 
 	frustumCorner[0].x = val_X;
 	frustumCorner[0].y = val_Y;

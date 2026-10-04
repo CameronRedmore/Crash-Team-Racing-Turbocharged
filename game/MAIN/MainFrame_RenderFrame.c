@@ -3,6 +3,56 @@
 
 #if defined(CTR_NATIVE)
 #include "platform/native_adhoc.h"
+#include "platform/native_projection_packet.h"
+#endif
+
+#if defined(CTR_NATIVE)
+int NativeProjection_IsGameplayActive(void)
+{
+	return NATIVE_DRAW3D_ACTIVE() && sdata->gGT != NULL &&
+	       (sdata->gGT->gameMode1 & (MAIN_MENU | LOADING | GAME_CUTSCENE | PAUSE_ALL)) == 0 &&
+	       gNativeProjectionMode > NATIVE_PROJECTION_PERSPECTIVE &&
+	       gNativeProjectionMode < NATIVE_PROJECTION_MODE_COUNT &&
+	       gNativeProjectionStrength > 0 && gNativeProjectionStrength <= 100;
+}
+
+double NativeProjection_GetWorldOverscan(void)
+{
+	if (!NativeProjection_IsGameplayActive()) return 1.0;
+	NativeProjectionParams params;
+	NativeProjection_BuildParams(gNativeProjectionMode, gNativeProjectionStrength, 1.0, &params);
+	return params.overscan;
+}
+
+#if NATIVE_DRAW3D_SUPPORTED
+static void MainFrame_AppendProjectionMarkers(struct GameTracker *gt)
+{
+	if (!NativeProjection_IsGameplayActive()) return;
+	const int count = gt->numPlyrCurrGame;
+	if (count < 1 || count > 4) return;
+	// Desktop consumption is synchronous; keep barriers outside the primitive
+	// arena so a full arena cannot leave the expanded source camera unresolved.
+	static NativeProjectionMarker markers[5];
+	NativeGpuLinks_RegisterRangeChecked("projection barriers", markers, sizeof(markers));
+	for (int i = 0; i <= count; i++)
+	{
+		NativeProjectionMarker *marker = &markers[i];
+		memset(marker, 0, sizeof(*marker));
+		marker->code = 0xB4000000u | (i < count ? (u32)i + 1 : 0);
+		setlen(marker, sizeof(*marker) / sizeof(u32) - P_LEN);
+		if (i < count)
+		{
+			struct PushBuffer *pb = &gt->pushBuffer[i];
+			marker->rect = pb->rect;
+			const double h = pb->distanceToScreen_PREV > 0 ? pb->distanceToScreen_PREV : 256;
+			const double tanHalf = pb->rect.w / (2.0 * h * NativeAspect_GetScaleX() * NativeAspect_GetFocalScale());
+			NativeProjection_BuildParams(gNativeProjectionMode, gNativeProjectionStrength, tanHalf, &marker->params);
+			AddPrim(&pb->ptrOT[0x3ff], marker);
+		}
+		else AddPrim(&gt->pushBuffer_UI.ptrOT[4], marker);
+	}
+}
+#endif
 #endif
 
 #if defined(CTR_NATIVE) && defined(CTR_INTERNAL)
@@ -1800,6 +1850,9 @@ void RenderSubmit(struct GameTracker *gGT)
 		ot = &gGT->pushBuffer[0].ptrOT[0x3ff];
 	}
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+	MainFrame_AppendProjectionMarkers(gGT);
+#endif
 	DrawOTag(ot);
 
 	gGT->frameTimer_notPaused = gGT->frameTimer_VsyncCallback;

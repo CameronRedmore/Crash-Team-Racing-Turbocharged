@@ -130,7 +130,7 @@ static int NativeHudIcon_Begin(struct NativeHudIconMesh *mesh, const struct Icon
 	// Match DecalHUD's centred squeeze, and DecalFont's button width fix.
 	const float squeezed = (float)CTR_WIDESCREEN_SCALE_X((int)width);
 	x += (width - squeezed) * 0.5f;
-	width = button ? (float)(((int)width * 34 + 44) / 45) : squeezed;
+	width = button ? (float)NativeAspect_ScaleXCeil((int)width) : squeezed;
 #else
 	(void)button;
 #endif

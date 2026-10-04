@@ -176,6 +176,10 @@ b32 NativeAutoSave_Apply(void);
 b32 NativeAutoSave_Write(void);
 b32 NativeAutoSave_QuickLoad(void);
 void NativeAutoSave_OnHubLoaded(void);
+void NativeAutoSave_ResetExitPortal(void);
+void NativeAutoSave_SetExitPortal(int hubID, int portalID);
+int NativeAutoSave_GetExitPortal(int hubID);
+int NativeAutoSave_GetExitPortalHub(void);
 #endif
 const char *NativeGhostInput_GetLeaderboardReplayName(void);
 void NativeGhostInput_ClearSelection(void);

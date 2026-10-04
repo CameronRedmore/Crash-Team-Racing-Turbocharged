@@ -29,6 +29,12 @@ static int RenderLists_IsVisible(const int *visLeafList, BspChildId childID)
 {
 	u32 rawChildID = (u16)childID;
 
+#if defined(CTR_NATIVE)
+	// Ultrawide side geometry may be absent from the retail camera-cell PVS.
+	// Keep the spatial bounds and leaf frustum tests below as the cullers.
+	if (NativeAspect_UsesExpandedVisibility()) return 1;
+#endif
+
 	if (visLeafList == 0)
 	{
 		return 1;

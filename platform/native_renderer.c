@@ -9,6 +9,8 @@
 #include <SDL3/SDL.h>
 
 #include "platform/native_assets.h"
+#include "platform/native_aspect.h"
+#include "platform/native_projection.h"
 #include "platform/native_gpu.h"
 #include "platform/native_adhoc.h"
 #if defined(__EMSCRIPTEN__)
@@ -22,6 +24,8 @@
 #include "platform/native_renderer.h"
 #include "platform/native_font.h"
 #include "platform/native_minimap.h"
+#include "platform/native_engine.h"
+#include "platform/native_kart_color.h"
 
 #include <assert.h>
 #include <string.h>
@@ -312,6 +316,10 @@ struct NativeRenderTarget
 global_variable struct NativeRenderTarget s_mainRenderTarget;
 global_variable struct NativeRenderTarget s_offscreenRenderTarget;
 #ifndef __vita__
+global_variable struct NativeRenderTarget s_projectedWorldTarget;
+global_variable b32 s_projectedWorldTargetReady = false;
+global_variable b32 s_projectedWorldBound = false;
+global_variable b32 s_projectedWorldSeeded = false;
 // Full-resolution greyscale copy of the main target, used as the pause backdrop.
 global_variable struct NativeRenderTarget s_pauseBackgroundTarget;
 global_variable b32 s_pauseBackgroundTargetReady = false;
@@ -408,7 +416,12 @@ extern int gNativeDitheringEnabled;
 
 global_variable int s_presentAspectW = 4;
 global_variable int s_presentAspectH = 3;
+global_variable int s_startupAspectW = 4;
+global_variable int s_startupAspectH = 3;
 global_variable SDL_Rect s_presentViewport = {0, 0, 0, 0};
+// Generic renderer users (including the renderer tests) retain their startup
+// aspect until the game explicitly opts into the player-selected ratio.
+global_variable int s_gamePresentationEnabled = 0;
 
 int g_dbg_wireframeMode = 0;
 int g_dbg_texturelessMode = 0;
@@ -424,6 +437,15 @@ global_variable GLuint s_pauseBackgroundShader = 0;
 global_variable GLint s_pauseBackgroundFlipYLoc = -1;
 global_variable GLint s_pauseBackgroundPaletteLoc = -1;
 global_variable GLint s_pauseBackgroundSmoothLoc = -1;
+global_variable GLuint s_projectedWorldShader = 0;
+global_variable GLint s_projectedWorldSourceLoc = -1;
+global_variable GLint s_projectedWorldRectLoc = -1;
+global_variable GLint s_projectedWorldTexelLoc = -1;
+global_variable GLint s_projectedWorldModeLoc = -1;
+global_variable GLint s_projectedWorldStrengthLoc = -1;
+global_variable GLint s_projectedWorldTanHalfLoc = -1;
+global_variable GLint s_projectedWorldOverscanLoc = -1;
+global_variable GLint s_projectedWorldEndpointLoc = -1;
 #endif
 global_variable GLuint s_presentVramShader = 0;
 global_variable GLint s_presentVramSourceRectLoc = -1;
@@ -447,6 +469,7 @@ internal void NativeRenderer_EnableDepth(int enable);
 internal void NativeRenderer_SetViewPort(int x, int y, int width, int height);
 internal void NativeRenderer_SetPresentationAspect(int width, int height);
 internal void NativeRenderer_UpdatePresentationViewport(void);
+internal void NativeRenderer_UpdateGamePresentationAspect(void);
 internal void NativeRenderer_ClearPresentationBars(void);
 internal void NativeRenderer_SetWireframe(int enable);
 internal void NativeRenderer_InitRenderTarget(struct NativeRenderTarget *target);
@@ -549,6 +572,9 @@ int NativeRenderer_InitialiseRender(char *windowName, int width, int height, int
 {
 	g_windowWidth = width;
 	g_windowHeight = height;
+	s_gamePresentationEnabled = 0;
+	s_startupAspectW = width;
+	s_startupAspectH = height;
 	NativeRenderer_SetPresentationAspect(width, height);
 
 	// Due to debugging in fullscreen
@@ -585,6 +611,11 @@ void NativeRenderer_Shutdown(void)
 	NativeRenderer_DestroyRenderTarget(&s_mainRenderTarget);
 	NativeRenderer_DestroyRenderTarget(&s_offscreenRenderTarget);
 #ifndef __vita__
+	if (s_projectedWorldTargetReady)
+	{
+		NativeRenderer_DestroyRenderTarget(&s_projectedWorldTarget);
+		s_projectedWorldTargetReady = false;
+	}
 	if (s_pauseBackgroundTargetReady)
 	{
 		NativeRenderer_DestroyRenderTarget(&s_pauseBackgroundTarget);
@@ -625,6 +656,7 @@ void NativeRenderer_Shutdown(void)
 	glDeleteProgram(s_packShader);
 #ifndef __vita__
 	glDeleteProgram(s_pauseBackgroundShader);
+	glDeleteProgram(s_projectedWorldShader);
 	glDeleteProgram(s_downsampleShader);
 #endif
 	glDeleteProgram(s_presentVramShader);
@@ -690,6 +722,8 @@ void NativeRenderer_BeginScene(void)
 #ifndef __vita__
 	s_frameAntiAliasingMode = ((gNativeAntiAliasingMode >= NATIVE_AA_OFF) && (gNativeAntiAliasingMode < NATIVE_AA_MODE_COUNT)) ? gNativeAntiAliasingMode
 	                                                                                                                         : NATIVE_AA_OFF;
+	s_projectedWorldBound = false;
+	s_projectedWorldSeeded = false;
 #endif
 #ifdef __vita__
 	if (++s_p4FrameSerial == 0)
@@ -705,6 +739,7 @@ void NativeRenderer_BeginScene(void)
 #endif
 	s_lastBoundTexture = 0;
 
+	NativeRenderer_UpdateGamePresentationAspect();
 	NativeRenderer_UpdatePresentationViewport();
 	NativeRenderer_ClearPresentationBars();
 	NativeRenderer_BindMainRenderTarget();
@@ -1077,7 +1112,18 @@ internal void NativeRenderer_BindMainRenderTarget(void)
 #endif
 	s_mainRenderTarget.logicalWidth = logicalWidth;
 	s_mainRenderTarget.logicalHeight = logicalHeight;
-	glBindFramebuffer(GL_FRAMEBUFFER, NativeRenderer_GetDrawFramebuffer(&s_mainRenderTarget));
+	struct NativeRenderTarget *drawTarget = &s_mainRenderTarget;
+#ifndef __vita__
+	if (s_projectedWorldBound && s_projectedWorldTargetReady)
+	{
+		drawTarget = &s_projectedWorldTarget;
+		NativeRenderer_EnsureRenderTarget(drawTarget, s_mainRenderTarget.width, s_mainRenderTarget.height);
+		NativeRenderer_EnsureMultisampleStorage(drawTarget, s_mainRenderTarget.samples);
+		drawTarget->logicalWidth = logicalWidth;
+		drawTarget->logicalHeight = logicalHeight;
+	}
+#endif
+	glBindFramebuffer(GL_FRAMEBUFFER, NativeRenderer_GetDrawFramebuffer(drawTarget));
 }
 
 internal void NativeRenderer_DrawVRAMRegion(int x, int y, int width, int height)
@@ -1202,6 +1248,47 @@ void NativeRenderer_ResetDevice(void)
 {
 	NativeRenderer_UpdatePresentationViewport();
 	NativeRenderer_UpdateSwapIntervalState(0);
+}
+
+internal void NativeRenderer_UpdateGamePresentationAspect(void)
+{
+	if (!s_gamePresentationEnabled)
+	{
+		return;
+	}
+
+	int presentationWidth = 0;
+	int presentationHeight = 0;
+	NativeAspect_GetPresentation(&presentationWidth, &presentationHeight);
+	if ((presentationWidth <= 0) || (presentationHeight <= 0))
+	{
+		return;
+	}
+
+	const int divisor = NativeRenderer_GCD(presentationWidth, presentationHeight);
+	if ((divisor <= 0) || ((s_presentAspectW == presentationWidth / divisor) && (s_presentAspectH == presentationHeight / divisor)))
+	{
+		return;
+	}
+	NativeRenderer_SetPresentationAspect(presentationWidth, presentationHeight);
+	// A frozen pause capture is sampled by normalized UVs and remains valid
+	// when the viewport changes. Retain it through in-game aspect/renderer
+	// changes; the next pause capture resizes its storage to the new source.
+	NativeRenderer_UpdatePresentationViewport();
+}
+
+void NativeRenderer_EnableGamePresentation(int enabled)
+{
+	s_gamePresentationEnabled = enabled != 0;
+	if (!s_gamePresentationEnabled)
+	{
+		// Restore the dimensions supplied by the renderer's initializer.
+		NativeRenderer_SetPresentationAspect(s_startupAspectW, s_startupAspectH);
+		NativeRenderer_UpdatePresentationViewport();
+		return;
+	}
+	NativeRenderer_UpdateGamePresentationAspect();
+	NativeRenderer_UpdatePresentationViewport();
 }
 
 typedef struct
@@ -2280,6 +2367,54 @@ global_variable const char *ctr_present_rgba_shader = "#ifdef VERTEX\n"
                                                        "}\n"
                                                        "#endif\n";
 
+#ifndef __vita__
+// Inverse-map a completed world image after rasterization. The whole world pass
+// shares one target and depth buffer; only its final colour resolve is warped.
+global_variable const char *ctr_projected_world_shader = "#ifdef VERTEX\n"
+    "attribute vec2 a_position;\n"
+    "varying vec2 v_uv;\n"
+    "void main() { v_uv = a_position * 0.5 + 0.5; gl_Position = vec4(a_position, 0.0, 1.0); }\n"
+    "#endif\n"
+    "#ifdef FRAGMENT\n"
+    "varying vec2 v_uv;\n"
+    "uniform sampler2D s_src;\n"
+    "uniform vec4 sourceRect;\n"
+    "uniform vec2 sourceTexelSize;\n"
+    "uniform int projectionMode;\n"
+    "uniform float projectionStrength;\n"
+    "uniform float horizontalTanHalf;\n"
+    "uniform float sourceOverscan;\n"
+    "uniform float paniniEndpoint;\n"
+    "float edgeSourceX(float outputX) {\n"
+    "    float k = projectionStrength;\n"
+    "    float a = abs(clamp(outputX, -1.0, 1.0));\n"
+    "    float c = 0.35;\n"
+    "    float warped = (a <= c || k <= 0.0) ? a : c + (exp(k * (a - c)) - 1.0) / k;\n"
+    "    return sign(outputX) * warped / sourceOverscan;\n"
+    "}\n"
+    "vec2 paniniSource(vec2 outputNdc) {\n"
+    "    float d = projectionStrength;\n"
+    "    float p = clamp(outputNdc.x, -1.0, 1.0) * paniniEndpoint;\n"
+    "    float a = d + 1.0;\n"
+    "    float denominator = a * a - p * p * d * d;\n"
+    "    float radicand = max(0.0, a * a + (1.0 - d * d) * p * p);\n"
+    "    float rayX = p * (a + d * sqrt(radicand)) / max(denominator, 0.000001);\n"
+    "    float factor = a / (1.0 + d * sqrt(1.0 + rayX * rayX));\n"
+    "    float endpointFactor = paniniEndpoint / horizontalTanHalf;\n"
+    "    return vec2(rayX / horizontalTanHalf, outputNdc.y * endpointFactor / factor);\n"
+    "}\n"
+    "void main() {\n"
+    "    vec2 outputNdc = v_uv * 2.0 - 1.0;\n"
+    "    vec2 sourceNdc = outputNdc;\n"
+    "    if (projectionMode == 1 && projectionStrength > 0.0) sourceNdc = paniniSource(outputNdc);\n"
+    "    else if (projectionMode == 2 && projectionStrength > 0.0) sourceNdc.x = edgeSourceX(outputNdc.x);\n"
+    "    vec2 sourceUv = sourceRect.xy + (sourceNdc * 0.5 + 0.5) * sourceRect.zw;\n"
+    "    sourceUv = clamp(sourceUv, sourceRect.xy + sourceTexelSize * 0.5, sourceRect.xy + sourceRect.zw - sourceTexelSize * 0.5);\n"
+    "    gl_FragColor = texture2D(s_src, sourceUv);\n"
+    "}\n"
+    "#endif\n";
+#endif
+
 // SSAA resolve: an area-weighted box filter. Each destination pixel averages
 // the source texels its footprint covers, weighted by overlap, so non-integer
 // scales (SSAA 2X) resolve without the bias of a single bilinear tap.
@@ -2360,6 +2495,20 @@ internal void NativeRenderer_InitVRAMPipelines(void)
 #ifndef __vita__
 	s_presentRgbaTexelSizeLoc = glGetUniformLocation(s_presentRgbaShader, "texelSize");
 	s_presentRgbaFxaaLoc = glGetUniformLocation(s_presentRgbaShader, "fxaaEnabled");
+	glUniform1i(s_presentRgbaFxaaLoc, 0);
+	glUniform2f(s_presentRgbaTexelSizeLoc, 1.0f, 1.0f);
+	s_projectedWorldShader = NativeRenderer_Shader_Compile(ctr_projected_world_shader, false, NULL);
+	s_projectedWorldSourceLoc = glGetUniformLocation(s_projectedWorldShader, "s_src");
+	s_projectedWorldRectLoc = glGetUniformLocation(s_projectedWorldShader, "sourceRect");
+	s_projectedWorldTexelLoc = glGetUniformLocation(s_projectedWorldShader, "sourceTexelSize");
+	s_projectedWorldModeLoc = glGetUniformLocation(s_projectedWorldShader, "projectionMode");
+	s_projectedWorldStrengthLoc = glGetUniformLocation(s_projectedWorldShader, "projectionStrength");
+	s_projectedWorldTanHalfLoc = glGetUniformLocation(s_projectedWorldShader, "horizontalTanHalf");
+	s_projectedWorldOverscanLoc = glGetUniformLocation(s_projectedWorldShader, "sourceOverscan");
+	s_projectedWorldEndpointLoc = glGetUniformLocation(s_projectedWorldShader, "paniniEndpoint");
+	glUseProgram(s_projectedWorldShader);
+	glUniform1i(s_projectedWorldSourceLoc, 0);
+	glUseProgram(s_presentRgbaShader);
 #endif
 	glUniform1i(presentRgbaSrcLoc, 0);
 	glUniform1f(s_presentRgbaFlipYLoc, 0.0f);
@@ -3811,6 +3960,151 @@ internal const struct NativeRenderTarget *NativeRenderer_ResolveMainRenderTarget
 }
 #endif
 
+int NativeRenderer_BindProjectedWorld(int enable)
+{
+#ifndef __vita__
+	if (!enable)
+	{
+		s_projectedWorldBound = false;
+		NativeRenderer_BindMainRenderTarget();
+		NativeRenderer_SetViewPort(0, 0, s_mainRenderTarget.width, s_mainRenderTarget.height);
+		return 1;
+	}
+
+	if (s_previousOffscreenState || (s_mainRenderTarget.width <= 0) || (s_mainRenderTarget.height <= 0))
+	{
+		return 0;
+	}
+
+	if (!s_projectedWorldTargetReady)
+	{
+		NativeRenderer_InitRenderTarget(&s_projectedWorldTarget);
+		s_projectedWorldTargetReady = true;
+	}
+	NativeRenderer_EnsureRenderTarget(&s_projectedWorldTarget, s_mainRenderTarget.width, s_mainRenderTarget.height);
+	NativeRenderer_EnsureMultisampleStorage(&s_projectedWorldTarget, s_mainRenderTarget.samples);
+	s_projectedWorldTarget.logicalWidth = s_mainRenderTarget.logicalWidth;
+	s_projectedWorldTarget.logicalHeight = s_mainRenderTarget.logicalHeight;
+
+	if (!s_projectedWorldSeeded)
+	{
+		// Seed the complete target from current main colour once per frame.
+		const struct NativeRenderTarget *source = NativeRenderer_ResolveMainRenderTarget();
+		struct NativeRendererPassState state;
+		NativeRenderer_BeginUtilityPass(&state, NativeRenderer_GetDrawFramebuffer(&s_projectedWorldTarget), 0, 0,
+		                                s_projectedWorldTarget.width, s_projectedWorldTarget.height);
+		glUseProgram(s_presentRgbaShader);
+		glUniform1f(s_presentRgbaFlipYLoc, 0.0f);
+		glUniform1i(s_presentRgbaFxaaLoc, 0);
+		glUniform2f(s_presentRgbaTexelSizeLoc, 1.0f / (GLfloat)s_mainRenderTarget.width,
+		            1.0f / (GLfloat)s_mainRenderTarget.height);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, source->texture);
+		glBindVertexArray(s_vramQuadVAO);
+		NativeRenderer_DrawTriangles(0, 2);
+		glBindVertexArray(0);
+		NativeRenderer_EndUtilityPass(&state);
+
+		// Clear depth/stencil with the scene seed, not on each split batch bind.
+		struct NativeRendererPassState clearState;
+		NativeRenderer_BeginUtilityPass(&clearState, NativeRenderer_GetDrawFramebuffer(&s_projectedWorldTarget), 0, 0,
+		                                s_projectedWorldTarget.width, s_projectedWorldTarget.height);
+		glDepthMask(GL_TRUE);
+		glStencilMask(0xff);
+		glClearDepth(1.0);
+		glClearStencil(0);
+		glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		NativeRenderer_EndUtilityPass(&clearState);
+		s_projectedWorldSeeded = true;
+	}
+
+	s_projectedWorldBound = true;
+	NativeRenderer_BindMainRenderTarget();
+	NativeRenderer_SetViewPort(0, 0, s_projectedWorldTarget.width, s_projectedWorldTarget.height);
+	return 1;
+#else
+	(void)enable;
+	return 0;
+#endif
+}
+
+void NativeRenderer_ResolveProjectedWorld(const RECT16 *cameraRect, const NativeProjectionParams *params)
+{
+#ifndef __vita__
+	if ((cameraRect == NULL) || !s_projectedWorldTargetReady || (s_projectedWorldTarget.width <= 0) ||
+	    (s_projectedWorldTarget.height <= 0))
+	{
+		return;
+	}
+	if (s_projectedWorldBound)
+	{
+		NativeRenderer_BindProjectedWorld(0);
+	}
+	NativeRenderer_ResolveMultisample(&s_projectedWorldTarget);
+
+	const int logicalWidth = s_mainRenderTarget.logicalWidth > 0 ? s_mainRenderTarget.logicalWidth : 512;
+	const int logicalHeight = s_mainRenderTarget.logicalHeight > 0 ? s_mainRenderTarget.logicalHeight : 216;
+	const int x0 = cameraRect->x < 0 ? 0 : (cameraRect->x > logicalWidth ? logicalWidth : cameraRect->x);
+	const int y0 = cameraRect->y < 0 ? 0 : (cameraRect->y > logicalHeight ? logicalHeight : cameraRect->y);
+	const int x1Raw = cameraRect->x + cameraRect->w;
+	const int y1Raw = cameraRect->y + cameraRect->h;
+	const int x1 = x1Raw < 0 ? 0 : (x1Raw > logicalWidth ? logicalWidth : x1Raw);
+	const int y1 = y1Raw < 0 ? 0 : (y1Raw > logicalHeight ? logicalHeight : y1Raw);
+	if ((x1 <= x0) || (y1 <= y0))
+	{
+		return;
+	}
+
+	NativeProjectionParams identity = {NATIVE_PROJECTION_PERSPECTIVE, 0, 1.0, 1.0, 1.0};
+	if (params == NULL)
+	{
+		params = &identity;
+	}
+
+	const int dstX = x0 * s_mainRenderTarget.width / logicalWidth;
+	const int dstRight = x1 * s_mainRenderTarget.width / logicalWidth;
+	const int dstBottom = s_mainRenderTarget.height - y1 * s_mainRenderTarget.height / logicalHeight;
+	const int dstTop = s_mainRenderTarget.height - y0 * s_mainRenderTarget.height / logicalHeight;
+	const int dstW = dstRight - dstX;
+	const int dstH = dstTop - dstBottom;
+	if ((dstW <= 0) || (dstH <= 0))
+	{
+		return;
+	}
+
+	const GLfloat sourceRect[4] = {
+	    (GLfloat)x0 / (GLfloat)logicalWidth,
+	    1.0f - (GLfloat)y1 / (GLfloat)logicalHeight,
+	    (GLfloat)(x1 - x0) / (GLfloat)logicalWidth,
+	    (GLfloat)(y1 - y0) / (GLfloat)logicalHeight,
+	};
+	struct NativeRendererPassState state;
+	NativeRenderer_BindMainRenderTarget();
+	NativeRenderer_BeginUtilityPass(&state, NativeRenderer_GetDrawFramebuffer(&s_mainRenderTarget), dstX, dstBottom, dstW, dstH);
+	glUseProgram(s_projectedWorldShader);
+	glUniform4fv(s_projectedWorldRectLoc, 1, sourceRect);
+	glUniform2f(s_projectedWorldTexelLoc, 1.0f / s_projectedWorldTarget.width, 1.0f / s_projectedWorldTarget.height);
+	glUniform1i(s_projectedWorldModeLoc, params->mode);
+	glUniform1f(s_projectedWorldStrengthLoc, (GLfloat)params->strength / 100.0f);
+	glUniform1f(s_projectedWorldTanHalfLoc, (GLfloat)params->horizontalTanHalf);
+	glUniform1f(s_projectedWorldOverscanLoc, (GLfloat)((params->overscan > 0.0) ? params->overscan : 1.0));
+	glUniform1f(s_projectedWorldEndpointLoc, (GLfloat)((params->paniniEndpoint > 0.0) ? params->paniniEndpoint : params->horizontalTanHalf));
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, s_projectedWorldTarget.texture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glBindVertexArray(s_vramQuadVAO);
+	NativeRenderer_DrawTriangles(0, 2);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glBindVertexArray(0);
+	NativeRenderer_EndUtilityPass(&state);
+#else
+	(void)cameraRect;
+	(void)params;
+#endif
+}
+
 // NOTE(aalhendi): PS1 draws into VRAM and can texture from that same VRAM. Native
 // mirrors that by flushing pending CPU VRAM writes, then packing the presented
 // framebuffer into the persistent RG8 VRAM texture. CPU-side VRAM reads pull from
@@ -3819,11 +4113,14 @@ void NativeRenderer_StoreFrameBuffer(int x, int y, int w, int h)
 {
 	NativePerf_BeginScope(NATIVE_PERF_BUCKET_FRAMEBUFFER_STORE);
 #ifndef __vita__
+	struct NativeRenderTarget *source = (s_projectedWorldBound && s_projectedWorldTargetReady) ? &s_projectedWorldTarget : &s_mainRenderTarget;
 	// The pack samples one texel per VRAM pixel, so an SSAA target is packed
 	// directly; only MSAA needs a resolve before it can be sampled.
-	NativeRenderer_ResolveMultisample(&s_mainRenderTarget);
+	NativeRenderer_ResolveMultisample(source);
+#else
+	struct NativeRenderTarget *source = &s_mainRenderTarget;
 #endif
-	NativeRenderer_GpuPackTextureToVRAM(s_mainRenderTarget.texture, x, y, w, h, true);
+	NativeRenderer_GpuPackTextureToVRAM(source->texture, x, y, w, h, true);
 
 	NativePerf_EndScope(NATIVE_PERF_BUCKET_FRAMEBUFFER_STORE);
 }
@@ -4381,6 +4678,9 @@ internal int NativeRenderer_BuildDebugOverlayLines(char lines[][NATIVE_DEBUG_OVE
 	const int aaConfigured = gNativeAntiAliasingMode;
 	const int aaFrame = s_frameAntiAliasingMode;
 	DBG_LINE("CTR DEBUG [F6]  %.1f fps", s_debugOverlayFps);
+	DBG_LINE("-- Player 1 --");
+	DBG_LINE("Engine %s", NativeEngine_GetProfileName(NativeEngine_GetEffectiveProfile(0)));
+	DBG_LINE("Kart hue rotation %d deg", gNativeKartHue * NATIVE_KART_HUE_STEP_DEGREES);
 	DBG_LINE("-- Resolution --");
 	DBG_LINE("Window  %dx%d", g_windowWidth, g_windowHeight);
 	DBG_LINE("Present %dx%d @%d,%d", s_presentViewport.w, s_presentViewport.h, s_presentViewport.x, s_presentViewport.y);
@@ -4680,6 +4980,49 @@ void NativeRenderer_DrawGhostReplayOverlay(void)
 	s_lastBoundTexture = (TextureID)-1;
 }
 
+void NativeRenderer_GetStreamingViewport(int contentHeight, int displayHeight, int *x, int *y, int *width, int *height)
+{
+	int displayX = s_presentViewport.x;
+	int displayY = s_presentViewport.y;
+	int displayW = s_presentViewport.w;
+	int displayH = s_presentViewport.h;
+
+#if !defined(__vita__) && !defined(__EMSCRIPTEN__)
+	if (s_gamePresentationEnabled && NativeAspect_IsActive() && (displayW > 0) && (displayH > 0))
+	{
+		// Video assets use a 4:3 display area even when game rendering fills a
+		// wider selected viewport. Fit and centre that area before applying the
+		// video's own vertical content fraction.
+		if (displayW * 3 > displayH * 4)
+		{
+			displayW = (displayH * 4) / 3;
+		}
+		else
+		{
+			displayH = (displayW * 3) / 4;
+		}
+		displayX = s_presentViewport.x + (s_presentViewport.w - displayW) / 2;
+		displayY = s_presentViewport.y + (s_presentViewport.h - displayH) / 2;
+	}
+#endif
+
+	int viewportH = displayH;
+	if ((contentHeight > 0) && (displayHeight >= contentHeight))
+	{
+		viewportH = (displayH * contentHeight + displayHeight / 2) / displayHeight;
+		if (viewportH < 1)
+		{
+			viewportH = 1;
+		}
+	}
+	const int viewportY = displayY + (displayH - viewportH) / 2;
+
+	if (x) *x = displayX;
+	if (y) *y = viewportY;
+	if (width) *width = displayW;
+	if (height) *height = viewportH;
+}
+
 void NativeRenderer_PresentStreamingTexture(TextureID texture, int contentHeight, int displayHeight)
 {
 	if ((texture == 0) || (contentHeight <= 0) || (displayHeight < contentHeight))
@@ -4696,9 +5039,12 @@ void NativeRenderer_PresentStreamingTexture(TextureID texture, int contentHeight
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
-	const int viewportH = (s_presentViewport.h * contentHeight + displayHeight / 2) / displayHeight;
-	const int viewportY = s_presentViewport.y + (s_presentViewport.h - viewportH) / 2;
-	NativeRenderer_SetViewPort(s_presentViewport.x, viewportY, s_presentViewport.w, viewportH);
+	int viewportX;
+	int viewportY;
+	int viewportW;
+	int viewportH;
+	NativeRenderer_GetStreamingViewport(contentHeight, displayHeight, &viewportX, &viewportY, &viewportW, &viewportH);
+	NativeRenderer_SetViewPort(viewportX, viewportY, viewportW, viewportH);
 
 	glUseProgram(s_presentRgbaShader);
 	glUniform1f(s_presentRgbaFlipYLoc, 1.0f);

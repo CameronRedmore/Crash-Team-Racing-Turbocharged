@@ -2,11 +2,16 @@
 #define NATIVE_RENDERER_H
 
 #include <platform/native_renderer_types.h>
+#include <platform/native_projection.h>
 
 int NativeRenderer_InitialiseRender(char *windowName, int width, int height, int fullscreen);
 int NativeRenderer_InitialisePSX(void);
 void NativeRenderer_Shutdown(void);
 void NativeRenderer_ResetDevice(void);
+// Opt the main game presentation into NativeAspect's selected ratio. Kept
+// explicit so renderer integration tests and utility windows retain the
+// dimensions passed to NativeRenderer_InitialiseRender.
+void NativeRenderer_EnableGamePresentation(int enabled);
 void NativeRenderer_BeginScene(void);
 void NativeRenderer_EndScene(void);
 void NativeRenderer_EndGpuFrame(void);
@@ -22,6 +27,12 @@ u32 NativeRenderer_CreateMinimapTexture(int width, int height, const u8 *pixels)
 void NativeRenderer_DestroyFontAtlasTexture(u32 texture);
 #endif
 void NativeRenderer_PresentMainRenderTarget(void);
+// Compute the viewport used by streaming/video frames without changing GL state.
+void NativeRenderer_GetStreamingViewport(int contentHeight, int displayHeight, int *x, int *y, int *width, int *height);
+// Route onscreen world draws through a persistent colour/depth target. Resolve
+// each logical camera rectangle once at its world/UI boundary.
+int NativeRenderer_BindProjectedWorld(int enable);
+void NativeRenderer_ResolveProjectedWorld(const RECT16 *cameraRect, const NativeProjectionParams *params);
 void NativeRenderer_DrawGhostReplayOverlay(void);
 #ifndef __vita__
 // F6 debug overlay (settings and resolution readout).

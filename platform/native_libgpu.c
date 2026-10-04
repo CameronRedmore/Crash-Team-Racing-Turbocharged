@@ -419,6 +419,9 @@ void DrawOTag(void *p)
 		}
 
 		ParsePrimitivesLinkedList((uint32_t *)p, 0);
+		#if NATIVE_DRAW3D_SUPPORTED
+		NativeGpu_FinishProjection();
+		#endif
 		DrawAllSplits();
 #endif
 	} while (g_dbg_emulatorPaused);

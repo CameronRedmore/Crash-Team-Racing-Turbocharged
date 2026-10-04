@@ -8,6 +8,8 @@ struct UIMap;
 
 // Projection before HUD translation, widescreen scaling and the 3P offset.
 void NativeMinimap_Project(const struct UIMap *map, double x, double z, double *mapX, double *mapY);
+// Translate the entire HUD map together, retaining its 4:3 edge margin.
+float NativeMinimap_GetAnchorOffsetX(const struct UIMap *map);
 int NativeMinimap_DrawLive(struct PrimMem *primMem, u32 *ot, u32 colorID);
 int NativeMinimap_DrawPreview(int levelID, int right, int bottom, int width, int height,
                              struct PrimMem *primMem, u32 *ot, u32 colorID);

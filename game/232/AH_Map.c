@@ -211,12 +211,17 @@ static void AH_Map_PreciseSetXY(s16 *xy, float x, float y)
 
 // Rotate and scale a hub map marker exactly as the retail integer version does,
 // keeping the fractions.
+static float AH_Map_ShapeAspectX(void)
+{
+	return NativeAspect_IsActive() ? (float)NativeAspect_GetHudPixelAspectX() : 8.0f / 5.0f;
+}
+
 static void AH_Map_PreciseShape(float posX, float posY, const SVec2 *vertPos, int count, int scale, float sizeScale, int angle, float *x, float *y)
 {
 	const float sin = MATH_Sin(angle) / 4096.0f;
 	const float cos = MATH_Cos(angle) / 4096.0f;
 	const float scaleY = scale * sizeScale / 4096.0f;
-	const float scaleX = scaleY * 8.0f / 5.0f;
+	const float scaleX = scaleY * AH_Map_ShapeAspectX();
 	for (int i = 0; i < count; i++)
 	{
 		x[i] = posX + 6 + (vertPos[i].x * cos + vertPos[i].y * sin) * scaleX;
@@ -228,6 +233,7 @@ static void AH_Map_PreciseShape(float posX, float posY, const SVec2 *vertPos, in
 // corners, replacing the retail five-copy offset outline.
 static void AH_Map_PreciseOutline(const float *x, const float *y, int count, float *outlineX, float *outlineY)
 {
+	const float pixelAspectX = NativeAspect_IsActive() ? (float)NativeAspect_GetHudPixelAspectX() : 1.0f;
 	float signedArea = 0.0f;
 	for (int i = 0; i < count; i++)
 	{
@@ -241,9 +247,9 @@ static void AH_Map_PreciseOutline(const float *x, const float *y, int count, flo
 	{
 		const int previous = (i + count - 1) % count;
 		const int next = (i + 1) % count;
-		const float prevDX = x[i] - x[previous];
+		const float prevDX = (x[i] - x[previous]) / pixelAspectX;
 		const float prevDY = y[i] - y[previous];
-		const float nextDX = x[next] - x[i];
+		const float nextDX = (x[next] - x[i]) / pixelAspectX;
 		const float nextDY = y[next] - y[i];
 		const float prevLength = sqrtf(prevDX * prevDX + prevDY * prevDY);
 		const float nextLength = sqrtf(nextDX * nextDX + nextDY * nextDY);
@@ -276,7 +282,7 @@ static void AH_Map_PreciseOutline(const float *x, const float *y, int count, flo
 			miterX *= miterScale;
 			miterY *= miterScale;
 		}
-		outlineX[i] = x[i] + miterX;
+		outlineX[i] = x[i] + miterX * pixelAspectX;
 		outlineY[i] = y[i] + miterY;
 	}
 }
@@ -394,7 +400,7 @@ static void AH_Map_PreciseLine(struct GameTracker *gGT, float x0, float y0, floa
 // or Modern Map.
 static b32 AH_Map_PrecisePos(struct UIMap *map, int worldX, int worldZ, float *posX, float *posY)
 {
-	if (!(gNativePreciseMinimapEnabled && NATIVE_PGXP_SUPPORTED) && !gNativeModernMapEnabled)
+	if (!NativeAspect_IsActive() && !(gNativePreciseMinimapEnabled && NATIVE_PGXP_SUPPORTED) && !gNativeModernMapEnabled)
 	{
 		return false;
 	}
@@ -447,7 +453,7 @@ static void AH_Map_HubRouteTrianglePivot(float centreX, float centreY, int angle
 	const float cos = MATH_Cos(angle) / 4096.0f;
 	// The triangle's local vertex centroid is (0, 8/3), scaled to (0, 4/3).
 	const float centroid = (4.0f / 3.0f) * sizeScale;
-	*pivotX = centreX - 6.0f - sin * centroid * (8.0f / 5.0f);
+	*pivotX = centreX - 6.0f - sin * centroid * AH_Map_ShapeAspectX();
 	*pivotY = centreY - 4.0f - cos * centroid;
 }
 #endif
@@ -641,7 +647,7 @@ static void AH_Map_HubArrowOuterPrecise(int arrowIndex, float posX, float posY, 
 
 		int outlineRadius =
 		    ((outlinePhase * AH_MAP_ARROW_OUTLINE_RADIUS_MUL + AH_MAP_ARROW_OUTLINE_RADIUS_BIAS) * 0x10000) >> AH_MAP_ARROW_OUTLINE_RADIUS_SHIFT;
-		const float radiusX = (float)((outlineRadius << 3) / 5) * sizeScale;
+		const float radiusX = NativeAspect_IsActive() ? outlineRadius * sizeScale * AH_Map_ShapeAspectX() : (float)((outlineRadius << 3) / 5) * sizeScale;
 		const float radiusY = outlineRadius * sizeScale;
 
 		float prevX = 0.0f;
@@ -677,15 +683,13 @@ enum AHMapMarkerConstants
 	AH_MAP_MARKER_PULSE_PERIOD = 64,
 };
 
-// Width of a HUD pixel relative to its height on screen, so markers stay round:
-// 512x216 is shown at 4:3, and widescreen narrows the HUD by 34/45.
+// Convert vertical marker radii to horizontal HUD units so they stay round.
 static float AH_Map_MarkerAspectX(void)
 {
-	const float aspect = (512.0f / 216.0f) / (4.0f / 3.0f);
 #if CTR_NATIVE_WIDESCREEN
-	return aspect * 34.0f / 45.0f;
+	return (float)NativeAspect_GetHudPixelAspectX();
 #else
-	return aspect;
+	return (512.0f / SCREEN_HEIGHT) / (4.0f / 3.0f);
 #endif
 }
 

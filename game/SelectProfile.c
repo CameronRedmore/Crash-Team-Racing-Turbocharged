@@ -2,12 +2,29 @@
 
 #if defined(CTR_NATIVE)
 #include <platform/native_custom_racer.h>
+#include <platform/native_engine.h>
+#include <platform/native_engine_metadata.h>
 #endif
 
 extern int gNativeGhostReplayMode;
 
 #if defined(CTR_NATIVE)
 static struct SelectProfileLoadSaveIcon s_autoSaveIcons[3];
+
+static char *SelectProfile_AdventureEngineMarker(const struct AdvProgress *adv)
+{
+	int profile = NativeEngineMetadata_DecodeWord(adv->reservedRewardFlags);
+	if (profile < 0 || !NativeEngine_IsProfileUnlocked(profile))
+		profile = NativeEngine_GetDefaultProfile(adv->characterID);
+	switch (profile)
+	{
+	case NATIVE_ENGINE_ACCEL: return "A";
+	case NATIVE_ENGINE_SPEED: return "S";
+	case NATIVE_ENGINE_TURN: return "T";
+	case NATIVE_ENGINE_PENTA: return "P";
+	default: return "B";
+	}
+}
 #endif
 
 static char *SelectProfile_NativeGhostFormatText(int ghostFps, int ghostMode)
@@ -201,6 +218,17 @@ void SelectProfile_DrawAdvProfile(struct AdvProgress *adv, int posX, int posY, s
 
 		RECTMENU_DrawPolyGT4(gGT->ptrIcons[iconID], posX + 10, posY + 6, &gGT->backBuffer->primMem, gGT->pushBuffer_UI.ptrOT, iconColor, iconColor, iconColor,
 		                     iconColor, 1, 0x1000);
+
+#if defined(CTR_NATIVE)
+		if (sdata->memcardAction == SELECT_PROFILE_ACTION_LOAD)
+		{
+			struct Icon *portrait = gGT->ptrIcons[iconID];
+			int width = portrait ? portrait->texLayout.u1 - portrait->texLayout.u0 : 32;
+			int height = portrait ? portrait->texLayout.v2 - portrait->texLayout.v0 : 32;
+			DecalFont_DrawLine(SelectProfile_AdventureEngineMarker(adv), posX + 10 + width + 6, posY + 6 + (height - 8) / 2,
+			                   FONT_SMALL, numberColor);
+		}
+#endif
 
 		DecalFont_DrawLine(adv->name, posX + 0x6c, posY + 0x29, FONT_BIG, nameColor | 0xffff8000);
 
@@ -787,7 +815,9 @@ static void SelectProfile_LoadAdvProfile(int slot)
 	GAMEPROG_SyncGameAndCard(&memcard->gameProgress, &sdata->gameProgress);
 	sdata->advProgress = memcard->advProgress[slot];
 #if defined(CTR_NATIVE)
+	NativeAutoSave_ResetExitPortal();
 	NativeCustomRacer_ClearDriverSelections();
+	NativeEngine_LoadAdventureProfile(&sdata->advProgress);
 #endif
 	data.characterIDs[0] = sdata->advProgress.characterID;
 	memmove(gGT->prevNameEntered, sdata->advProgress.name, sizeof(gGT->prevNameEntered));
@@ -799,6 +829,9 @@ static void SelectProfile_SaveAdvProfile(int slot)
 
 	sdata->unk_8008d73C_relatedToRowHighlighted = slot;
 	SelectProfile_CopyGameProgressToCard();
+#if defined(CTR_NATIVE)
+	NativeEngine_SaveAdventureProfile(&sdata->advProgress);
+#endif
 	memcard->advProgress[slot] = sdata->advProgress;
 	MEMCARD_SetIcon(0);
 	RefreshCard_StartMemcardAction(3);

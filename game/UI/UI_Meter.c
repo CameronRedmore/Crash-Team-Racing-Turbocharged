@@ -168,7 +168,11 @@ void UI_JumpMeter_Draw(s16 posX, s16 posY, struct Driver *driver)
 	posXInt = (int)posX;
 	numbersY = (int)posY + UI_JUMP_METER_NUMBER_Y_OFFSET + UI_JUMP_METER_NUMBER_Y_BIAS;
 
-	DebugFont_DrawNumbers(wholeSeconds, posXInt + UI_JUMP_METER_SECONDS_X_OFFSET, numbersY);
+	int secondsOffset = UI_JUMP_METER_SECONDS_X_OFFSET;
+#if defined(CTR_NATIVE)
+	if (NativeAspect_IsActive()) secondsOffset = CTR_WIDESCREEN_SCALE_X(secondsOffset);
+#endif
+	DebugFont_DrawNumbers(wholeSeconds, posXInt + secondsOffset, numbersY);
 	DebugFont_DrawNumbers(tenths, posXInt + CTR_WIDESCREEN_SCALE_X(UI_JUMP_METER_TENTHS_X_OFFSET), numbersY);
 	DebugFont_DrawNumbers((((jumpMeterRemainder + tenths * -UI_JUMP_METER_TENTH_UNIT) * UI_JUMP_METER_PERCENT_SCALE) / UI_JUMP_METER_TIME_UNIT) * 0x10000 >>
 	                          0x10,
@@ -176,6 +180,13 @@ void UI_JumpMeter_Draw(s16 posX, s16 posY, struct Driver *driver)
 
 	numberBoxX = posX + UI_JUMP_METER_NUMBER_BOX_X_OFFSET;
 	box.w = CTR_NATIVE_WIDESCREEN ? 29 : UI_JUMP_METER_NUMBER_BOX_W;
+#if defined(CTR_NATIVE)
+	if (NativeAspect_IsActive())
+	{
+		numberBoxX = posX + CTR_WIDESCREEN_SCALE_X(UI_JUMP_METER_NUMBER_BOX_X_OFFSET);
+		box.w = posX + CTR_WIDESCREEN_SCALE_X(UI_JUMP_METER_NUMBER_FILL_RIGHT_OFFSET) - numberBoxX;
+	}
+#endif
 	box.h = UI_JUMP_METER_NUMBER_BOX_H;
 	box.x = numberBoxX;
 	box.y = posY + UI_JUMP_METER_NUMBER_Y_OFFSET;

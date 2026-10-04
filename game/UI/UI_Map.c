@@ -164,6 +164,7 @@ void UI_Map_DrawMap_ExtraFunc(struct Icon *icon, POLY_FT4 *p, s16 posX, s16 empt
 
 #if CTR_NATIVE_WIDESCREEN
 	int centerX = (leftX + posX) / 2;
+	float mapOffsetX = 0.0f;
 
 	// In-race map coordinates are projected around iconStartX.  Scale the
 	// map around that same origin so its route icons remain registered.
@@ -173,14 +174,16 @@ void UI_Map_DrawMap_ExtraFunc(struct Icon *icon, POLY_FT4 *p, s16 posX, s16 empt
 		struct UIMap *map = pointers[ST1_MAP];
 		if (map != NULL)
 		{
+			mapOffsetX = NativeMinimap_GetAnchorOffsetX(map);
 			int centerY = 0;
 			centerX = 0;
 			UI_Map_GetIconPos(map, &centerX, &centerY);
+			centerX -= (int)mapOffsetX;
 		}
 	}
 
-	leftX = (s16)(centerX + CTR_WIDESCREEN_SCALE_X(leftX - centerX));
-	posX = (s16)(centerX + CTR_WIDESCREEN_SCALE_X(posX - centerX));
+	leftX = (s16)(centerX + CTR_WIDESCREEN_SCALE_X(leftX - centerX) + mapOffsetX);
+	posX = (s16)(centerX + CTR_WIDESCREEN_SCALE_X(posX - centerX) + mapOffsetX);
 #endif
 
 	p->x0 = leftX;
@@ -266,6 +269,9 @@ void UI_Map_GetIconPos(struct UIMap *map, int *posX, int *posY)
 	}
 
 	*posX = map->iconStartX + addX;
+#if defined(CTR_NATIVE)
+	*posX += (int)NativeMinimap_GetAnchorOffsetX(map);
+#endif
 	*posY = map->iconStartY + addY - UI_MAP_ICON_Y_OFFSET;
 	return;
 }
@@ -277,14 +283,14 @@ void UI_Map_GetIconPosPrecise(const struct UIMap *map, const s32 worldPos[3], fl
 	double addX, addY;
 	NativeMinimap_Project(map, worldPos[0], worldPos[2], &addX, &addY);
 #if CTR_NATIVE_WIDESCREEN
-	addX *= 34.0 / 45.0;
+	addX *= NativeAspect_GetScaleX();
 #endif
 	if (sdata->gGT->numPlyrCurrGame == 3)
 	{
 		addX -= UI_MAP_3P_OFFSET_X;
 		addY += UI_MAP_3P_OFFSET_Y;
 	}
-	*posX = (float)(map->iconStartX + addX);
+	*posX = (float)(map->iconStartX + addX) + NativeMinimap_GetAnchorOffsetX(map);
 	*posY = (float)(map->iconStartY + addY - UI_MAP_ICON_Y_OFFSET);
 }
 #endif
@@ -311,7 +317,7 @@ void UI_Map_DrawAdvPlayer(struct UIMap *map, const s32 worldPos[3], int unused1,
 	}
 
 #if defined(CTR_NATIVE)
-	if ((gNativePreciseMinimapEnabled && NATIVE_PGXP_SUPPORTED) || gNativeModernMapEnabled)
+	if (NativeAspect_IsActive() || (gNativePreciseMinimapEnabled && NATIVE_PGXP_SUPPORTED) || gNativeModernMapEnabled)
 	{
 		float preciseX, preciseY;
 		UI_Map_GetIconPosPrecise(map, worldPos, &preciseX, &preciseY);
@@ -356,7 +362,7 @@ void UI_Map_DrawRawIcon(struct UIMap *map, const s32 worldPos[3], int iconID, in
 	DecalHUD_DrawPolyGT4(iconPtrArray[iconID], posX, posY, &gGT->backBuffer->primMem, gGT->pushBuffer_UI.ptrOT, ptrColor[0], ptrColor[1], ptrColor[2],
 	                     ptrColor[3], 0, (int)scale);
 #if defined(CTR_NATIVE)
-	if (gNativePreciseMinimapEnabled && NATIVE_PGXP_SUPPORTED && gGT->backBuffer->primMem.cursor == p + 1)
+	if ((NativeAspect_IsActive() || (gNativePreciseMinimapEnabled && NATIVE_PGXP_SUPPORTED)) && gGT->backBuffer->primMem.cursor == p + 1)
 	{
 		float preciseX, preciseY;
 		UI_Map_GetIconPosPrecise(map, worldPos, &preciseX, &preciseY);

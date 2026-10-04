@@ -16,6 +16,13 @@ void MainFreeze_BeginAdventureCharacterChange(void)
 {
 	s_returnToAdventureHubAfterCharacterSelect = true;
 	s_adventureCharacterReturnLevel = sdata->gGT->levelID;
+#if defined(CTR_NATIVE)
+	int portalHub = NativeAutoSave_GetExitPortalHub();
+	if (portalHub >= 0)
+	{
+		s_adventureCharacterReturnLevel = portalHub;
+	}
+#endif
 }
 
 s16 MainFreeze_GetAdventureCharacterReturnLevel(void)

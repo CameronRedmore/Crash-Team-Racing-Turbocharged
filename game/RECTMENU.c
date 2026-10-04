@@ -3,6 +3,8 @@
 #include <platform/native_font.h>
 #include <platform/native_kart_color.h>
 #include <platform/native_engine.h>
+#include <platform/native_aspect.h>
+#include <platform/native_projection.h>
 
 extern int cfg_language;
 extern int gNativeMirrorModeEnabled;
@@ -66,6 +68,42 @@ static const char *const s_txtDisplay[6] =
 	"SCHERMO",
 	"PANTALLA",
 	"WEERGAVE",
+};
+static const char *const s_txtAspectRatio[6] =
+{
+	"ASPECT RATIO",
+	"FORMAT D'ECRAN",
+	"BILDFORMAT",
+	"FORMATO SCHERMO",
+	"FORMATO DE PANTALLA",
+	"BEELDVERHOUDING",
+};
+static const char *const s_txtFieldOfView[6] =
+{
+	"VERTICAL FOV",
+	"FOV VERTICAL",
+	"VERTIKALES FOV",
+	"FOV VERTICALE",
+	"FOV VERTICAL",
+	"VERTICALE FOV",
+};
+static const char *const s_txtProjection[6] =
+{
+	"PROJECTION",
+	"PROJECTION",
+	"PROJEKTION",
+	"PROIEZIONE",
+	"PROYECCION",
+	"PROJECTIE",
+};
+static const char *const s_txtProjectionStrength[6] =
+{
+	"PROJECTION STRENGTH",
+	"FORCE DE PROJECTION",
+	"PROJEKTIONSSTAERKE",
+	"INTENSITA PROIEZIONE",
+	"FUERZA DE PROYECCION",
+	"PROJECTIESTERKTE",
 };
 static const char *const s_txtWindowed[6] =
 {
@@ -175,14 +213,32 @@ static const char *const s_txtSkipMaskHints[6] =
 	"SALTAR CONSEJOS MASCARA",
 	"MASKERTIPS OVERSLAAN",
 };
-static const char *const s_txtDepthBuffer[6] =
+static const char *const s_txtClassicDepth[6] =
 {
-	"DEPTH BUFFER",
-	"TAMPON PROFONDEUR",
-	"TIEFENPUFFER",
-	"BUFFER DI PROFONDITA",
-	"BUFFER DE PROFUNDIDAD",
-	"DIEPTEBUFFER",
+	"CLASSIC DEPTH",
+	"PROFONDEUR CLASSIQUE",
+	"KLASSISCHE TIEFE",
+	"PROFONDITA CLASSICA",
+	"PROFUNDIDAD CLASICA",
+	"KLASSIEKE DIEPTE",
+};
+static const char *const s_txtClassicPgxp[6] =
+{
+	"CLASSIC PGXP",
+	"PGXP CLASSIQUE",
+	"KLASSISCHES PGXP",
+	"PGXP CLASSICO",
+	"PGXP CLASICO",
+	"KLASSIEKE PGXP",
+};
+static const char *const s_txtPgxpMode[6][NATIVE_PGXP_MODE_COUNT] =
+{
+	{"OFF", "GEOMETRY", "PERSPECTIVE"},
+	{"NON", "GEOMETRIE", "PERSPECTIVE"},
+	{"AUS", "GEOMETRIE", "PERSPEKTIVE"},
+	{"NO", "GEOMETRIA", "PROSPETTIVA"},
+	{"NO", "GEOMETRIA", "PERSPECTIVA"},
+	{"UIT", "GEOMETRIE", "PERSPECTIEF"},
 };
 static const char *const s_txtRenderer[6] =
 {
@@ -385,6 +441,7 @@ static char *NativeRow(const char *label, const char *value)
 
 static char *RECTMENU_GetString(s16 stringIndex)
 {
+	char cameraValue[16];
 	static const char *ghostReplay[6] =
 	{
 		"GHOST REPLAY",
@@ -458,15 +515,6 @@ static char *RECTMENU_GetString(s16 stringIndex)
 		{"DITHER: NO", "DITHER: SI"},
 		{"DITHER: NO", "DITHER: SI"},
 		{"DITHER: UIT", "DITHER: AAN"},
-	};
-	static const char *pgxp[6][NATIVE_PGXP_MODE_COUNT] =
-	{
-		{"PGXP: OFF", "PGXP: GEOMETRY", "PGXP: PERSPECTIVE"},
-		{"PGXP: NON", "PGXP: GEOMETRIE", "PGXP: PERSPECTIVE"},
-		{"PGXP: AUS", "PGXP: GEOMETRIE", "PGXP: PERSPEKTIVE"},
-		{"PGXP: NO", "PGXP: GEOMETRIA", "PGXP: PROSPETTIVA"},
-		{"PGXP: NO", "PGXP: GEOMETRIA", "PGXP: PERSPECTIVA"},
-		{"PGXP: UIT", "PGXP: GEOMETRIE", "PGXP: PERSPECTIEF"},
 	};
 	static const char *maxLod[6][2] =
 	{
@@ -717,6 +765,27 @@ static char *RECTMENU_GetString(s16 stringIndex)
 		return (char *)mirrorMode[languageRow][gNativeMirrorModeEnabled != 0];
 	case NATIVE_MENU_STRING_FRAME_RATE:
 		return (char *)frameRate[gNative60FpsEnabled];
+	case NATIVE_MENU_STRING_ASPECT_RATIO:
+		if (NATIVE_DRAW3D_ACTIVE()) return NativeRow(s_txtAspectRatio[languageRow], NativeAspect_GetLabel(gNativeAspectRatio));
+		snprintf(audioRow, sizeof(audioRow), "%s (NATIVE)", s_txtAspectRatio[languageRow]);
+		return NativeRow(audioRow, NativeAspect_GetLabel(gNativeAspectRatio));
+	case NATIVE_MENU_STRING_FIELD_OF_VIEW:
+		snprintf(audioRow, sizeof(audioRow), "%s%s", s_txtFieldOfView[languageRow], NATIVE_DRAW3D_ACTIVE() ? "" : " (NATIVE)");
+		if (gNativeFovDegrees == 0) return NativeRow(audioRow, "ORIGINAL");
+		snprintf(cameraValue, sizeof(cameraValue), "%d DEG", gNativeFovDegrees);
+		return NativeRow(audioRow, cameraValue);
+	case NATIVE_MENU_STRING_PROJECTION:
+		{
+			static const char *const projectionNames[NATIVE_PROJECTION_MODE_COUNT] = {"PERSPECTIVE", "PANINI", "EDGE COMPRESS"};
+			int mode = gNativeProjectionMode;
+			if (mode < 0 || mode >= NATIVE_PROJECTION_MODE_COUNT) mode = NATIVE_PROJECTION_PERSPECTIVE;
+			snprintf(audioRow, sizeof(audioRow), "%s%s", s_txtProjection[languageRow], NATIVE_DRAW3D_ACTIVE() ? "" : " (NATIVE)");
+			return NativeRow(audioRow, projectionNames[mode]);
+		}
+	case NATIVE_MENU_STRING_PROJECTION_STRENGTH:
+		snprintf(audioRow, sizeof(audioRow), "%s%s", s_txtProjectionStrength[languageRow], NATIVE_DRAW3D_ACTIVE() ? "" : " (NATIVE)");
+		snprintf(cameraValue, sizeof(cameraValue), "%d", gNativeProjectionStrength);
+		return NativeRow(audioRow, cameraValue);
 	case NATIVE_MENU_STRING_AUDIO_FX:
 	case NATIVE_MENU_STRING_AUDIO_MUSIC:
 	case NATIVE_MENU_STRING_AUDIO_VOICE:
@@ -799,12 +868,9 @@ static char *RECTMENU_GetString(s16 stringIndex)
 	case NATIVE_MENU_STRING_BORDERLESS:
 		return NativeRow(s_txtDisplay[languageRow], gNativeBorderlessEnabled ? s_txtBorderless[languageRow] : s_txtWindowed[languageRow]);
 	case NATIVE_MENU_STRING_PGXP:
-		if (NATIVE_DRAW3D_ACTIVE()) return "PGXP: N/A";
-		return (char *)pgxp[languageRow][gNativePgxpMode];
+		return NativeRow(s_txtClassicPgxp[languageRow], s_txtPgxpMode[languageRow][gNativePgxpMode]);
 	case NATIVE_MENU_STRING_DEPTH_BUFFER:
-		// The native renderer always depth tests; the option applies to Classic.
-		if (NATIVE_DRAW3D_ACTIVE()) return NativeRow(s_txtDepthBuffer[languageRow], "N/A");
-		return NativeRow(s_txtDepthBuffer[languageRow], gNativeDepthBufferEnabled ? s_txtOn[languageRow] : s_txtOff[languageRow]);
+		return NativeRow(s_txtClassicDepth[languageRow], gNativeDepthBufferEnabled ? s_txtOn[languageRow] : s_txtOff[languageRow]);
 	case NATIVE_MENU_STRING_RENDERER:
 		return NativeRow(s_txtRenderer[languageRow], gNativeRendererMode == NATIVE_RENDERER_NATIVE ? s_txtRendererNative[languageRow] : s_txtRendererClassic[languageRow]);
 	case NATIVE_MENU_STRING_COLOR_DEPTH:
@@ -1276,6 +1342,10 @@ static b32 RECTMENU_NativeOptionsHorizontalInput(struct RectMenu *menu)
 	return ((stringIndex >= NATIVE_MENU_STRING_AUDIO_FX) &&
 	        (stringIndex <= NATIVE_MENU_STRING_AUDIO_MODE)) ||
 	       (stringIndex == NATIVE_MENU_STRING_FRAME_RATE) ||
+	       (stringIndex == NATIVE_MENU_STRING_ASPECT_RATIO) ||
+	       (stringIndex == NATIVE_MENU_STRING_FIELD_OF_VIEW) ||
+	       (stringIndex == NATIVE_MENU_STRING_PROJECTION) ||
+	       (stringIndex == NATIVE_MENU_STRING_PROJECTION_STRENGTH) ||
 	       (stringIndex == NATIVE_MENU_STRING_BORDERLESS) ||
 	       (stringIndex == NATIVE_MENU_STRING_ANTI_ALIASING) ||
 	       (stringIndex == NATIVE_MENU_STRING_DITHERING) ||

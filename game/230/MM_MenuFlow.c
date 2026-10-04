@@ -3,6 +3,8 @@
 #include <platform/native_font.h>
 #include <platform/native_kart_color.h>
 #include <platform/native_engine.h>
+#include <platform/native_aspect.h>
+#include <platform/native_projection.h>
 
 #if defined(CTR_NATIVE)
 #include "platform/native_leaderboard.h"
@@ -402,6 +404,10 @@ static struct MenuRow s_nativeDisplayRows[] =
 	{.stringIndex = NATIVE_MENU_STRING_DITHERING},
 #if NATIVE_DRAW3D_SUPPORTED
 	{.stringIndex = NATIVE_MENU_STRING_RENDERER},
+	{.stringIndex = NATIVE_MENU_STRING_ASPECT_RATIO},
+	{.stringIndex = NATIVE_MENU_STRING_FIELD_OF_VIEW},
+	{.stringIndex = NATIVE_MENU_STRING_PROJECTION},
+	{.stringIndex = NATIVE_MENU_STRING_PROJECTION_STRENGTH},
 #endif
 	{.stringIndex = NATIVE_MENU_STRING_DEPTH_BUFFER},
 	{.stringIndex = NATIVE_MENU_STRING_TEXTURE_FILTER},
@@ -1329,14 +1335,6 @@ static void MM_NativeOptionsApplyLocks(struct MenuRow *rows, b32 inGame)
 	for (struct MenuRow *row = rows; row->stringIndex != RECTMENU_STRING_NONE; row++)
 	{
 		b32 locked = inGame && MM_NativeOptionsRowLockedInRace(row->stringIndex);
-#ifndef __vita__
-		s16 setting = row->stringIndex & MENU_ROW_LNG_MASK;
-		if (NATIVE_DRAW3D_ACTIVE() &&
-		    ((setting == NATIVE_MENU_STRING_DEPTH_BUFFER) || (setting == NATIVE_MENU_STRING_PGXP)))
-		{
-			locked = true;
-		}
-#endif
 		if (locked)
 		{
 			row->stringIndex |= MENU_ROW_LOCKED;
@@ -1761,12 +1759,9 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 
 	if (choose == NATIVE_MENU_STRING_DEPTH_BUFFER)
 	{
-		// Native 3D always depth tests; the option belongs to Classic.
-		if (!NATIVE_DRAW3D_ACTIVE())
-		{
-			gNativeDepthBufferEnabled ^= 1;
-			save_config();
-		}
+		// This stores the Classic preference; Native 3D keeps depth testing enabled.
+		gNativeDepthBufferEnabled ^= 1;
+		save_config();
 		return;
 	}
 
@@ -1780,6 +1775,84 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 			OtherFX_Play(0, 1);
 		}
 		save_config();
+#endif
+		return;
+	}
+
+	if (choose == NATIVE_MENU_STRING_ASPECT_RATIO)
+	{
+#if NATIVE_DRAW3D_SUPPORTED
+		if ((button & (BTN_LEFT | BTN_RIGHT)) != 0)
+		{
+			if (button & BTN_LEFT)
+			{
+				gNativeAspectRatio = (gNativeAspectRatio + NATIVE_ASPECT_COUNT - 1) % NATIVE_ASPECT_COUNT;
+			}
+			else if (button & BTN_RIGHT)
+			{
+				gNativeAspectRatio = (gNativeAspectRatio + 1) % NATIVE_ASPECT_COUNT;
+			}
+			save_config();
+		}
+#endif
+		return;
+	}
+
+	if (choose == NATIVE_MENU_STRING_FIELD_OF_VIEW)
+	{
+#if NATIVE_DRAW3D_SUPPORTED
+		if ((button & (BTN_LEFT | BTN_RIGHT)) != 0)
+		{
+			if (button & BTN_LEFT)
+			{
+				gNativeFovDegrees = (gNativeFovDegrees < 45 || gNativeFovDegrees > 100) ? 100 :
+				                    (gNativeFovDegrees < 50) ? 0 : gNativeFovDegrees - 5;
+			}
+			else if (button & BTN_RIGHT)
+			{
+				gNativeFovDegrees = (gNativeFovDegrees == 0 || gNativeFovDegrees < 45 || gNativeFovDegrees > 100) ? 45 :
+				                    (gNativeFovDegrees > 95) ? 0 : gNativeFovDegrees + 5;
+			}
+			save_config();
+		}
+#endif
+		return;
+	}
+
+	if (choose == NATIVE_MENU_STRING_PROJECTION)
+	{
+#if NATIVE_DRAW3D_SUPPORTED
+		if ((button & (BTN_LEFT | BTN_RIGHT)) != 0)
+		{
+			if (button & BTN_LEFT)
+			{
+				gNativeProjectionMode = (gNativeProjectionMode + NATIVE_PROJECTION_MODE_COUNT - 1) % NATIVE_PROJECTION_MODE_COUNT;
+			}
+			else if (button & BTN_RIGHT)
+			{
+				gNativeProjectionMode = (gNativeProjectionMode + 1) % NATIVE_PROJECTION_MODE_COUNT;
+			}
+			save_config();
+		}
+#endif
+		return;
+	}
+
+	if (choose == NATIVE_MENU_STRING_PROJECTION_STRENGTH)
+	{
+#if NATIVE_DRAW3D_SUPPORTED
+		if ((button & (BTN_LEFT | BTN_RIGHT)) != 0)
+		{
+			if (button & BTN_LEFT)
+			{
+				gNativeProjectionStrength = (gNativeProjectionStrength < 10) ? 100 : gNativeProjectionStrength - 10;
+			}
+			else if (button & BTN_RIGHT)
+			{
+				gNativeProjectionStrength = (gNativeProjectionStrength > 90) ? 0 : gNativeProjectionStrength + 10;
+			}
+			save_config();
+		}
 #endif
 		return;
 	}
@@ -2423,6 +2496,10 @@ void MM_MenuProc_Main(struct RectMenu *mainMenu)
 	{
 		MM_NativeOptionsConfigureRows(0);
 		s_nativeOptionsMenu.rowSelected = 0;
+		// As a submenu, inherit the main menu's position. Pause and preset
+		// entry points set absolute coordinates on this same menu instance.
+		s_nativeOptionsMenu.posX_curr = 0;
+		s_nativeOptionsMenu.posY_curr = 0;
 		s_nativeOptionsMenu.state = CENTER_ON_X | USE_SMALL_FONT | BIG_TEXT_IN_TITLE;
 		s_nativeOptionsMenu.ptrNextBox_InHierarchy = NULL;
 		s_nativeOptionsMenu.ptrPrevBox_InHierarchy = mainMenu;

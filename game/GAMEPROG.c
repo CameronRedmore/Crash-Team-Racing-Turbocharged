@@ -244,6 +244,12 @@ void GAMEPROG_InitFullMemcard(struct MemcardProfile *mcp)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80026cb8-0x80026cf4.
 void GAMEPROG_NewProfile_InsideAdv(struct AdvProgress *adv)
 {
+#if defined(CTR_NATIVE)
+	if (adv == &sdata->advProgress)
+	{
+		NativeAutoSave_ResetExitPortal();
+	}
+#endif
 	// clear
 	memset(adv, 0x0, sizeof(struct AdvProgress));
 

@@ -15,6 +15,7 @@
 #include "platform/native_perf.h"
 #include "platform/native_pgxp.h"
 #include "platform/native_renderer.h"
+#include "platform/native_projection_packet.h"
 
 #include <assert.h>
 #include <math.h>
@@ -117,6 +118,9 @@ typedef struct
 	u32 numVerts;
 
 	const char *debugText;
+#if NATIVE_DRAW3D_SUPPORTED
+	bool projectedWorld;
+#endif
 } GPUDrawSplit;
 
 #if defined(__vita__)
@@ -200,6 +204,48 @@ global_variable GPUDrawSplit *s_gpuDrawSplits;
 global_variable int s_gpuDrawVertexCount;
 global_variable int s_gpuDrawSplitCount;
 global_variable NativeGpuState s_gpu;
+
+#if NATIVE_DRAW3D_SUPPORTED
+static int s_gpuProjectionCamera;
+static NativeProjectionMarker s_gpuProjectionMarker;
+typedef struct NativeGpuDeferredOverlay
+{
+	int layer;
+	DRAWENV drawenv;
+	DISPENV dispenv;
+} NativeGpuDeferredOverlay;
+static NativeGpuDeferredOverlay s_gpuDeferredOverlays[16384];
+static int s_gpuDeferredOverlayCount;
+static void NativeGpu_EmitDraw3DLayer(int layerIndex);
+
+void NativeGpu_FinishProjection(void)
+{
+	if (!s_gpuProjectionCamera) return;
+	GPUDrawSplit *last = &s_gpu.splits[s_gpu.splitIndex];
+	last->numVerts = s_gpu.vertexIndex - last->startVertex;
+	DrawAllSplits();
+	NativeRenderer_BindProjectedWorld(0);
+	NativeRenderer_ResolveProjectedWorld(&s_gpuProjectionMarker.rect, &s_gpuProjectionMarker.params);
+	s_gpuProjectionCamera = 0;
+	const DRAWENV savedDraw = activeDrawEnv;
+	const DISPENV savedDisp = activeDispEnv;
+	for (int i = 0; i < s_gpuDeferredOverlayCount; i++)
+	{
+		activeDrawEnv = s_gpuDeferredOverlays[i].drawenv;
+		activeDispEnv = s_gpuDeferredOverlays[i].dispenv;
+		NativeGpu_EmitDraw3DLayer(s_gpuDeferredOverlays[i].layer);
+	}
+	if (s_gpuDeferredOverlayCount)
+	{
+		last = &s_gpu.splits[s_gpu.splitIndex];
+		last->numVerts = s_gpu.vertexIndex - last->startVertex;
+		DrawAllSplits();
+	}
+	s_gpuDeferredOverlayCount = 0;
+	activeDrawEnv = savedDraw;
+	activeDispEnv = savedDisp;
+}
+#endif
 
 internal void NativeGpu_DrawPreparedFrame(GrVertex *vertices, GPUDrawSplit *splits, int vertexCount, int splitCount);
 
@@ -803,6 +849,9 @@ void ClearSplits(void)
 	s_gpu.splits[0].psxTextureOutputSTP = false;
 	s_gpu.splits[0].psxDrawMaskSet = false;
 	s_gpu.splits[0].superTurboTint = false;
+#if NATIVE_DRAW3D_SUPPORTED
+	s_gpu.splits[0].projectedWorld = false;
+#endif
 #if NATIVE_PGXP_SUPPORTED
 	s_gpu.splits[0].worldDepth = NATIVE_GPU_WORLD_DEPTH_NONE;
 	s_gpu.splits[0].nativeOverlayLayer = 0;
@@ -1779,6 +1828,9 @@ internal void AddSplit(bool semiTrans, bool textured, bool framebufferFeedback, 
 	    curSplit->drawPrimMode == s_gpu.drawPrimMode && curSplit->psxTexturedSemiTrans == psxTexturedSemiTrans &&
 	    curSplit->psxTextureOutputSTP == psxTextureOutputSTP && curSplit->psxDrawMaskSet == s_gpu.psxDrawMaskSet &&
 	    curSplit->superTurboTint == superTurboTint &&
+#if NATIVE_DRAW3D_SUPPORTED
+	    curSplit->projectedWorld == (s_gpuProjectionCamera != 0) &&
+#endif
 #ifdef __vita__
 	    curSplit->p4CacheEligible == p4CacheEligible &&
 	    (!p4CacheEligible || (curSplit->p4Page == p4Page && curSplit->p4Clut == p4Clut && curSplit->p4SuperTurboTint == p4SuperTurboTint)) &&
@@ -1807,6 +1859,9 @@ internal void AddSplit(bool semiTrans, bool textured, bool framebufferFeedback, 
 	split->psxTextureOutputSTP = psxTextureOutputSTP;
 	split->psxDrawMaskSet = s_gpu.psxDrawMaskSet;
 	split->superTurboTint = superTurboTint;
+#if NATIVE_DRAW3D_SUPPORTED
+	split->projectedWorld = s_gpuProjectionCamera != 0;
+#endif
 #if NATIVE_PGXP_SUPPORTED
 	split->worldDepth = NATIVE_GPU_WORLD_DEPTH_NONE;
 	split->nativeOverlayLayer = 0;
@@ -2056,6 +2111,9 @@ internal void NativeGpu_DrawSplitRangePass(const GPUDrawSplit *split, int semiTr
 
 	NativeRenderer_SetupClipMode(&split->drawenv.clip, &split->dispenv, drawOnScreen);
 	NativeRenderer_SetOffscreenState(&split->drawenv.clip, !drawOnScreen);
+#if NATIVE_DRAW3D_SUPPORTED
+	if (drawOnScreen) NativeRenderer_BindProjectedWorld(split->projectedWorld);
+#endif
 	NativeGpu_SetSplitShaderState(split, semiTransPass, blendMode, !drawOnScreen);
 #if NATIVE_DRAW3D_SUPPORTED
 	if (s_gpuIsolatedDepthPending)
@@ -2823,6 +2881,9 @@ internal void SetPSXMaskState(u32 code)
 internal bool NativeGpu_SameWorldDepthDomain(const GPUDrawSplit *first, const GPUDrawSplit *second)
 {
 	return first->nativeOverlayLayer == second->nativeOverlayLayer &&
+#if NATIVE_DRAW3D_SUPPORTED
+	       first->projectedWorld == second->projectedWorld &&
+#endif
 	       (first->nativeOverlayLayer ? second->drawenv.dfe == first->drawenv.dfe : second->drawenv.dfe) &&
 	       (first->nativeOverlayLayer ? second->drawPrimMode == first->drawPrimMode : !second->drawPrimMode) &&
 	       memcmp(&first->drawenv.clip, &second->drawenv.clip, sizeof(first->drawenv.clip)) == 0 &&
@@ -4053,11 +4114,39 @@ internal int ProcessPsyXPrims(P_TAG *polyTag)
 		// Native 3D layer marker (see native_draw3d.h).
 		DR_PSYX_DRAW3D *marker = (DR_PSYX_DRAW3D *)polyTag;
 #if NATIVE_DRAW3D_SUPPORTED
+		const int layerIndex = (int)(marker->code & 0x00ffffffu);
+		const NativeDraw3DLayer *layer = NativeDraw3D_GetLayer(layerIndex);
+		const NativeDraw3DTriangle *triangles = NativeDraw3D_GetTriangles();
+		if (s_gpuProjectionCamera && layer && layer->triangleCount &&
+		    (triangles[layer->firstTriangle].material.flags & NATIVE_DRAW3D_OVERLAY))
+		{
+			if (s_gpuDeferredOverlayCount < 16384)
+				s_gpuDeferredOverlays[s_gpuDeferredOverlayCount++] =
+					(NativeGpuDeferredOverlay){layerIndex, activeDrawEnv, activeDispEnv};
+			return 1;
+		}
 		NativeGpu_EmitDraw3DLayer((int)(marker->code & 0x00ffffffu));
 #else
 		(void)marker;
 #endif
 		return 1;
+	}
+	case 0x04:
+	{
+		NativeProjectionMarker *marker = (NativeProjectionMarker *)polyTag;
+#if NATIVE_DRAW3D_SUPPORTED
+		NativeGpu_FinishProjection();
+		GPUDrawSplit *last = &s_gpu.splits[s_gpu.splitIndex];
+		last->numVerts = s_gpu.vertexIndex - last->startVertex;
+		DrawAllSplits();
+		if (marker->code & 0x00ffffffu)
+		{
+			s_gpuProjectionMarker = *marker;
+			s_gpuProjectionCamera = (int)(marker->code & 0x00ffffffu);
+			NativeRenderer_BindProjectedWorld(1);
+		}
+#endif
+		return sizeof(*marker) / sizeof(u32) - P_LEN;
 	}
 	}
 

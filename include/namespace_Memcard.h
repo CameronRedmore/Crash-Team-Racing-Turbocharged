@@ -329,7 +329,7 @@ struct AdvProgress
 			u32 platinumCtrTokenFlags;
 			u32 storyFlags;
 			u32 hintFlags;
-			u32 reservedRewardFlags;
+			u32 reservedRewardFlags; // Native: tagged Adventure engine choice; retail layout unchanged.
 		};
 	};
 

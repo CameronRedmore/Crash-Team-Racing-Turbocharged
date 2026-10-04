@@ -39,6 +39,9 @@ int NativeGpu_IsSynchronousFrame(void);
 int NativeGpu_IsFrontendFrameActive(void);
 void ClearSplits(void);
 void DrawAllSplits(void);
+#if NATIVE_DRAW3D_SUPPORTED
+void NativeGpu_FinishProjection(void);
+#endif
 void ParsePrimitivesLinkedList(u32 *p, int singlePrimitive);
 int NativeGpu_GetStateSize(void);
 int NativeGpu_CaptureState(void *dst, int dstSize);

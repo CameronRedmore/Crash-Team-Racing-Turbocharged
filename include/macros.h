@@ -143,9 +143,10 @@ extern int gNativeAntiAliasingMode;
 #define HOURS(x)                   ((s32)(((f32)(x)) * HOUR))
 
 #if defined(CTR_NATIVE)
+#include <platform/native_aspect.h>
 #define CTR_NATIVE_WIDESCREEN             1
-#define CTR_WIDESCREEN_SCALE_X(value)   ((s32)(((s64)(value) * 34) / 45))
-#define CTR_WIDESCREEN_EXPAND_X(value)  ((s32)(((s64)(value) * 45) / 34))
+#define CTR_WIDESCREEN_SCALE_X(value)   NativeAspect_ScaleX(value)
+#define CTR_WIDESCREEN_EXPAND_X(value)  NativeAspect_ExpandX(value)
 #else
 #define CTR_NATIVE_WIDESCREEN             0
 #define CTR_WIDESCREEN_SCALE_X(value)   (value)

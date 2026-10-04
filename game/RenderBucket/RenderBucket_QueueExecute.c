@@ -2441,6 +2441,20 @@ static struct RenderBucketEntry *RenderBucket_QueueDraw(struct Instance *inst, s
 	return rbi + 1;
 }
 
+static struct Instance **RenderBucket_GetVisibleLevelInstances(const struct CameraDC *camera)
+{
+#if defined(CTR_NATIVE)
+	// Loaded level pointers are unpacked to Instance pointers by LevInstDef.
+	// QueueDraw still checks each instance against the player camera frustum.
+	if (NativeAspect_UsesExpandedVisibility() && sdata->gGT->level1 != NULL &&
+	    sdata->gGT->level1->ptrInstDefPtrArray != NULL)
+	{
+		return (struct Instance **)sdata->gGT->level1->ptrInstDefPtrArray;
+	}
+#endif
+	return camera->visInstSrc;
+}
+
 void *RenderBucket_QueueLevInstances(struct CameraDC *cDC, struct OTMem *otState, void *rbi, u32 lodMask, u8 numPlyr, int gameMode1)
 {
 	struct RenderBucketEntry *entry = (struct RenderBucketEntry *)rbi;
@@ -2467,7 +2481,7 @@ void *RenderBucket_QueueLevInstances(struct CameraDC *cDC, struct OTMem *otState
 	if (NativeAdhoc_IsSingleViewRenderActive())
 	{
 		int player = NativeAdhoc_GetLocalPlayerIndex();
-		struct Instance **visInstSrc = cDC[player].visInstSrc;
+		struct Instance **visInstSrc = RenderBucket_GetVisibleLevelInstances(&cDC[player]);
 
 		if (visInstSrc != 0)
 		{
@@ -2481,7 +2495,7 @@ void *RenderBucket_QueueLevInstances(struct CameraDC *cDC, struct OTMem *otState
 #endif
 	for (int player = count - 1; player >= 0; player--)
 	{
-		struct Instance **visInstSrc = cDC[player].visInstSrc;
+		struct Instance **visInstSrc = RenderBucket_GetVisibleLevelInstances(&cDC[player]);
 
 		if (visInstSrc == 0)
 		{

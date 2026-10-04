@@ -15,6 +15,10 @@ enum NativeEngineProfile
 extern int gNativeEngineSelectionEnabled;
 extern int gNativeAdditionalUnlocksEnabled;
 
+struct AdvProgress;
+void NativeEngine_SaveAdventureProfile(struct AdvProgress *adv);
+void NativeEngine_LoadAdventureProfile(const struct AdvProgress *adv);
+
 int NativeEngine_GetDefaultProfile(int characterID);
 int NativeEngine_GetSelectedProfile(int playerID);
 int NativeEngine_GetEffectiveProfile(int driverID);

@@ -1,5 +1,6 @@
 #include <common.h>
 #include <platform/native_engine.h>
+#include <platform/native_engine_metadata.h>
 
 enum
 {
@@ -78,6 +79,22 @@ int NativeEngine_GetSelectedProfile(int playerID)
 	}
 
 	return s_selectedProfiles[playerID];
+}
+
+// Tagged metadata in the unused reward word preserves the retail save layout.
+// Keep the choice even while the option is off; DEFAULT remains character-based.
+void NativeEngine_SaveAdventureProfile(struct AdvProgress *adv)
+{
+	adv->reservedRewardFlags = NativeEngineMetadata_EncodeWord(s_selectedProfiles[0]);
+}
+
+void NativeEngine_LoadAdventureProfile(const struct AdvProgress *adv)
+{
+	int profile = NativeEngineMetadata_DecodeWord(adv->reservedRewardFlags);
+	// Reset first so legacy, corrupt or locked choices cannot inherit another save.
+	NativeEngine_SetSelectedProfile(0, NATIVE_ENGINE_DEFAULT);
+	NativeEngine_SetSelectedProfile(0, profile);
+	NativeEngine_ClearReplayOverrides();
 }
 
 void NativeEngine_SetSelectedProfile(int playerID, int profile)

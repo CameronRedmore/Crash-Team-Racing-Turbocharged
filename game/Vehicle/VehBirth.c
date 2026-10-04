@@ -131,10 +131,15 @@ static int VehBirth_ShouldSpawnOutsideBoss(struct GameTracker *gGT)
 
 static int VehBirth_ShouldUseStartlineInAdv(struct GameTracker *gGT, s16 *warppadRot)
 {
+#if defined(CTR_NATIVE)
+	(void)gGT;
+	return warppadRot == NULL;
+#else
 	int prevLEV = gGT->prevLEV;
 
 	return (prevLEV == MAIN_MENU_LEVEL) || (prevLEV == ADVENTURE_GARAGE) || (prevLEV == -1) || (prevLEV == SCRAPBOOK) ||
 	       ((u32)(prevLEV - CREDITS_CRASH) < VEH_BIRTH_ADV_RETURN_LEVEL_COUNT) || (warppadRot == NULL);
+#endif
 }
 
 static struct SpawnPosRot *VehBirth_SpawnType2PosRot(struct Level *level)
@@ -272,6 +277,17 @@ void VehBirth_TeleportSelf(struct Driver *d, u8 spawnFlag, int spawnPosY)
 		}
 		else if (gGT->podiumRewardID == NOFUNC)
 		{
+#if defined(CTR_NATIVE)
+			warppadRot = AH_WarpPad_GetSpawnPosRot(warppadPos.v);
+			if (warppadRot != NULL)
+			{
+				VehBirth_SetBottomFromPos(&posBottom, &warppadPos);
+			}
+			else
+			{
+				VehBirth_SetStartlinePosition(d, level1, &posBottom);
+			}
+#else
 			if ((gGT->prevLEV == MAIN_MENU_LEVEL) || (gGT->prevLEV == ADVENTURE_GARAGE) || (gGT->prevLEV == -1) || (gGT->prevLEV == SCRAPBOOK) ||
 			    ((u32)(gGT->prevLEV - CREDITS_CRASH) < VEH_BIRTH_ADV_RETURN_LEVEL_COUNT))
 			{
@@ -282,6 +298,7 @@ void VehBirth_TeleportSelf(struct Driver *d, u8 spawnFlag, int spawnPosY)
 				warppadRot = AH_WarpPad_GetSpawnPosRot(warppadPos.v);
 				VehBirth_SetBottomFromPos(&posBottom, &warppadPos);
 			}
+#endif
 		}
 		else
 		{

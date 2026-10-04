@@ -26,7 +26,7 @@ static void DecalFont_DrawGlyph(u8 character, struct Icon *icon, s16 posX, s16 p
 	if ((icon != NULL) && (primMem->cursor == p + 1))
 	{
 		const int sourceWidth = FP_Mult(icon->texLayout.u1 - icon->texLayout.u0, scale);
-		const int targetWidth = (sourceWidth * 34 + 44) / 45;
+		const int targetWidth = NativeAspect_ScaleXCeil(sourceWidth);
 		const int drawnWidth = p->x1 - p->x0;
 		const int expandRight = targetWidth - drawnWidth;
 
@@ -49,9 +49,10 @@ static const float sDecalFont_TtfCapHeight[FONT_NUM] = {0.0f, 12.0f, 5.5f, 12.0f
 static const float sDecalFont_TtfCapTop[FONT_NUM] = {0.0f, 1.5f, 1.25f, 1.5f};
 
 #if CTR_NATIVE_WIDESCREEN
-// HUD x is squeezed by 34/45 (CTR_WIDESCREEN_SCALE_X), so a square em spans
-// that many more PS1 pixels across than down.
-#define DECAL_FONT_TTF_ASPECT (45.0f / 34.0f)
+// TrueType geometry is already in HUD coordinates; correct its pixel aspect
+// directly rather than applying the retail glyph squeeze a second time.
+// Classic keeps its established font metrics.
+#define DECAL_FONT_TTF_ASPECT (NativeAspect_IsActive() ? (float)NativeAspect_GetHudPixelAspectX() : (45.0f / 34.0f))
 #else
 // 512x216 shown at 4:3.
 #define DECAL_FONT_TTF_ASPECT (512.0f / 216.0f * 3.0f / 4.0f)

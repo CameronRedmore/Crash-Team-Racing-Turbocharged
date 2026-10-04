@@ -2004,6 +2004,10 @@ void MM_Characters_MenuProc(struct RectMenu *menu)
 				// The hub menu was loaded in between; preserve the newly selected
 				// driver and return to the hub captured before entering the menu.
 				sdata->advProgress.characterID = data.characterIDs[0];
+#if defined(CTR_NATIVE)
+				sdata->advProgress.HubLevYouSavedOn = MainFreeze_GetAdventureCharacterReturnLevel();
+				NativeAutoSave_Write();
+#endif
 				sdata->Loading.OnBegin.AddBitsConfig0 |= ADVENTURE_ARENA;
 				sdata->Loading.OnBegin.RemBitsConfig0 |= MAIN_MENU;
 				// Stop preview updates before the hub replaces the menu LEV and
