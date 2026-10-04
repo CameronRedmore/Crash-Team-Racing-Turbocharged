@@ -254,6 +254,9 @@ void NativeRenderer_BeginScene(void)
 #ifdef __vita__
 	NativeRenderer_BeginP4Frame();
 #endif
+#ifndef __vita__
+	NativeRenderer_BeginUploadFrame();
+#endif
 	NativeRenderer_ResetTextureBinding();
 
 	NativeRenderer_UpdateGamePresentationAspect();
@@ -356,6 +359,12 @@ int NativeRenderer_InitialisePSX(void)
 	NativeRenderer_InitRG8LUT();
 	NativeRenderer_GenerateCommonTextures();
 	NativeRenderer_InitialisePSXShaders();
+#if NATIVE_DRAW3D_SUPPORTED
+	// CPU-only tools keep their original contracts. The running desktop
+	// renderer enables the GPU path, with an explicit A/B switch for profiling.
+	const char *gpuTransform = getenv("CTR_GPU_TRANSFORM");
+	gNativeGpuTransformEnabled = !gpuTransform || strcmp(gpuTransform, "0") != 0;
+#endif
 	NativeRenderer_InitVRAMPipelines();
 
 #if defined(CTR_INTERNAL)

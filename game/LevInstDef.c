@@ -325,6 +325,72 @@ static void LevInstDef_FindTurboVisualQuads(struct mesh_info *mesh)
 #endif
 
 
+#if defined(CTR_NATIVE)
+// Retail draws level instances only through the camera quadblock's PVS list.
+// Expanded visibility cannot use that list, but it must still skip instances
+// no list reaches: the Naughty Dog crate level has no quadblocks and keeps
+// static copies of the box parts that only its cutscene threads animate.
+#define NATIVE_REACHABLE_INSTANCE_LIMIT 2048
+
+static const struct Level *s_nativeReachableLevel;
+static struct Instance *s_nativeReachableInstances[NATIVE_REACHABLE_INSTANCE_LIMIT + 1];
+static u8 s_nativeReachableMarks[NATIVE_REACHABLE_INSTANCE_LIMIT];
+
+static void LevInstDef_BuildReachableInstances(const struct mesh_info *mesh, const struct Level *level)
+{
+	s_nativeReachableLevel = NULL;
+	if (level == NULL || level->ptrInstDefPtrArray == NULL || level->ptrInstDefs == NULL || level->numInstances > NATIVE_REACHABLE_INSTANCE_LIMIT)
+	{
+		return;
+	}
+
+	const struct InstDef *defs = level->ptrInstDefs;
+	const u32 numDefs = level->numInstances;
+	memset(s_nativeReachableMarks, 0, numDefs);
+
+	const struct PVS *prevPvs = NULL;
+	for (int i = 0; mesh != NULL && i < mesh->numQuadBlock; i++)
+	{
+		const struct PVS *pvs = mesh->ptrQuadBlockArray[i].pvs;
+		if (pvs == NULL || pvs == prevPvs || pvs->visInstSrc == NULL)
+		{
+			continue;
+		}
+		prevPvs = pvs;
+		for (struct Instance **entry = pvs->visInstSrc; entry[0] != NULL; entry++)
+		{
+			// Shared lists can be left as InstDef pointers; see the ND BUG note in UnPack.
+			const struct InstDef *def = (const struct InstDef *)entry[0];
+			if (def < defs || def >= defs + numDefs)
+			{
+				def = entry[0]->instDef;
+			}
+			if (def >= defs && def < defs + numDefs)
+			{
+				s_nativeReachableMarks[def - defs] = 1;
+			}
+		}
+	}
+
+	int count = 0;
+	for (struct Instance **it = (struct Instance **)level->ptrInstDefPtrArray; it[0] != NULL; it++)
+	{
+		const struct InstDef *def = it[0]->instDef;
+		if (def >= defs && def < defs + numDefs && s_nativeReachableMarks[def - defs] && count < NATIVE_REACHABLE_INSTANCE_LIMIT)
+		{
+			s_nativeReachableInstances[count++] = it[0];
+		}
+	}
+	s_nativeReachableInstances[count] = NULL;
+	s_nativeReachableLevel = level;
+}
+
+struct Instance **LevInstDef_GetReachableInstances(const struct Level *level)
+{
+	return (level != NULL && level == s_nativeReachableLevel) ? s_nativeReachableInstances : NULL;
+}
+#endif
+
 void LevInstDef_UnPack(struct mesh_info *ptr_mesh_info)
 {
 	// NOTE(aalhendi): ASM-verified NTSC-U 926 0x8003116c-0x80031268.
@@ -373,6 +439,10 @@ void LevInstDef_UnPack(struct mesh_info *ptr_mesh_info)
 			visInstSrc[0] = (struct InstDef *)visInstSrc[0]->ptrInstance;
 		}
 	}
+
+#if defined(CTR_NATIVE)
+	LevInstDef_BuildReachableInstances(ptr_mesh_info, level1);
+#endif
 }
 
 
@@ -386,6 +456,10 @@ void LevInstDef_RePack(struct mesh_info *ptr_mesh_info, b32 boolAdvHub)
 	struct Instance **visInstSrc;
 	struct Level *level1;
 	struct Thread *th;
+
+#if defined(CTR_NATIVE)
+	s_nativeReachableLevel = NULL;
+#endif
 
 	numQuadBlock = ptr_mesh_info->numQuadBlock;
 	ptrQuadBlockArray = ptr_mesh_info->ptrQuadBlockArray;

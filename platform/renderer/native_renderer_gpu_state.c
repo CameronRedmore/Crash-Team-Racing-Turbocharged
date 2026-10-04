@@ -20,6 +20,7 @@
 
 #include <macros.h>
 #include <SDL3/SDL.h>
+#include <math.h>
 
 #include "platform/native_draw3d.h"
 #include "platform/native_gpu.h"
@@ -40,6 +41,20 @@ global_variable int s_previousScissorH = 0;
 // when a shader binds and the setters below read them; no other module does
 // either. They were plain globals in the single-file renderer, and are static
 // here because nothing outside this file ever referenced them.
+#if NATIVE_DRAW3D_SUPPORTED
+static GLint u_objectToCameraLoc, u_nativeViewLoc;
+
+void NativeRenderer_SetObjectGeometry(const NativeDraw3DTransform *transform, const float *view)
+{
+	if (!transform)
+		return; // Legacy vertices select their branch per vertex.
+	const double *r = transform->rotation, *t = transform->translation;
+	const float matrix[16] = {r[0], r[3], r[6], 0, r[1], r[4], r[7], 0, r[2], r[5], r[8], 0, t[0], t[1], t[2], 1};
+	glUniformMatrix4fv(u_objectToCameraLoc, 1, GL_FALSE, matrix);
+	glUniform4fv(u_nativeViewLoc, 1, view);
+}
+#endif
+
 global_variable GLint u_projectionLoc;
 global_variable GLint u_bilinearFilterLoc;
 global_variable GLint u_texelSizeLoc;
@@ -285,6 +300,10 @@ void NativeRenderer_SetTexture(TextureID texture, TexFormat texFormat, int semiT
 	NativeRenderer_SetShader(shader->shader);
 	u_bilinearFilterLoc = shader->bilinearFilterLoc;
 	u_projectionLoc = shader->projectionLoc;
+#if NATIVE_DRAW3D_SUPPORTED
+	u_objectToCameraLoc = shader->objectToCameraLoc;
+	u_nativeViewLoc = shader->nativeViewLoc;
+#endif
 	u_texelSizeLoc = (texFormat == TF_32_BIT_RGBA || texFormat == TF_TEXT_SDF) ? shader->texelSizeLoc : -1;
 #ifndef __vita__
 	u_psxSemiTransPassLoc = shader->psxSemiTransPassLoc;
@@ -454,10 +473,13 @@ static struct
 {
 	struct NativeRenderTarget *target;
 	GLint drawFramebuffer, readFramebuffer;
+	int x, y, right, top;
 } s_isolatedDepth;
 
-int NativeRenderer_BeginIsolatedDepth(void)
+int NativeRenderer_BeginIsolatedDepth(const float bounds[4], int logicalWidth, int logicalHeight)
 {
+	if (logicalWidth <= 0 || logicalHeight <= 0)
+		return 0;
 	if (s_isolatedDepth.target != NULL)
 	{
 		NativeDraw3D_ReportDiagnostic(NATIVE_DRAW3D_DIAG_OVERLAY_NESTED, "BeginIsolatedDepth", 0);
@@ -506,20 +528,36 @@ int NativeRenderer_BeginIsolatedDepth(void)
 		NativeDraw3D_ReportDiagnostic(NATIVE_DRAW3D_DIAG_OVERLAY_FRAMEBUFFER, "BeginIsolatedDepth", (u32)isolatedStatus);
 		return 0;
 	}
+	// Only the model's conservative pixel bounds need stencil/depth work.
+	// Copying the entire SSAA target for each HUD icon wastes bandwidth.
+	const double sx = (double)target->width / logicalWidth;
+	const double sy = (double)target->height / logicalHeight;
+	const int x = (int)fmax(0, fmin(target->width, floor(bounds[0] * sx) - 1));
+	const int right = (int)fmax(x, fmin(target->width, ceil(bounds[2] * sx) + 1));
+	const int y = (int)fmax(0, fmin(target->height, floor((logicalHeight - bounds[3]) * sy) - 1));
+	const int top = (int)fmax(y, fmin(target->height, ceil((logicalHeight - bounds[1]) * sy) + 1));
 	// Preserve the PS1 draw-mask stencil while giving the model fresh depth.
 	const int scissor = s_previousScissorState;
 	NativeRenderer_SetScissorState(0);
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, (GLuint)drawFramebuffer);
-	glBlitFramebuffer(0, 0, target->width, target->height, 0, 0, target->width, target->height, GL_STENCIL_BUFFER_BIT, GL_NEAREST);
+	glBlitFramebuffer(x, y, right, top, x, y, right, top, GL_STENCIL_BUFFER_BIT, GL_NEAREST);
 	const int depthMode = s_previousDepthMode, depthWrite = s_previousDepthWrite;
 	NativeRenderer_SetDepthState(0, 1);
+	const int oldX = s_previousScissorX, oldY = s_previousScissorY, oldW = s_previousScissorW, oldH = s_previousScissorH;
+	NativeRenderer_SetScissorRectCached(x, y, right - x, top - y);
+	NativeRenderer_SetScissorState(1);
 	glClear(GL_DEPTH_BUFFER_BIT);
 	NativeRenderer_SetDepthState(depthMode, depthWrite);
+	NativeRenderer_SetScissorRectCached(oldX, oldY, oldW, oldH);
 	NativeRenderer_SetScissorState(scissor);
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, target->isolatedFramebuffer);
 	s_isolatedDepth.target = target;
 	s_isolatedDepth.drawFramebuffer = drawFramebuffer;
 	s_isolatedDepth.readFramebuffer = readFramebuffer;
+	s_isolatedDepth.x = x;
+	s_isolatedDepth.y = y;
+	s_isolatedDepth.right = right;
+	s_isolatedDepth.top = top;
 	return 1;
 }
 
@@ -533,7 +571,8 @@ void NativeRenderer_EndIsolatedDepth(void)
 	// Only stencil is returned; the world depth attachment stays untouched.
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, target->isolatedFramebuffer);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, (GLuint)s_isolatedDepth.drawFramebuffer);
-	glBlitFramebuffer(0, 0, target->width, target->height, 0, 0, target->width, target->height, GL_STENCIL_BUFFER_BIT, GL_NEAREST);
+	glBlitFramebuffer(s_isolatedDepth.x, s_isolatedDepth.y, s_isolatedDepth.right, s_isolatedDepth.top, s_isolatedDepth.x, s_isolatedDepth.y,
+	                  s_isolatedDepth.right, s_isolatedDepth.top, GL_STENCIL_BUFFER_BIT, GL_NEAREST);
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, (GLuint)s_isolatedDepth.readFramebuffer);
 	NativeRenderer_SetScissorState(scissor);
 	s_isolatedDepth.target = NULL;

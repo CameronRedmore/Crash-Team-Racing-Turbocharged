@@ -9,7 +9,6 @@
 #include <time.h>
 
 #include "platform/native_log.h"
-#include "platform/native_visibility_stats.h"
 
 int gNativeRendererMode = NATIVE_RENDERER_CLASSIC;
 int gNativeColorDepth = NATIVE_COLOR_DEPTH_TRUE;
@@ -43,6 +42,47 @@ global_variable u32 s_draw3dTriangleCount;
 global_variable NativeDraw3DLayer s_draw3dLayers[NATIVE_DRAW3D_MAX_LAYERS];
 global_variable int s_draw3dLayerCount;
 
+int gNativeGpuTransformEnabled = 0;
+#define NATIVE_DRAW3D_MAX_TRANSFORMS 16384
+static NativeDraw3DTransform s_draw3dTransforms[NATIVE_DRAW3D_MAX_TRANSFORMS];
+static u32 s_draw3dTransformCount;
+static u32 s_draw3dGpuTriangleCount;
+
+const NativeDraw3DTransform *NativeDraw3D_GetTransform(u32 index)
+{
+	return index && index <= s_draw3dTransformCount ? &s_draw3dTransforms[index - 1] : NULL;
+}
+
+void NativeDraw3D_GetGeometryCounts(u32 *gpuTriangles, u32 *cpuTriangles)
+{
+	*gpuTriangles = s_draw3dGpuTriangleCount;
+	*cpuTriangles = s_draw3dTriangleCount - s_draw3dGpuTriangleCount;
+}
+
+static u32 NativeDraw3D_SnapshotTransform(NativeDraw3DLayer *layer)
+{
+	if (layer->transformIndex)
+		return layer->transformIndex;
+	if (s_draw3dTransformCount == NATIVE_DRAW3D_MAX_TRANSFORMS)
+		return 0;
+	NativeDraw3DTransform *snapshot = &s_draw3dTransforms[s_draw3dTransformCount++];
+	memcpy(snapshot->rotation, layer->objectRotation, sizeof(snapshot->rotation));
+	memcpy(snapshot->translation, layer->objectTranslation, sizeof(snapshot->translation));
+	const double *r = snapshot->rotation, *t = snapshot->translation;
+	const double inverse[9] = {r[4] * r[8] - r[5] * r[7], r[2] * r[7] - r[1] * r[8], r[1] * r[5] - r[2] * r[4],
+	                           r[5] * r[6] - r[3] * r[8], r[0] * r[8] - r[2] * r[6], r[2] * r[3] - r[0] * r[5],
+	                           r[3] * r[7] - r[4] * r[6], r[1] * r[6] - r[0] * r[7], r[0] * r[4] - r[1] * r[3]};
+	snapshot->determinant = r[0] * inverse[0] + r[1] * inverse[3] + r[2] * inverse[6];
+	if (fabs(snapshot->determinant) < 1e-20)
+	{
+		s_draw3dTransformCount--;
+		return 0;
+	}
+	for (int i = 0; i < 3; i++)
+		snapshot->cameraPosition[i] = -(inverse[3 * i] * t[0] + inverse[3 * i + 1] * t[1] + inverse[3 * i + 2] * t[2]) / snapshot->determinant;
+	return layer->transformIndex = s_draw3dTransformCount;
+}
+
 static const char *const s_draw3dDiagnosticNames[NATIVE_DRAW3D_DIAG_COUNT] = {
     "model skipped: unsupported setup/selector",
     "model unsupported draw handler",
@@ -55,7 +95,6 @@ static const char *const s_draw3dDiagnosticNames[NATIVE_DRAW3D_DIAG_COUNT] = {
     "overlay drawn without depth: unexpected target",
     "overlay drawn without depth: incomplete framebuffer",
     "projected polygon packet using geometry recovery",
-    "model dropped: render bucket entries exhausted",
 };
 static u64 s_draw3dDiagnosticTotals[NATIVE_DRAW3D_DIAG_COUNT];
 static u64 s_draw3dDiagnosticInterval[NATIVE_DRAW3D_DIAG_COUNT];
@@ -91,8 +130,9 @@ void NativeDraw3D_BeginFrame(void)
 {
 	// Report recovery events before releasing the completed frame.
 	NativeDraw3D_ReportDiagnostics();
-	NativeVisibility_ReportFrameBoundary();
 	s_draw3dTriangleCount = 0;
+	s_draw3dTransformCount = 0;
+	s_draw3dGpuTriangleCount = 0;
 	s_draw3dLayerCount = 0;
 }
 
@@ -118,6 +158,7 @@ int NativeDraw3D_BeginLayer(const NativeDraw3DView *view)
 	layer->view = *view;
 	memcpy(layer->objectRotation, view->rotation, sizeof(layer->objectRotation));
 	memcpy(layer->objectTranslation, view->translation, sizeof(layer->objectTranslation));
+	layer->transformIndex = 0;
 	layer->firstTriangle = s_draw3dTriangleCount;
 	layer->triangleCount = 0;
 	layer->open = 1;
@@ -138,6 +179,10 @@ void NativeDraw3D_SetObjectTransform(int layer, const double *rotation, const do
 	{
 		return;
 	}
+	if (memcmp(s_draw3dLayers[layer].objectRotation, rotation, sizeof(s_draw3dLayers[layer].objectRotation)) == 0 &&
+	    memcmp(s_draw3dLayers[layer].objectTranslation, translation, sizeof(s_draw3dLayers[layer].objectTranslation)) == 0)
+		return;
+	s_draw3dLayers[layer].transformIndex = 0;
 	memcpy(s_draw3dLayers[layer].objectRotation, rotation, sizeof(s_draw3dLayers[layer].objectRotation));
 	memcpy(s_draw3dLayers[layer].objectTranslation, translation, sizeof(s_draw3dLayers[layer].objectTranslation));
 }
@@ -194,6 +239,20 @@ internal int NativeDraw3D_IsOutsideFrustum(const NativeDraw3DView *view, float p
 	return outside[0] | outside[1] | outside[2] | outside[3] | outside[4];
 }
 
+// Reject back faces before expanding/uploading them, without transforming
+// three vertices. det(R) * dot(cross(b-a,c-a),a-camera) has the same sign as
+// the legacy camera-space determinant, including reflected transforms.
+static int NativeDraw3D_ObjectFrontFacing(const NativeDraw3DTransform *transform, const NativeDraw3DVertex *a, const NativeDraw3DVertex *b,
+                                          const NativeDraw3DVertex *c, int reverse)
+{
+	const double ux = (double)b->x - a->x, uy = (double)b->y - a->y, uz = (double)b->z - a->z;
+	const double vx = (double)c->x - a->x, vy = (double)c->y - a->y, vz = (double)c->z - a->z;
+	const double *eye = transform->cameraPosition;
+	const double area =
+	    ((uy * vz - uz * vy) * (a->x - eye[0]) + (uz * vx - ux * vz) * (a->y - eye[1]) + (ux * vy - uy * vx) * (a->z - eye[2])) * transform->determinant;
+	return reverse ? area < 0 : area > 0;
+}
+
 int NativeDraw3D_AddTriangle(int layerIndex, const NativeDraw3DVertex *v0, const NativeDraw3DVertex *v1, const NativeDraw3DVertex *v2,
                              const NativeDraw3DMaterial *material)
 {
@@ -215,12 +274,29 @@ int NativeDraw3D_AddTriangle(int layerIndex, const NativeDraw3DVertex *v0, const
 	NativeDraw3DTriangle *triangle = &s_draw3dTriangles[s_draw3dTriangleCount];
 	const NativeDraw3DVertex *vertices[3] = {v0, v1, v2};
 
+	// Ordered, translucent, background and pushed-depth geometry retains its
+	// existing CPU culling/depth semantics. Ordinary opaque geometry uses the
+	// same vertex stream and scheduler, with transformation and culling in GL.
+	const int gpuEligible = gNativeGpuTransformEnabled && material->depthSlots == 0 &&
+	                        !(material->flags & (NATIVE_DRAW3D_SEMI_TRANS | NATIVE_DRAW3D_ORDERED_BLEND | NATIVE_DRAW3D_BACKGROUND));
+	triangle->transformIndex = gpuEligible ? NativeDraw3D_SnapshotTransform(layer) : 0;
+	if (triangle->transformIndex && !(material->flags & NATIVE_DRAW3D_DOUBLE_SIDED) &&
+	    !NativeDraw3D_ObjectFrontFacing(NativeDraw3D_GetTransform(triangle->transformIndex), v0, v1, v2,
+	                                    (material->flags & NATIVE_DRAW3D_REVERSE_WINDING) != 0))
+		return 0;
 	for (int i = 0; i < 3; i++)
 	{
-		NativeDraw3D_Transform(layer, vertices[i], triangle->position[i]);
+		if (triangle->transformIndex)
+		{
+			triangle->position[i][0] = vertices[i]->x;
+			triangle->position[i][1] = vertices[i]->y;
+			triangle->position[i][2] = vertices[i]->z;
+		}
+		else
+			NativeDraw3D_Transform(layer, vertices[i], triangle->position[i]);
 	}
 
-	if (((material->flags & NATIVE_DRAW3D_DOUBLE_SIDED) == 0) &&
+	if (!triangle->transformIndex && ((material->flags & NATIVE_DRAW3D_DOUBLE_SIDED) == 0) &&
 	    !NativeDraw3D_IsFrontFacing(triangle->position[0], triangle->position[1], triangle->position[2],
 	                                (material->flags & NATIVE_DRAW3D_REVERSE_WINDING) != 0))
 	{
@@ -229,7 +305,7 @@ int NativeDraw3D_AddTriangle(int layerIndex, const NativeDraw3DVertex *v0, const
 	// Account for the post-mirror screen offset in conservative rejection.
 	NativeDraw3DView cullView = layer->view;
 	cullView.centerX += layer->view.mirror ? -material->screenOffsetX : material->screenOffsetX;
-	if (NativeDraw3D_IsOutsideFrustum(&cullView, triangle->position))
+	if (!triangle->transformIndex && NativeDraw3D_IsOutsideFrustum(&cullView, triangle->position))
 	{
 		return 0;
 	}
@@ -250,6 +326,7 @@ int NativeDraw3D_AddTriangle(int layerIndex, const NativeDraw3DVertex *v0, const
 	triangle->material = *material;
 	triangle->sortDepth = sortDepth + (float)material->depthSlots * NativeDraw3D_GetDrawOrderSlotDepth();
 
+	s_draw3dGpuTriangleCount += triangle->transformIndex != 0;
 	s_draw3dTriangleCount++;
 	layer->triangleCount++;
 	return 1;

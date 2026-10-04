@@ -16,6 +16,18 @@
 // Which of the two vertex buffers the next submission writes. Only this module
 // rotates it.
 global_variable int s_curVertexBuffer = 0;
+#ifndef __vita__
+static u32 s_frameUploadVertices, s_frameUploads;
+void NativeRenderer_BeginUploadFrame(void)
+{
+	s_frameUploadVertices = s_frameUploads = 0;
+}
+void NativeRenderer_GetUploadCounts(u32 *vertices, u32 *uploads)
+{
+	*vertices = s_frameUploadVertices;
+	*uploads = s_frameUploads;
+}
+#endif
 
 void NativeRenderer_UpdateVertexBuffer(const GrVertex *vertices, int num_vertices)
 {
@@ -48,7 +60,12 @@ void NativeRenderer_UpdateVertexBuffer(const GrVertex *vertices, int num_vertice
 	memcpy(gpuVertices, vertices, (size_t)num_vertices * sizeof(GrVertex));
 	vglBufferData(GL_ARRAY_BUFFER, gpuVertices);
 #else
+	// Replace storage before writing the next batch: queued GL draws can keep
+	// the previous allocation rather than stalling this upload on its reuse.
+	glBufferData(GL_ARRAY_BUFFER, sizeof(GrVertex) * MAX_VERTEX_BUFFER_SIZE, NULL, GL_STREAM_DRAW);
 	glBufferSubData(GL_ARRAY_BUFFER, 0, num_vertices * sizeof(GrVertex), vertices);
+	s_frameUploadVertices += (u32)num_vertices;
+	s_frameUploads++;
 #endif
 
 	NativePerf_EndScope(NATIVE_PERF_BUCKET_RENDERER_VERTEX_UPLOAD);
@@ -74,6 +91,23 @@ void NativeRenderer_DrawTriangles(int start_vertex, int triangles)
 	glDrawArrays(GL_TRIANGLES, start_vertex, triangles * 3);
 	NativePerf_EndScope(NATIVE_PERF_BUCKET_RENDERER_DRAW_TRIANGLES);
 }
+
+#if NATIVE_DRAW3D_SUPPORTED
+void NativeRenderer_DrawObjectTriangles(int startVertex, int triangles, u32 cullMode)
+{
+	// Scope culling to one draw: legacy and utility passes never inherit it.
+	// Projection flips screen Y, so retail front faces are clockwise in GL.
+	if (cullMode)
+	{
+		glEnable(GL_CULL_FACE);
+		glCullFace(GL_BACK);
+		glFrontFace(cullMode == 1 ? GL_CW : GL_CCW);
+	}
+	NativeRenderer_DrawTriangles(startVertex, triangles);
+	if (cullMode)
+		glDisable(GL_CULL_FACE);
+}
+#endif
 
 void NativeRenderer_PushDebugLabel(const char *label)
 {

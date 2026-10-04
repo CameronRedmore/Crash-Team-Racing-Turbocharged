@@ -100,7 +100,6 @@ int gNativeRelicRaceResultTier = -1;
 #include "platform/native_draw3d.c"
 #include "platform/native_aspect.c"
 #include "platform/native_projection.c"
-#include "platform/native_visibility_stats.c"
 #include "platform/native_physics.c"
 #include "platform/native_collision.c"
 #if !defined(__EMSCRIPTEN__)

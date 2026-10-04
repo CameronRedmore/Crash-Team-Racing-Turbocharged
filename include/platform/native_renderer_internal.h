@@ -137,6 +137,10 @@ typedef struct
 	GLint psxDitherEnabledLoc;
 	GLint psxColorDepth15Loc;
 #endif
+#if NATIVE_DRAW3D_SUPPORTED
+	GLint objectToCameraLoc;
+	GLint nativeViewLoc;
+#endif
 	GLint psxDrawMaskSetLoc;
 	GLint psxTextureOutputStpLoc;
 } GTEShader;

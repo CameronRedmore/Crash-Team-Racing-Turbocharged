@@ -160,6 +160,52 @@ static void TransformsAndLayers(void)
 	assert(NativeDraw3D_BeginLayer(&view) == 0);
 }
 
+static void GpuSnapshots(void)
+{
+	gNativeGpuTransformEnabled = 1;
+	NativeDraw3DView view = TestView();
+	NativeDraw3D_BeginFrame();
+	const int layer = NativeDraw3D_BeginLayer(&view);
+	NativeDraw3DVertex a = Vertex(0, 0, 100), b = Vertex(10, 0, 100), c = Vertex(0, 10, 100);
+	NativeDraw3DMaterial material = Material(0);
+	assert(NativeDraw3D_AddTriangle(layer, &a, &b, &c, &material));
+	u32 first = NativeDraw3D_GetTriangles()[0].transformIndex;
+	const double translation[3] = {5, 6, 7};
+	NativeDraw3D_SetObjectTransform(layer, view.rotation, translation);
+	assert(NativeDraw3D_AddTriangle(layer, &a, &b, &c, &material));
+	u32 second = NativeDraw3D_GetTriangles()[1].transformIndex;
+	assert(first && second && first != second);
+	assert(NativeDraw3D_GetTransform(first)->translation[0] == 0);
+	assert(NativeDraw3D_GetTransform(second)->translation[0] == 5);
+	assert(NativeDraw3D_GetTriangles()[1].position[0][0] == a.x);
+	// Transparent geometry and draw-order fits keep real camera-space depth.
+	material.flags |= NATIVE_DRAW3D_SEMI_TRANS;
+	assert(NativeDraw3D_AddTriangle(layer, &a, &b, &c, &material));
+	assert(!NativeDraw3D_GetTriangles()[2].transformIndex);
+	assert(NativeDraw3D_GetTriangles()[2].position[0][0] == 5);
+	u32 gpu, cpu;
+	NativeDraw3D_GetGeometryCounts(&gpu, &cpu);
+	assert(gpu == 2 && cpu == 1);
+	NativeDraw3D_BeginFrame();
+	NativeDraw3D_GetGeometryCounts(&gpu, &cpu);
+	assert(!gpu && !cpu && !NativeDraw3D_GetTransform(first));
+	// Exhausting snapshot storage falls back to the current CPU transform,
+	// without reusing a previous snapshot or dropping otherwise visible work.
+	int many = NativeDraw3D_BeginLayer(&view);
+	material.flags = 0;
+	for (int i = 0; i < 20000; i++)
+	{
+		double shifted[3] = {0, 0, i + 100};
+		NativeDraw3D_SetObjectTransform(many, view.rotation, shifted);
+		assert(NativeDraw3D_AddTriangle(many, &a, &b, &c, &material));
+	}
+	NativeDraw3D_GetGeometryCounts(&gpu, &cpu);
+	assert(gpu && cpu && gpu + cpu == 20000);
+	assert(!NativeDraw3D_GetTriangles()[19999].transformIndex);
+	assert(NativeDraw3D_GetTriangles()[19999].position[0][2] == 20199);
+	gNativeGpuTransformEnabled = 0;
+}
+
 static void Marker(void)
 {
 	DR_PSYX_DRAW3D marker;
@@ -176,6 +222,7 @@ int main(void)
 	Winding();
 	Culling();
 	TransformsAndLayers();
+	GpuSnapshots();
 	Marker();
 	puts("native draw3d tests passed");
 	return 0;

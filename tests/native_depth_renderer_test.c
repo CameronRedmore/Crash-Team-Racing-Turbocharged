@@ -197,6 +197,200 @@ static void DepthTest_Pixel(int x, int y, int r, int g, int b)
 	assert(glGetError() == GL_NO_ERROR);
 }
 
+// A multi-material HUD model must keep its private depth on every split,
+// regardless of world depth behind it, and leave scene depth intact afterwards.
+static void DepthTest_HudDepth(void)
+{
+	gNativeRendererMode = NATIVE_RENDERER_NATIVE;
+	gNativeColorDepth = NATIVE_COLOR_DEPTH_TRUE;
+	gNativeDitheringEnabled = 0;
+	const int modes[] = {NATIVE_AA_OFF, NATIVE_AA_MSAA_4X, NATIVE_AA_SSAA_4X};
+	u16 blue = 31 << 10;
+	RECT16 tex = {640, 256, 1, 1};
+	LoadImage(&tex, &blue);
+	for (int aa = 0; aa < 3; aa++)
+		for (int gpu = 0; gpu < 2; gpu++)
+		{
+			gNativeGpuTransformEnabled = gpu;
+			gNativeAntiAliasingMode = modes[aa];
+			DepthTest_Begin(1, NATIVE_PGXP_MODE_PERSPECTIVE);
+			activeDispEnv.disp.y = gpu ? 296 : 0;
+			activeDrawEnv.clip.y = activeDrawEnv.ofs[1] = activeDispEnv.disp.y;
+			int world = DepthTest_BeginNativeLayer(0);
+			DepthTest_NativeTriangle(world, 0, 200, NATIVE_DRAW3D_DOUBLE_SIDED, 0);
+			DepthTest_Marker(0, world);
+			int hud = DepthTest_BeginNativeLayer(0);
+			NativeDraw3DMaterial m = {.flags = NATIVE_DRAW3D_DOUBLE_SIDED | NATIVE_DRAW3D_OVERLAY};
+			NativeDraw3DVertex a = DepthTest_NativeVertex(80, 60, 800, 1);
+			NativeDraw3DVertex b = DepthTest_NativeVertex(140, 60, 800, 1);
+			NativeDraw3DVertex c = DepthTest_NativeVertex(110, 140, 800, 1);
+			assert(NativeDraw3D_AddTriangle(hud, &a, &b, &c, &m));
+			m.flags |= NATIVE_DRAW3D_TEXTURED;
+			m.tpage = getTPage(2, 0, 640, 256);
+			a = DepthTest_NativeVertex(180, 60, 700, 0);
+			b = DepthTest_NativeVertex(240, 60, 700, 0);
+			c = DepthTest_NativeVertex(210, 140, 700, 0);
+			a.r = a.g = a.b = b.r = b.g = b.b = c.r = c.g = c.b = 128;
+			assert(NativeDraw3D_AddTriangle(hud, &a, &b, &c, &m));
+			DepthTest_Marker(1, hud);
+			world = DepthTest_BeginNativeLayer(0);
+			DepthTest_NativeTriangle(world, 1, 400, NATIVE_DRAW3D_DOUBLE_SIDED, 0);
+			DepthTest_Marker(2, world);
+			void *packets[] = {&depthTestMarkers[0], &depthTestMarkers[1], &depthTestMarkers[2]};
+			DepthTest_DrawPackets(packets, 3);
+			DepthTest_Pixel(110, 90, 0, 248, 0);
+			DepthTest_Pixel(210, 90, 0, 0, 248);
+			DepthTest_Pixel(160, 180, 248, 0, 0);
+			// HUD work covers under a quarter of this target, even with SSAA.
+			assert((s_isolatedDepth.right - s_isolatedDepth.x) * (s_isolatedDepth.top - s_isolatedDepth.y) <
+			       s_mainRenderTarget.width * s_mainRenderTarget.height / 4);
+			NativeRenderer_EndScene();
+		}
+	gNativeGpuTransformEnabled = 1;
+}
+
+// Compare the entire resolved image through the actual split scheduler,
+// including CPU/GPU interleaving, mutable transforms, culling and near clipping.
+static void DepthTest_GpuParity(void)
+{
+	u8 *images[2] = {NULL, NULL};
+	u32 pixelCount = 0;
+	gNativeRendererMode = NATIVE_RENDERER_NATIVE;
+	gNativeAntiAliasingMode = NATIVE_AA_OFF;
+	u16 texels[64];
+	for (int i = 0; i < 64; i++)
+		texels[i] = (u16)(1 + i % 31) | (u16)(1 + i / 8) << 5 | (u16)(i % 8) << 10;
+	RECT16 rect = {640, 256, 8, 8};
+	LoadImage(&rect, texels);
+	for (int mirror = 0; mirror < 2; mirror++)
+		for (int variant = 0; variant < 9; variant++)
+		{
+			for (int gpu = 0; gpu < 2; gpu++)
+			{
+				gNativeGpuTransformEnabled = gpu;
+				DepthTest_Begin(1, NATIVE_PGXP_MODE_PERSPECTIVE);
+				const int layer = DepthTest_BeginNativeLayer(mirror);
+				NativeDraw3DMaterial m = {0};
+				m.flags = variant == 1 ? NATIVE_DRAW3D_DOUBLE_SIDED : variant == 2 ? NATIVE_DRAW3D_REVERSE_WINDING : 0;
+				m.depthBias = variant == 3 ? -10 : 0;
+				m.screenOffsetX = variant == 3 ? 7 : 0;
+				g_cfg_bilinearFiltering = variant == 7;
+				gNativeDitheringEnabled = variant == 8;
+				gNativeColorDepth = variant == 8 ? NATIVE_COLOR_DEPTH_15BIT : NATIVE_COLOR_DEPTH_TRUE;
+				if (variant >= 6)
+				{
+					m.flags = NATIVE_DRAW3D_TEXTURED | NATIVE_DRAW3D_DITHER;
+					m.tpage = getTPage(2, 0, 640, 256);
+				}
+				NativeDraw3DVertex a = DepthTest_NativeVertex(30, 40, 256, 0);
+				NativeDraw3DVertex b = DepthTest_NativeVertex(140, 40, 256, 0);
+				NativeDraw3DVertex c = DepthTest_NativeVertex(80, 180, variant == 4 ? 16 : 256, 0);
+				if (variant >= 6)
+				{
+					a.r = a.g = a.b = b.r = b.g = b.b = c.r = c.g = c.b = 128;
+					a.u = a.v = b.v = c.u = 0;
+					b.u = c.v = 7;
+				}
+				// Reverse front convention, or exercise reflected object transforms.
+				if (variant == 1 || variant == 2)
+				{
+					NativeDraw3DVertex tmp = b;
+					b = c;
+					c = tmp;
+				}
+				double rotation[9] = {1, 0, 0, 0, 1, 0, 0, 0, 1};
+				double translation[3] = {0, 0, 0};
+				if (variant == 5)
+				{
+					rotation[0] = -1;
+					m.flags = NATIVE_DRAW3D_REVERSE_WINDING;
+				}
+				NativeDraw3D_SetObjectTransform(layer, rotation, translation);
+				NativeDraw3D_AddTriangle(layer, &a, &b, &c, &m);
+				translation[0] = variant == 5 ? -160 : 160;
+				NativeDraw3D_SetObjectTransform(layer, rotation, translation);
+				a.r = b.r = c.r = 0;
+				a.g = b.g = c.g = 255;
+				NativeDraw3D_AddTriangle(layer, &a, &b, &c, &m);
+				// A transparent layer and a legacy HUD packet follow GPU draws.
+				DepthTest_Marker(0, layer);
+				int blend = DepthTest_BeginNativeLayer(mirror);
+				DepthTest_NativeTriangle(blend, 2, 512, NATIVE_DRAW3D_SEMI_TRANS, 0);
+				DepthTest_Marker(1, blend);
+				DepthTest_Polygon(0, 0, NULL, 0, 0);
+				depthTestPolys[0].x0 = depthTestPolys[0].x1 = 4;
+				depthTestPolys[0].y0 = depthTestPolys[0].y2 = 4;
+				depthTestPolys[0].x2 = 14;
+				depthTestPolys[0].y1 = 14;
+				void *packets[] = {&depthTestMarkers[0], &depthTestMarkers[1], &depthTestPolys[0]};
+				DepthTest_DrawPackets(packets, 3);
+				const struct NativeRenderTarget *resolved = NativeRenderer_ResolveMainRenderTarget();
+				pixelCount = (u32)resolved->width * resolved->height;
+				images[gpu] = realloc(images[gpu], pixelCount * 4);
+				assert(images[gpu]);
+				glBindFramebuffer(GL_FRAMEBUFFER, resolved->framebuffer);
+				glReadPixels(0, 0, resolved->width, resolved->height, GL_RGBA, GL_UNSIGNED_BYTE, images[gpu]);
+				NativeRenderer_BindMainRenderTarget();
+				assert(!glIsEnabled(GL_CULL_FACE));
+				assert(glGetError() == GL_NO_ERROR);
+			}
+			u32 differing = 0, lit = 0;
+			for (u32 i = 0; i < pixelCount; i++)
+			{
+				lit += images[0][4 * i] || images[0][4 * i + 1] || images[0][4 * i + 2];
+				differing += memcmp(images[0] + 4 * i, images[1] + 4 * i, 4) != 0;
+			}
+			if (differing > pixelCount / 5000 + 8)
+				fprintf(stderr, "GPU parity mirror=%d variant=%d: %u differing pixels\n", mirror, variant, differing);
+			assert(lit > 100 && differing <= pixelCount / 5000 + 8);
+		}
+	free(images[0]);
+	free(images[1]);
+	g_cfg_bilinearFiltering = gNativeDitheringEnabled = 0;
+	gNativeColorDepth = NATIVE_COLOR_DEPTH_TRUE;
+	gNativeGpuTransformEnabled = 1;
+}
+
+static void DepthTest_GpuBenchmark(void)
+{
+	gNativeRendererMode = NATIVE_RENDERER_NATIVE;
+	gNativeAntiAliasingMode = NATIVE_AA_OFF;
+	for (int gpu = 0; gpu < 2; gpu++)
+	{
+		gNativeGpuTransformEnabled = gpu;
+		u64 begin = 0;
+		for (int frame = 0; frame < 240; frame++)
+		{
+			if (frame == 40)
+				begin = SDL_GetPerformanceCounter();
+			DepthTest_Begin(1, NATIVE_PGXP_MODE_PERSPECTIVE);
+			const int layer = DepthTest_BeginNativeLayer(0);
+			NativeDraw3DMaterial m = {0};
+			for (int i = 0; i < 30000; i++)
+			{
+				const float x = (float)(i % 100) * 3 + 4, y = (float)((i / 100) % 70) * 3 + 4;
+				NativeDraw3DVertex a = DepthTest_NativeVertex(x, y, 256, 0);
+				NativeDraw3DVertex b = DepthTest_NativeVertex(x + 2, y, 256, 0);
+				NativeDraw3DVertex c = DepthTest_NativeVertex(x, y + 2, 256, 0);
+				assert(NativeDraw3D_AddTriangle(layer, &a, &b, &c, &m));
+			}
+			DepthTest_Marker(0, layer);
+			void *packets[] = {&depthTestMarkers[0]};
+			DepthTest_DrawPackets(packets, 1);
+			glFinish();
+			u32 vertices, uploads, gt, ct;
+			NativeRenderer_GetUploadCounts(&vertices, &uploads);
+			NativeDraw3D_GetGeometryCounts(&gt, &ct);
+			assert(vertices == 90000 && uploads == 1);
+			assert(gt == (gpu ? 30000u : 0u) && gt + ct == 30000);
+			assert(glGetError() == GL_NO_ERROR);
+		}
+		const double ms = (SDL_GetPerformanceCounter() - begin) * 1000.0 / SDL_GetPerformanceFrequency() / 200;
+		printf("30000 opaque triangles: %s %.3f ms/frame (including GPU completion)\n", gpu ? "GPU" : "CPU", ms);
+	}
+	gNativeGpuTransformEnabled = 1;
+}
+
 // Native 3D layers share the depth buffer and encoding with PGXP geometry.
 static void DepthTest_Native(int mode)
 {
@@ -1584,12 +1778,26 @@ static void EngineTest_SavePersistence(const char *root)
 	sdata->gGT = NULL;
 }
 
+#include "native_visibility_checks.h"
 #include "native_aspect_game_checks.h"
 #include "native_projection_game_checks.h"
 #include "native_projection_renderer_checks.h"
 
 int main(int argc, char **argv)
 {
+	if (argc == 2 && strcmp(argv[1], "--hud-aspect-only") == 0)
+	{
+		AspectTest_HudTransitions();
+		puts("HUD proportions refresh across in-level aspect changes passed");
+		return 0;
+	}
+	if (argc == 2 && strcmp(argv[1], "--visibility-only") == 0)
+	{
+		VisibilityTest_Camera();
+		VisibilityTest_Expanded();
+		puts("Expanded visibility camera, PVS recovery and distant-leaf checks passed");
+		return 0;
+	}
 	if (argc == 2 && strcmp(argv[1], "--projection-only") == 0)
 	{
 		ProjectionTest_GamePaths();
@@ -1819,6 +2027,25 @@ int main(int argc, char **argv)
 		return 77;
 	SDL_HideWindow(g_window);
 	assert(NativeRenderer_InitialisePSX());
+	if (argc == 2 && strcmp(argv[1], "--hud-depth-only") == 0)
+	{
+		DepthTest_HudDepth();
+		NativeRenderer_Shutdown();
+		SDL_DestroyWindow(g_window);
+		SDL_Quit();
+		puts("Multi-material HUD depth and bounded SSAA work passed");
+		return 0;
+	}
+	if (argc == 2 && strcmp(argv[1], "--gpu-transform-only") == 0)
+	{
+		DepthTest_GpuParity();
+		DepthTest_GpuBenchmark();
+		NativeRenderer_Shutdown();
+		SDL_DestroyWindow(g_window);
+		SDL_Quit();
+		puts("GPU transform parity, frame lifetime and benchmark checks passed");
+		return 0;
+	}
 	if (argc == 2 && strcmp(argv[1], "--projection-renderer-only") == 0)
 	{
 		ProjectionTest_Resolve();

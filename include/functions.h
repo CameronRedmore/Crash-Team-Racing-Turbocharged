@@ -382,6 +382,7 @@ void LevInstDef_RePack(struct mesh_info *ptr_mesh_info, b32 boolAdvHub);
 #if defined(CTR_NATIVE)
 b32 LevInstDef_IsTurboVisualQuad(const struct QuadBlock *quad);
 b32 LevInstDef_IsSuperTurboVisualQuad(const struct QuadBlock *quad);
+struct Instance **LevInstDef_GetReachableInstances(const struct Level *level);
 #endif
 
 struct Instance *LinkedCollide_Hitbox_Desc(struct HitboxDesc *objBoxDesc);

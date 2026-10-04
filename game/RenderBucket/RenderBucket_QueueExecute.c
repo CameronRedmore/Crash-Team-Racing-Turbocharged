@@ -4,7 +4,6 @@
 
 #if defined(CTR_NATIVE)
 #include "platform/native_adhoc.h"
-#include "platform/native_visibility_stats.h"
 #endif
 
 
@@ -30,14 +29,7 @@ CTR_STATIC_ASSERT(offsetof(struct RenderBucketEntry, instPlayerBase) == 0x4);
 #if defined(CTR_NATIVE)
 enum
 {
-	// Retail reaches this queue through the camera-cell visible-instance lists,
-	// which bound how many models can arrive. Expanded visibility (wide FOV,
-	// ultrawide aspects) hands it the whole level instance list instead, so the
-	// queue fills sooner and later models are dropped rather than drawn. Eight
-	// entries per original slot. At eight times the retail count the array is
-	// 128 KiB of BSS, which buys the headroom the largest tracks need at four
-	// players.
-	NATIVE_RENDER_BUCKET_ENTRY_CAPACITY = 16384,
+	NATIVE_RENDER_BUCKET_ENTRY_CAPACITY = 2048,
 };
 static struct RenderBucketEntry s_nativeRenderBucketStorage[NATIVE_RENDER_BUCKET_ENTRY_CAPACITY];
 
@@ -2313,8 +2305,6 @@ static struct RenderBucketEntry *RenderBucket_QueueDraw(struct Instance *inst, s
 #if defined(CTR_NATIVE)
 	if ((queueState->entryEnd != NULL) && (rbi >= queueState->entryEnd))
 	{
-		NativeVisibilityCountOnce(NATIVE_VIS_INSTANCES_DROPPED);
-		NativeDraw3D_ReportDiagnostic(NATIVE_DRAW3D_DIAG_MODEL_QUEUE_FULL, "QueueDraw", (u32)(uintptr_t)inst);
 		return rbi;
 	}
 #endif
@@ -2435,9 +2425,6 @@ static struct RenderBucketEntry *RenderBucket_QueueDraw(struct Instance *inst, s
 	}
 
 	RenderBucket_SelectRetailHandlers(&queuedFlags, &split, &drawFunc, &uncompressFunc);
-#if defined(CTR_NATIVE)
-	NativeVisibilityCountOnce(NATIVE_VIS_INSTANCES_QUEUED);
-#endif
 	rbi->inst = inst;
 	rbi->instPlayerBase = instPlayerBase;
 	queuedFlags |= DRAW_SUCCESSFUL;
@@ -2454,12 +2441,16 @@ static struct RenderBucketEntry *RenderBucket_QueueDraw(struct Instance *inst, s
 static struct Instance **RenderBucket_GetVisibleLevelInstances(const struct CameraDC *camera)
 {
 #if defined(CTR_NATIVE)
-	// Loaded level pointers are unpacked to Instance pointers by LevInstDef.
-	// QueueDraw still checks each instance against the player camera frustum.
-	if (NativeAspect_UsesExpandedVisibility() && sdata->gGT->level1 != NULL &&
-	    sdata->gGT->level1->ptrInstDefPtrArray != NULL)
+	// Expanded visibility replaces the camera-cell list with every instance a
+	// PVS list can reach. QueueDraw still checks each against the camera
+	// frustum. A camera without a list draws no level instances, as in retail.
+	if (NativeAspect_UsesExpandedVisibility() && camera->visInstSrc != NULL)
 	{
-		return (struct Instance **)sdata->gGT->level1->ptrInstDefPtrArray;
+		struct Instance **reachable = LevInstDef_GetReachableInstances(sdata->gGT->level1);
+		if (reachable != NULL)
+		{
+			return reachable;
+		}
 	}
 #endif
 	return camera->visInstSrc;
@@ -2528,6 +2519,30 @@ void *RenderBucket_QueueLevInstances(struct CameraDC *cDC, struct OTMem *otState
 	return entry;
 }
 
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+static void RenderBucket_RefreshUiProjection(void)
+{
+	struct GameTracker *gt = sdata->gGT;
+	if (gt == NULL || gt->pushBuffer_UI.rect.w <= 0 || gt->pushBuffer_UI.rect.h <= 0)
+		return;
+	// Unlike the world cameras, retail only builds the UI camera when the
+	// level loads. Native aspect/renderer options can change during that level.
+	// Refresh before queueing models so bounds and emitted geometry agree.
+	struct PushBuffer *ui = &gt->pushBuffer_UI;
+	PushBuffer_SetMatrixVP(ui);
+	if (sdata->ptrPushBufferUI != 0)
+	{
+		// The shared fruit preview owns a copy of this view, with its own rect
+		// and OT metadata. Carry the precise sidecar as well as the retail matrix.
+		struct PushBuffer *copy = (struct PushBuffer *)(uintptr_t)sdata->ptrPushBufferUI;
+		copy->matrix_ViewProj = ui->matrix_ViewProj;
+		double rotation[9], translation[3];
+		NativePgxp_GetTransform(&ui->matrix_ViewProj, &ui->matrix_ViewProj.m[0][0], ui->matrix_ViewProj.t, rotation, translation);
+		NativePgxp_SetTransform(&copy->matrix_ViewProj, &copy->matrix_ViewProj.m[0][0], copy->matrix_ViewProj.t, rotation, translation);
+	}
+}
+#endif
+
 void *RenderBucket_QueueNonLevInstances(struct Item *item, struct OTMem *otState, void *rbi, u32 lodMask, u8 numPlyr, int gameMode1)
 {
 	struct RenderBucketEntry *entry = (struct RenderBucketEntry *)rbi;
@@ -2535,6 +2550,10 @@ void *RenderBucket_QueueNonLevInstances(struct Item *item, struct OTMem *otState
 	int count = (int)(u8)numPlyr;
 #if defined(CTR_NATIVE)
 	RenderBucket_InitEntryBounds(&queueState);
+#endif
+
+#if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
+	RenderBucket_RefreshUiProjection();
 #endif
 
 	// NOTE(aalhendi): ASM-verified NTSC-U 926 0x8007084c-0x80070950.

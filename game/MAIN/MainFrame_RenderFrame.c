@@ -1245,7 +1245,7 @@ static void RenderAllLevelGeometry_Native(struct GameTracker *gGT, struct Level 
 		gGT->bspLeafsDrawn += RenderLists_Init1P2P(ptr_mesh_info->bspRoot, gGT->visMem1->visLeafList[i], pushBuffer, (u32)&gGT->LevRenderLists[i],
 		                                           gGT->visMem1->bspList[i], 1);
 		NativeDrawLevel_Viewport(pushBuffer, &gGT->backBuffer->primMem, ptr_mesh_info, &gGT->LevRenderLists[i], gGT->visMem1->visFaceList[i],
-		                         gGT->visMem1->visLeafList[i], level1->ptr_tex_waterEnvMap);
+		                         level1->ptr_tex_waterEnvMap);
 	}
 
 	// Retail draws the skybox in single player only.

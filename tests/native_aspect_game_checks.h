@@ -11,13 +11,35 @@ static void AspectTest_GamePaths(void)
 	const int previousProjection = gNativeProjectionMode;
 	const int previousProjectionStrength = gNativeProjectionStrength;
 	struct Level level = {0};
-	struct Instance instance = {0};
-	struct InstDef *allInstances[] = {(struct InstDef *)&instance, NULL};
-	struct Instance *pvsInstances[] = {NULL};
+	// Instance 0 is listed by pointer, instance 1 by a shared list left holding
+	// its InstDef, and instance 2 by no list (like the crate level's templates).
+	struct InstDef defs[3] = {0};
+	struct Instance instances[3] = {0};
+	for (int i = 0; i < 3; i++)
+	{
+		instances[i].instDef = &defs[i];
+		defs[i].ptrInstance = &instances[i];
+	}
+	struct InstDef *allInstances[] = {(struct InstDef *)&instances[0], (struct InstDef *)&instances[1], (struct InstDef *)&instances[2], NULL};
+	struct Instance *pvsInstances[] = {&instances[0], NULL};
+	struct Instance *packedPvsInstances[] = {(struct Instance *)&defs[1], NULL};
+	struct PVS pvs[2] = {0};
+	struct QuadBlock quads[2] = {0};
+	struct mesh_info mesh = {0};
+	pvs[0].visInstSrc = pvsInstances;
+	pvs[1].visInstSrc = packedPvsInstances;
+	quads[0].pvs = &pvs[0];
+	quads[1].pvs = &pvs[1];
+	mesh.numQuadBlock = 2;
+	mesh.ptrQuadBlockArray = quads;
 	tracker.levelID = MAIN_MENU_LEVEL;
 	tracker.level1 = &level;
+	level.ptrInstDefs = defs;
+	level.numInstances = 3;
 	level.ptrInstDefPtrArray = allInstances;
+	level.ptr_mesh_info = &mesh;
 	tracker.cameraDC[0].visInstSrc = pvsInstances;
+	LevInstDef_BuildReachableInstances(&mesh, &level);
 	sdata->gGT = &tracker;
 	gNativePresetPending = 1; // Menu input must not write the user's config.
 	gNativeRendererMode = NATIVE_RENDERER_NATIVE;
@@ -83,68 +105,20 @@ static void AspectTest_GamePaths(void)
 
 		const int invisibleLeaves[] = {0};
 		const int expanded = ratio == NATIVE_ASPECT_21_9 || ratio == NATIVE_ASPECT_32_9;
-		// The camera-cell mask stays authoritative in the leaf lookup at every ratio and FOV.
-		// Expanded visibility no longer overrides it here; it recovers mask-rejected children
-		// in RenderLists_PushChild, where the camera frustum and a bounded recovery range decide.
-		assert(!RenderLists_IsVisible(invisibleLeaves, 0));
-		assert((void *)RenderBucket_GetVisibleLevelInstances(&tracker.cameraDC[0]) == (expanded ? (void *)allInstances : (void *)pvsInstances));
-
-		// End to end: a leaf the camera-cell mask hides must stay hidden at the
-		// retail framing, and must come back once the frustum is wide enough to
-		// want it. The leaf box sits wholly outside the retail frustum edge at
-		// its own depth and wholly inside the 90 degree one. Runs at 16:9 so the
-		// aspect itself is not what turns expanded visibility on.
-		if (ratio == NATIVE_ASPECT_16_9)
+		assert(RenderLists_IsVisible(invisibleLeaves, 0) == expanded);
+		struct Instance **levelInstances = RenderBucket_GetVisibleLevelInstances(&tracker.cameraDC[0]);
+		if (expanded)
 		{
-			struct BSP tree[2];
-			struct VisMemBspListNode nodes[2];
-			struct DrawLevelOvr1PRenderList renderList;
-			const int hiddenLeafMask = 0;
-			memset(tree, 0, sizeof(tree));
-			memset(nodes, 0, sizeof(nodes));
-			memset(&renderList, 0, sizeof(renderList));
-
-			tree[0].box.min.x = -2000;
-			tree[0].box.min.y = -2000;
-			tree[0].box.min.z = 0;
-			tree[0].box.max.x = 2000;
-			tree[0].box.max.y = 2000;
-			tree[0].box.max.z = 1000;
-			tree[0].data.branch.childID[0] = (BspChildId)(1 | BSP_CHILD_ID_LEAF_FLAG);
-			tree[0].data.branch.childID[1] = -1;
-
-			tree[1].flag = BSP_NODE_FLAG_LEAF | BSP_RENDER_LEAF_FLAG_4X4;
-			tree[1].box.min.x = 250;
-			tree[1].box.min.y = -40;
-			tree[1].box.min.z = 200;
-			tree[1].box.max.x = 270;
-			tree[1].box.max.y = 40;
-			tree[1].box.max.z = 220;
-
-			struct PushBuffer *walkPb = &tracker.pushBuffer[0];
-			memset(walkPb, 0, sizeof(*walkPb));
-			walkPb->rect.w = 512;
-			walkPb->rect.h = 216;
-			walkPb->distanceToScreen_PREV = 256;
-			PushBuffer_UpdateFrustum(walkPb);
-
-			gNativeFovDegrees = 0;
-			assert(RenderLists_Init1P2P(tree, &hiddenLeafMask, walkPb, (u32)&renderList, nodes, 1) == 0);
-
-			memset(&renderList, 0, sizeof(renderList));
-			gNativeFovDegrees = 90;
-			PushBuffer_UpdateFrustum(walkPb);
-			assert(RenderLists_Init1P2P(tree, &hiddenLeafMask, walkPb, (u32)&renderList, nodes, 1) == 1);
-
-			// A leaf beyond even the widened frustum stays culled, so the
-			// recovery does not simply switch the walk off.
-			memset(&renderList, 0, sizeof(renderList));
-			tree[1].box.min.x = 4000;
-			tree[1].box.max.x = 4020;
-			assert(RenderLists_Init1P2P(tree, &hiddenLeafMask, walkPb, (u32)&renderList, nodes, 1) == 0);
-
-			gNativeFovDegrees = previousFov;
+			assert(levelInstances[0] == &instances[0] && levelInstances[1] == &instances[1] && levelInstances[2] == NULL);
 		}
+		else
+		{
+			assert(levelInstances == pvsInstances);
+		}
+		// Without a camera-cell list, retail draws no level instances.
+		tracker.cameraDC[0].visInstSrc = NULL;
+		assert(RenderBucket_GetVisibleLevelInstances(&tracker.cameraDC[0]) == NULL);
+		tracker.cameraDC[0].visInstSrc = pvsInstances;
 		assert(fabs(AH_Map_MarkerAspectX() - (512.0 / 216.0 / (4.0 / 3.0)) * scales[ratio]) < 1e-6);
 
 		// Map origin, artwork and markers move together toward the screen
@@ -384,4 +358,58 @@ static void AspectTest_RenderTargets(void)
 		assert(glGetError() == GL_NO_ERROR);
 		NativeRenderer_EndScene();
 	}
+}
+
+// Switch presentation ratios after the HUD camera has already been built.
+// Exercise the real non-level queue entry point used every frame, then compose
+// a HUD model MVP and check its physical proportions and screen anchor.
+static void AspectTest_HudTransitions(void)
+{
+	struct GameTracker tracker = {0};
+	sdata->gGT = &tracker;
+	Platform_InitScratchpad();
+	gNativeRendererMode = NATIVE_RENDERER_NATIVE;
+	gNativePgxpMode = NATIVE_PGXP_MODE_OFF;
+	gNativeFovDegrees = 100; // UI framing must be independent of world FOV.
+	struct PushBuffer *ui = &tracker.pushBuffer_UI;
+	PushBuffer_Init(ui, 0, 1);
+	ui->rot.x = 0x800;
+	gNativeAspectRatio = NATIVE_ASPECT_16_9;
+	PushBuffer_SetMatrixVP(ui);
+	struct PushBuffer preview = *ui;
+	preview.rect = (RECT16){20, 30, 64, 64};
+	sdata->ptrPushBufferUI = (int)(uintptr_t)&preview;
+	const MATRIX world = tracker.pushBuffer[0].matrix_ViewProj;
+	struct InstDrawPerPlayer model = {0};
+	model.m3x3.m[0][0] = model.m3x3.m[1][1] = model.m3x3.m[2][2] = 4096;
+	const double anchor[3] = {-280, -160, 2048};
+	const int ratios[] = {NATIVE_ASPECT_32_9, NATIVE_ASPECT_4_3, NATIVE_ASPECT_16_9, NATIVE_ASPECT_21_9, NATIVE_ASPECT_16_10, NATIVE_ASPECT_32_9};
+	for (int i = 0; i < (int)len(ratios); i++)
+	{
+		gNativeAspectRatio = ratios[i];
+		RenderBucket_QueueNonLevInstances(NULL, NULL, RenderBucket_GetNativeStorage(), 0, 1, 0);
+		MATRIX mvp = {0};
+		RenderBucket_PreciseMvp(ui, &model, &mvp, anchor);
+		double r[9], t[3];
+		NativePgxp_GetTransform(&mvp, &mvp.m[0][0], mvp.t, r, t);
+		const double xScale = sqrt(r[0] * r[0] + r[1] * r[1] + r[2] * r[2]);
+		const double yScale = sqrt(r[3] * r[3] + r[4] * r[4] + r[5] * r[5]);
+		int aw, ah;
+		NativeAspect_GetPresentation(&aw, &ah);
+		const double physicalRatio = xScale / yScale * aw / ah * ui->rect.h / ui->rect.w;
+		assert(fabs(physicalRatio - 1.0) < 1e-10);
+		assert(memcmp(t, anchor, sizeof(t)) == 0);
+		assert(memcmp(&tracker.pushBuffer[0].matrix_ViewProj, &world, sizeof(world)) == 0);
+		double copied[9], copiedT[3], uiR[9], uiT[3];
+		NativePgxp_GetTransform(&preview.matrix_ViewProj, &preview.matrix_ViewProj.m[0][0], preview.matrix_ViewProj.t, copied, copiedT);
+		NativePgxp_GetTransform(&ui->matrix_ViewProj, &ui->matrix_ViewProj.m[0][0], ui->matrix_ViewProj.t, uiR, uiT);
+		assert(memcmp(copied, uiR, sizeof(copied)) == 0 && memcmp(copiedT, uiT, sizeof(copiedT)) == 0);
+		assert(preview.rect.w == 64 && preview.rect.h == 64 && preview.rect.x == 20 && preview.rect.y == 30);
+	}
+	// Switching back to Classic must also discard the cached native scale.
+	gNativeRendererMode = NATIVE_RENDERER_CLASSIC;
+	RenderBucket_QueueNonLevInstances(NULL, NULL, RenderBucket_GetNativeStorage(), 0, 1, 0);
+	assert(ui->matrix_ViewProj.m[0][0] == NativeAspect_ScaleX(4096));
+	sdata->ptrPushBufferUI = 0;
+	sdata->gGT = NULL;
 }

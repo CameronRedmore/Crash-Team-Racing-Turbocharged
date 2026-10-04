@@ -266,7 +266,6 @@ if(BUILD_TESTING AND NOT EMSCRIPTEN)
         platform/native_draw3d.c
         platform/native_aspect.c
         platform/native_projection.c
-        platform/native_visibility_stats.c
         platform/native_gte_core.c
         platform/native_inline_c.c
     )
@@ -284,7 +283,7 @@ if(BUILD_TESTING AND NOT EMSCRIPTEN)
     endif()
     add_test(NAME ctr_native_physics COMMAND ctr_native_physics_test)
     add_executable(ctr_native_draw3d_test tests/native_draw3d_test.c platform/native_draw3d.c)
-    target_sources(ctr_native_draw3d_test PRIVATE platform/native_aspect.c platform/native_projection.c platform/native_visibility_stats.c)
+    target_sources(ctr_native_draw3d_test PRIVATE platform/native_aspect.c platform/native_projection.c)
     target_include_directories(ctr_native_draw3d_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
     target_compile_definitions(ctr_native_draw3d_test PRIVATE CTR_NATIVE BUILD=926)
     if(NOT CTR_NATIVE_MSVC_FRONTEND)
@@ -348,6 +347,12 @@ if(BUILD_TESTING AND NOT EMSCRIPTEN)
         )
 
         add_test(NAME ctr_native_depth_renderer COMMAND ctr_native_depth_renderer_test)
+        add_test(NAME ctr_native_expanded_visibility COMMAND ctr_native_depth_renderer_test --visibility-only)
+        add_test(NAME ctr_native_hud_aspect COMMAND ctr_native_depth_renderer_test --hud-aspect-only)
+        add_test(NAME ctr_native_hud_depth COMMAND ctr_native_depth_renderer_test --hud-depth-only)
+        set_tests_properties(ctr_native_hud_depth PROPERTIES SKIP_RETURN_CODE 77 LABELS "gpu")
+        add_test(NAME ctr_native_gpu_transform COMMAND ctr_native_depth_renderer_test --gpu-transform-only)
+        set_tests_properties(ctr_native_gpu_transform PROPERTIES SKIP_RETURN_CODE 77 LABELS "gpu")
         # Headless: renders every options-menu row's text for all six languages
         # and every accepted value, before any GL context is created.
         add_test(NAME ctr_native_option_strings COMMAND ctr_native_depth_renderer_test --option-strings-only)

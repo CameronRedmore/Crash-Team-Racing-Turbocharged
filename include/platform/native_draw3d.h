@@ -104,9 +104,6 @@ enum NativeDraw3DDiagnosticEvent
 	NATIVE_DRAW3D_DIAG_OVERLAY_TARGET,
 	NATIVE_DRAW3D_DIAG_OVERLAY_FRAMEBUFFER,
 	NATIVE_DRAW3D_DIAG_PROJECTED_PACKET,
-	// A scenery instance was dropped because the render bucket entry array was
-	// full, so the model is missing from the frame.
-	NATIVE_DRAW3D_DIAG_MODEL_QUEUE_FULL,
 	NATIVE_DRAW3D_DIAG_COUNT,
 };
 
@@ -139,14 +136,25 @@ typedef struct
 
 typedef struct
 {
-	// Camera space, GTE convention: +z forward, screen = centre + H * xy / z.
+	// Object space when transformIndex != 0, otherwise camera space.
+	// GTE convention: +z forward, screen = centre + H * xy / z.
 	float position[3][3];
 	u8 uv[3][2];
 	u8 color[3][3];
 	NativeDraw3DMaterial material;
 	// Farthest camera depth, for back-to-front translucent ordering.
 	float sortDepth;
+	// 1-based immutable frame snapshot; zero selects CPU geometry.
+	u32 transformIndex;
 } NativeDraw3DTriangle;
+
+typedef struct
+{
+	double rotation[9];
+	double translation[3];
+	double cameraPosition[3]; // -inverse(rotation) * translation
+	double determinant;
+} NativeDraw3DTransform;
 
 typedef struct
 {
@@ -170,6 +178,8 @@ typedef struct
 	// Object to camera transform applied by NativeDraw3D_AddTriangle.
 	double objectRotation[9];
 	double objectTranslation[3];
+	// Lazily allocated for GPU-eligible triangles, invalidated on transform changes.
+	u32 transformIndex;
 	u32 firstTriangle;
 	u32 triangleCount;
 	b32 open;
@@ -179,6 +189,11 @@ typedef struct
 
 // Max detail with four viewports stays well below this.
 #define NATIVE_DRAW3D_MAX_TRIANGLES (1u << 18)
+
+// Set by desktop renderer startup; CPU-only callers keep the established path.
+extern int gNativeGpuTransformEnabled;
+const NativeDraw3DTransform *NativeDraw3D_GetTransform(u32 index);
+void NativeDraw3D_GetGeometryCounts(u32 *gpuTriangles, u32 *cpuTriangles);
 
 // Drops last frame's layers. Call before the frame starts submitting.
 void NativeDraw3D_BeginFrame(void);

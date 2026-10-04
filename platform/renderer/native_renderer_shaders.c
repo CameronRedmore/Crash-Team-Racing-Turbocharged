@@ -456,7 +456,7 @@ global_variable const char *gte_shader_text_sdf = "	uniform sampler2D s_texture;
 	"\tgl_Position.z = 1.0 - a_orderDepth * (2.0 / 65535.0);\n"     \
 	"\tv_ditherCoord = a_position.xy;\n"
 #else
-#define GTE_ORDER_DEPTH_ATTRIBUTE ""
+#define GTE_ORDER_DEPTH_ATTRIBUTE "\tuniform mat4 ObjectToCamera;\n\tuniform vec4 NativeView;\n"
 // NOTE: a_position.z is the PGXP view depth (0 = affine). Scaling the whole
 // clip position by it leaves the screen position unchanged after the divide
 // but makes the rasteriser interpolate texture coordinates in perspective.
@@ -469,7 +469,13 @@ global_variable const char *gte_shader_text_sdf = "	uniform sampler2D s_texture;
 // w the camera depth. The host clips them at the near plane.
 // Native 2D uses the same input with clip w=1 and z=0, without depth testing.
 #define GTE_PERSPECTIVE_CORRECTION                                                    \
-	"\tif (a_extra.z > 0.5) {\n"                                                      \
+	"\tif (a_extra.z > 1.5) {\n"                                                      \
+	"\t\tvec3 camera = (ObjectToCamera * vec4(a_position.xyz, 1.0)).xyz;\n"           \
+	"\t\tvec2 screen = NativeView.xy * camera.xy + NativeView.zw * camera.z;\n"       \
+	"\t\tgl_Position = Projection * vec4(screen, 0.0, camera.z);\n"                   \
+	"\t\tgl_Position.z = camera.z + a_position.w;\n"                                  \
+	"\t\tv_ditherCoord = vec3(screen, camera.z);\n"                                   \
+	"\t} else if (a_extra.z > 0.5) {\n"                                               \
 	"\t\tgl_Position = Projection * vec4(a_position.xy, 0.0, a_position.w);\n"        \
 	"\t\tgl_Position.z = a_position.z;\n"                                             \
 	"\t\tv_ditherCoord = a_position.xyw;\n"                                           \
@@ -719,6 +725,10 @@ internal void NativeRenderer_CompilePSXShader(GTEShader *sh, const char *source,
 	sh->psxSemiTransPassLoc = glGetUniformLocation(sh->shader, "psxSemiTransPass");
 	sh->psxDitherEnabledLoc = glGetUniformLocation(sh->shader, "psxDitherEnabled");
 	sh->psxColorDepth15Loc = glGetUniformLocation(sh->shader, "psxColorDepth15");
+#endif
+#if NATIVE_DRAW3D_SUPPORTED
+	sh->objectToCameraLoc = glGetUniformLocation(sh->shader, "ObjectToCamera");
+	sh->nativeViewLoc = glGetUniformLocation(sh->shader, "NativeView");
 #endif
 	sh->psxDrawMaskSetLoc = glGetUniformLocation(sh->shader, "psxDrawMaskSet");
 	sh->psxTextureOutputStpLoc = glGetUniformLocation(sh->shader, "psxTextureOutputStp");

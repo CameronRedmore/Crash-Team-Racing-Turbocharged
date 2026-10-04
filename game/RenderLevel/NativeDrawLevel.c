@@ -1,7 +1,5 @@
 #include <common.h>
 
-#include "platform/native_visibility_stats.h"
-
 // NOTE: Native 3D level geometry (see native_draw3d.h). Walks the same BSP
 // render lists and per-quadblock visibility bits as overlay 226, and makes the
 // same per-face decisions (face permutation, UV flip, winding, texture LOD,
@@ -75,6 +73,7 @@ static const struct NativeDrawLevelMosaicShape sNativeDrawLevelMosaicShapes[REND
 struct NativeDrawLevelContext
 {
 	int layer;
+	struct PushBuffer *pushBuffer;
 	const struct LevVertex *vertices;
 	const struct MainRenderLevelGeometryScratch *lod;
 	const struct TextureLayout *waterEnvMap;
@@ -619,23 +618,8 @@ enum NativeDrawLevelKind
 	NATIVE_DRAW_LEVEL_WATER,
 };
 
-// The camera-cell leaf mask, re-derived from the leaf pointer. RenderLists
-// culls the BSP walk with this same bit; the emitter needs the same answer to
-// know whether a leaf's per-quadblock face bits are authoritative. Under
-// expanded visibility a leaf can reach here that the mask never listed, and
-// for those the face bits describe the old camera rather than this one.
-static int NativeDrawLevel_LeafInCellMask(const int *visLeafList, const struct BSP *bspRoot, const struct BSP *leaf)
-{
-	if ((visLeafList == NULL) || (bspRoot == NULL) || (leaf == NULL))
-	{
-		return 1;
-	}
-	const u32 rawChildID = (u32)(((ptrdiff_t)(leaf - bspRoot)) & BSP_CHILD_ID_INDEX_MASK) | BSP_CHILD_ID_LEAF_FLAG;
-	return ((s32)visLeafList[(rawChildID >> 5) & 0x1ff] << (rawChildID & 0x1f)) < 0;
-}
-
 static void NativeDrawLevel_BspList(const struct NativeDrawLevelContext *ctx, const struct VisMemBspListNode *node, const int *visFaceList,
-                                    enum NativeDrawLevelKind kind, const int *visLeafList, const struct BSP *bspRoot)
+                                    enum NativeDrawLevelKind kind)
 {
 	const int expandedVisibility = NativeAspect_UsesExpandedVisibility();
 	for (; node != NULL; node = node->next)
@@ -650,26 +634,19 @@ static void NativeDrawLevel_BspList(const struct NativeDrawLevelContext *ctx, co
 			continue;
 		}
 
-		// The per-quadblock face bits stay authoritative for every leaf the
-		// camera-cell mask listed, which is all of them outside expanded
-		// visibility. Only leaves the walk recovered beyond that mask emit all
-		// of their blocks, because the face bits were authored for the retail
-		// camera and omit the side geometry the wider frustum wants.
-		const int faceMaskAuthoritative = !expandedVisibility || NativeDrawLevel_LeafInCellMask(visLeafList, bspRoot, bsp);
-
 		NativeDrawLevel_SeedVisibility(&vis, visFaceList, block);
 		for (; quadCount > 0; quadCount--, block++)
 		{
-#if defined(CTR_NATIVE)
-			NativeVisibilityCountOnce(NATIVE_VIS_QUAD_BLOCKS_TESTED);
-#endif
-			if (!NativeDrawLevel_ConsumeVisibility(&vis) && faceMaskAuthoritative)
+			if (!NativeDrawLevel_ConsumeVisibility(&vis) && !expandedVisibility)
 			{
 				continue;
 			}
-#if defined(CTR_NATIVE)
-			NativeVisibilityCountOnce(NATIVE_VIS_QUAD_BLOCKS_EMITTED);
-#endif
+
+			// Static block bounds are a cheaper conservative gate than generating
+			// every subdivision and letting individual triangles reject it later.
+			// Water vertices move outside their authored bounds, so keep that path.
+			if (expandedVisibility && kind != NATIVE_DRAW_LEVEL_WATER && !RenderLists_BoxPassesFrustum(ctx->pushBuffer, &block->bbox))
+				continue;
 
 			switch (kind)
 			{
@@ -736,8 +713,10 @@ static void NativeDrawLevel_LinkLayer(struct PushBuffer *pb, struct PrimMem *pri
 
 // Takes the retail LevRenderList like the overlays do.
 static void NativeDrawLevel_Viewport(struct PushBuffer *pb, struct PrimMem *primMem, const struct mesh_info *mesh, const void *levRenderList,
-                                     const int *visFaceList, const int *visLeafList, const struct TextureLayout *waterEnvMap)
+                                     const int *visFaceList, const struct TextureLayout *waterEnvMap)
 {
+	if (pb && NativeAspect_UsesExpandedVisibility())
+		RenderLists_PrepareNativeFrustum(pb);
 	const struct DrawLevelOvr1PRenderList *renderList = levRenderList;
 
 	if ((visFaceList == NULL) || (mesh->ptrQuadBlockArray == NULL) || (mesh->ptrVertexArray == NULL))
@@ -760,6 +739,7 @@ static void NativeDrawLevel_Viewport(struct PushBuffer *pb, struct PrimMem *prim
 	ctx.lod = CTR_SCRATCHPAD_PTR(struct MainRenderLevelGeometryScratch, 0);
 	ctx.waterEnvMap = waterEnvMap;
 	ctx.view = &view;
+	ctx.pushBuffer = pb;
 	for (int i = 0; i < 3; i++)
 	{
 		ctx.center[i] = (s16)((u16)(u8)pb->data6[i * 2] | ((u16)(u8)pb->data6[i * 2 + 1] << 8));
@@ -769,10 +749,10 @@ static void NativeDrawLevel_Viewport(struct PushBuffer *pb, struct PrimMem *prim
 	{
 		const enum NativeDrawLevelKind kind = (slot == RENDER_LIST_SLOT_WATER) ? NATIVE_DRAW_LEVEL_WATER : NATIVE_DRAW_LEVEL_HIGH;
 		ctx.mosaic = (slot < RENDER_LIST_SLOT_WATER) ? &sNativeDrawLevelMosaicShapes[slot] : NULL;
-		NativeDrawLevel_BspList(&ctx, renderList->list[slot].bspListStart, visFaceList, kind, visLeafList, mesh->bspRoot);
+		NativeDrawLevel_BspList(&ctx, renderList->list[slot].bspListStart, visFaceList, kind);
 	}
 	ctx.mosaic = NULL;
-	NativeDrawLevel_BspList(&ctx, renderList->bspListStart_FullDynamic, visFaceList, NATIVE_DRAW_LEVEL_LOW, visLeafList, mesh->bspRoot);
+	NativeDrawLevel_BspList(&ctx, renderList->bspListStart_FullDynamic, visFaceList, NATIVE_DRAW_LEVEL_LOW);
 
 	NativeDraw3D_EndLayer(layer);
 	NativeDrawLevel_LinkLayer(pb, primMem, layer, NATIVE_DRAW_LEVEL_MARKER_OT_INDEX);

@@ -12,14 +12,14 @@
 #include <psx/libgpu.h>
 #include <platform/native_pgxp.h>
 
-#define LUT_WIDTH              (256)
-#define LUT_HEIGHT             (256)
+#define LUT_WIDTH    (256)
+#define LUT_HEIGHT   (256)
 
-#define VRAM_WIDTH             (1024)
-#define VRAM_HEIGHT            (512)
+#define VRAM_WIDTH   (1024)
+#define VRAM_HEIGHT  (512)
 
-#define TPAGE_WIDTH            (256)
-#define TPAGE_HEIGHT           (256)
+#define TPAGE_WIDTH  (256)
+#define TPAGE_HEIGHT (256)
 
 #if defined(__vita__)
 #define MAX_VERTEX_BUFFER_SIZE (1u << 16)
@@ -37,10 +37,10 @@ typedef struct
 	// Native geometry (clipSpace set) holds screen xy times clip w here.
 	float x, y;
 	// Perspective divisor for PGXP polygons; 0 keeps retail affine mapping.
-	// Clip depth for native 3D vertices.
+	// Clip depth for native 3D vertices; object Z when clipSpace=2.
 	float w;
 	// Optional world depth, independent of the texture perspective divisor.
-	// Clip w (camera depth) for native 3D vertices.
+	// Clip w for native 3D vertices; depth coefficient when clipSpace=2.
 	float depth;
 	s16 page, clut;
 #else

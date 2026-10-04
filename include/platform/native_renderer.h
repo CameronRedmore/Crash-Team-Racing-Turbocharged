@@ -70,7 +70,7 @@ void NativeRenderer_SetDepthState(int enable, int write);
 void NativeRenderer_SetDepthAlwaysPass(int alwaysPass);
 #if NATIVE_DRAW3D_SUPPORTED
 // Share colour and stencil with the current target, use fresh private depth.
-int NativeRenderer_BeginIsolatedDepth(void);
+int NativeRenderer_BeginIsolatedDepth(const float bounds[4], int logicalWidth, int logicalHeight);
 void NativeRenderer_EndIsolatedDepth(void);
 #endif
 void NativeRenderer_SetStencilMode(int drawPrim);
@@ -85,6 +85,14 @@ void NativeRenderer_SetPSXDrawMaskSet(int maskSet);
 GrVertex *NativeRenderer_AllocateVertexBuffer(int count);
 void NativeRenderer_UpdateVertexBuffer(const GrVertex *vertices, int count);
 void NativeRenderer_DrawTriangles(int startVertex, int triangles);
+#if NATIVE_DRAW3D_SUPPORTED
+void NativeRenderer_DrawObjectTriangles(int startVertex, int triangles, u32 cullMode);
+void NativeRenderer_SetObjectGeometry(const NativeDraw3DTransform *transform, const float *view);
+#endif
+#ifndef __vita__
+void NativeRenderer_GetUploadCounts(u32 *vertices, u32 *uploads);
+void NativeRenderer_BeginUploadFrame(void);
+#endif
 void NativeRenderer_PushDebugLabel(const char *label);
 void NativeRenderer_PopDebugLabel(void);
 
