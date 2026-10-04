@@ -7,6 +7,10 @@
 
 #include <platform/native_options.h>
 
+#include <ctype.h>
+#include <errno.h>
+#include <limits.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <macros.h>
@@ -657,4 +661,108 @@ int NativeOptions_WriteAll(FILE *file)
 		}
 	}
 	return 1;
+}
+
+// Reads the next "key=value" line from file.
+//
+// Returns NATIVE_CONFIG_ENTRY with key/outValue filled on a well-formed line,
+// NATIVE_CONFIG_MALFORMED when the line was unusable, or NATIVE_CONFIG_EOF at
+// end of file. A malformed line is reported separately from end of file so the
+// caller can skip it and keep going - collapsing the two would make a single
+// bad line drop every setting after it.
+//
+// This replaced a single fscanf("%29[^=]=%d\n") in load_config, which had two
+// faults that a hand-edited config.ini could hit:
+//
+//   - A scanf scan set does not stop at end of line, so a value that failed to
+//     parse as a number left the file position mid-line and the *following*
+//     line was swallowed as part of the key. "key=abc\nlanguage=2" read the
+//     second entry as the key "abc\nlanguage", silently dropping language.
+//   - Worse, load_config looped while the result was not EOF. When the scan
+//     position sat on an '=' - a line starting with '=', or the ordinary typo
+//     "key==1" - the %29[^=] conversion failed without consuming anything and
+//     fscanf returned 0 forever. The loop never terminated and the game hung on
+//     startup at full CPU before any window or asset load happened.
+//
+// An over-long key is rejected rather than truncated: truncation could produce
+// a prefix that matches a real setting and silently change it.
+int NativeConfig_ReadEntry(FILE *file, char *key, int keySize, int *outValue)
+{
+	char line[128];
+	const char *keyStart;
+	char *equals;
+	char *parseEnd;
+	char *trimEnd;
+	long parsed;
+	size_t keyLength;
+
+	if ((file == NULL) || (key == NULL) || (outValue == NULL) || (keySize <= 0))
+	{
+		return NATIVE_CONFIG_EOF;
+	}
+
+	if (fgets(line, (int)sizeof(line), file) == NULL)
+	{
+		return NATIVE_CONFIG_EOF;
+	}
+
+	if (strchr(line, '\n') == NULL)
+	{
+		// fgets stopped early, so this line is longer than the buffer. Drain the
+		// remainder instead of parsing it as a second entry.
+		int character;
+		while ((character = fgetc(file)) != EOF && character != '\n')
+		{
+		}
+	}
+
+	// Ignore leading whitespace when measuring the key, so " key=1" and
+	// "key=1" mean the same thing.
+	keyStart = line;
+	while (isspace((unsigned char)*keyStart))
+	{
+		keyStart++;
+	}
+
+	equals = strchr(line, '=');
+	if ((equals == NULL) || (equals < keyStart))
+	{
+		return NATIVE_CONFIG_MALFORMED;
+	}
+
+	// Trim whitespace the key picked up before the '='.
+	trimEnd = equals;
+	while ((trimEnd > keyStart) && isspace((unsigned char)trimEnd[-1]))
+	{
+		trimEnd--;
+	}
+
+	keyLength = (size_t)(trimEnd - keyStart);
+	if ((keyLength == 0) || ((int)keyLength >= keySize))
+	{
+		return NATIVE_CONFIG_MALFORMED;
+	}
+
+	// strtol reports where the number ended, which is what makes a missing
+	// value ("key=") and trailing garbage ("key=1abc") distinguishable from a
+	// good read; %d accepted both and kept a stale value.
+	errno = 0;
+	parsed = strtol(equals + 1, &parseEnd, 10);
+	if ((parseEnd == equals + 1) || (errno == ERANGE) || (parsed < INT_MIN) || (parsed > INT_MAX))
+	{
+		return NATIVE_CONFIG_MALFORMED;
+	}
+	while (isspace((unsigned char)*parseEnd))
+	{
+		parseEnd++;
+	}
+	if (*parseEnd != '\0')
+	{
+		return NATIVE_CONFIG_MALFORMED;
+	}
+
+	memcpy(key, keyStart, keyLength);
+	key[keyLength] = '\0';
+	*outValue = (int)parsed;
+	return NATIVE_CONFIG_ENTRY;
 }

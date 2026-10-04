@@ -273,7 +273,7 @@ static int NativeConfig_SetCheat(const char *key, int value)
 
 void load_config(void)
 {
-	char buffer[30];
+	char buffer[NATIVE_CONFIG_KEY_MAX];
 	int value;
 	gNativeAspectRatio = NATIVE_ASPECT_16_9;
 	gNativeFovDegrees = 0;
@@ -288,11 +288,21 @@ void load_config(void)
 		// Aliased keys resolve by precedence, not file order, so the state that
 		// tracks which alias won has to be reset per pass.
 		NativeOptions_BeginLoad();
-		// %29 bounds the key scan to buffer. An unbounded %[^=] overflows the
-		// stack on any hand-written key longer than 29 characters.
-		while (EOF != fscanf(config, "%29[^=]=%d\n", buffer, &value))
+		// One line per iteration. A malformed line is skipped, not fatal, and
+		// never stalls the pass; see NativeConfig_ReadEntry.
+		for (;;)
 		{
-			const struct NativeOption *option = NativeOption_Find(buffer);
+			int read = NativeConfig_ReadEntry(config, buffer, (int)sizeof(buffer), &value);
+			const struct NativeOption *option;
+			if (read == NATIVE_CONFIG_EOF)
+			{
+				break;
+			}
+			if (read == NATIVE_CONFIG_MALFORMED)
+			{
+				continue;
+			}
+			option = NativeOption_Find(buffer);
 			if (option != NULL)
 			{
 				NativeOption_Apply(option, value);

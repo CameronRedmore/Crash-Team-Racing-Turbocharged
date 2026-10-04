@@ -139,4 +139,17 @@ void NativeOptions_BeginLoad(void);
 // Writes every persistent option as "key=value\n" in registry order.
 int NativeOptions_WriteAll(FILE *file);
 
+// Largest config.ini key NativeConfig_ReadEntry reports. Longer keys are
+// rejected rather than truncated. Well clear of the longest key the game
+// writes: "default_hud_speedometer" (23) and "bind_pad_triangle" (17).
+#define NATIVE_CONFIG_KEY_MAX   64
+
+// Reads the next "key=value" line from file into key (at most keySize bytes)
+// and outValue. Always consumes the whole line, so malformed input cannot
+// affect the entries that follow it.
+#define NATIVE_CONFIG_ENTRY     (1)  // a well-formed line was returned
+#define NATIVE_CONFIG_MALFORMED (0)  // unusable line; skip it and keep reading
+#define NATIVE_CONFIG_EOF       (-1) // nothing left to read
+int NativeConfig_ReadEntry(FILE *file, char *key, int keySize, int *outValue);
+
 #endif
