@@ -495,9 +495,11 @@ void NativeRenderer_EnableGamePresentation(int enabled)
 }
 
 #ifndef __vita__
-// Blit the multisampled samples into the target's single-sample texture.
+// Whether s_supersampleResolveTarget has allocated storage yet. Paired with it,
+// and only ever touched from this file.
 global_variable b32 s_supersampleResolveTargetReady = false;
 
+// Blit the multisampled samples into the target's single-sample texture.
 internal void NativeRenderer_ResolveMultisample(const struct NativeRenderTarget *target)
 {
 	if (target->samples <= 1)

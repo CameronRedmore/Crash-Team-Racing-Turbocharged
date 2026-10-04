@@ -290,10 +290,7 @@ internal void NativeRenderer_DestroyAllTargets(void);
 internal void NativeRenderer_InitRenderTarget(struct NativeRenderTarget *target);
 internal void NativeRenderer_DestroyRenderTarget(struct NativeRenderTarget *target);
 internal void NativeRenderer_EnsureRenderTarget(struct NativeRenderTarget *target, int width, int height);
-internal void NativeRenderer_EnsureMultisampleStorage(struct NativeRenderTarget *target, int samples);
 internal GLuint NativeRenderer_GetDrawFramebuffer(const struct NativeRenderTarget *target);
-internal void NativeRenderer_ResolveMultisample(const struct NativeRenderTarget *target);
-internal const struct NativeRenderTarget *NativeRenderer_ResolveMainRenderTarget(void);
 internal void NativeRenderer_BindMainRenderTarget(void);
 internal void NativeRenderer_LoadRenderTargetFromVRAM(struct NativeRenderTarget *target, int x, int y, int logicalWidth, int logicalHeight);
 internal void NativeRenderer_DrawVRAMRegion(int x, int y, int width, int height);
@@ -301,7 +298,15 @@ internal void NativeRenderer_SetPresentationAspect(int width, int height);
 internal void NativeRenderer_UpdatePresentationViewport(void);
 internal void NativeRenderer_UpdateGamePresentationAspect(void);
 internal void NativeRenderer_ClearPresentationBars(void);
+
+// MSAA and supersample resolve exist only where the renderer owns a
+// multisampled main target; Vita has neither, so neither do these.
+#ifndef __vita__
+internal void NativeRenderer_EnsureMultisampleStorage(struct NativeRenderTarget *target, int samples);
+internal void NativeRenderer_ResolveMultisample(const struct NativeRenderTarget *target);
+internal const struct NativeRenderTarget *NativeRenderer_ResolveMainRenderTarget(void);
 internal float NativeRenderer_SupersampleScale(int mode);
+#endif
 
 // native_renderer_shaders.c -- shader objects and the blit pipelines.
 internal void NativeRenderer_DestroyPSXShaders(void);

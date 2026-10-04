@@ -126,9 +126,11 @@ int gNativeRelicRaceResultTier = -1;
 #include "platform/native_platform.c"
 #include "platform/native_replay_scheduler.c"
 // The renderer is split into subsystems that share one translation unit with
-// the rest of the game; platform/native_renderer_internal.h is their contract.
-// Order carries no meaning beyond readability -- the header declares the
-// shared state and the cross-module operations.
+// the rest of the game; platform/native_renderer_internal.h is their contract
+// and carries the shared state and the cross-module operations, so those do
+// not depend on order. What a module keeps to itself -- the PSX shader objects
+// and their variant enum in native_renderer_shaders.c -- is still reached by a
+// later module through the unity build, so keep shaders before gpu_state.
 #include "platform/renderer/native_renderer_core.c"
 #include "platform/renderer/native_renderer_shaders.c"
 #include "platform/renderer/native_renderer_textures.c"

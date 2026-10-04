@@ -20,7 +20,6 @@
 #include <macros.h>
 #include <SDL3/SDL.h>
 
-#include "platform/native_renderer_types.h"
 #include "platform/native_renderer_internal.h"
 
 global_variable BlendMode s_previousBlendMode = BM_NONE;

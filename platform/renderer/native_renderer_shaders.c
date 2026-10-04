@@ -15,6 +15,10 @@
 
 #include "platform/native_log.h"
 #include "platform/native_options.h"
+// The text-SDF variant of the PSX shader passes the same edge constants the
+// font renderer uses, so they have to be visible here rather than arriving
+// from whichever file happened to be included first.
+#include "platform/native_font.h"
 #include "platform/native_renderer_internal.h"
 
 #ifdef __vita__
