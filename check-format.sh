@@ -16,7 +16,17 @@ set -euo pipefail
 # that passes locally can fail in CI purely because of the tool version. If
 # this needs to change, reformat the affected files in the same commit that
 # bumps it, so that diff stays reviewable.
-CLANG_FORMAT_VERSION="23.1.1"
+#
+# The pin lives in .clang-format-version because three separate things have to
+# agree on it: this script, .githooks/pre-commit, and the CI job that installs
+# the tool. Three copies kept in sync by a comment is how they drift.
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+clang_format_version_file="${script_dir}/.clang-format-version"
+if [[ ! -s "${clang_format_version_file}" ]]; then
+    echo "check-format: ${clang_format_version_file} is missing or empty" >&2
+    exit 2
+fi
+CLANG_FORMAT_VERSION="$(tr -d '[:space:]' < "${clang_format_version_file}")"
 
 # Files this fork wrote from scratch. Derived from the diff rather than a
 # hand-kept list, so it cannot drift: a file counts as authored when the fork

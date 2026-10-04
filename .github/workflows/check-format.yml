@@ -5,9 +5,10 @@ name: Check formatting
 # scoped to the diff: your lines must conform, but you are never forced to
 # reindent code you did not write.
 #
-# The version is pinned in check-format.sh and mirrored here. clang-format's
-# output changes between releases, so an unpinned checker disagrees with
-# whatever a contributor ran locally.
+# The version is pinned in .clang-format-version, which this job, check-format.sh
+# and .githooks/pre-commit all read. clang-format's output changes between
+# releases, so an unpinned checker disagrees with whatever a contributor ran
+# locally.
 
 on:
   pull_request:
@@ -33,8 +34,6 @@ jobs:
   format:
     name: clang-format (changed lines)
     runs-on: ubuntu-latest
-    env:
-      CLANG_FORMAT_VERSION: "23.1.1"
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -42,11 +41,25 @@ jobs:
           # Needed to diff against the base revision and find merge bases.
           fetch-depth: 0
 
+      # The pin lives in .clang-format-version, the same file check-format.sh
+      # and .githooks/pre-commit read, so the three cannot drift apart.
+      - name: Read pinned clang-format version
+        run: |
+          set -euo pipefail
+          if [[ ! -s .clang-format-version ]]; then
+            echo ".clang-format-version is missing or empty" >&2
+            exit 1
+          fi
+          version="$(tr -d '[:space:]' < .clang-format-version)"
+          echo "CLANG_FORMAT_VERSION=${version}" >> "$GITHUB_ENV"
+          echo "Pinned clang-format ${version}"
+
       # Installed from PyPI rather than apt so the exact version the script
       # pins is the exact version that runs. Ubuntu's clang-format packages
       # lag the LLVM releases.
       - name: Install pinned clang-format
         run: |
+          set -euo pipefail
           python3 -m pip install --disable-pip-version-check "clang-format==${CLANG_FORMAT_VERSION}"
           clang-format --version
           command -v git-clang-format

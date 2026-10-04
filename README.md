@@ -208,6 +208,43 @@ In order to be able to auto submit your new records in Time Trial and Relic Race
 - Fixed a bug causing the Uka-Uka/Aku-Aku powerup to occasionally enter in stale setups, resulting in audio glitches (eg: powerup music playing permanently or playing when you were recovered from an out of track).
 - Added ability to skip the intro from the very first frame of the SCEA copyright screen by pressing START.
 
+## Building from source
+
+Requires a 32-bit target: the game is a PS1 decompilation and still assumes
+4-byte pointers. `CMakePresets.json` has working presets for all three
+platforms — `cmake --preset linux-gcc-i686-release && cmake --build
+build-linux-gcc-i686-release`.
+
+Tests run under `ctest --test-dir <build>`. The renderer integration tests are
+off by default because five of them need a GL context; configure with
+`-DCTR_NATIVE_RENDERER_TESTS=ON` to build them. The 23 tests without a `gpu`
+label run anywhere, with no display and no GPU:
+
+```
+ctest --test-dir build -LE gpu     # display-independent subset
+ctest --test-dir build -L gpu      # the five that need a GL context
+```
+
+### Formatting
+
+The decompiled upstream tree is not clang-format clean and never will be, so
+the standard is scoped to the diff: your lines must conform, but you are never
+forced to reindent code you did not write. Files this fork authored outright
+are formatted in full.
+
+The clang-format version is pinned in `.clang-format-version`, which
+`check-format.sh`, the pre-commit hook and CI all read — output differs between
+releases, so an unpinned checker disagrees with whatever you ran locally.
+
+To get the format check on `git commit`:
+
+```
+git config core.hooksPath .githooks
+```
+
+This is not set automatically and is per-clone, so without it the gate is CI
+only. `SKIP_FORMAT_HOOK=1` bypasses it for a single commit.
+
 ## vitaGL flags for compilation
 
 `HAVE_SHADER_CACHE=1 NO_DEBUG=1 READBACKS_SPEEDHACK=1 CIRCULAR_POOL_SPEEDHACK=1`

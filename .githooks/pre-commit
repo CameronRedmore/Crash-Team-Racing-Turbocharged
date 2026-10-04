@@ -17,8 +17,14 @@ if ! command -v clang-format >/dev/null 2>&1 || ! command -v git-clang-format >/
     exit 0
 fi
 
-# Keep in sync with CLANG_FORMAT_VERSION in check-format.sh and the CI job.
-pinned=23.1.1
+# Read the pin from the same file check-format.sh and the CI job read, rather
+# than keeping a fourth copy here.
+version_file="$(dirname "$0")/../.clang-format-version"
+if [ ! -s "$version_file" ]; then
+    echo "pre-commit: .clang-format-version missing; skipping format check" >&2
+    exit 0
+fi
+pinned=$(tr -d '[:space:]' < "$version_file")
 found=$(clang-format --version | sed -n 's/.*version \([0-9][0-9.]*\).*/\1/p')
 if [ "$found" != "$pinned" ]; then
     echo "pre-commit: clang-format $found found, expected $pinned; skipping local check" >&2
