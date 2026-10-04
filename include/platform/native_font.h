@@ -7,7 +7,8 @@
 // Enhancements > Font: replaces the retail 2D text glyphs with a TrueType
 // font. The font is rasterised into a cached signed distance field atlas, so
 // glyphs stay sharp at any output resolution, and drawn with the retail vertex
-// colours plus a black outline (see gte_shader_text_sdf in native_renderer.c).
+// colours plus a black outline (see gte_shader_text_sdf in
+// platform/renderer/native_renderer_shaders.c).
 //
 // To add a font, put the .ttf under assets/fonts, add an id below and a row
 // to s_nativeFonts in native_font.c. The menu cycles through every id.

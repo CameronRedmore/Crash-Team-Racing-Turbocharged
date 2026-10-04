@@ -11,8 +11,9 @@
  * .c file), so declaring a variable here is enough for every module to see it.
  * That is why the shared state below is declared global_variable (static), not
  * extern: it keeps exactly the internal linkage these had in the single-file
- * renderer, so splitting the file cannot widen who may touch them. The few
- * plain externs are the knobs defined outside the renderer altogether.
+ * renderer, so splitting the file cannot widen who may touch them. The plain
+ * externs are the handful of names that other translation units share -- either
+ * defined here and read elsewhere, or defined elsewhere and read here.
  * Anything used by only one module stays static in that module and is not
  * declared here at all.
  *
@@ -163,22 +164,25 @@ struct NativeRendererPassState
 // is not visible outside this translation unit.
 // ---------------------------------------------------------------------------
 
-// Window and user-tunable renderer knobs. These are plain globals, defined in
-// the renderer but read by other platform code, so they keep external linkage.
+// Renderer-owned knobs that other translation units read. These are defined in
+// native_renderer_core.c and keep external linkage because platform code and the
+// option tests reach them by name.
 extern int g_windowWidth;
 extern int g_windowHeight;
 extern int g_dbg_wireframeMode;
 extern int g_dbg_texturelessMode;
 extern int g_cfg_bilinearFiltering;
 
+// Defined outside the renderer and read by it.
+extern SDL_Window *g_window;
+
 // gpu_state: last value pushed to GL, so repeated state changes stay cheap.
-// Writes go through the setters or the Invalidate* helpers below. These are
-// shared rather than private because native_renderer_targets.c parks and
-// restores the whole set around LoadRenderTargetFromVRAM; its save/restore is
-// close to BeginUtilityPass/EndUtilityPass but not identical -- it leaves the
-// framebuffer bound and writes depth with depth-write on -- so the two are not
-// yet one function. The scissor and stencil caches, by contrast, are private to
-// gpu_state.
+// Invalidation goes through the Invalidate* helpers below rather than a direct
+// write, but three modules still read and restore these fields themselves --
+// native_renderer_targets.c around LoadRenderTargetFromVRAM, native_renderer_vram.c
+// around RestoreVRAMState, and native_renderer_device.c for the always-pass depth
+// knob -- so they are not yet private to gpu_state. The scissor-rect and stencil
+// caches, which nothing else touches, are.
 global_variable BlendMode s_previousBlendMode;
 global_variable int s_previousMixedSTPBlend;
 global_variable int s_previousDepthMode;
@@ -302,8 +306,10 @@ internal void NativeRenderer_InitVRAMPipelines(void);
 internal void NativeRenderer_InitRG8LUT(void);
 
 // native_renderer_gpu_state.c -- cached GL state.
-// The caches themselves are private to that module; these are how the rest of
-// the renderer drops them when it changes GL state behind a setter's back.
+// Invalidation entry points: how the rest of the renderer drops a cache when it
+// changes GL state behind a setter's back. The scissor-rect and stencil caches
+// are private to that module; the rest are still read directly by targets, vram
+// and device, as noted where they are declared.
 internal void NativeRenderer_InvalidateTextureBinding(void);
 internal void NativeRenderer_InvalidateTextureBindingIfCurrent(TextureID texture);
 internal void NativeRenderer_InvalidateBindingCache(void);
@@ -313,6 +319,9 @@ internal void NativeRenderer_SetScissorState(int enable);
 internal void NativeRenderer_EnableDepth(int enable);
 internal void NativeRenderer_SetViewPort(int x, int y, int width, int height);
 internal void NativeRenderer_SetWireframe(int enable);
+// The save/restore that wraps a full-screen pass lives with the state it saves.
+internal void NativeRenderer_BeginUtilityPass(struct NativeRendererPassState *state, GLuint framebuffer, int x, int y, int width, int height);
+internal void NativeRenderer_EndUtilityPass(const struct NativeRendererPassState *state);
 
 // native_renderer_vram.c -- CPU mirror and its dirty tracking.
 internal int NativeRenderer_ClipVRAMRect(RECT16 *out, int x, int y, int w, int h);
@@ -336,9 +345,8 @@ internal void NativeRenderer_BeginP4Frame(void);
 internal void NativeRenderer_DestroyP4Textures(void);
 #endif
 
-// native_renderer_passes.c -- full-screen offscreen passes.
-internal void NativeRenderer_BeginUtilityPass(struct NativeRendererPassState *state, GLuint framebuffer, int x, int y, int width, int height);
-internal void NativeRenderer_EndUtilityPass(const struct NativeRendererPassState *state);
+// native_renderer_passes.c -- full-screen offscreen passes. The state
+// save/restore around them is in native_renderer_gpu_state.c, listed above.
 internal void NativeRenderer_GpuPackTextureToVRAM(TextureID sourceTexture, int x, int y, int w, int h, b32 flipY);
 #ifndef __vita__
 internal void NativeRenderer_DestroyPassTargets(void);

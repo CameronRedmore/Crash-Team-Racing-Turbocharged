@@ -5,12 +5,13 @@
  * wraps a full-screen utility pass.
  *
  * The caches behind the setters live here. Invalidation goes through the
- * Invalidate and Reset entry points rather than a direct write, with one
- * exception: LoadRenderTargetFromVRAM in native_renderer_targets.c snapshots
- * and restores the whole set itself, because its pass leaves the target
- * framebuffer bound and writes depth with depth-write on, so it cannot use
- * BeginUtilityPass/EndUtilityPass. That is why these fields are still declared
- * in the internal header rather than kept private to this file.
+ * Invalidate and Reset entry points rather than a direct write. They are not
+ * fully private yet: native_renderer_targets.c, native_renderer_vram.c and
+ * native_renderer_device.c still read or restore some of them directly, the
+ * largest case being LoadRenderTargetFromVRAM, which snapshots the whole set
+ * because its pass leaves the target framebuffer bound and writes depth with
+ * depth-write on, so it cannot use BeginUtilityPass/EndUtilityPass. That is why
+ * these fields are still declared in the internal header.
  *
  * Derived from REDRIVER2/PsyCross MIT source:
  * externals/PsyCross/src/render/PsyX_render.cpp
@@ -176,8 +177,9 @@ internal void NativeRenderer_InvalidateBindingCache(void)
 	s_lastBoundTexture = (TextureID)-1;
 }
 
-// A new scene starts with no texture bound at all, which is a known state
-// rather an unknown one, so this records GL texture 0 instead of -1.
+// BeginScene records GL texture 0 as bound. The original wrote 0 rather than
+// the -1 the invalidation helpers use, and that is preserved exactly; whether a
+// scene really always starts with nothing bound is not established here.
 internal void NativeRenderer_ResetTextureBinding(void)
 {
 	s_lastBoundTexture = 0;

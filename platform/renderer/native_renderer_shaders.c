@@ -378,14 +378,14 @@ global_variable const char *gpu_shader_common = "	centroid varying vec4 v_texcoo
                                                 "	varying float v_z;\n";
 #endif
 
-const char *gte_shader_4 = GPU_FRAGMENT_SAMPLE_SHADER(4);
-const char *gte_shader_8 = GPU_FRAGMENT_SAMPLE_SHADER(8);
-const char *gte_shader_16 = GPU_FRAGMENT_SAMPLE_SHADER(16);
+global_variable const char *gte_shader_4 = GPU_FRAGMENT_SAMPLE_SHADER(4);
+global_variable const char *gte_shader_8 = GPU_FRAGMENT_SAMPLE_SHADER(8);
+global_variable const char *gte_shader_16 = GPU_FRAGMENT_SAMPLE_SHADER(16);
 #ifdef __vita__
-const char *gte_shader_untextured = "\tuniform float psxDrawMaskSet;\n"
-                                    "\tvoid main() {\n"
-                                    "\t\tgl_FragColor.rgb = v_color.rgb * (248.0 / 255.0);\n"
-                                    "\t\tgl_FragColor.a = psxDrawMaskSet;\n" GPU_PSX_BLEND_APPLY "\t}\n";
+global_variable const char *gte_shader_untextured = "\tuniform float psxDrawMaskSet;\n"
+                                                    "\tvoid main() {\n"
+                                                    "\t\tgl_FragColor.rgb = v_color.rgb * (248.0 / 255.0);\n"
+                                                    "\t\tgl_FragColor.a = psxDrawMaskSet;\n" GPU_PSX_BLEND_APPLY "\t}\n";
 
 #define GPU_RGBA_FRAGMENT_OUTPUT                      \
 	"		gl_FragColor.rgb = color.rgb * v_color.rgb;\n" \
@@ -396,37 +396,37 @@ const char *gte_shader_untextured = "\tuniform float psxDrawMaskSet;\n"
 	"		gl_FragColor.a = psxDrawMaskSet;\n"
 #endif
 
-const char *gte_shader_32_rgba = "	uniform sampler2D s_texture;\n" GPU_SEMI_TRANS_UNIFORM "	uniform float psxDrawMaskSet;\n"
-                                 "	uniform vec2 texelSize;\n"
-                                 "	void main() {\n"
-                                 "		vec2 tc = v_texcoord.xy * texelSize + texelSize * 0.5;\n"
-                                 "		vec4 color = texture2D(s_texture, tc);\n"
+global_variable const char *gte_shader_32_rgba = "	uniform sampler2D s_texture;\n" GPU_SEMI_TRANS_UNIFORM "	uniform float psxDrawMaskSet;\n"
+                                                 "	uniform vec2 texelSize;\n"
+                                                 "	void main() {\n"
+                                                 "		vec2 tc = v_texcoord.xy * texelSize + texelSize * 0.5;\n"
+                                                 "		vec4 color = texture2D(s_texture, tc);\n"
 #ifndef __vita__
-                                 // Pass 4 resolves native HUD coverage with edge UVs.
-                                 "\t\tif (psxSemiTransPass == 4) {\n"
-                                 "\t\t\tcolor = texture2D(s_texture, v_texcoord.xy * texelSize);\n"
-                                 "\t\t\tgl_FragColor = vec4(color.rgb * psxShade().rgb, color.a);\n"
-                                 "\t\t\treturn;\n"
-                                 "\t\t}\n"
+                                                 // Pass 4 resolves native HUD coverage with edge UVs.
+                                                 "\t\tif (psxSemiTransPass == 4) {\n"
+                                                 "\t\t\tcolor = texture2D(s_texture, v_texcoord.xy * texelSize);\n"
+                                                 "\t\t\tgl_FragColor = vec4(color.rgb * psxShade().rgb, color.a);\n"
+                                                 "\t\t\treturn;\n"
+                                                 "\t\t}\n"
 #endif
 #ifdef __vita__
-                                 "#if defined(PSX_PASS_NON_STP) || defined(PSX_PASS_STP)\n"
-                                 "		if (color.a < 0.25) { discard; }\n"
-                                 "		float sampledStp = step(0.75, color.a);\n"
-                                 "#ifdef PSX_PASS_NON_STP\n		if (sampledStp >= 0.5) { discard; }\n#endif\n"
-                                 "#ifdef PSX_PASS_STP\n		if (sampledStp < 0.5) { discard; }\n#endif\n"
-                                 "#else\n"
-                                 "		if (color.a < 0.5) { discard; }\n"
-                                 "#endif\n"
+                                                 "#if defined(PSX_PASS_NON_STP) || defined(PSX_PASS_STP)\n"
+                                                 "		if (color.a < 0.25) { discard; }\n"
+                                                 "		float sampledStp = step(0.75, color.a);\n"
+                                                 "#ifdef PSX_PASS_NON_STP\n		if (sampledStp >= 0.5) { discard; }\n#endif\n"
+                                                 "#ifdef PSX_PASS_STP\n		if (sampledStp < 0.5) { discard; }\n#endif\n"
+                                                 "#else\n"
+                                                 "		if (color.a < 0.5) { discard; }\n"
+                                                 "#endif\n"
 #else
-                                 "		if (psxSemiTransPass == 0) {\n"
-                                 "			if (color.a < 0.5) { discard; }\n"
-                                 "		} else {\n"
-                                 "			if (color.a < 0.25) { discard; }\n"
-                                 "			float sampledStp = step(0.75, color.a);\n"
-                                 "			if (psxSemiTransPass == 1 && sampledStp >= 0.5) { discard; }\n"
-                                 "			if (psxSemiTransPass == 2 && sampledStp < 0.5) { discard; }\n"
-                                 "		}\n"
+                                                 "		if (psxSemiTransPass == 0) {\n"
+                                                 "			if (color.a < 0.5) { discard; }\n"
+                                                 "		} else {\n"
+                                                 "			if (color.a < 0.25) { discard; }\n"
+                                                 "			float sampledStp = step(0.75, color.a);\n"
+                                                 "			if (psxSemiTransPass == 1 && sampledStp >= 0.5) { discard; }\n"
+                                                 "			if (psxSemiTransPass == 2 && sampledStp < 0.5) { discard; }\n"
+                                                 "		}\n"
 #endif
     GPU_RGBA_FRAGMENT_OUTPUT GPU_PSX_BLEND_APPLY "	}\n";
 
@@ -436,17 +436,17 @@ const char *gte_shader_32_rgba = "	uniform sampler2D s_texture;\n" GPU_SEMI_TRAN
 // Retail font texels are mid grey under a 2x shade, so half the shade gives
 // the retail fill colour; the outline is black like the retail glyphs.
 // Blending only writes colour, which keeps the PS1 mask bit in alpha intact.
-const char *gte_shader_text_sdf = "	uniform sampler2D s_texture;\n"
-                                  "	uniform vec2 texelSize;\n"
-                                  "	uniform vec2 sdfEdges; // glyph edge, outline edge\n"
-                                  "	void main() {\n"
-                                  "		float dist = texture2D(s_texture, v_texcoord.xy * texelSize).r;\n"
-                                  "		float aa = max(fwidth(dist) * 0.7, 1.0 / 255.0);\n"
-                                  "		float shape = smoothstep(sdfEdges.y - aa, sdfEdges.y + aa, dist);\n"
-                                  "		if (shape <= 0.0) { discard; }\n"
-                                  "		float body = smoothstep(sdfEdges.x - aa, sdfEdges.x + aa, dist);\n"
-                                  "		gl_FragColor = vec4(clamp(psxShade().rgb * 0.5, 0.0, 1.0) * body, shape);\n"
-                                  "	}\n";
+global_variable const char *gte_shader_text_sdf = "	uniform sampler2D s_texture;\n"
+                                                  "	uniform vec2 texelSize;\n"
+                                                  "	uniform vec2 sdfEdges; // glyph edge, outline edge\n"
+                                                  "	void main() {\n"
+                                                  "		float dist = texture2D(s_texture, v_texcoord.xy * texelSize).r;\n"
+                                                  "		float aa = max(fwidth(dist) * 0.7, 1.0 / 255.0);\n"
+                                                  "		float shape = smoothstep(sdfEdges.y - aa, sdfEdges.y + aa, dist);\n"
+                                                  "		if (shape <= 0.0) { discard; }\n"
+                                                  "		float body = smoothstep(sdfEdges.x - aa, sdfEdges.x + aa, dist);\n"
+                                                  "		gl_FragColor = vec4(clamp(psxShade().rgb * 0.5, 0.0, 1.0) * body, shape);\n"
+                                                  "	}\n";
 #endif
 
 #ifdef __vita__

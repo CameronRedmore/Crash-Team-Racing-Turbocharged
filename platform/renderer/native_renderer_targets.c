@@ -18,8 +18,11 @@
 #include "platform/native_renderer_internal.h"
 
 // Set to the sample count the driver refused, so a failed MSAA allocation
-// is not retried on every target every frame.
+// is not retried on every target every frame. Vita has no MSAA path, so this
+// is guarded with the code that uses it.
+#ifndef __vita__
 global_variable int s_multisampleFailedSamples = 0;
+#endif
 
 // Aspect the presentation viewport is built from.
 global_variable int s_presentAspectW = 4;
@@ -350,11 +353,15 @@ internal void NativeRenderer_DrawVRAMRegion(int x, int y, int width, int height)
 }
 
 // This snapshots the gpu_state caches by hand rather than calling
-// BeginUtilityPass/EndUtilityPass, and the difference is load-bearing: this
-// pass leaves the target framebuffer bound when it finishes, writes depth with
-// depth-write enabled, and restores the scissor state, whereas EndUtilityPass
-// rebinds the main or offscreen framebuffer. Merging the two would change what
-// the submit run sees afterwards.
+// BeginUtilityPass/EndUtilityPass, and the difference is load-bearing. Three
+// things differ, all of them observable by the submit run that follows:
+//   - EndUtilityPass rebinds the main or offscreen framebuffer and its
+//     viewport; this leaves the target framebuffer bound.
+//   - UpdateVRAM runs here after the state is saved, not before.
+//   - There is a trailing glClear of depth and stencil, which is the only
+//     reason SetDepthState is called with depth-write on -- depth test is off,
+//     so the draw itself writes no depth.
+// Merging the two would change what the submit run sees afterwards.
 internal void NativeRenderer_LoadRenderTargetFromVRAM(struct NativeRenderTarget *target, int x, int y, int logicalWidth, int logicalHeight)
 {
 	const ShaderID previousShader = s_previousShader;

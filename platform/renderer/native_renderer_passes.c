@@ -41,9 +41,11 @@ internal void NativeRenderer_GpuPackTextureToVRAM(TextureID sourceTexture, int x
 	NativeRenderer_MarkGpuVRAMNewer(x, y, w, h);
 }
 
+#ifndef __vita__
+// Whether the projected-world target has been seeded with the scene this frame.
+// Guarded with the pass itself: Vita has no projected-world path.
 global_variable b32 s_projectedWorldSeeded = false;
 
-#ifndef __vita__
 // Full-resolution greyscale copy of the main target, used as the pause backdrop.
 global_variable struct NativeRenderTarget s_pauseBackgroundTarget;
 global_variable b32 s_pauseBackgroundTargetReady = false;
