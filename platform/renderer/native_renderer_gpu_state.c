@@ -2,9 +2,15 @@
  * GPU state: the cached blend/depth/stencil/scissor/viewport setters the PSX
  * submit run drives, draw-environment projection and clipping, texture and
  * shader selection, the isolated-depth overlay pass, and the save/restore that
- * wraps a full-screen utility pass. The caches behind the setters live here and
- * are not written directly by other modules; they invalidate through the
- * Invalidate and Reset entry points instead.
+ * wraps a full-screen utility pass.
+ *
+ * The caches behind the setters live here. Invalidation goes through the
+ * Invalidate and Reset entry points rather than a direct write, with one
+ * exception: LoadRenderTargetFromVRAM in native_renderer_targets.c snapshots
+ * and restores the whole set itself, because its pass leaves the target
+ * framebuffer bound and writes depth with depth-write on, so it cannot use
+ * BeginUtilityPass/EndUtilityPass. That is why these fields are still declared
+ * in the internal header rather than kept private to this file.
  *
  * Derived from REDRIVER2/PsyCross MIT source:
  * externals/PsyCross/src/render/PsyX_render.cpp

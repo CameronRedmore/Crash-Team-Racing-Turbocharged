@@ -349,6 +349,12 @@ internal void NativeRenderer_DrawVRAMRegion(int x, int y, int width, int height)
 	NativeRenderer_DrawTriangles(0, 2);
 }
 
+// This snapshots the gpu_state caches by hand rather than calling
+// BeginUtilityPass/EndUtilityPass, and the difference is load-bearing: this
+// pass leaves the target framebuffer bound when it finishes, writes depth with
+// depth-write enabled, and restores the scissor state, whereas EndUtilityPass
+// rebinds the main or offscreen framebuffer. Merging the two would change what
+// the submit run sees afterwards.
 internal void NativeRenderer_LoadRenderTargetFromVRAM(struct NativeRenderTarget *target, int x, int y, int logicalWidth, int logicalHeight)
 {
 	const ShaderID previousShader = s_previousShader;
