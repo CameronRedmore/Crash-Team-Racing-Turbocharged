@@ -83,8 +83,68 @@ static void AspectTest_GamePaths(void)
 
 		const int invisibleLeaves[] = {0};
 		const int expanded = ratio == NATIVE_ASPECT_21_9 || ratio == NATIVE_ASPECT_32_9;
-		assert(RenderLists_IsVisible(invisibleLeaves, 0) == expanded);
+		// The camera-cell mask stays authoritative in the leaf lookup at every ratio and FOV.
+		// Expanded visibility no longer overrides it here; it recovers mask-rejected children
+		// in RenderLists_PushChild, where the camera frustum and a bounded recovery range decide.
+		assert(!RenderLists_IsVisible(invisibleLeaves, 0));
 		assert((void *)RenderBucket_GetVisibleLevelInstances(&tracker.cameraDC[0]) == (expanded ? (void *)allInstances : (void *)pvsInstances));
+
+		// End to end: a leaf the camera-cell mask hides must stay hidden at the
+		// retail framing, and must come back once the frustum is wide enough to
+		// want it. The leaf box sits wholly outside the retail frustum edge at
+		// its own depth and wholly inside the 90 degree one. Runs at 16:9 so the
+		// aspect itself is not what turns expanded visibility on.
+		if (ratio == NATIVE_ASPECT_16_9)
+		{
+			struct BSP tree[2];
+			struct VisMemBspListNode nodes[2];
+			struct DrawLevelOvr1PRenderList renderList;
+			const int hiddenLeafMask = 0;
+			memset(tree, 0, sizeof(tree));
+			memset(nodes, 0, sizeof(nodes));
+			memset(&renderList, 0, sizeof(renderList));
+
+			tree[0].box.min.x = -2000;
+			tree[0].box.min.y = -2000;
+			tree[0].box.min.z = 0;
+			tree[0].box.max.x = 2000;
+			tree[0].box.max.y = 2000;
+			tree[0].box.max.z = 1000;
+			tree[0].data.branch.childID[0] = (BspChildId)(1 | BSP_CHILD_ID_LEAF_FLAG);
+			tree[0].data.branch.childID[1] = -1;
+
+			tree[1].flag = BSP_NODE_FLAG_LEAF | BSP_RENDER_LEAF_FLAG_4X4;
+			tree[1].box.min.x = 250;
+			tree[1].box.min.y = -40;
+			tree[1].box.min.z = 200;
+			tree[1].box.max.x = 270;
+			tree[1].box.max.y = 40;
+			tree[1].box.max.z = 220;
+
+			struct PushBuffer *walkPb = &tracker.pushBuffer[0];
+			memset(walkPb, 0, sizeof(*walkPb));
+			walkPb->rect.w = 512;
+			walkPb->rect.h = 216;
+			walkPb->distanceToScreen_PREV = 256;
+			PushBuffer_UpdateFrustum(walkPb);
+
+			gNativeFovDegrees = 0;
+			assert(RenderLists_Init1P2P(tree, &hiddenLeafMask, walkPb, (u32)&renderList, nodes, 1) == 0);
+
+			memset(&renderList, 0, sizeof(renderList));
+			gNativeFovDegrees = 90;
+			PushBuffer_UpdateFrustum(walkPb);
+			assert(RenderLists_Init1P2P(tree, &hiddenLeafMask, walkPb, (u32)&renderList, nodes, 1) == 1);
+
+			// A leaf beyond even the widened frustum stays culled, so the
+			// recovery does not simply switch the walk off.
+			memset(&renderList, 0, sizeof(renderList));
+			tree[1].box.min.x = 4000;
+			tree[1].box.max.x = 4020;
+			assert(RenderLists_Init1P2P(tree, &hiddenLeafMask, walkPb, (u32)&renderList, nodes, 1) == 0);
+
+			gNativeFovDegrees = previousFov;
+		}
 		assert(fabs(AH_Map_MarkerAspectX() - (512.0 / 216.0 / (4.0 / 3.0)) * scales[ratio]) < 1e-6);
 
 		// Map origin, artwork and markers move together toward the screen

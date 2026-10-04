@@ -1,5 +1,9 @@
 #include <common.h>
 
+#if defined(CTR_NATIVE)
+#include "platform/native_visibility_stats.h"
+#endif
+
 enum RenderListsSlot1P2P
 {
 	RENDER_LIST_SLOT_4X4 = 0,
@@ -30,12 +34,6 @@ CTR_STATIC_ASSERT(sizeof(struct RenderListsScratchRecord) == 0x10);
 static int RenderLists_IsVisible(const int *visLeafList, BspChildId childID)
 {
 	u32 rawChildID = (u16)childID;
-
-#if defined(CTR_NATIVE)
-	// Ultrawide side geometry may be absent from the retail camera-cell PVS.
-	// Keep the spatial bounds and leaf frustum tests below as the cullers.
-	if (NativeAspect_UsesExpandedVisibility()) return 1;
-#endif
 
 	if (visLeafList == 0)
 	{
@@ -207,7 +205,7 @@ static void RenderLists_LinkBsp(struct BSP *bspRoot, struct BSP *bsp, struct Vis
 }
 
 static void RenderLists_PushChild(struct BSP *bspRoot, const int *visLeafList, struct PushBuffer *pb, BspChildId childID,
-                                  struct RenderListsScratchRecord **stack, struct RenderListsScratchRecord *stackEnd)
+                                  struct RenderListsScratchRecord **stack, struct RenderListsScratchRecord *stackEnd, int farLimit)
 {
 	struct BSP *child;
 	struct RenderListsScratchRecord *record;
@@ -217,32 +215,56 @@ static void RenderLists_PushChild(struct BSP *bspRoot, const int *visLeafList, s
 		return;
 	}
 
-	if (!RenderLists_IsVisible(visLeafList, childID))
+	int maskVisible = RenderLists_IsVisible(visLeafList, childID);
+#if defined(CTR_NATIVE)
+	const int expanded = NativeAspect_UsesExpandedVisibility();
+#else
+	const int expanded = 0;
+#endif
+	// Retail culls through the camera-cell mask alone. Expanded visibility keeps
+	// that mask as a sufficient condition rather than discarding it: a child the
+	// mask rejects is only recovered below if the camera frustum wants it and it
+	// is within retail's own far-LOD range for this viewport.
+	if (!maskVisible && !expanded)
 	{
 		return;
 	}
 
 	child = &bspRoot[((u16)childID) & BSP_CHILD_ID_INDEX_MASK];
+#if defined(CTR_NATIVE)
+	NativeVisibilityCountOnce(NATIVE_VIS_BSP_CHILDREN_TESTED);
+#endif
 	if (!RenderLists_BoxOverlapsPushBuffer(&child->box, &pb->bbox))
 	{
+#if defined(CTR_NATIVE)
+		NativeVisibilityCountOnce(NATIVE_VIS_BSP_CHILDREN_BBOX_REJECTED);
+#endif
 		return;
 	}
 
 	int frustumTested = 0;
 #if defined(CTR_NATIVE)
-	// The retail camera-cell mask prunes this descent for free. Once expanded
-	// visibility removes it, the pushbuffer AABB above is the only gate left on
-	// the way down, and at wide FOV that AABB spans the whole level, so the walk
-	// descends every branch in the tree and only culls at the leaves. Test the
-	// child box against the camera frustum here instead: a rejected subtree is
-	// then never descended at all. This is the same predicate the leaf pop
-	// applies, so it cannot drop a leaf the leaf test would have kept as long as
-	// child boxes stay inside their parent box, which the pushbuffer AABB test
-	// above already relies on.
-	if (NativeAspect_UsesExpandedVisibility())
+	// With the mask bypassed at wide FOV the pushbuffer AABB above is the only
+	// gate left on the way down, and it spans the whole level, so the walk used
+	// to descend every branch and only cull at the leaves. Testing the child box
+	// against the camera frustum here means a rejected subtree is never
+	// descended at all. It is the same predicate the leaf pop applies, so it
+	// cannot drop a leaf the leaf test would have kept as long as child boxes
+	// stay inside their parent box, which the pushbuffer AABB test above already
+	// relies on.
+	if (expanded)
 	{
 		if (!RenderLists_BoxPassesFrustum(pb, &child->box))
 		{
+			return;
+		}
+		// The mask is what bounds draw distance for the retail camera, so the
+		// recovered geometry needs an explicit range. Retail's own far-LOD
+		// distance is used so the recovery reaches about as far as the level's
+		// LOD system still has something to show.
+		if (!maskVisible && (farLimit > 0) && (RenderLists_ProjectDistance(pb, &child->box) > farLimit))
+		{
+			NativeVisibilityCountOnce(NATIVE_VIS_BSP_CHILDREN_FAR_REJECTED);
 			return;
 		}
 		frustumTested = 1;
@@ -259,6 +281,9 @@ static void RenderLists_PushChild(struct BSP *bspRoot, const int *visLeafList, s
 	record->frustumTested = (s16)frustumTested;
 	record->box = child->box;
 	*stack = record + 1;
+#if defined(CTR_NATIVE)
+	NativeVisibilityCountOnce(NATIVE_VIS_BSP_CHILDREN_PUSHED);
+#endif
 }
 
 static int RenderLists_Walk1P2P(struct BSP *bspRoot, const int *visLeafList, struct PushBuffer *pb, void *LevRenderList, struct VisMemBspListNode *bspList,
@@ -269,6 +294,14 @@ static int RenderLists_Walk1P2P(struct BSP *bspRoot, const int *visLeafList, str
 	struct RenderListsScratchRecord *stack = stackBase;
 	struct BSP *branch = bspRoot;
 	int lodDistanceThreshold = (numPlyr == 1) ? CTR_SCRATCHPAD_PTR(struct MainRenderLevelGeometryScratch, 0)->bspLodDistanceThreshold : 0x1540;
+	int farLimit = 0;
+#if defined(CTR_NATIVE)
+	// Retail's own far-LOD distance for this viewport. Deliberately not read
+	// from the geometry scratch: the Max detail option pushes those thresholds
+	// to infinity, and the expanded-visibility recovery range must not depend
+	// on it.
+	farLimit = (numPlyr == 1) ? pb->distanceToScreen_PREV * 0x1a : 0x1540;
+#endif
 	int count = 0;
 
 	if (bspRoot == 0 || pb == 0)
@@ -286,8 +319,8 @@ static int RenderLists_Walk1P2P(struct BSP *bspRoot, const int *visLeafList, str
 
 	for (;;)
 	{
-		RenderLists_PushChild(bspRoot, visLeafList, pb, branch->data.branch.childID[0], &stack, stackEnd);
-		RenderLists_PushChild(bspRoot, visLeafList, pb, branch->data.branch.childID[1], &stack, stackEnd);
+		RenderLists_PushChild(bspRoot, visLeafList, pb, branch->data.branch.childID[0], &stack, stackEnd, farLimit);
+		RenderLists_PushChild(bspRoot, visLeafList, pb, branch->data.branch.childID[1], &stack, stackEnd, farLimit);
 
 		while (stack != stackBase)
 		{
@@ -302,12 +335,18 @@ static int RenderLists_Walk1P2P(struct BSP *bspRoot, const int *visLeafList, str
 
 			if (!record.frustumTested && !RenderLists_BoxPassesFrustum(pb, &record.box))
 			{
+#if defined(CTR_NATIVE)
+				NativeVisibilityCountOnce(NATIVE_VIS_BSP_LEAVES_REJECTED);
+#endif
 				continue;
 			}
 
 			int slotIndex = RenderLists_Select1P2PSlot(bsp, pb, lodDistanceThreshold);
 			RenderLists_LinkBsp(bspRoot, bsp, RenderLists_Get1P2PHead(LevRenderList, slotIndex), bspList);
 			count++;
+#if defined(CTR_NATIVE)
+			NativeVisibilityCountOnce(NATIVE_VIS_BSP_LEAVES_LINKED);
+#endif
 		}
 
 		return count;
@@ -324,6 +363,10 @@ static int RenderLists_Walk3P4P(struct BSP *bspRoot, const int *visLeafList, str
 	struct RenderListsScratchRecord *stack = stackBase;
 	struct BSP *branch = bspRoot;
 	int count = 0;
+	int farLimit = 0;
+#if defined(CTR_NATIVE)
+	farLimit = pb->distanceToScreen_PREV * 0x1a;
+#endif
 
 	if (bspRoot == 0 || pb == 0)
 	{
@@ -341,8 +384,8 @@ static int RenderLists_Walk3P4P(struct BSP *bspRoot, const int *visLeafList, str
 
 	for (;;)
 	{
-		RenderLists_PushChild(bspRoot, visLeafList, pb, branch->data.branch.childID[0], &stack, stackEnd);
-		RenderLists_PushChild(bspRoot, visLeafList, pb, branch->data.branch.childID[1], &stack, stackEnd);
+		RenderLists_PushChild(bspRoot, visLeafList, pb, branch->data.branch.childID[0], &stack, stackEnd, farLimit);
+		RenderLists_PushChild(bspRoot, visLeafList, pb, branch->data.branch.childID[1], &stack, stackEnd, farLimit);
 
 		while (stack != stackBase)
 		{
@@ -357,6 +400,9 @@ static int RenderLists_Walk3P4P(struct BSP *bspRoot, const int *visLeafList, str
 
 			if (!record.frustumTested && !RenderLists_BoxPassesFrustum(pb, &record.box))
 			{
+#if defined(CTR_NATIVE)
+				NativeVisibilityCountOnce(NATIVE_VIS_BSP_LEAVES_REJECTED);
+#endif
 				continue;
 			}
 
@@ -365,6 +411,9 @@ static int RenderLists_Walk3P4P(struct BSP *bspRoot, const int *visLeafList, str
 
 			RenderLists_LinkBsp(bspRoot, bsp, head, bspList);
 			count++;
+#if defined(CTR_NATIVE)
+			NativeVisibilityCountOnce(NATIVE_VIS_BSP_LEAVES_LINKED);
+#endif
 		}
 
 		return count;

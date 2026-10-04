@@ -4,6 +4,7 @@
 
 #if defined(CTR_NATIVE)
 #include "platform/native_adhoc.h"
+#include "platform/native_visibility_stats.h"
 #endif
 
 
@@ -29,7 +30,14 @@ CTR_STATIC_ASSERT(offsetof(struct RenderBucketEntry, instPlayerBase) == 0x4);
 #if defined(CTR_NATIVE)
 enum
 {
-	NATIVE_RENDER_BUCKET_ENTRY_CAPACITY = 2048,
+	// Retail reaches this queue through the camera-cell visible-instance lists,
+	// which bound how many models can arrive. Expanded visibility (wide FOV,
+	// ultrawide aspects) hands it the whole level instance list instead, so the
+	// queue fills sooner and later models are dropped rather than drawn. Eight
+	// entries per original slot. At eight times the retail count the array is
+	// 128 KiB of BSS, which buys the headroom the largest tracks need at four
+	// players.
+	NATIVE_RENDER_BUCKET_ENTRY_CAPACITY = 16384,
 };
 static struct RenderBucketEntry s_nativeRenderBucketStorage[NATIVE_RENDER_BUCKET_ENTRY_CAPACITY];
 
@@ -2305,6 +2313,8 @@ static struct RenderBucketEntry *RenderBucket_QueueDraw(struct Instance *inst, s
 #if defined(CTR_NATIVE)
 	if ((queueState->entryEnd != NULL) && (rbi >= queueState->entryEnd))
 	{
+		NativeVisibilityCountOnce(NATIVE_VIS_INSTANCES_DROPPED);
+		NativeDraw3D_ReportDiagnostic(NATIVE_DRAW3D_DIAG_MODEL_QUEUE_FULL, "QueueDraw", (u32)(uintptr_t)inst);
 		return rbi;
 	}
 #endif
@@ -2425,6 +2435,9 @@ static struct RenderBucketEntry *RenderBucket_QueueDraw(struct Instance *inst, s
 	}
 
 	RenderBucket_SelectRetailHandlers(&queuedFlags, &split, &drawFunc, &uncompressFunc);
+#if defined(CTR_NATIVE)
+	NativeVisibilityCountOnce(NATIVE_VIS_INSTANCES_QUEUED);
+#endif
 	rbi->inst = inst;
 	rbi->instPlayerBase = instPlayerBase;
 	queuedFlags |= DRAW_SUCCESSFUL;
