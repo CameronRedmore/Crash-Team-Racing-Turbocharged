@@ -9,7 +9,18 @@
 set -euo pipefail
 
 PLATFORM="${1:-}"
-VERSION="${2:-beta-7_1}"
+
+# Default the version from VERSION, the same file CMake reads. The previous
+# hardcoded beta-7_1 default was a second copy of the version and drifted from
+# the build silently. CI passes an explicit version (branch + short SHA), so
+# this only affects local packaging.
+VERSION_FILE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/VERSION"
+if [[ ! -s "${VERSION_FILE}" ]]; then
+    echo "package.sh: ${VERSION_FILE} is missing or empty" >&2
+    exit 1
+fi
+DEFAULT_VERSION="$(tr -d '[:space:]' < "${VERSION_FILE}")"
+VERSION="${2:-${DEFAULT_VERSION}}"
 BUILD_DIR="${BUILD_DIR:-build}"
 DIST_DIR="${DIST_DIR:-dist}"
 

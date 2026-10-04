@@ -158,7 +158,16 @@ int gNativeRelicRaceResultTier = -1;
 #endif
 
 #ifndef CTR_NATIVE_VERSION
-#define CTR_NATIVE_VERSION "0.0.0-dev"
+// Fallback for translation units compiled without the build's definitions
+// (clangd, ad-hoc compiles). Deliberately not version-shaped: the previous
+// 0.0.0-dev here could reach a leaderboard client version or a replay header
+// and read as a real release. The build always supplies the real value from
+// the VERSION file.
+#define CTR_NATIVE_VERSION "unknown"
+#endif
+
+#ifndef CTR_PRODUCT_NAME
+#define CTR_PRODUCT_NAME "Crash Team Racing: Turbocharged"
 #endif
 
 #ifndef CTR_NATIVE_BUILD_ID
@@ -398,7 +407,7 @@ int main(int argc, char *argv[])
 	{
 		if (NativeArg_IsVersion(argv[argIndex]))
 		{
-			printf("CTR Native %s (%s)\n", CTR_NATIVE_VERSION, CTR_NATIVE_BUILD_ID);
+			printf("%s %s (%s)\n", CTR_PRODUCT_NAME, CTR_NATIVE_VERSION, CTR_NATIVE_BUILD_ID);
 			return 0;
 		}
 	}
@@ -420,6 +429,7 @@ int main(int argc, char *argv[])
 		return NativeConsole_Return(1);
 	}
 
+	printf("[CTR Native] Product: %s\n", CTR_PRODUCT_NAME);
 	printf("[CTR Native] Version: %s (%s)\n", CTR_NATIVE_VERSION, CTR_NATIVE_BUILD_ID);
 	printf("[CTR Native] Built with: " CC "\n");
 	printf("[CTR Native] Base: %s\n", NativeAssets_GetBaseDir());

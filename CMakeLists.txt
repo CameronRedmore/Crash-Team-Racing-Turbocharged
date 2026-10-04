@@ -2,7 +2,20 @@ cmake_minimum_required(VERSION 3.20)
 project(CTR-Native C)
 include(CheckCCompilerFlag)
 
-set(CTR_NATIVE_VERSION "0.1.0-beta.7.1")
+# Single source of truth for the version. The build, the packaged archive name
+# and the binary's own banner all read this file, so they cannot disagree --
+# package.sh used to carry its own copy of the default.
+file(READ "${CMAKE_SOURCE_DIR}/VERSION" CTR_NATIVE_VERSION)
+string(STRIP "${CTR_NATIVE_VERSION}" CTR_NATIVE_VERSION)
+if(NOT CTR_NATIVE_VERSION)
+    message(FATAL_ERROR "VERSION is missing or empty; it is the only place the version is set.")
+endif()
+
+# Display name, deliberately separate from the version. CTR_NATIVE_VERSION is
+# sent to the leaderboard as the client version and written into replay files as
+# ctr_native_version, so changing its value is a compatibility decision rather
+# than a cosmetic one. Renaming the product is not.
+set(CTR_PRODUCT_NAME "Crash Team Racing: Turbocharged")
 
 if(NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
     message(FATAL_ERROR
@@ -121,6 +134,7 @@ target_compile_definitions(ctr_native PRIVATE
     BUILD=926
     CTR_NATIVE_VERSION=\"${CTR_NATIVE_VERSION}\"
     CTR_NATIVE_BUILD_ID=\"${CTR_NATIVE_BUILD_ID}\"
+    CTR_PRODUCT_NAME=\"${CTR_PRODUCT_NAME}\"
 )
 if(NOT EMSCRIPTEN)
     target_compile_definitions(ctr_native PRIVATE CTR_INTERNAL)
@@ -295,7 +309,7 @@ if(BUILD_TESTING AND NOT EMSCRIPTEN)
     add_test(NAME ctr_native_projection COMMAND ctr_native_projection_test)
     add_test(NAME ctr_native_precision COMMAND ctr_native_precision_test)
     add_test(NAME ctr_native_version COMMAND $<TARGET_FILE:ctr_native> --version)
-    set_tests_properties(ctr_native_version PROPERTIES PASS_REGULAR_EXPRESSION "^CTR Native ")
+    set_tests_properties(ctr_native_version PROPERTIES PASS_REGULAR_EXPRESSION "^Crash Team Racing: Turbocharged ")
     if(CTR_NATIVE_RENDERER_TESTS)
         add_executable(ctr_native_depth_renderer_test tests/native_depth_renderer_test.c)
         set_target_properties(ctr_native_depth_renderer_test PROPERTIES C_STANDARD 17 C_STANDARD_REQUIRED ON C_EXTENSIONS OFF)
