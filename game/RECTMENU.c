@@ -423,257 +423,496 @@ static char *NativeRow(const char *label, const char *value)
 	return row;
 }
 
+static const char *ghostReplay[6] =
+{
+	"GHOST REPLAY",
+	"REPLAY FANTOME",
+	"GEISTER-REPLAY",
+	"REPLAY FANTASMA",
+	"REPLAY FANTASMA",
+	"SPOOKREPLAY",
+};
+static const char *mirrorMode[6][2] =
+{
+	{"MIRROR: OFF", "MIRROR: ON"},
+	{"MIROIR: NON", "MIROIR: OUI"},
+	{"SPIEGEL: AUS", "SPIEGEL: EIN"},
+	{"SPECCHIO: NO", "SPECCHIO: SI"},
+	{"ESPEJO: NO", "ESPEJO: SI"},
+	{"SPIEGEL: UIT", "SPIEGEL: AAN"},
+};
+static const char *frameRate[NATIVE_FRAME_RATE_COUNT] =
+{
+	"FPS: 30",
+	"FPS: 60",
+	"FPS: 90",
+	"FPS: 120",
+	"FPS: 144",
+	"FPS: 240",
+};
+static const char *defaultCamera[6][2] =
+{
+	{"CAMERA: NEAR", "CAMERA: FAR"},
+	{"CAMERA: PROCHE", "CAMERA: LOIN"},
+	{"KAMERA: NAH", "KAMERA: WEIT"},
+	{"CAMERA: VICINA", "CAMERA: LONTANA"},
+	{"CAMARA: CERCA", "CAMARA: LEJOS"},
+	{"CAMERA: DICHTBIJ", "CAMERA: VER"},
+};
+static const char *defaultHud[6][2] =
+{
+	{"HUD: MINIMAP", "HUD: SPEEDOMETER"},
+	{"HUD: MINI-CARTE", "HUD: COMPTEUR"},
+	{"HUD: MINIKARTE", "HUD: TACHO"},
+	{"HUD: MINIMAPPA", "HUD: TACHIMETRO"},
+	{"HUD: MINIMAPA", "HUD: VELOCIMETRO"},
+	{"HUD: MINIKAART", "HUD: SNELHEID"},
+};
+static const char *aiRacers[6][NATIVE_AI_RACERS_MODE_COUNT] =
+{
+	{"AI RACERS: RETAIL", "AI RACERS: EXTENDED", "AI RACERS: EXTENDED+CUSTOM"},
+	{"PILOTES IA: RETAIL", "PILOTES IA: EXTENDED", "PILOTES IA: EXTENDED+CUSTOM"},
+	{"KI-FAHRER: RETAIL", "KI-FAHRER: EXTENDED", "KI-FAHRER: EXTENDED+CUSTOM"},
+	{"PILOTI IA: RETAIL", "PILOTI IA: EXTENDED", "PILOTI IA: EXTENDED+CUSTOM"},
+	{"PILOTOS IA: RETAIL", "PILOTOS IA: EXTENDED", "PILOTOS IA: EXTENDED+CUSTOM"},
+	{"AI RACERS: RETAIL", "AI RACERS: EXTENDED", "AI RACERS: EXTENDED+CUSTOM"},
+};
+#ifndef __vita__
+static const char *antiAliasing[NATIVE_AA_MODE_COUNT] =
+{
+	"AA: OFF",
+	"AA: FXAA",
+	"AA: MSAA 2X",
+	"AA: MSAA 4X",
+	"AA: MSAA 8X",
+	"AA: SSAA 2X",
+	"AA: SSAA 4X",
+};
+static const char *dithering[6][2] =
+{
+	{"DITHER: OFF", "DITHER: ON"},
+	{"TRAMAGE: NON", "TRAMAGE: OUI"},
+	{"DITHER: AUS", "DITHER: EIN"},
+	{"DITHER: NO", "DITHER: SI"},
+	{"DITHER: NO", "DITHER: SI"},
+	{"DITHER: UIT", "DITHER: AAN"},
+};
+static const char *maxLod[6][2] =
+{
+	{"DETAIL: ORIGINAL", "DETAIL: MAXIMUM"},
+	{"DETAILS: ORIGINE", "DETAILS: MAXIMUM"},
+	{"DETAILS: ORIGINAL", "DETAILS: MAXIMUM"},
+	{"DETTAGLI: ORIGINALI", "DETTAGLI: MASSIMI"},
+	{"DETALLE: ORIGINAL", "DETALLE: MAXIMO"},
+	{"DETAILS: ORIGINEEL", "DETAILS: MAXIMAAL"},
+};
+#endif
+static const char *superHard[6] =
+{
+	"SUPER HARD",
+	"SUPER DIFFICILE",
+	"SUPER SCHWER",
+	"SUPER DIFFICILE",
+	"SUPER DIFICIL",
+	"SUPER MOEILIJK",
+};
+static const char *ultraHard[6] =
+{
+	"ULTRA HARD",
+	"ULTRA DIFFICILE",
+	"ULTRA SCHWER",
+	"ULTRA DIFFICILE",
+	"ULTRA DIFICIL",
+	"ULTRA MOEILIJK",
+};
+static const char *bossFight[6] =
+{
+	"BOSS FIGHT",
+	"COMBAT DE BOSS",
+	"BOSS-KAMPF",
+	"SFIDA BOSS",
+	"BATALLA DE JEFE",
+	"BAASGEVECHT",
+};
+static const char *oxideFinal[6] =
+{
+	"N. OXIDE - HARD",
+	"N. OXIDE - DIFFICILE",
+	"N. OXIDE - SCHWER",
+	"N. OXIDE - DIFFICILE",
+	"N. OXIDE - DIFICIL",
+	"N. OXIDE - MOEILIJK",
+};
+static const char *changeBoss[6] =
+{
+	"CHANGE BOSS",
+	"CHANGER DE BOSS",
+	"BOSS WECHSELN",
+	"CAMBIA BOSS",
+	"CAMBIAR JEFE",
+	"BAAS WIJZIGEN",
+};
+static const char *adhoc[6] =
+{
+	"ADHOC",
+	"ADHOC",
+	"ADHOC",
+	"ADHOC",
+	"ADHOC",
+	"ADHOC",
+};
+static const char *exitGame[6] =
+{
+	"EXIT GAME",
+	"QUITTER LE JEU",
+	"SPIEL BEENDEN",
+	"ESCI DAL GIOCO",
+	"SALIR DEL JUEGO",
+	"SPEL AFSLUITEN",
+};
+static const char *onlineLeaderboard[6] =
+{
+	"ONLINE LEADERBOARD",
+	"CLASSEMENT ONLINE",
+	"ONLINE-RANGLISTE",
+	"CLASSIFICA ONLINE",
+	"RANKING ONLINE",
+	"ONLINE RANGLIJST",
+};
+static const char *watchGhost[6] =
+{
+	"WATCH GHOST",
+	"VOIR FANTOME",
+	"GEIST ANSEHEN",
+	"GUARDA FANTASMA",
+	"VER FANTASMA",
+	"SPOOK BEKIJKEN",
+};
+static const char *challengeGhost[6] =
+{
+	"CHALLENGE GHOST",
+	"DEFIER FANTOME",
+	"GEIST HERAUSF.",
+	"SFIDA FANTASMA",
+	"DESAFIA FANTASMA",
+	"DAAG SPOOK UIT",
+};
+static const char *trackNormal[6] =
+{
+	"NORMAL",
+	"NORMAL",
+	"NORMAL",
+	"NORMALE",
+	"NORMAL",
+	"NORMAAL",
+};
+static const char *trackReverse[6] =
+{
+	"REVERSE",
+	"INVERSE",
+	"RUECKWAERTS",
+	"INVERSA",
+	"INVERSA",
+	"OMGEKEERD",
+};
+static const char *trackAlternative[6] =
+{
+	"ALTERNATIVE",
+	"ALTERNATIVE",
+	"ALTERNATIV",
+	"ALTERNATIVA",
+	"ALTERNATIVA",
+	"ALTERNATIEF",
+};
+static const char *cheatsTitle[6] =
+{
+	"CHEATS", "TRICHES", "CHEATS", "TRUCCHI", "TRUCOS", "CHEATS",
+};
+static const char *cheatToggle[6][2] =
+{
+	{"OFF", "ON"}, {"NON", "OUI"}, {"AUS", "EIN"}, {"NO", "SI"}, {"NO", "SI"}, {"UIT", "AAN"},
+};
+static const char *cheatName[6][10] =
+{
+	{"INFINITE WUMPA", "INFINITE MASK", "INFINITE TURBOS", "INFINITE BOMBS", "INVISIBILITY", "SUPER ENGINE", "ICY TRACKS", "SUPER TURBO PADS", "ADV DIFFICULTY", "ALL CHARACTERS"},
+	{"WUMPA INFINIS", "MASQUE INFINI", "TURBOS INFINIS", "BOMBES INFINIES", "INVISIBILITE", "SUPER MOTEUR", "PISTES GLACEES", "SUPER TURBO PADS", "DIFFICULTE ADV", "TOUS PERSONNAGES"},
+	{"WUMPA UNENDLICH", "MASKE UNENDLICH", "TURBOS UNENDLICH", "BOMBEN UNENDLICH", "UNSICHTBAR", "SUPER MOTOR", "EISIGE STRECKEN", "SUPER TURBO-PADS", "ADV-SCHWIERIG", "ALLE CHARAKTERE"},
+	{"WUMPA INFINITI", "MASCHERA INFINITA", "TURBO INFINITI", "BOMBE INFINITE", "INVISIBILITA", "SUPER MOTORE", "PISTE GHIACCIATE", "SUPER TURBO PAD", "DIFFICOLTA ADV", "TUTTI I PERSONAGGI"},
+	{"WUMPA INFINITA", "MASCARA INFINITA", "TURBOS INFINITOS", "BOMBAS INFINITAS", "INVISIBILIDAD", "SUPER MOTOR", "PISTAS HELADAS", "SUPER TURBO PADS", "DIFICULTAD ADV", "TODOS LOS PERSONAJES"},
+	{"ONEINDIG WUMPA", "ONEINDIG MASKER", "ONEINDIGE TURBOS", "ONEINDIGE BOMMEN", "ONZICHTBAAR", "SUPER MOTOR", "IJZIGE BANEN", "SUPER TURBO PADS", "ADV MOEILIJK", "ALLE PERSONAGES"},
+};
+static const char *boostCounter[6] = {"BOOST COUNTER", "COMPTEUR TURBO", "TURBO-ZAEHLER", "CONTATORE TURBO", "CONTADOR TURBO", "TURBO TELLER"};
+static char cheatRow[64];
+static const char *lapSingular[6] = {"LAP", "TOUR", "RUNDE", "GIRO", "VUELTA", "RONDE"};
+static const char *lapPlural[6] = {"LAPS", "TOURS", "RUNDEN", "GIRI", "VUELTAS", "RONDEN"};
+static char lapRow[32];
+static const char *controlsTitle[6] =
+{
+	"CONTROLS", "COMMANDES", "STEUERUNG", "COMANDI", "CONTROLES", "BESTURING",
+};
+static const char *controlHeaderAction[6] =
+{
+	"ACTION", "ACTION", "AKTION", "AZIONE", "ACCION", "ACTIE",
+};
+static const char *controlHeaderKbm[6] =
+{
+	"KB+M", "CLAV/SOURIS", "TAST/MOUSE", "KB+M", "KB+M", "KB+M",
+};
+static const char *controlHeaderController[6] =
+{
+	"CONTROLLER", "MANETTE", "CONTROLLER", "CONTROLLER", "MANDO", "CONTROLLER",
+};
+static const char *controlAction[6][PLATFORM_INPUT_BIND_ACTION_COUNT] =
+{
+	{"* ACCELERATE", "[ BRAKE/REVERSE", "@ USE POWER-UP", "^ TOGGLE HUD", "HOP / SLIDE L1", "HOP / SLIDE R1", "CAMERA CHANGE", "REAR VIEW", "DPAD UP", "DPAD DOWN", "DPAD LEFT", "DPAD RIGHT", "START / PAUSE"},
+	{"* ACCELERER", "[ FREIN/RECUL", "@ UTILISER BONUS", "^ AFFICHAGE HUD", "SAUT / DERAP L1", "SAUT / DERAP R1", "CHANGER CAMERA", "VUE ARRIERE", "HAUT", "BAS", "GAUCHE", "DROITE", "START / PAUSE"},
+	{"* BESCHLEUNIGEN", "[ BREMSE/RUECK", "@ POWER-UP NUTZEN", "^ HUD UMSCHALTEN", "SPRUNG / DRIFT L1", "SPRUNG / DRIFT R1", "KAMERA WECHSEL", "RUECKSICHT", "STEUERKREUZ OBEN", "STEUERKREUZ UNTEN", "STEUERKREUZ LINKS", "STEUERKREUZ RECHTS", "START / PAUSE"},
+	{"* ACCELERA", "[ FRENO/RETRO", "@ USA POWER-UP", "^ CAMBIA HUD", "SALTO / DERAP L1", "SALTO / DERAP R1", "CAMBIA CAMERA", "VISTA POSTERIORE", "DPAD SU", "DPAD GIU", "DPAD SINISTRA", "DPAD DESTRA", "START / PAUSA"},
+	{"* ACELERAR", "[ FRENO/REVERSA", "@ USAR POWER-UP", "^ CAMBIAR HUD", "SALTO / DERRAPE L1", "SALTO / DERRAPE R1", "CAMBIAR CAMARA", "VISTA TRASERA", "DPAD ARRIBA", "DPAD ABAJO", "DPAD IZQUIERDA", "DPAD DERECHA", "START / PAUSA"},
+	{"* GAS", "[ REM/ACHTERUIT", "@ POWER-UP GEBR.", "^ HUD WISSELEN", "SPRONG / DRIFT L1", "SPRONG / DRIFT R1", "CAMERA WISSEL", "ACHTERUITZICHT", "DPAD OMHOOG", "DPAD OMLAAG", "DPAD LINKS", "DPAD RECHTS", "START / PAUZE"},
+};
+
+// Options menu presentation.
+//
+// Persistence for these settings lives in platform/native_options.c; this table
+// is the menu's view of the same globals. Each row states how to render one
+// setting's "LABEL: VALUE" text, so adding a setting means one row in the
+// registry and one row here, rather than a case in RECTMENU_GetString plus
+// another term in RECTMENU_NativeOptionsHorizontalInput.
+enum NativeOptionValueStyle
+{
+	// The whole row is enumLabels[languageRow * enumStride + value].
+	NATIVE_OPTION_VALUE_LOCALIZED_ENUM,
+	// The whole row is enumLabels[value]; the labels are not translated.
+	NATIVE_OPTION_VALUE_PLAIN_ENUM,
+	// "label: value" where value is onLabel/offLabel chosen by the stored value.
+	NATIVE_OPTION_VALUE_LABELLED_PAIR,
+	// "label: value" where value is enumLabels[languageRow * enumStride + value].
+	NATIVE_OPTION_VALUE_LABELLED_ENUM,
+	// format() renders the whole row.
+	NATIVE_OPTION_VALUE_FORMATTED
+};
+
+struct NativeOptionRow
+{
+	s16 stringIndex;
+	// Row label, indexed by language. NULL when the value table already
+	// includes the label.
+	const char *const *label;
+	// The setting's storage. Menu code reads it; input code writes it.
+	const int *storage;
+	enum NativeOptionValueStyle style;
+	// Labelled by style: a [language][value] table cast to a flat pointer and
+	// indexed with enumStride, or a plain [value] table.
+	const char *const *enumLabels;
+	int enumStride;
+	const char *const *onLabel;
+	const char *const *offLabel;
+	char *(*format)(int languageRow);
+	// Non-zero when left/right adjust this row's value.
+	unsigned char horizontalInput;
+};
+
+// Scratch buffers for the NATIVE_OPTION_VALUE_FORMATTED rows below. GetString
+// returns one of these, so only the most recent result is valid; that matches
+// how the previous per-case buffers behaved.
+static char s_optionLabelRow[64];
+static char s_optionValueText[16];
+
+static char *NativeOptionFormatAspectRatio(int languageRow)
+{
+	if (NATIVE_DRAW3D_ACTIVE())
+	{
+		return NativeRow(s_txtAspectRatio[languageRow], NativeAspect_GetLabel(gNativeAspectRatio));
+	}
+	snprintf(s_optionLabelRow, sizeof(s_optionLabelRow), "%s (NATIVE)", s_txtAspectRatio[languageRow]);
+	return NativeRow(s_optionLabelRow, NativeAspect_GetLabel(gNativeAspectRatio));
+}
+
+static char *NativeOptionFormatFieldOfView(int languageRow)
+{
+	snprintf(s_optionLabelRow, sizeof(s_optionLabelRow), "%s%s", s_txtFieldOfView[languageRow],
+	         NATIVE_DRAW3D_ACTIVE() ? "" : " (NATIVE)");
+	if (gNativeFovDegrees == 0)
+	{
+		return NativeRow(s_optionLabelRow, "ORIGINAL");
+	}
+	snprintf(s_optionValueText, sizeof(s_optionValueText), "%d DEG", gNativeFovDegrees);
+	return NativeRow(s_optionLabelRow, s_optionValueText);
+}
+
+static char *NativeOptionFormatProjection(int languageRow)
+{
+	static const char *const projectionNames[NATIVE_PROJECTION_MODE_COUNT] = {"PERSPECTIVE", "PANINI", "EDGE COMPRESS"};
+	int mode = gNativeProjectionMode;
+	if ((mode < 0) || (mode >= NATIVE_PROJECTION_MODE_COUNT))
+	{
+		mode = NATIVE_PROJECTION_PERSPECTIVE;
+	}
+	snprintf(s_optionLabelRow, sizeof(s_optionLabelRow), "%s%s", s_txtProjection[languageRow],
+	         NATIVE_DRAW3D_ACTIVE() ? "" : " (NATIVE)");
+	return NativeRow(s_optionLabelRow, projectionNames[mode]);
+}
+
+static char *NativeOptionFormatProjectionStrength(int languageRow)
+{
+	snprintf(s_optionLabelRow, sizeof(s_optionLabelRow), "%s%s", s_txtProjectionStrength[languageRow],
+	         NATIVE_DRAW3D_ACTIVE() ? "" : " (NATIVE)");
+	snprintf(s_optionValueText, sizeof(s_optionValueText), "%d", gNativeProjectionStrength);
+	return NativeRow(s_optionLabelRow, s_optionValueText);
+}
+
+static char *NativeOptionFormatColorDepth(int languageRow)
+{
+	return NativeRow(s_txtColourDepth[languageRow],
+	                 gNativeColorDepth == NATIVE_COLOR_DEPTH_15BIT ? "15-BIT PS1" : "24-BIT");
+}
+
+static char *NativeOptionFormatHdPause(int languageRow)
+{
+	const char *value;
+	if (gNativeHdPauseMode == 0)
+	{
+		value = s_txtOriginal[languageRow];
+	}
+	else if (gNativeHdPauseMode == 1)
+	{
+		value = "HD";
+	}
+	else
+	{
+		value = s_txtHdSmooth[languageRow];
+	}
+	return NativeRow(s_txtPauseScreen[languageRow], value);
+}
+
+static char *NativeOptionFormatKartHue(int languageRow)
+{
+	static char kartHueRow[96];
+	if (gNativeKartHue == 0)
+	{
+		snprintf(kartHueRow, sizeof(kartHueRow), "%s (%s): %s", s_txtKartHue[languageRow], s_txtExperimental[languageRow],
+		         s_txtOriginal[languageRow]);
+	}
+	else
+	{
+		snprintf(kartHueRow, sizeof(kartHueRow), "%s (%s): +%d", s_txtKartHue[languageRow], s_txtExperimental[languageRow],
+		         gNativeKartHue * NATIVE_KART_HUE_STEP_DEGREES);
+	}
+	return kartHueRow;
+}
+
+static char *NativeOptionFormatFont(int languageRow)
+{
+	static char fontRow[48];
+	snprintf(fontRow, sizeof(fontRow), "%s: %s", s_txtFont[languageRow],
+	         (gNativeFont == NATIVE_FONT_ORIGINAL) ? s_txtOriginal[languageRow] : NativeFont_GetName(gNativeFont));
+	return fontRow;
+}
+
+static const struct NativeOptionRow s_nativeOptionRows[] = {
+	{NATIVE_MENU_STRING_MIRROR_MODE, NULL, &gNativeMirrorModeEnabled, NATIVE_OPTION_VALUE_LOCALIZED_ENUM,
+	 (const char *const *)mirrorMode, 2, NULL, NULL, NULL, 1},
+	{NATIVE_MENU_STRING_FRAME_RATE, NULL, &gNative60FpsEnabled, NATIVE_OPTION_VALUE_PLAIN_ENUM, frameRate, 0, NULL, NULL,
+	 NULL, 1},
+	{NATIVE_MENU_STRING_ASPECT_RATIO, NULL, &gNativeAspectRatio, NATIVE_OPTION_VALUE_FORMATTED, NULL, 0, NULL, NULL,
+	 NativeOptionFormatAspectRatio, 1},
+	{NATIVE_MENU_STRING_FIELD_OF_VIEW, NULL, &gNativeFovDegrees, NATIVE_OPTION_VALUE_FORMATTED, NULL, 0, NULL, NULL,
+	 NativeOptionFormatFieldOfView, 1},
+	{NATIVE_MENU_STRING_PROJECTION, NULL, &gNativeProjectionMode, NATIVE_OPTION_VALUE_FORMATTED, NULL, 0, NULL, NULL,
+	 NativeOptionFormatProjection, 1},
+	{NATIVE_MENU_STRING_PROJECTION_STRENGTH, NULL, &gNativeProjectionStrength, NATIVE_OPTION_VALUE_FORMATTED, NULL, 0,
+	 NULL, NULL, NativeOptionFormatProjectionStrength, 1},
+	{NATIVE_MENU_STRING_DEFAULT_CAMERA, NULL, &gNativeDefaultCameraFar, NATIVE_OPTION_VALUE_LOCALIZED_ENUM,
+	 (const char *const *)defaultCamera, 2, NULL, NULL, NULL, 1},
+	{NATIVE_MENU_STRING_DEFAULT_HUD, NULL, &gNativeDefaultHudSpeedometer, NATIVE_OPTION_VALUE_LOCALIZED_ENUM,
+	 (const char *const *)defaultHud, 2, NULL, NULL, NULL, 1},
+	{NATIVE_MENU_STRING_AI_RACERS, NULL, &gNativeAIRacersMode, NATIVE_OPTION_VALUE_LOCALIZED_ENUM,
+	 (const char *const *)aiRacers, NATIVE_AI_RACERS_MODE_COUNT, NULL, NULL, NULL, 1},
+	{NATIVE_MENU_STRING_SKIP_MASK_HINTS, s_txtSkipMaskHints, &gNativeSkipMaskHints, NATIVE_OPTION_VALUE_LABELLED_PAIR,
+	 NULL, 0, s_txtOn, s_txtOff, NULL, 1},
+#ifndef __vita__
+	{NATIVE_MENU_STRING_ANTI_ALIASING, NULL, &gNativeAntiAliasingMode, NATIVE_OPTION_VALUE_PLAIN_ENUM, antiAliasing, 0,
+	 NULL, NULL, NULL, 1},
+	{NATIVE_MENU_STRING_DITHERING, NULL, &gNativeDitheringEnabled, NATIVE_OPTION_VALUE_LOCALIZED_ENUM,
+	 (const char *const *)dithering, 2, NULL, NULL, NULL, 1},
+	{NATIVE_MENU_STRING_BORDERLESS, s_txtDisplay, &gNativeBorderlessEnabled, NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0,
+	 s_txtBorderless, s_txtWindowed, NULL, 1},
+	{NATIVE_MENU_STRING_PGXP, s_txtClassicPgxp, &gNativePgxpMode, NATIVE_OPTION_VALUE_LABELLED_ENUM,
+	 (const char *const *)s_txtPgxpMode, NATIVE_PGXP_MODE_COUNT, NULL, NULL, NULL, 1},
+	{NATIVE_MENU_STRING_DEPTH_BUFFER, s_txtClassicDepth, &gNativeDepthBufferEnabled, NATIVE_OPTION_VALUE_LABELLED_PAIR,
+	 NULL, 0, s_txtOn, s_txtOff, NULL, 1},
+	{NATIVE_MENU_STRING_RENDERER, s_txtRenderer, &gNativeRendererMode, NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0,
+	 s_txtRendererNative, s_txtRendererClassic, NULL, 1},
+	{NATIVE_MENU_STRING_COLOR_DEPTH, NULL, &gNativeColorDepth, NATIVE_OPTION_VALUE_FORMATTED, NULL, 0, NULL, NULL,
+	 NativeOptionFormatColorDepth, 1},
+	{NATIVE_MENU_STRING_TEXTURE_FILTER, s_txtTextures, &g_cfg_bilinearFiltering, NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL,
+	 0, s_txtBilinear, s_txtNearest, NULL, 1},
+	{NATIVE_MENU_STRING_HD_PAUSE, NULL, &gNativeHdPauseMode, NATIVE_OPTION_VALUE_FORMATTED, NULL, 0, NULL, NULL,
+	 NativeOptionFormatHdPause, 1},
+	{NATIVE_MENU_STRING_PRECISE_MINIMAP, s_txtPreciseMinimap, &gNativePreciseMinimapEnabled,
+	 NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0, s_txtOn, s_txtOff, NULL, 1},
+	{NATIVE_MENU_STRING_MODERN_MAP, s_txtModernMinimap, &gNativeModernMapEnabled, NATIVE_OPTION_VALUE_LABELLED_PAIR,
+	 NULL, 0, s_txtOn, s_txtOff, NULL, 1},
+	{NATIVE_MENU_STRING_MODERN_HUD_ICONS, s_txtModernHudIcons, &gNativeModernHudIconsEnabled,
+	 NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0, s_txtOn, s_txtOff, NULL, 1},
+	{NATIVE_MENU_STRING_ADDITIONAL_UNLOCKS, s_txtAdditionalUnlocks, &gNativeAdditionalUnlocksEnabled,
+	 NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0, s_txtOn, s_txtOff, NULL, 1},
+	{NATIVE_MENU_STRING_ENGINE_SELECTION, s_txtEngineSelection, &gNativeEngineSelectionEnabled,
+	 NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0, s_txtOn, s_txtOff, NULL, 1},
+	{NATIVE_MENU_STRING_KART_HUE, NULL, &gNativeKartHue, NATIVE_OPTION_VALUE_FORMATTED, NULL, 0, NULL, NULL,
+	 NativeOptionFormatKartHue, 1},
+	{NATIVE_MENU_STRING_FONT, NULL, &gNativeFont, NATIVE_OPTION_VALUE_FORMATTED, NULL, 0, NULL, NULL,
+	 NativeOptionFormatFont, 1},
+	{NATIVE_MENU_STRING_AI_PHYSICS, s_txtAi, &gNativeSmoothedAIEnabled, NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0,
+	 s_txtSmoothed, s_txtOriginal, NULL, 1},
+	{NATIVE_MENU_STRING_COLLISION_PHYSICS, s_txtCollisions, &gNativeSmoothedCollisionEnabled,
+	 NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0, s_txtSmoothed, s_txtOriginal, NULL, 1},
+	{NATIVE_MENU_STRING_STEERING_PHYSICS, s_txtSteering, &gNativeSmoothedSteeringEnabled,
+	 NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0, s_txtSmoothed, s_txtOriginal, NULL, 1},
+	{NATIVE_MENU_STRING_PHYSICS, s_txtPlayerPhysics, &gNativeSmoothedPhysicsEnabled, NATIVE_OPTION_VALUE_LABELLED_PAIR,
+	 NULL, 0, s_txtSmoothed, s_txtOriginal, NULL, 1},
+	{NATIVE_MENU_STRING_MAX_LOD, NULL, &gNativeMaxLodEnabled, NATIVE_OPTION_VALUE_LOCALIZED_ENUM,
+	 (const char *const *)maxLod, 2, NULL, NULL, NULL, 1},
+#endif
+};
+
+// The table is short and only consulted while drawing a menu, so a linear scan
+// beats keeping a parallel index in sync.
+static const struct NativeOptionRow *NativeOptionRowFor(s16 stringIndex)
+{
+	for (unsigned int row = 0; row < sizeof(s_nativeOptionRows) / sizeof(s_nativeOptionRows[0]); row++)
+	{
+		if (s_nativeOptionRows[row].stringIndex == stringIndex)
+		{
+			return &s_nativeOptionRows[row];
+		}
+	}
+	return NULL;
+}
+
+static char *NativeOptionRowText(const struct NativeOptionRow *row, int languageRow)
+{
+	int value = *row->storage;
+
+	switch (row->style)
+	{
+	case NATIVE_OPTION_VALUE_LOCALIZED_ENUM:
+		return (char *)row->enumLabels[languageRow * row->enumStride + value];
+	case NATIVE_OPTION_VALUE_PLAIN_ENUM:
+		return (char *)row->enumLabels[value];
+	case NATIVE_OPTION_VALUE_LABELLED_PAIR:
+		return NativeRow(row->label[languageRow], value != 0 ? row->onLabel[languageRow] : row->offLabel[languageRow]);
+	case NATIVE_OPTION_VALUE_LABELLED_ENUM:
+		return NativeRow(row->label[languageRow], row->enumLabels[languageRow * row->enumStride + value]);
+	case NATIVE_OPTION_VALUE_FORMATTED:
+		return row->format(languageRow);
+	}
+	return NULL;
+}
+
 static char *RECTMENU_GetString(s16 stringIndex)
 {
-	char cameraValue[16];
-	static const char *ghostReplay[6] =
-	{
-		"GHOST REPLAY",
-		"REPLAY FANTOME",
-		"GEISTER-REPLAY",
-		"REPLAY FANTASMA",
-		"REPLAY FANTASMA",
-		"SPOOKREPLAY",
-	};
-	static const char *mirrorMode[6][2] =
-	{
-		{"MIRROR: OFF", "MIRROR: ON"},
-		{"MIROIR: NON", "MIROIR: OUI"},
-		{"SPIEGEL: AUS", "SPIEGEL: EIN"},
-		{"SPECCHIO: NO", "SPECCHIO: SI"},
-		{"ESPEJO: NO", "ESPEJO: SI"},
-		{"SPIEGEL: UIT", "SPIEGEL: AAN"},
-	};
-	static const char *frameRate[NATIVE_FRAME_RATE_COUNT] =
-	{
-		"FPS: 30",
-		"FPS: 60",
-		"FPS: 90",
-		"FPS: 120",
-		"FPS: 144",
-		"FPS: 240",
-	};
-	static const char *defaultCamera[6][2] =
-	{
-		{"CAMERA: NEAR", "CAMERA: FAR"},
-		{"CAMERA: PROCHE", "CAMERA: LOIN"},
-		{"KAMERA: NAH", "KAMERA: WEIT"},
-		{"CAMERA: VICINA", "CAMERA: LONTANA"},
-		{"CAMARA: CERCA", "CAMARA: LEJOS"},
-		{"CAMERA: DICHTBIJ", "CAMERA: VER"},
-	};
-	static const char *defaultHud[6][2] =
-	{
-		{"HUD: MINIMAP", "HUD: SPEEDOMETER"},
-		{"HUD: MINI-CARTE", "HUD: COMPTEUR"},
-		{"HUD: MINIKARTE", "HUD: TACHO"},
-		{"HUD: MINIMAPPA", "HUD: TACHIMETRO"},
-		{"HUD: MINIMAPA", "HUD: VELOCIMETRO"},
-		{"HUD: MINIKAART", "HUD: SNELHEID"},
-	};
-	static const char *aiRacers[6][NATIVE_AI_RACERS_MODE_COUNT] =
-	{
-		{"AI RACERS: RETAIL", "AI RACERS: EXTENDED", "AI RACERS: EXTENDED+CUSTOM"},
-		{"PILOTES IA: RETAIL", "PILOTES IA: EXTENDED", "PILOTES IA: EXTENDED+CUSTOM"},
-		{"KI-FAHRER: RETAIL", "KI-FAHRER: EXTENDED", "KI-FAHRER: EXTENDED+CUSTOM"},
-		{"PILOTI IA: RETAIL", "PILOTI IA: EXTENDED", "PILOTI IA: EXTENDED+CUSTOM"},
-		{"PILOTOS IA: RETAIL", "PILOTOS IA: EXTENDED", "PILOTOS IA: EXTENDED+CUSTOM"},
-		{"AI RACERS: RETAIL", "AI RACERS: EXTENDED", "AI RACERS: EXTENDED+CUSTOM"},
-	};
-#ifndef __vita__
-	static const char *antiAliasing[NATIVE_AA_MODE_COUNT] =
-	{
-		"AA: OFF",
-		"AA: FXAA",
-		"AA: MSAA 2X",
-		"AA: MSAA 4X",
-		"AA: MSAA 8X",
-		"AA: SSAA 2X",
-		"AA: SSAA 4X",
-	};
-	static const char *dithering[6][2] =
-	{
-		{"DITHER: OFF", "DITHER: ON"},
-		{"TRAMAGE: NON", "TRAMAGE: OUI"},
-		{"DITHER: AUS", "DITHER: EIN"},
-		{"DITHER: NO", "DITHER: SI"},
-		{"DITHER: NO", "DITHER: SI"},
-		{"DITHER: UIT", "DITHER: AAN"},
-	};
-	static const char *maxLod[6][2] =
-	{
-		{"DETAIL: ORIGINAL", "DETAIL: MAXIMUM"},
-		{"DETAILS: ORIGINE", "DETAILS: MAXIMUM"},
-		{"DETAILS: ORIGINAL", "DETAILS: MAXIMUM"},
-		{"DETTAGLI: ORIGINALI", "DETTAGLI: MASSIMI"},
-		{"DETALLE: ORIGINAL", "DETALLE: MAXIMO"},
-		{"DETAILS: ORIGINEEL", "DETAILS: MAXIMAAL"},
-	};
-#endif
-	static const char *superHard[6] =
-	{
-		"SUPER HARD",
-		"SUPER DIFFICILE",
-		"SUPER SCHWER",
-		"SUPER DIFFICILE",
-		"SUPER DIFICIL",
-		"SUPER MOEILIJK",
-	};
-	static const char *ultraHard[6] =
-	{
-		"ULTRA HARD",
-		"ULTRA DIFFICILE",
-		"ULTRA SCHWER",
-		"ULTRA DIFFICILE",
-		"ULTRA DIFICIL",
-		"ULTRA MOEILIJK",
-	};
-	static const char *bossFight[6] =
-	{
-		"BOSS FIGHT",
-		"COMBAT DE BOSS",
-		"BOSS-KAMPF",
-		"SFIDA BOSS",
-		"BATALLA DE JEFE",
-		"BAASGEVECHT",
-	};
-	static const char *oxideFinal[6] =
-	{
-		"N. OXIDE - HARD",
-		"N. OXIDE - DIFFICILE",
-		"N. OXIDE - SCHWER",
-		"N. OXIDE - DIFFICILE",
-		"N. OXIDE - DIFICIL",
-		"N. OXIDE - MOEILIJK",
-	};
-	static const char *changeBoss[6] =
-	{
-		"CHANGE BOSS",
-		"CHANGER DE BOSS",
-		"BOSS WECHSELN",
-		"CAMBIA BOSS",
-		"CAMBIAR JEFE",
-		"BAAS WIJZIGEN",
-	};
-	static const char *adhoc[6] =
-	{
-		"ADHOC",
-		"ADHOC",
-		"ADHOC",
-		"ADHOC",
-		"ADHOC",
-		"ADHOC",
-	};
-	static const char *exitGame[6] =
-	{
-		"EXIT GAME",
-		"QUITTER LE JEU",
-		"SPIEL BEENDEN",
-		"ESCI DAL GIOCO",
-		"SALIR DEL JUEGO",
-		"SPEL AFSLUITEN",
-	};
-	static const char *onlineLeaderboard[6] =
-	{
-		"ONLINE LEADERBOARD",
-		"CLASSEMENT ONLINE",
-		"ONLINE-RANGLISTE",
-		"CLASSIFICA ONLINE",
-		"RANKING ONLINE",
-		"ONLINE RANGLIJST",
-	};
-	static const char *watchGhost[6] =
-	{
-		"WATCH GHOST",
-		"VOIR FANTOME",
-		"GEIST ANSEHEN",
-		"GUARDA FANTASMA",
-		"VER FANTASMA",
-		"SPOOK BEKIJKEN",
-	};
-	static const char *challengeGhost[6] =
-	{
-		"CHALLENGE GHOST",
-		"DEFIER FANTOME",
-		"GEIST HERAUSF.",
-		"SFIDA FANTASMA",
-		"DESAFIA FANTASMA",
-		"DAAG SPOOK UIT",
-	};
-	static const char *trackNormal[6] =
-	{
-		"NORMAL",
-		"NORMAL",
-		"NORMAL",
-		"NORMALE",
-		"NORMAL",
-		"NORMAAL",
-	};
-	static const char *trackReverse[6] =
-	{
-		"REVERSE",
-		"INVERSE",
-		"RUECKWAERTS",
-		"INVERSA",
-		"INVERSA",
-		"OMGEKEERD",
-	};
-	static const char *trackAlternative[6] =
-	{
-		"ALTERNATIVE",
-		"ALTERNATIVE",
-		"ALTERNATIV",
-		"ALTERNATIVA",
-		"ALTERNATIVA",
-		"ALTERNATIEF",
-	};
-	static const char *cheatsTitle[6] =
-	{
-		"CHEATS", "TRICHES", "CHEATS", "TRUCCHI", "TRUCOS", "CHEATS",
-	};
-	static const char *cheatToggle[6][2] =
-	{
-		{"OFF", "ON"}, {"NON", "OUI"}, {"AUS", "EIN"}, {"NO", "SI"}, {"NO", "SI"}, {"UIT", "AAN"},
-	};
-	static const char *cheatName[6][10] =
-	{
-		{"INFINITE WUMPA", "INFINITE MASK", "INFINITE TURBOS", "INFINITE BOMBS", "INVISIBILITY", "SUPER ENGINE", "ICY TRACKS", "SUPER TURBO PADS", "ADV DIFFICULTY", "ALL CHARACTERS"},
-		{"WUMPA INFINIS", "MASQUE INFINI", "TURBOS INFINIS", "BOMBES INFINIES", "INVISIBILITE", "SUPER MOTEUR", "PISTES GLACEES", "SUPER TURBO PADS", "DIFFICULTE ADV", "TOUS PERSONNAGES"},
-		{"WUMPA UNENDLICH", "MASKE UNENDLICH", "TURBOS UNENDLICH", "BOMBEN UNENDLICH", "UNSICHTBAR", "SUPER MOTOR", "EISIGE STRECKEN", "SUPER TURBO-PADS", "ADV-SCHWIERIG", "ALLE CHARAKTERE"},
-		{"WUMPA INFINITI", "MASCHERA INFINITA", "TURBO INFINITI", "BOMBE INFINITE", "INVISIBILITA", "SUPER MOTORE", "PISTE GHIACCIATE", "SUPER TURBO PAD", "DIFFICOLTA ADV", "TUTTI I PERSONAGGI"},
-		{"WUMPA INFINITA", "MASCARA INFINITA", "TURBOS INFINITOS", "BOMBAS INFINITAS", "INVISIBILIDAD", "SUPER MOTOR", "PISTAS HELADAS", "SUPER TURBO PADS", "DIFICULTAD ADV", "TODOS LOS PERSONAJES"},
-		{"ONEINDIG WUMPA", "ONEINDIG MASKER", "ONEINDIGE TURBOS", "ONEINDIGE BOMMEN", "ONZICHTBAAR", "SUPER MOTOR", "IJZIGE BANEN", "SUPER TURBO PADS", "ADV MOEILIJK", "ALLE PERSONAGES"},
-	};
-	static const char *boostCounter[6] = {"BOOST COUNTER", "COMPTEUR TURBO", "TURBO-ZAEHLER", "CONTATORE TURBO", "CONTADOR TURBO", "TURBO TELLER"};
-	static char cheatRow[64];
-	static const char *lapSingular[6] = {"LAP", "TOUR", "RUNDE", "GIRO", "VUELTA", "RONDE"};
-	static const char *lapPlural[6] = {"LAPS", "TOURS", "RUNDEN", "GIRI", "VUELTAS", "RONDEN"};
-	static char lapRow[32];
-	static const char *controlsTitle[6] =
-	{
-		"CONTROLS", "COMMANDES", "STEUERUNG", "COMANDI", "CONTROLES", "BESTURING",
-	};
-	static const char *controlHeaderAction[6] =
-	{
-		"ACTION", "ACTION", "AKTION", "AZIONE", "ACCION", "ACTIE",
-	};
-	static const char *controlHeaderKbm[6] =
-	{
-		"KB+M", "CLAV/SOURIS", "TAST/MOUSE", "KB+M", "KB+M", "KB+M",
-	};
-	static const char *controlHeaderController[6] =
-	{
-		"CONTROLLER", "MANETTE", "CONTROLLER", "CONTROLLER", "MANDO", "CONTROLLER",
-	};
-	static const char *controlAction[6][PLATFORM_INPUT_BIND_ACTION_COUNT] =
-	{
-		{"* ACCELERATE", "[ BRAKE/REVERSE", "@ USE POWER-UP", "^ TOGGLE HUD", "HOP / SLIDE L1", "HOP / SLIDE R1", "CAMERA CHANGE", "REAR VIEW", "DPAD UP", "DPAD DOWN", "DPAD LEFT", "DPAD RIGHT", "START / PAUSE"},
-		{"* ACCELERER", "[ FREIN/RECUL", "@ UTILISER BONUS", "^ AFFICHAGE HUD", "SAUT / DERAP L1", "SAUT / DERAP R1", "CHANGER CAMERA", "VUE ARRIERE", "HAUT", "BAS", "GAUCHE", "DROITE", "START / PAUSE"},
-		{"* BESCHLEUNIGEN", "[ BREMSE/RUECK", "@ POWER-UP NUTZEN", "^ HUD UMSCHALTEN", "SPRUNG / DRIFT L1", "SPRUNG / DRIFT R1", "KAMERA WECHSEL", "RUECKSICHT", "STEUERKREUZ OBEN", "STEUERKREUZ UNTEN", "STEUERKREUZ LINKS", "STEUERKREUZ RECHTS", "START / PAUSE"},
-		{"* ACCELERA", "[ FRENO/RETRO", "@ USA POWER-UP", "^ CAMBIA HUD", "SALTO / DERAP L1", "SALTO / DERAP R1", "CAMBIA CAMERA", "VISTA POSTERIORE", "DPAD SU", "DPAD GIU", "DPAD SINISTRA", "DPAD DESTRA", "START / PAUSA"},
-		{"* ACELERAR", "[ FRENO/REVERSA", "@ USAR POWER-UP", "^ CAMBIAR HUD", "SALTO / DERRAPE L1", "SALTO / DERRAPE R1", "CAMBIAR CAMARA", "VISTA TRASERA", "DPAD ARRIBA", "DPAD ABAJO", "DPAD IZQUIERDA", "DPAD DERECHA", "START / PAUSA"},
-		{"* GAS", "[ REM/ACHTERUIT", "@ POWER-UP GEBR.", "^ HUD WISSELEN", "SPRONG / DRIFT L1", "SPRONG / DRIFT R1", "CAMERA WISSEL", "ACHTERUITZICHT", "DPAD OMHOOG", "DPAD OMLAAG", "DPAD LINKS", "DPAD RECHTS", "START / PAUZE"},
-	};
 	static char controlRow[128];
 	static char controlHeaderRow[128];
 	static char audioRow[64];
@@ -685,6 +924,12 @@ static char *RECTMENU_GetString(s16 stringIndex)
 	}
 
 	s16 nativeStringIndex = stringIndex & MENU_ROW_LNG_MASK;
+	const struct NativeOptionRow *optionRow = NativeOptionRowFor(nativeStringIndex);
+	if (optionRow != NULL)
+	{
+		return NativeOptionRowText(optionRow, languageRow);
+	}
+
 	if ((nativeStringIndex >= NATIVE_MENU_STRING_CONTROL_CROSS) && (nativeStringIndex <= NATIVE_MENU_STRING_CONTROL_START))
 	{
 		int action = nativeStringIndex - NATIVE_MENU_STRING_CONTROL_CROSS;
@@ -745,31 +990,6 @@ static char *RECTMENU_GetString(s16 stringIndex)
 	{
 	case NATIVE_MENU_STRING_GHOST_REPLAY:
 		return (char *)ghostReplay[languageRow];
-	case NATIVE_MENU_STRING_MIRROR_MODE:
-		return (char *)mirrorMode[languageRow][gNativeMirrorModeEnabled != 0];
-	case NATIVE_MENU_STRING_FRAME_RATE:
-		return (char *)frameRate[gNative60FpsEnabled];
-	case NATIVE_MENU_STRING_ASPECT_RATIO:
-		if (NATIVE_DRAW3D_ACTIVE()) return NativeRow(s_txtAspectRatio[languageRow], NativeAspect_GetLabel(gNativeAspectRatio));
-		snprintf(audioRow, sizeof(audioRow), "%s (NATIVE)", s_txtAspectRatio[languageRow]);
-		return NativeRow(audioRow, NativeAspect_GetLabel(gNativeAspectRatio));
-	case NATIVE_MENU_STRING_FIELD_OF_VIEW:
-		snprintf(audioRow, sizeof(audioRow), "%s%s", s_txtFieldOfView[languageRow], NATIVE_DRAW3D_ACTIVE() ? "" : " (NATIVE)");
-		if (gNativeFovDegrees == 0) return NativeRow(audioRow, "ORIGINAL");
-		snprintf(cameraValue, sizeof(cameraValue), "%d DEG", gNativeFovDegrees);
-		return NativeRow(audioRow, cameraValue);
-	case NATIVE_MENU_STRING_PROJECTION:
-		{
-			static const char *const projectionNames[NATIVE_PROJECTION_MODE_COUNT] = {"PERSPECTIVE", "PANINI", "EDGE COMPRESS"};
-			int mode = gNativeProjectionMode;
-			if (mode < 0 || mode >= NATIVE_PROJECTION_MODE_COUNT) mode = NATIVE_PROJECTION_PERSPECTIVE;
-			snprintf(audioRow, sizeof(audioRow), "%s%s", s_txtProjection[languageRow], NATIVE_DRAW3D_ACTIVE() ? "" : " (NATIVE)");
-			return NativeRow(audioRow, projectionNames[mode]);
-		}
-	case NATIVE_MENU_STRING_PROJECTION_STRENGTH:
-		snprintf(audioRow, sizeof(audioRow), "%s%s", s_txtProjectionStrength[languageRow], NATIVE_DRAW3D_ACTIVE() ? "" : " (NATIVE)");
-		snprintf(cameraValue, sizeof(cameraValue), "%d", gNativeProjectionStrength);
-		return NativeRow(audioRow, cameraValue);
 	case NATIVE_MENU_STRING_AUDIO_FX:
 	case NATIVE_MENU_STRING_AUDIO_MUSIC:
 	case NATIVE_MENU_STRING_AUDIO_VOICE:
@@ -784,14 +1004,6 @@ static char *RECTMENU_GetString(s16 stringIndex)
 		snprintf(audioRow, sizeof(audioRow), "%s %s", sdata->lngStrings[LNG_MODE],
 		         sdata->lngStrings[howl_ModeGet() ? LNG_STEREO : LNG_MONO]);
 		return audioRow;
-	case NATIVE_MENU_STRING_DEFAULT_CAMERA:
-		return (char *)defaultCamera[languageRow][gNativeDefaultCameraFar != 0];
-	case NATIVE_MENU_STRING_DEFAULT_HUD:
-		return (char *)defaultHud[languageRow][gNativeDefaultHudSpeedometer != 0];
-	case NATIVE_MENU_STRING_AI_RACERS:
-		return (char *)aiRacers[languageRow][gNativeAIRacersMode];
-	case NATIVE_MENU_STRING_SKIP_MASK_HINTS:
-		return NativeRow(s_txtSkipMaskHints[languageRow], gNativeSkipMaskHints ? s_txtOn[languageRow] : s_txtOff[languageRow]);
 	case NATIVE_MENU_STRING_DISPLAY:
 		return (char *)s_txtDisplay[languageRow];
 	case NATIVE_MENU_STRING_AUDIO:
@@ -845,30 +1057,6 @@ static char *RECTMENU_GetString(s16 stringIndex)
 #endif
 		return controlHeaderRow;
 #ifndef __vita__
-	case NATIVE_MENU_STRING_ANTI_ALIASING:
-		return (char *)antiAliasing[gNativeAntiAliasingMode];
-	case NATIVE_MENU_STRING_DITHERING:
-		return (char *)dithering[languageRow][gNativeDitheringEnabled != 0];
-	case NATIVE_MENU_STRING_BORDERLESS:
-		return NativeRow(s_txtDisplay[languageRow], gNativeBorderlessEnabled ? s_txtBorderless[languageRow] : s_txtWindowed[languageRow]);
-	case NATIVE_MENU_STRING_PGXP:
-		return NativeRow(s_txtClassicPgxp[languageRow], s_txtPgxpMode[languageRow][gNativePgxpMode]);
-	case NATIVE_MENU_STRING_DEPTH_BUFFER:
-		return NativeRow(s_txtClassicDepth[languageRow], gNativeDepthBufferEnabled ? s_txtOn[languageRow] : s_txtOff[languageRow]);
-	case NATIVE_MENU_STRING_RENDERER:
-		return NativeRow(s_txtRenderer[languageRow], gNativeRendererMode == NATIVE_RENDERER_NATIVE ? s_txtRendererNative[languageRow] : s_txtRendererClassic[languageRow]);
-	case NATIVE_MENU_STRING_COLOR_DEPTH:
-		return NativeRow(s_txtColourDepth[languageRow], gNativeColorDepth == NATIVE_COLOR_DEPTH_15BIT ? "15-BIT PS1" : "24-BIT");
-	case NATIVE_MENU_STRING_TEXTURE_FILTER:
-		return NativeRow(s_txtTextures[languageRow], g_cfg_bilinearFiltering ? s_txtBilinear[languageRow] : s_txtNearest[languageRow]);
-	case NATIVE_MENU_STRING_HD_PAUSE:
-		return NativeRow(s_txtPauseScreen[languageRow], gNativeHdPauseMode == 0 ? s_txtOriginal[languageRow] : (gNativeHdPauseMode == 1 ? "HD" : s_txtHdSmooth[languageRow]));
-	case NATIVE_MENU_STRING_PRECISE_MINIMAP:
-		return NativeRow(s_txtPreciseMinimap[languageRow], gNativePreciseMinimapEnabled ? s_txtOn[languageRow] : s_txtOff[languageRow]);
-	case NATIVE_MENU_STRING_MODERN_MAP:
-		return NativeRow(s_txtModernMinimap[languageRow], gNativeModernMapEnabled ? s_txtOn[languageRow] : s_txtOff[languageRow]);
-	case NATIVE_MENU_STRING_MODERN_HUD_ICONS:
-		return NativeRow(s_txtModernHudIcons[languageRow], gNativeModernHudIconsEnabled ? s_txtOn[languageRow] : s_txtOff[languageRow]);
 	case NATIVE_MENU_STRING_PRESET:
 		return (char *)s_txtPreset[languageRow];
 	case NATIVE_MENU_STRING_PRESET_PS1:
@@ -884,39 +1072,6 @@ static char *RECTMENU_GetString(s16 stringIndex)
 		snprintf(cheatRow, sizeof(cheatRow), "%s: %s", boostCounter[languageRow], cheatToggle[languageRow][(gNativeCheatConfigMask & CHEAT_TURBOCOUNT) != 0]);
 		return cheatRow;
 	}
-	case NATIVE_MENU_STRING_ADDITIONAL_UNLOCKS:
-		return NativeRow(s_txtAdditionalUnlocks[languageRow], gNativeAdditionalUnlocksEnabled ? s_txtOn[languageRow] : s_txtOff[languageRow]);
-	case NATIVE_MENU_STRING_ENGINE_SELECTION:
-		return NativeRow(s_txtEngineSelection[languageRow], gNativeEngineSelectionEnabled ? s_txtOn[languageRow] : s_txtOff[languageRow]);
-	case NATIVE_MENU_STRING_KART_HUE:
-	{
-		static char kartHueRow[96];
-		if (gNativeKartHue == 0)
-		{
-			snprintf(kartHueRow, sizeof(kartHueRow), "%s (%s): %s", s_txtKartHue[languageRow], s_txtExperimental[languageRow], s_txtOriginal[languageRow]);
-		}
-		else
-		{
-			snprintf(kartHueRow, sizeof(kartHueRow), "%s (%s): +%d", s_txtKartHue[languageRow], s_txtExperimental[languageRow], gNativeKartHue * NATIVE_KART_HUE_STEP_DEGREES);
-		}
-		return kartHueRow;
-	}
-	case NATIVE_MENU_STRING_FONT:
-	{
-		static char fontRow[48];
-		snprintf(fontRow, sizeof(fontRow), "%s: %s", s_txtFont[languageRow], (gNativeFont == NATIVE_FONT_ORIGINAL) ? s_txtOriginal[languageRow] : NativeFont_GetName(gNativeFont));
-		return fontRow;
-	}
-	case NATIVE_MENU_STRING_AI_PHYSICS:
-		return NativeRow(s_txtAi[languageRow], gNativeSmoothedAIEnabled ? s_txtSmoothed[languageRow] : s_txtOriginal[languageRow]);
-	case NATIVE_MENU_STRING_COLLISION_PHYSICS:
-		return NativeRow(s_txtCollisions[languageRow], gNativeSmoothedCollisionEnabled ? s_txtSmoothed[languageRow] : s_txtOriginal[languageRow]);
-	case NATIVE_MENU_STRING_STEERING_PHYSICS:
-		return NativeRow(s_txtSteering[languageRow], gNativeSmoothedSteeringEnabled ? s_txtSmoothed[languageRow] : s_txtOriginal[languageRow]);
-	case NATIVE_MENU_STRING_PHYSICS:
-		return NativeRow(s_txtPlayerPhysics[languageRow], gNativeSmoothedPhysicsEnabled ? s_txtSmoothed[languageRow] : s_txtOriginal[languageRow]);
-	case NATIVE_MENU_STRING_MAX_LOD:
-		return (char *)maxLod[languageRow][CTR_NATIVE_MAX_LOD_ACTIVE];
 #endif
 	case NATIVE_MENU_STRING_SUPER_HARD:
 		return (char *)superHard[languageRow];
@@ -1323,40 +1478,17 @@ static b32 RECTMENU_NativeOptionsHorizontalInput(struct RectMenu *menu)
 	}
 
 	s16 stringIndex = menu->rows[menu->rowSelected].stringIndex & MENU_ROW_LNG_MASK;
-	return ((stringIndex >= NATIVE_MENU_STRING_AUDIO_FX) &&
-	        (stringIndex <= NATIVE_MENU_STRING_AUDIO_MODE)) ||
-	       (stringIndex == NATIVE_MENU_STRING_FRAME_RATE) ||
-	       (stringIndex == NATIVE_MENU_STRING_ASPECT_RATIO) ||
-	       (stringIndex == NATIVE_MENU_STRING_FIELD_OF_VIEW) ||
-	       (stringIndex == NATIVE_MENU_STRING_PROJECTION) ||
-	       (stringIndex == NATIVE_MENU_STRING_PROJECTION_STRENGTH) ||
-	       (stringIndex == NATIVE_MENU_STRING_BORDERLESS) ||
-	       (stringIndex == NATIVE_MENU_STRING_ANTI_ALIASING) ||
-	       (stringIndex == NATIVE_MENU_STRING_DITHERING) ||
-	       (stringIndex == NATIVE_MENU_STRING_DEFAULT_CAMERA) ||
-	       (stringIndex == NATIVE_MENU_STRING_DEFAULT_HUD) ||
-	       (stringIndex == NATIVE_MENU_STRING_MIRROR_MODE) ||
-	       (stringIndex == NATIVE_MENU_STRING_AI_RACERS) ||
-	       (stringIndex == NATIVE_MENU_STRING_PGXP) ||
-	       (stringIndex == NATIVE_MENU_STRING_RENDERER) ||
-	       (stringIndex == NATIVE_MENU_STRING_COLOR_DEPTH) ||
-	       (stringIndex == NATIVE_MENU_STRING_TEXTURE_FILTER) ||
-	       (stringIndex == NATIVE_MENU_STRING_DEPTH_BUFFER) ||
-	       (stringIndex == NATIVE_MENU_STRING_HD_PAUSE) ||
-	       (stringIndex == NATIVE_MENU_STRING_MAX_LOD) ||
-	       (stringIndex == NATIVE_MENU_STRING_PHYSICS) ||
-	       (stringIndex == NATIVE_MENU_STRING_AI_PHYSICS) ||
-	       (stringIndex == NATIVE_MENU_STRING_COLLISION_PHYSICS) ||
-	       (stringIndex == NATIVE_MENU_STRING_STEERING_PHYSICS) ||
-	       (stringIndex == NATIVE_MENU_STRING_PRECISE_MINIMAP) ||
-	       (stringIndex == NATIVE_MENU_STRING_SKIP_MASK_HINTS) ||
-	       (stringIndex == NATIVE_MENU_STRING_MODERN_MAP) ||
-	       (stringIndex == NATIVE_MENU_STRING_FONT) ||
-	       (stringIndex == NATIVE_MENU_STRING_KART_HUE) ||
-	       (stringIndex == NATIVE_MENU_STRING_MODERN_HUD_ICONS) ||
-	       (stringIndex == NATIVE_MENU_STRING_ADDITIONAL_UNLOCKS) ||
-	       (stringIndex == NATIVE_MENU_STRING_BOOST_COUNTER) ||
-	       (stringIndex == NATIVE_MENU_STRING_ENGINE_SELECTION);
+
+	// Every settings row adjusts with left/right; the table is the single
+	// place that decides this, so adding a setting needs no edit here.
+	if (NativeOptionRowFor(stringIndex) != NULL)
+	{
+		return true;
+	}
+
+	// Rows that are not persisted settings but still adjust horizontally.
+	return ((stringIndex >= NATIVE_MENU_STRING_AUDIO_FX) && (stringIndex <= NATIVE_MENU_STRING_AUDIO_MODE)) ||
+	       (stringIndex == NATIVE_MENU_STRING_BOOST_COUNTER);
 }
 #endif
 

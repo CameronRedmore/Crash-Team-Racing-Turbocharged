@@ -1679,6 +1679,88 @@ int main(int argc, char **argv)
 		DepthTest_MinimapAssets(argv[2]);
 		return 0;
 	}
+	// Headless snapshot of every options-menu row's rendered text, for each
+	// language and each accepted value. Guards the options menu against label
+	// and formatting regressions without needing a GL context, and lets a
+	// refactor of the row rendering be checked by diffing the output.
+	if (argc == 2 && strcmp(argv[1], "--option-strings-only") == 0)
+	{
+		struct OptionStringSweep
+		{
+			const char *name;
+			s16 stringIndex;
+			int *storage;
+			int minValue;
+			int maxValue;
+		};
+		static const struct OptionStringSweep sweeps[] = {
+			{"aspect_ratio", NATIVE_MENU_STRING_ASPECT_RATIO, &gNativeAspectRatio, 0, NATIVE_ASPECT_COUNT - 1},
+			{"fov_degrees", NATIVE_MENU_STRING_FIELD_OF_VIEW, &gNativeFovDegrees, 0, 100},
+			{"projection_mode", NATIVE_MENU_STRING_PROJECTION, &gNativeProjectionMode, 0, NATIVE_PROJECTION_MODE_COUNT - 1},
+			{"projection_strength", NATIVE_MENU_STRING_PROJECTION_STRENGTH, &gNativeProjectionStrength, 0, 100},
+			{"mirror_mode", NATIVE_MENU_STRING_MIRROR_MODE, &gNativeMirrorModeEnabled, 0, 1},
+			{"frame_rate", NATIVE_MENU_STRING_FRAME_RATE, &gNative60FpsEnabled, 0, NATIVE_FRAME_RATE_COUNT - 1},
+			{"default_camera_far", NATIVE_MENU_STRING_DEFAULT_CAMERA, &gNativeDefaultCameraFar, 0, 1},
+			{"default_hud_speedometer", NATIVE_MENU_STRING_DEFAULT_HUD, &gNativeDefaultHudSpeedometer, 0, 1},
+			{"ai_racers", NATIVE_MENU_STRING_AI_RACERS, &gNativeAIRacersMode, 0, NATIVE_AI_RACERS_MODE_COUNT - 1},
+			{"skip_mask_hints", NATIVE_MENU_STRING_SKIP_MASK_HINTS, &gNativeSkipMaskHints, 0, 1},
+			{"engine_selection", NATIVE_MENU_STRING_ENGINE_SELECTION, &gNativeEngineSelectionEnabled, 0, 1},
+			{"additional_unlocks", NATIVE_MENU_STRING_ADDITIONAL_UNLOCKS, &gNativeAdditionalUnlocksEnabled, 0, 1},
+			{"anti_aliasing", NATIVE_MENU_STRING_ANTI_ALIASING, &gNativeAntiAliasingMode, 0, NATIVE_AA_MODE_COUNT - 1},
+			{"dithering", NATIVE_MENU_STRING_DITHERING, &gNativeDitheringEnabled, 0, 1},
+			{"borderless", NATIVE_MENU_STRING_BORDERLESS, &gNativeBorderlessEnabled, 0, 1},
+			{"pgxp", NATIVE_MENU_STRING_PGXP, &gNativePgxpMode, 0, NATIVE_PGXP_MODE_COUNT - 1},
+			{"renderer", NATIVE_MENU_STRING_RENDERER, &gNativeRendererMode, 0, NATIVE_RENDERER_MODE_COUNT - 1},
+			{"color_depth", NATIVE_MENU_STRING_COLOR_DEPTH, &gNativeColorDepth, 0, NATIVE_COLOR_DEPTH_COUNT - 1},
+			{"texture_filter", NATIVE_MENU_STRING_TEXTURE_FILTER, &g_cfg_bilinearFiltering, 0, 1},
+			{"modern_minimap", NATIVE_MENU_STRING_MODERN_MAP, &gNativeModernMapEnabled, 0, 1},
+			{"modern_hud_icons", NATIVE_MENU_STRING_MODERN_HUD_ICONS, &gNativeModernHudIconsEnabled, 0, 1},
+			{"font", NATIVE_MENU_STRING_FONT, &gNativeFont, 0, NATIVE_FONT_COUNT - 1},
+			{"kart_hue", NATIVE_MENU_STRING_KART_HUE, &gNativeKartHue, 0, NATIVE_KART_HUE_STEPS - 1},
+			{"max_lod", NATIVE_MENU_STRING_MAX_LOD, &gNativeMaxLodEnabled, 0, 1},
+			{"depth_buffer", NATIVE_MENU_STRING_DEPTH_BUFFER, &gNativeDepthBufferEnabled, 0, 1},
+			{"hd_pause_screen", NATIVE_MENU_STRING_HD_PAUSE, &gNativeHdPauseMode, 0, 2},
+			{"smoothed_physics", NATIVE_MENU_STRING_PHYSICS, &gNativeSmoothedPhysicsEnabled, 0, 1},
+			{"smoothed_ai", NATIVE_MENU_STRING_AI_PHYSICS, &gNativeSmoothedAIEnabled, 0, 1},
+			{"smoothed_collisions", NATIVE_MENU_STRING_COLLISION_PHYSICS, &gNativeSmoothedCollisionEnabled, 0, 1},
+			{"smoothed_steering", NATIVE_MENU_STRING_STEERING_PHYSICS, &gNativeSmoothedSteeringEnabled, 0, 1},
+		};
+
+		for (unsigned int sweep = 0; sweep < sizeof(sweeps) / sizeof(sweeps[0]); sweep++)
+		{
+			for (int language = 0; language < 6; language++)
+			{
+				cfg_language = language;
+				for (int value = sweeps[sweep].minValue; value <= sweeps[sweep].maxValue; value++)
+				{
+						*sweeps[sweep].storage = value;
+					printf("%s|lang%d|value%d|%s\n", sweeps[sweep].name, language, value, RECTMENU_GetString(sweeps[sweep].stringIndex));
+				}
+			}
+		}
+		// Rows that read the cheat bitmask rather than an option global.
+		// Audio rows are excluded: they read sdata->lngStrings, which this mode
+		// does not initialise.
+		for (int language = 0; language < 6; language++)
+		{
+			cfg_language = language;
+			for (int value = 0; value <= 1; value++)
+			{
+				if (value)
+				{
+					gNativeCheatConfigMask |= CHEAT_TURBOCOUNT;
+				}
+				else
+				{
+					gNativeCheatConfigMask &= ~CHEAT_TURBOCOUNT;
+				}
+				printf("boost_counter|lang%d|value%d|%s\n", language, value, RECTMENU_GetString(NATIVE_MENU_STRING_BOOST_COUNTER));
+			}
+		}
+		puts("option string snapshot complete");
+		return 0;
+	}
+
 	if (!SDL_Init(SDL_INIT_VIDEO)) return 77;
 	gNativeDitheringEnabled = 0;
 	gNativeBorderlessEnabled = 0;

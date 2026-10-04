@@ -294,6 +294,9 @@ if(BUILD_TESTING AND NOT EMSCRIPTEN)
             target_sources(ctr_native_depth_renderer_test PRIVATE platform/native_http_win32.c)
         endif()
         add_test(NAME ctr_native_depth_renderer COMMAND ctr_native_depth_renderer_test)
+        # Headless: renders every options-menu row's text for all six languages
+        # and every accepted value, before any GL context is created.
+        add_test(NAME ctr_native_option_strings COMMAND ctr_native_depth_renderer_test --option-strings-only)
         add_test(NAME ctr_native_aspect_game COMMAND ctr_native_depth_renderer_test --aspect-only)
         add_test(NAME ctr_native_projection_game COMMAND ctr_native_depth_renderer_test --projection-only)
         add_test(NAME ctr_native_projection_renderer COMMAND ctr_native_depth_renderer_test --projection-renderer-only)
