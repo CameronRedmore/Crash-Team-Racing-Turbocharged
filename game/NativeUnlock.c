@@ -18,25 +18,27 @@ struct NativeUnlockReward
 	enum NativeUnlockKind kind;
 };
 
-static const struct NativeUnlockReward s_nativeUnlockRewards[] =
-{
-	{5, LNG_DR_N_TROPY, NATIVE_UNLOCK_CHARACTER},
-	{6, LNG_PENTA_PENGUIN, NATIVE_UNLOCK_CHARACTER},
-	{7, LNG_RIPPER_ROO, NATIVE_UNLOCK_CHARACTER},
-	{8, LNG_PAPU_PAPU, NATIVE_UNLOCK_CHARACTER},
-	{9, LNG_KOMODO_JOE, NATIVE_UNLOCK_CHARACTER},
-	{10, LNG_PINSTRIPE, NATIVE_UNLOCK_CHARACTER},
-	{11, LNG_FAKE_CRASH, NATIVE_UNLOCK_CHARACTER},
-	{GAME_UNLOCK_BIT_OXIDE, LNG_N_OXIDE_FULL, NATIVE_UNLOCK_CHARACTER},
-	{GAME_UNLOCK_BIT_TURBO_TRACK, LNG_TURBO_TRACK, NATIVE_UNLOCK_TRACK},
-	{GAME_UNLOCK_BIT_PARKING_LOT, LNG_PARKING_LOT, NATIVE_UNLOCK_ARENA},
-	{GAME_UNLOCK_BIT_NORTH_BOWL, LNG_THE_NORTH_BOWL, NATIVE_UNLOCK_ARENA},
-	{GAME_UNLOCK_BIT_LAB_BASEMENT, LNG_LAB_BASEMENT, NATIVE_UNLOCK_ARENA},
-	{GAME_UNLOCK_BIT_SCRAPBOOK, LNG_SCRAPBOOK, NATIVE_UNLOCK_SCRAPBOOK},
-	{-1, LNG_SLIDE_COLISEUM, NATIVE_UNLOCK_ADVENTURE_TRACK},
+static const struct NativeUnlockReward s_nativeUnlockRewards[] = {
+    {5, LNG_DR_N_TROPY, NATIVE_UNLOCK_CHARACTER},
+    {6, LNG_PENTA_PENGUIN, NATIVE_UNLOCK_CHARACTER},
+    {7, LNG_RIPPER_ROO, NATIVE_UNLOCK_CHARACTER},
+    {8, LNG_PAPU_PAPU, NATIVE_UNLOCK_CHARACTER},
+    {9, LNG_KOMODO_JOE, NATIVE_UNLOCK_CHARACTER},
+    {10, LNG_PINSTRIPE, NATIVE_UNLOCK_CHARACTER},
+    {11, LNG_FAKE_CRASH, NATIVE_UNLOCK_CHARACTER},
+    {GAME_UNLOCK_BIT_OXIDE, LNG_N_OXIDE_FULL, NATIVE_UNLOCK_CHARACTER},
+    {GAME_UNLOCK_BIT_TURBO_TRACK, LNG_TURBO_TRACK, NATIVE_UNLOCK_TRACK},
+    {GAME_UNLOCK_BIT_PARKING_LOT, LNG_PARKING_LOT, NATIVE_UNLOCK_ARENA},
+    {GAME_UNLOCK_BIT_NORTH_BOWL, LNG_THE_NORTH_BOWL, NATIVE_UNLOCK_ARENA},
+    {GAME_UNLOCK_BIT_LAB_BASEMENT, LNG_LAB_BASEMENT, NATIVE_UNLOCK_ARENA},
+    {GAME_UNLOCK_BIT_SCRAPBOOK, LNG_SCRAPBOOK, NATIVE_UNLOCK_SCRAPBOOK},
+    {-1, LNG_SLIDE_COLISEUM, NATIVE_UNLOCK_ADVENTURE_TRACK},
 };
 
-enum { NATIVE_UNLOCK_REWARD_COUNT = sizeof(s_nativeUnlockRewards) / sizeof(s_nativeUnlockRewards[0]) };
+enum
+{
+	NATIVE_UNLOCK_REWARD_COUNT = sizeof(s_nativeUnlockRewards) / sizeof(s_nativeUnlockRewards[0])
+};
 static int s_nativeUnlockQueue[NATIVE_UNLOCK_REWARD_COUNT];
 static int s_nativeUnlockHead;
 static int s_nativeUnlockCount;
@@ -47,9 +49,11 @@ static void NativeUnlock_QueueBit(int bit)
 {
 	for (int reward = 0; reward < NATIVE_UNLOCK_REWARD_COUNT; reward++)
 	{
-		if (s_nativeUnlockRewards[reward].bit != bit) continue;
+		if (s_nativeUnlockRewards[reward].bit != bit)
+			continue;
 		for (int i = 0; i < s_nativeUnlockCount; i++)
-			if (s_nativeUnlockQueue[(s_nativeUnlockHead + i) % NATIVE_UNLOCK_REWARD_COUNT] == reward) return;
+			if (s_nativeUnlockQueue[(s_nativeUnlockHead + i) % NATIVE_UNLOCK_REWARD_COUNT] == reward)
+				return;
 		if (s_nativeUnlockCount < NATIVE_UNLOCK_REWARD_COUNT)
 		{
 			s_nativeUnlockQueue[(s_nativeUnlockHead + s_nativeUnlockCount) % NATIVE_UNLOCK_REWARD_COUNT] = reward;
@@ -61,8 +65,10 @@ static void NativeUnlock_QueueBit(int bit)
 
 void NativeUnlock_GrantBit(int bit)
 {
-	if ((sdata == NULL) || (bit < 0) || (bit >= GAME_PROGRESS_UNLOCK_WORD_COUNT * 32)) return;
-	if (CHECK_ADV_BIT(sdata->gameProgress.unlocks, bit)) return;
+	if ((sdata == NULL) || (bit < 0) || (bit >= GAME_PROGRESS_UNLOCK_WORD_COUNT * 32))
+		return;
+	if (CHECK_ADV_BIT(sdata->gameProgress.unlocks, bit))
+		return;
 	UNLOCK_ADV_BIT(sdata->gameProgress.unlocks, bit);
 	NativeUnlock_QueueBit(bit);
 }
@@ -70,7 +76,8 @@ void NativeUnlock_GrantBit(int bit)
 void NativeUnlock_GrantMask(u32 mask)
 {
 	for (int bit = 0; bit < 32; bit++)
-		if (mask & (1u << bit)) NativeUnlock_GrantBit(bit);
+		if (mask & (1u << bit))
+			NativeUnlock_GrantBit(bit);
 }
 
 void NativeUnlock_NotifySlideColiseum(void)
@@ -83,23 +90,20 @@ void NativeUnlock_NotifySlideColiseum(void)
 void NativeUnlock_Draw(void)
 {
 	static const char *const titles[6] = {
-		"UNLOCKED!", "DEBLOQUE!", "FREIGESCHALTET!", "SBLOCCATO!", "DESBLOQUEADO!", "ONTGRENDELD!",
+	    "UNLOCKED!", "DEBLOQUE!", "FREIGESCHALTET!", "SBLOCCATO!", "DESBLOQUEADO!", "ONTGRENDELD!",
 	};
 	static const char *const kinds[6][5] = {
-		{"CHARACTER", "TRACK", "BATTLE ARENA", "SCRAPBOOK", "ADVENTURE TRACK"},
-		{"PERSONNAGE", "CIRCUIT", "ARENE DE COMBAT", "ALBUM", "CIRCUIT AVENTURE"},
-		{"CHARAKTER", "STRECKE", "KAMPFARENA", "ALBUM", "ABENTEUERSTRECKE"},
-		{"PERSONAGGIO", "PISTA", "ARENA BATTAGLIA", "ALBUM", "PISTA AVVENTURA"},
-		{"PERSONAJE", "CIRCUITO", "ARENA DE BATALLA", "ALBUM", "CIRCUITO AVENTURA"},
-		{"PERSONAGE", "CIRCUIT", "GEVECHTSARENA", "ALBUM", "AVONTURENCIRCUIT"},
+	    {"CHARACTER", "TRACK", "BATTLE ARENA", "SCRAPBOOK", "ADVENTURE TRACK"},      {"PERSONNAGE", "CIRCUIT", "ARENE DE COMBAT", "ALBUM", "CIRCUIT AVENTURE"},
+	    {"CHARAKTER", "STRECKE", "KAMPFARENA", "ALBUM", "ABENTEUERSTRECKE"},         {"PERSONAGGIO", "PISTA", "ARENA BATTAGLIA", "ALBUM", "PISTA AVVENTURA"},
+	    {"PERSONAJE", "CIRCUITO", "ARENA DE BATALLA", "ALBUM", "CIRCUITO AVENTURA"}, {"PERSONAGE", "CIRCUIT", "GEVECHTSARENA", "ALBUM", "AVONTURENCIRCUIT"},
 	};
-	if ((sdata == NULL) || (sdata->gGT == NULL) || (s_nativeUnlockCount == 0)) return;
+	if ((sdata == NULL) || (sdata->gGT == NULL) || (s_nativeUnlockCount == 0))
+		return;
 	struct GameTracker *gGT = sdata->gGT;
-	if ((sdata->Loading.stage != LOAD_IDLE) || (sdata->lngStrings == NULL) ||
-	    (gGT->backBuffer == NULL) || (gGT->boolDemoMode != 0) ||
-	    (sdata->boolPlayVideoSTR != 0) || (sdata->AkuAkuHintState != 0) ||
-	    ((gGT->gameMode1 & GAME_CUTSCENE) != 0) ||
-	    ((gGT->gameMode1 & (MAIN_MENU | ADVENTURE_ARENA | END_OF_RACE)) == 0)) return;
+	if ((sdata->Loading.stage != LOAD_IDLE) || (sdata->lngStrings == NULL) || (gGT->backBuffer == NULL) || (gGT->boolDemoMode != 0) ||
+	    (sdata->boolPlayVideoSTR != 0) || (sdata->AkuAkuHintState != 0) || ((gGT->gameMode1 & GAME_CUTSCENE) != 0) ||
+	    ((gGT->gameMode1 & (MAIN_MENU | ADVENTURE_ARENA | END_OF_RACE)) == 0))
+		return;
 
 	if (!s_nativeUnlockStarted)
 	{
@@ -112,8 +116,10 @@ void NativeUnlock_Draw(void)
 	char *name = sdata->lngStrings[reward->name];
 	int nameFont = DecalFont_GetLineWidth(name, FONT_BIG) <= 440 ? FONT_BIG : FONT_SMALL;
 	int width = DecalFont_GetLineWidth(name, nameFont) + 32;
-	if (width < 280) width = 280;
-	if (width > 480) width = 480;
+	if (width < 280)
+		width = 280;
+	if (width > 480)
+		width = 480;
 	RECT box = {(s16)(256 - width / 2), 8, (s16)width, 58};
 	Color background = {.self = 0x302018};
 	Color border = {.self = 0x4080ff};

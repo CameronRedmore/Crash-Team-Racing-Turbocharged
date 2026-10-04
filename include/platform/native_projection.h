@@ -26,11 +26,9 @@ typedef struct NativeProjectionParams
 } NativeProjectionParams;
 
 // Returns zero for invalid pointers or a non-finite/non-positive horizontal tangent.
-int NativeProjection_BuildParams(enum NativeProjectionMode mode, int strength,
-	double horizontalTanHalf, NativeProjectionParams *out);
+int NativeProjection_BuildParams(enum NativeProjectionMode mode, int strength, double horizontalTanHalf, NativeProjectionParams *out);
 
 // Inverse-map display NDC to source-camera NDC. Returns zero if inputs are invalid.
-int NativeProjection_MapOutputToSource(const NativeProjectionParams *params,
-	double outputNdcX, double outputNdcY, double *sourceNdcX, double *sourceNdcY);
+int NativeProjection_MapOutputToSource(const NativeProjectionParams *params, double outputNdcX, double outputNdcY, double *sourceNdcX, double *sourceNdcY);
 
 #endif

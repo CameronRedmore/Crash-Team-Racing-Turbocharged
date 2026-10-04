@@ -55,10 +55,10 @@ enum NativeTextureFilter
 
 // Matches the PGXP depth encoding: clip w is camera depth and NDC depth is
 // 1 - 2 * near / depth, so geometry closer than this is clipped.
-#define NATIVE_DRAW3D_NEAR_PLANE 32.0f
+#define NATIVE_DRAW3D_NEAR_PLANE            32.0f
 
 // Camera depth covered by one retail OT slot (level faces sort at depth >> 6).
-#define NATIVE_DRAW3D_OT_SLOT_DEPTH 64.0f
+#define NATIVE_DRAW3D_OT_SLOT_DEPTH         64.0f
 // Depth a positive draw-order slot pushes a level face back. Retail compares
 // whole faces, so a full slot per unit lets long faces just behind a pushed
 // one (tunnel walls behind a mouth frame) show through it per pixel. Half a
@@ -190,13 +190,12 @@ void NativeDraw3D_SetObjectTransform(int layer, const double *rotation, const do
 int NativeDraw3D_AddTriangle(int layer, const NativeDraw3DVertex *v0, const NativeDraw3DVertex *v1, const NativeDraw3DVertex *v2,
                              const NativeDraw3DMaterial *material);
 // PS1 quad order: triangles (v0, v1, v2) and (v1, v3, v2).
-int NativeDraw3D_AddQuad(int layer, const NativeDraw3DVertex *v0, const NativeDraw3DVertex *v1, const NativeDraw3DVertex *v2,
-                         const NativeDraw3DVertex *v3, const NativeDraw3DMaterial *material);
+int NativeDraw3D_AddQuad(int layer, const NativeDraw3DVertex *v0, const NativeDraw3DVertex *v1, const NativeDraw3DVertex *v2, const NativeDraw3DVertex *v3,
+                         const NativeDraw3DMaterial *material);
 
 // A coloured line becomes a one-pixel-wide camera-space ribbon. Clips its
 // endpoints before constructing the ribbon, preserving perspective depth.
-int NativeDraw3D_AddLine(int layer, const NativeDraw3DVertex *v0, const NativeDraw3DVertex *v1,
-                         const NativeDraw3DMaterial *material, float width);
+int NativeDraw3D_AddLine(int layer, const NativeDraw3DVertex *v0, const NativeDraw3DVertex *v1, const NativeDraw3DMaterial *material, float width);
 
 // Writes a DR_PSYX_DRAW3D marker that draws `layer` at its OT position.
 void NativeDraw3D_SetMarker(void *packet, int layer);

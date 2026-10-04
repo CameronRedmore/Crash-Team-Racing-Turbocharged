@@ -120,12 +120,40 @@ static void ResetToDefaults(void)
 
 // save_config's key order at the point the registry replaced it. Cheat and
 // binding keys follow these and are emitted by main.c, not the registry.
-static const char *const s_expectedWriteOrder[] = {
-	"language", "aspect_ratio", "fov_degrees", "projection_mode", "projection_strength", "preset_seen", "mirror_mode", "60fps", "frame_rate",
-	"default_camera_far", "default_hud_speedometer", "ai_racers", "skip_mask_hints", "engine_selection", "additional_unlocks", "anti_aliasing",
-	"dithering", "borderless", "pgxp", "renderer", "color_depth", "texture_filter", "pgxp_integer_nclip", "modern_minimap", "modern_hud_icons",
-	"font", "kart_hue", "max_lod", "depth_buffer", "hd_pause_screen", "smoothed_physics", "smoothed_ai", "smoothed_collisions", "smoothed_steering"
-};
+static const char *const s_expectedWriteOrder[] = {"language",
+                                                   "aspect_ratio",
+                                                   "fov_degrees",
+                                                   "projection_mode",
+                                                   "projection_strength",
+                                                   "preset_seen",
+                                                   "mirror_mode",
+                                                   "60fps",
+                                                   "frame_rate",
+                                                   "default_camera_far",
+                                                   "default_hud_speedometer",
+                                                   "ai_racers",
+                                                   "skip_mask_hints",
+                                                   "engine_selection",
+                                                   "additional_unlocks",
+                                                   "anti_aliasing",
+                                                   "dithering",
+                                                   "borderless",
+                                                   "pgxp",
+                                                   "renderer",
+                                                   "color_depth",
+                                                   "texture_filter",
+                                                   "pgxp_integer_nclip",
+                                                   "modern_minimap",
+                                                   "modern_hud_icons",
+                                                   "font",
+                                                   "kart_hue",
+                                                   "max_lod",
+                                                   "depth_buffer",
+                                                   "hd_pause_screen",
+                                                   "smoothed_physics",
+                                                   "smoothed_ai",
+                                                   "smoothed_collisions",
+                                                   "smoothed_steering"};
 
 // Keys load_config accepted before the refactor that are not written back.
 static const char *const s_legacyOnlyKeys[] = {"custom_ai_racers", "modern_map", "precise_minimap"};
@@ -170,8 +198,9 @@ static void test_legacy_aliases_are_accepted_but_not_written(void)
 static void test_bool_keys_normalise_and_round_trip(void)
 {
 	ResetToDefaults();
-	const char *const boolKeys[] = {"mirror_mode", "default_camera_far", "default_hud_speedometer", "skip_mask_hints", "engine_selection", "additional_unlocks",
-		                            "dithering", "borderless", "pgxp_integer_nclip", "modern_hud_icons", "max_lod", "depth_buffer"};
+	const char *const boolKeys[] = {
+	    "mirror_mode", "default_camera_far", "default_hud_speedometer", "skip_mask_hints",  "engine_selection", "additional_unlocks",
+	    "dithering",   "borderless",         "pgxp_integer_nclip",      "modern_hud_icons", "max_lod",          "depth_buffer"};
 	for (unsigned int i = 0; i < sizeof(boolKeys) / sizeof(boolKeys[0]); i++)
 	{
 		const struct NativeOption *option = NativeOption_Find(boolKeys[i]);
@@ -195,15 +224,15 @@ static void test_enum_keys_reject_out_of_range_and_keep_previous(void)
 		const char *key;
 		int lastValid;
 	} enums[] = {
-		{"aspect_ratio", NATIVE_ASPECT_COUNT - 1},
-		{"projection_mode", NATIVE_PROJECTION_MODE_COUNT - 1},
-		{"anti_aliasing", NATIVE_AA_MODE_COUNT - 1},
-		{"pgxp", NATIVE_PGXP_MODE_COUNT - 1},
-		{"renderer", NATIVE_RENDERER_MODE_COUNT - 1},
-		{"color_depth", NATIVE_COLOR_DEPTH_COUNT - 1},
-		{"font", NATIVE_FONT_COUNT - 1},
-		{"kart_hue", NATIVE_KART_HUE_STEPS - 1},
-		{"ai_racers", NATIVE_AI_RACERS_MODE_COUNT - 1},
+	    {"aspect_ratio", NATIVE_ASPECT_COUNT - 1},
+	    {"projection_mode", NATIVE_PROJECTION_MODE_COUNT - 1},
+	    {"anti_aliasing", NATIVE_AA_MODE_COUNT - 1},
+	    {"pgxp", NATIVE_PGXP_MODE_COUNT - 1},
+	    {"renderer", NATIVE_RENDERER_MODE_COUNT - 1},
+	    {"color_depth", NATIVE_COLOR_DEPTH_COUNT - 1},
+	    {"font", NATIVE_FONT_COUNT - 1},
+	    {"kart_hue", NATIVE_KART_HUE_STEPS - 1},
+	    {"ai_racers", NATIVE_AI_RACERS_MODE_COUNT - 1},
 	};
 
 	for (unsigned int i = 0; i < sizeof(enums) / sizeof(enums[0]); i++)

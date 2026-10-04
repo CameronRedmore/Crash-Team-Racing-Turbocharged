@@ -43,13 +43,17 @@ global_variable NativeDraw3DLayer s_draw3dLayers[NATIVE_DRAW3D_MAX_LAYERS];
 global_variable int s_draw3dLayerCount;
 
 static const char *const s_draw3dDiagnosticNames[NATIVE_DRAW3D_DIAG_COUNT] = {
-	"model skipped: unsupported setup/selector", "model unsupported draw handler",
-	"model unsupported primitive", "model Classic fallback: invalid depth scale",
-	"model Classic fallback: missing OT range", "model Classic fallback: stale shared OT range",
-	"level skipped: missing input",
-	"overlay drawn without depth: nested pass", "overlay drawn without depth: unexpected target",
-	"overlay drawn without depth: incomplete framebuffer",
-	"projected polygon packet using geometry recovery",
+    "model skipped: unsupported setup/selector",
+    "model unsupported draw handler",
+    "model unsupported primitive",
+    "model Classic fallback: invalid depth scale",
+    "model Classic fallback: missing OT range",
+    "model Classic fallback: stale shared OT range",
+    "level skipped: missing input",
+    "overlay drawn without depth: nested pass",
+    "overlay drawn without depth: unexpected target",
+    "overlay drawn without depth: incomplete framebuffer",
+    "projected polygon packet using geometry recovery",
 };
 static u64 s_draw3dDiagnosticTotals[NATIVE_DRAW3D_DIAG_COUNT];
 static u64 s_draw3dDiagnosticInterval[NATIVE_DRAW3D_DIAG_COUNT];
@@ -57,22 +61,25 @@ static double s_draw3dReportTime;
 
 static void NativeDraw3D_ReportDiagnostics(void)
 {
-	if (!NATIVE_DRAW3D_ACTIVE() && s_draw3dLayerCount == 0) return;
+	if (!NATIVE_DRAW3D_ACTIVE() && s_draw3dLayerCount == 0)
+		return;
 	// time() rather than timespec_get(): the i686 MinGW (msvcrt) runtime lacks TIME_UTC.
 	const time_t now = time(NULL);
-	if (now == (time_t)-1) return;
+	if (now == (time_t)-1)
+		return;
 	const double seconds = (double)now;
 	if (s_draw3dReportTime == 0.0 || seconds < s_draw3dReportTime)
 	{
 		s_draw3dReportTime = seconds;
 		return;
 	}
-	if (seconds - s_draw3dReportTime < 10.0) return;
+	if (seconds - s_draw3dReportTime < 10.0)
+		return;
 	for (int i = 0; i < NATIVE_DRAW3D_DIAG_COUNT; i++)
 	{
 		if (s_draw3dDiagnosticInterval[i])
-			Platform_LogWarn("[CTR Draw3D] %s: interval=%llu, session=%llu\n", s_draw3dDiagnosticNames[i],
-			    (unsigned long long)s_draw3dDiagnosticInterval[i], (unsigned long long)s_draw3dDiagnosticTotals[i]);
+			Platform_LogWarn("[CTR Draw3D] %s: interval=%llu, session=%llu\n", s_draw3dDiagnosticNames[i], (unsigned long long)s_draw3dDiagnosticInterval[i],
+			                 (unsigned long long)s_draw3dDiagnosticTotals[i]);
 		s_draw3dDiagnosticInterval[i] = 0;
 	}
 	s_draw3dReportTime = seconds;
@@ -245,22 +252,24 @@ int NativeDraw3D_AddTriangle(int layerIndex, const NativeDraw3DVertex *v0, const
 	return 1;
 }
 
-int NativeDraw3D_AddQuad(int layer, const NativeDraw3DVertex *v0, const NativeDraw3DVertex *v1, const NativeDraw3DVertex *v2,
-                         const NativeDraw3DVertex *v3, const NativeDraw3DMaterial *material)
+int NativeDraw3D_AddQuad(int layer, const NativeDraw3DVertex *v0, const NativeDraw3DVertex *v1, const NativeDraw3DVertex *v2, const NativeDraw3DVertex *v3,
+                         const NativeDraw3DMaterial *material)
 {
 	return NativeDraw3D_AddTriangle(layer, v0, v1, v2, material) + NativeDraw3D_AddTriangle(layer, v1, v3, v2, material);
 }
 
-int NativeDraw3D_AddLine(int layerIndex, const NativeDraw3DVertex *v0, const NativeDraw3DVertex *v1,
-                         const NativeDraw3DMaterial *material, float width)
+int NativeDraw3D_AddLine(int layerIndex, const NativeDraw3DVertex *v0, const NativeDraw3DVertex *v1, const NativeDraw3DMaterial *material, float width)
 {
-	if (layerIndex < 0 || layerIndex >= s_draw3dLayerCount || width <= 0.0f) return 0;
+	if (layerIndex < 0 || layerIndex >= s_draw3dLayerCount || width <= 0.0f)
+		return 0;
 	NativeDraw3DLayer *layer = &s_draw3dLayers[layerIndex];
-	if (!layer->open || layer->view.projection <= 0.0f) return 0;
+	if (!layer->open || layer->view.projection <= 0.0f)
+		return 0;
 	float position[2][3];
 	NativeDraw3D_Transform(layer, v0, position[0]);
 	NativeDraw3D_Transform(layer, v1, position[1]);
-	if (position[0][2] < NATIVE_DRAW3D_NEAR_PLANE && position[1][2] < NATIVE_DRAW3D_NEAR_PLANE) return 0;
+	if (position[0][2] < NATIVE_DRAW3D_NEAR_PLANE && position[1][2] < NATIVE_DRAW3D_NEAR_PLANE)
+		return 0;
 	NativeDraw3DVertex ends[2] = {*v0, *v1};
 	for (int i = 0; i < 2; i++)
 	{
@@ -268,7 +277,8 @@ int NativeDraw3D_AddLine(int layerIndex, const NativeDraw3DVertex *v0, const Nat
 		{
 			int other = i ^ 1;
 			float t = (NATIVE_DRAW3D_NEAR_PLANE - position[i][2]) / (position[other][2] - position[i][2]);
-			for (int axis = 0; axis < 3; axis++) position[i][axis] += t * (position[other][axis] - position[i][axis]);
+			for (int axis = 0; axis < 3; axis++)
+				position[i][axis] += t * (position[other][axis] - position[i][axis]);
 			position[i][2] = NATIVE_DRAW3D_NEAR_PLANE;
 			ends[i].r = (u8)(ends[i].r + t * ((float)ends[other].r - ends[i].r));
 			ends[i].g = (u8)(ends[i].g + t * ((float)ends[other].g - ends[i].g));
@@ -291,15 +301,16 @@ int NativeDraw3D_AddLine(int layerIndex, const NativeDraw3DVertex *v0, const Nat
 		vertices[i].x = position[end][0] + nx * sign * halfWidth;
 		vertices[i].y = position[end][1] + ny * sign * halfWidth;
 		vertices[i].z = position[end][2];
-		if (length <= 1.0e-8f) vertices[i].y += (end ? 1.0f : -1.0f) * halfWidth;
+		if (length <= 1.0e-8f)
+			vertices[i].y += (end ? 1.0f : -1.0f) * halfWidth;
 	}
 	// The generated ribbon is already in camera space. Restore the object's
 	// transform afterwards so subsequent particles share the original layer.
 	double savedRotation[9], savedTranslation[3];
 	memcpy(savedRotation, layer->objectRotation, sizeof(savedRotation));
 	memcpy(savedTranslation, layer->objectTranslation, sizeof(savedTranslation));
-	static const double identity[9] = {1,0,0,0,1,0,0,0,1};
-	static const double zero[3] = {0,0,0};
+	static const double identity[9] = {1, 0, 0, 0, 1, 0, 0, 0, 1};
+	static const double zero[3] = {0, 0, 0};
 	NativeDraw3D_SetObjectTransform(layerIndex, identity, zero);
 	NativeDraw3DMaterial lineMaterial = *material;
 	lineMaterial.flags |= NATIVE_DRAW3D_DOUBLE_SIDED;
@@ -334,13 +345,14 @@ const NativeDraw3DTriangle *NativeDraw3D_GetTriangles(void)
 void NativeDraw3D_ReportDiagnostic(enum NativeDraw3DDiagnosticEvent event, const char *source, u32 detail)
 {
 #if NATIVE_DRAW3D_SUPPORTED
-	if (!NATIVE_DRAW3D_ACTIVE() || event < 0 || event >= NATIVE_DRAW3D_DIAG_COUNT) return;
+	if (!NATIVE_DRAW3D_ACTIVE() || event < 0 || event >= NATIVE_DRAW3D_DIAG_COUNT)
+		return;
 	s_draw3dDiagnosticInterval[event]++;
 	if (++s_draw3dDiagnosticTotals[event] == 1)
-		Platform_LogWarn("[CTR Draw3D] first %s; source=%s detail=0x%08x\n",
-		    s_draw3dDiagnosticNames[event], source ? source : "unknown", detail);
+		Platform_LogWarn("[CTR Draw3D] first %s; source=%s detail=0x%08x\n", s_draw3dDiagnosticNames[event], source ? source : "unknown", detail);
 #else
-	(void)event; (void)source; (void)detail;
+	(void)event;
+	(void)source;
+	(void)detail;
 #endif
 }
-

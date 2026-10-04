@@ -7,9 +7,9 @@
 #if !defined(__vita__)
 // Shapes are built back to front and linked in reverse, since the OT prepends.
 // All positions stay fractional, including with Classic PGXP disabled.
-#define HUD_ICON_SEGMENTS 48
+#define HUD_ICON_SEGMENTS    48
 #define HUD_BUTTON_MAX_QUADS (HUD_ICON_SEGMENTS * 4 + 8)
-#define HUD_LIGHT_MAX_QUADS (HUD_ICON_SEGMENTS * 7 + 24)
+#define HUD_LIGHT_MAX_QUADS  (HUD_ICON_SEGMENTS * 7 + 24)
 struct NativeHudIconMesh
 {
 	POLY_G4 *first;
@@ -35,8 +35,8 @@ static void NativeHudIcon_Quad(struct NativeHudIconMesh *mesh, const float x[4],
 {
 	POLY_G4 *p = &mesh->first[mesh->count++];
 	memset(p, 0, sizeof(*p));
-	setInt32RGB4(p, NativeHudIcon_Color(top, bottom, y[0]), NativeHudIcon_Color(top, bottom, y[1]),
-	             NativeHudIcon_Color(top, bottom, y[2]), NativeHudIcon_Color(top, bottom, y[3]));
+	setInt32RGB4(p, NativeHudIcon_Color(top, bottom, y[0]), NativeHudIcon_Color(top, bottom, y[1]), NativeHudIcon_Color(top, bottom, y[2]),
+	             NativeHudIcon_Color(top, bottom, y[3]));
 	setPolyG4(p);
 	s16 *points[4] = {&p->x0, &p->x1, &p->x2, &p->x3};
 	for (int i = 0; i < 4; i++)
@@ -71,8 +71,7 @@ static void NativeHudIcon_Line(struct NativeHudIconMesh *mesh, float x0, float y
 	NativeHudIcon_Quad(mesh, x, y, color, color);
 }
 
-static void NativeHudIcon_Box(struct NativeHudIconMesh *mesh, float left, float topY, float right, float bottomY,
-                              u32 top, u32 bottom)
+static void NativeHudIcon_Box(struct NativeHudIconMesh *mesh, float left, float topY, float right, float bottomY, u32 top, u32 bottom)
 {
 	const float x[4] = {left, right, left, right};
 	const float y[4] = {topY, topY, bottomY, bottomY};
@@ -82,13 +81,13 @@ static void NativeHudIcon_Box(struct NativeHudIconMesh *mesh, float left, float 
 static u32 NativeHudIcon_LensColor(float x, float y, int green, int lit)
 {
 	// Curved glass: dark edges, a broad upper-left reflection and a lower-right glint.
-	const float radius = x*x + y*y;
-	const float reflection = expf(-((x+0.38f)*(x+0.38f) + (y+0.48f)*(y+0.48f)) * 15.0f);
-	const float glint = expf(-((x-0.47f)*(x-0.47f) + (y-0.54f)*(y-0.54f)) * 28.0f);
+	const float radius = x * x + y * y;
+	const float reflection = expf(-((x + 0.38f) * (x + 0.38f) + (y + 0.48f) * (y + 0.48f)) * 15.0f);
+	const float glint = expf(-((x - 0.47f) * (x - 0.47f) + (y - 0.54f) * (y - 0.54f)) * 28.0f);
 	const float glow = lit ? expf(-radius * 4.0f) : 0.0f;
 	const float strength = fmaxf(0.0f, 1.0f - radius);
-	const float primary = fminf(255.0f, 42.0f + strength * (lit ? 198.0f : 125.0f) + reflection*155.0f + glint*92.0f);
-	const float other = fminf(255.0f, 4.0f + reflection*190.0f + glint*72.0f + glow*155.0f);
+	const float primary = fminf(255.0f, 42.0f + strength * (lit ? 198.0f : 125.0f) + reflection * 155.0f + glint * 92.0f);
+	const float other = fminf(255.0f, 4.0f + reflection * 190.0f + glint * 72.0f + glow * 155.0f);
 	const u32 c = (u32)primary, h = (u32)other;
 	return green ? h | (c << 8) | (h << 16) : c | (h << 8) | (h << 16);
 }
@@ -101,29 +100,32 @@ static void NativeHudIcon_Lens(struct NativeHudIconMesh *mesh, int green, int li
 		for (int i = 0; i < HUD_ICON_SEGMENTS; i++)
 		{
 			const float a = i * (6.28318530718f / HUD_ICON_SEGMENTS);
-			const float b = (i+1) * (6.28318530718f / HUD_ICON_SEGMENTS);
-			const float lx[4] = {cosf(a)*outer, cosf(b)*outer, cosf(a)*inner, cosf(b)*inner};
-			const float ly[4] = {sinf(a)*outer, sinf(b)*outer, sinf(a)*inner, sinf(b)*inner};
+			const float b = (i + 1) * (6.28318530718f / HUD_ICON_SEGMENTS);
+			const float lx[4] = {cosf(a) * outer, cosf(b) * outer, cosf(a) * inner, cosf(b) * inner};
+			const float ly[4] = {sinf(a) * outer, sinf(b) * outer, sinf(a) * inner, sinf(b) * inner};
 			float x[4], y[4];
-			for (int j = 0; j < 4; j++) { x[j] = lx[j]*0.74f; y[j] = ly[j]*0.74f; }
+			for (int j = 0; j < 4; j++)
+			{
+				x[j] = lx[j] * 0.74f;
+				y[j] = ly[j] * 0.74f;
+			}
 			NativeHudIcon_Quad(mesh, x, y, 0, 0);
-			POLY_G4 *p = &mesh->first[mesh->count-1];
-			setInt32RGB4(p, NativeHudIcon_LensColor(lx[0], ly[0], green, lit),
-			             NativeHudIcon_LensColor(lx[1], ly[1], green, lit),
-			             NativeHudIcon_LensColor(lx[2], ly[2], green, lit),
-			             NativeHudIcon_LensColor(lx[3], ly[3], green, lit));
+			POLY_G4 *p = &mesh->first[mesh->count - 1];
+			setInt32RGB4(p, NativeHudIcon_LensColor(lx[0], ly[0], green, lit), NativeHudIcon_LensColor(lx[1], ly[1], green, lit),
+			             NativeHudIcon_LensColor(lx[2], ly[2], green, lit), NativeHudIcon_LensColor(lx[3], ly[3], green, lit));
 			setPolyG4(p);
 		}
 	}
 }
 
-static int NativeHudIcon_Begin(struct NativeHudIconMesh *mesh, const struct Icon *icon, float x, float y, s16 scale,
-                               int button, struct PrimMem *primMem, u32 *ot)
+static int NativeHudIcon_Begin(struct NativeHudIconMesh *mesh, const struct Icon *icon, float x, float y, s16 scale, int button, struct PrimMem *primMem,
+                               u32 *ot)
 {
-	if (!gNativeModernHudIconsEnabled || !icon || !primMem || !ot || scale <= 0) return 0;
+	if (!gNativeModernHudIconsEnabled || !icon || !primMem || !ot || scale <= 0)
+		return 0;
 	const size_t needed = (button ? HUD_BUTTON_MAX_QUADS : HUD_LIGHT_MAX_QUADS) * sizeof(POLY_G4);
-	if ((uintptr_t)primMem->cursor > (uintptr_t)primMem->end ||
-	    (uintptr_t)primMem->end - (uintptr_t)primMem->cursor < needed) return 0;
+	if ((uintptr_t)primMem->cursor > (uintptr_t)primMem->end || (uintptr_t)primMem->end - (uintptr_t)primMem->cursor < needed)
+		return 0;
 	float width = (float)FP_Mult(icon->texLayout.u1 - icon->texLayout.u0, scale);
 	const float height = (float)FP_Mult(icon->texLayout.v2 - icon->texLayout.v0, scale);
 #if CTR_NATIVE_WIDESCREEN
@@ -134,25 +136,28 @@ static int NativeHudIcon_Begin(struct NativeHudIconMesh *mesh, const struct Icon
 #else
 	(void)button;
 #endif
-	if (width <= 0 || height <= 0) return 0;
+	if (width <= 0 || height <= 0)
+		return 0;
 	*mesh = (struct NativeHudIconMesh){primMem->cursor, 0, x + width * 0.5f, y + height * 0.5f, width * 0.5f, height * 0.5f, 0, 0};
 	return 1;
 }
 
 static void NativeHudIcon_End(struct NativeHudIconMesh *mesh, struct PrimMem *primMem, u32 *ot)
 {
-	for (int i = mesh->count - 1; i >= 0; i--) AddPrim(ot, &mesh->first[i]);
+	for (int i = mesh->count - 1; i >= 0; i--)
+		AddPrim(ot, &mesh->first[i]);
 	primMem->cursor = mesh->first + mesh->count;
 }
 #endif
 
-int NativeHudIcons_DrawButton(u8 character, const struct Icon *icon, float x, float y,
-                             s16 scale, struct PrimMem *primMem, u32 *ot)
+int NativeHudIcons_DrawButton(u8 character, const struct Icon *icon, float x, float y, s16 scale, struct PrimMem *primMem, u32 *ot)
 {
 #if !defined(__vita__)
-	if (character != '*' && character != '@' && character != '[' && character != '^') return 0;
+	if (character != '*' && character != '@' && character != '[' && character != '^')
+		return 0;
 	struct NativeHudIconMesh mesh;
-	if (!NativeHudIcon_Begin(&mesh, icon, x, y, scale, 1, primMem, ot)) return 0;
+	if (!NativeHudIcon_Begin(&mesh, icon, x, y, scale, 1, primMem, ot))
+		return 0;
 	NativeHudIcon_Ring(&mesh, 0.98f, 0.0f, 0x0c0c0c, 0x080808);
 	NativeHudIcon_Ring(&mesh, 0.88f, 0.0f, 0x8c8c8c, 0x282828);
 	NativeHudIcon_Ring(&mesh, 0.77f, 0.0f, 0x484848, 0x202020);
@@ -162,12 +167,14 @@ int NativeHudIcons_DrawButton(u8 character, const struct Icon *icon, float x, fl
 		NativeHudIcon_Line(&mesh, -0.40f, -0.40f, 0.40f, 0.40f, 0.17f, 0xff9860);
 		NativeHudIcon_Line(&mesh, -0.40f, 0.40f, 0.40f, -0.40f, 0.17f, 0xff9860);
 	}
-	else if (character == '@') NativeHudIcon_Ring(&mesh, 0.53f, 0.38f, 0x7070ff, 0x5050e8);
+	else if (character == '@')
+		NativeHudIcon_Ring(&mesh, 0.53f, 0.38f, 0x7070ff, 0x5050e8);
 	else if (character == '[')
 	{
 		const float px[4] = {-0.43f, 0.43f, 0.43f, -0.43f};
 		const float py[4] = {-0.43f, -0.43f, 0.43f, 0.43f};
-		for (int i = 0; i < 4; i++) NativeHudIcon_Line(&mesh, px[i], py[i], px[(i+1)%4], py[(i+1)%4], 0.14f, 0xd890ed);
+		for (int i = 0; i < 4; i++)
+			NativeHudIcon_Line(&mesh, px[i], py[i], px[(i + 1) % 4], py[(i + 1) % 4], 0.14f, 0xd890ed);
 	}
 	else
 	{
@@ -178,17 +185,23 @@ int NativeHudIcons_DrawButton(u8 character, const struct Icon *icon, float x, fl
 	NativeHudIcon_End(&mesh, primMem, ot);
 	return 1;
 #else
-	(void)character; (void)icon; (void)x; (void)y; (void)scale; (void)primMem; (void)ot;
+	(void)character;
+	(void)icon;
+	(void)x;
+	(void)y;
+	(void)scale;
+	(void)primMem;
+	(void)ot;
 	return 0;
 #endif
 }
 
-int NativeHudIcons_DrawLight(const struct Icon *icon, float x, float y, s16 scale,
-                            int green, int lit, struct PrimMem *primMem, u32 *ot)
+int NativeHudIcons_DrawLight(const struct Icon *icon, float x, float y, s16 scale, int green, int lit, struct PrimMem *primMem, u32 *ot)
 {
 #if !defined(__vita__)
 	struct NativeHudIconMesh mesh;
-	if (!NativeHudIcon_Begin(&mesh, icon, x, y, scale, 0, primMem, ot)) return 0;
+	if (!NativeHudIcon_Begin(&mesh, icon, x, y, scale, 0, primMem, ot))
+		return 0;
 	// Blue steel brackets and bottom mounting foot sit behind the bevelled housing.
 	NativeHudIcon_Box(&mesh, -0.24f, 0.66f, 0.24f, 0.99f, 0x30241a, 0x30241a);
 	NativeHudIcon_Box(&mesh, -0.19f, 0.72f, 0.19f, 0.97f, 0x70583a, 0x48321e);
@@ -196,9 +209,9 @@ int NativeHudIcons_DrawLight(const struct Icon *icon, float x, float y, s16 scal
 	for (int side = -1; side <= 1; side += 2)
 	{
 		const float left = side < 0 ? -0.99f : 0.78f;
-		NativeHudIcon_Box(&mesh, left, -0.29f, left+0.21f, 0.36f, 0x342b22, 0x342b22);
-		NativeHudIcon_Box(&mesh, left+0.025f, -0.25f, left+0.18f, 0.31f, 0x9c8056, 0x60462b);
-		NativeHudIcon_Box(&mesh, left+0.025f, -0.16f, left+0.18f, -0.04f, 0xe0d0a0, 0x987c50);
+		NativeHudIcon_Box(&mesh, left, -0.29f, left + 0.21f, 0.36f, 0x342b22, 0x342b22);
+		NativeHudIcon_Box(&mesh, left + 0.025f, -0.25f, left + 0.18f, 0.31f, 0x9c8056, 0x60462b);
+		NativeHudIcon_Box(&mesh, left + 0.025f, -0.16f, left + 0.18f, -0.04f, 0xe0d0a0, 0x987c50);
 	}
 	mesh.cy -= mesh.ry * 0.07f;
 	mesh.ry *= 0.90f;
@@ -209,27 +222,32 @@ int NativeHudIcons_DrawLight(const struct Icon *icon, float x, float y, s16 scal
 	NativeHudIcon_End(&mesh, primMem, ot);
 	return 1;
 #else
-	(void)icon; (void)x; (void)y; (void)scale; (void)green; (void)lit; (void)primMem; (void)ot;
+	(void)icon;
+	(void)x;
+	(void)y;
+	(void)scale;
+	(void)green;
+	(void)lit;
+	(void)primMem;
+	(void)ot;
 	return 0;
 #endif
 }
 
-int NativeHudIcons_DrawMenuArrow(const float x[4], const float y[4], const u32 colors[4],
-                                 struct PrimMem *primMem, u32 *ot)
+int NativeHudIcons_DrawMenuArrow(const float x[4], const float y[4], const u32 colors[4], struct PrimMem *primMem, u32 *ot)
 {
 #if !defined(__vita__)
-	if (!gNativeModernHudIconsEnabled || !primMem || !ot) return 0;
+	if (!gNativeModernHudIconsEnabled || !primMem || !ot)
+		return 0;
 	// Seven-sided silhouette: a broad arrowhead with a short rectangular stem.
 	// Its centre is inside the stem/head junction, making the fan convex per wedge.
 	static const float px[7] = {-0.55f, -0.55f, -0.95f, -0.95f, -0.55f, -0.55f, 0.95f};
 	static const float py[7] = {-0.95f, -0.36f, -0.36f, 0.36f, 0.36f, 0.95f, 0.0f};
 	const size_t needed = 14 * sizeof(POLY_G4);
-	if ((uintptr_t)primMem->cursor > (uintptr_t)primMem->end ||
-	    (uintptr_t)primMem->end - (uintptr_t)primMem->cursor < needed) return 0;
-	struct NativeHudIconMesh mesh = {primMem->cursor, 0,
-		(x[0] + x[3]) * 0.5f, (y[0] + y[3]) * 0.5f,
-		(x[1] - x[0]) * 0.5f, (y[2] - y[0]) * 0.5f,
-		(y[1] - y[0]) * 0.5f, (x[2] - x[0]) * 0.5f};
+	if ((uintptr_t)primMem->cursor > (uintptr_t)primMem->end || (uintptr_t)primMem->end - (uintptr_t)primMem->cursor < needed)
+		return 0;
+	struct NativeHudIconMesh mesh = {
+	    primMem->cursor, 0, (x[0] + x[3]) * 0.5f, (y[0] + y[3]) * 0.5f, (x[1] - x[0]) * 0.5f, (y[2] - y[0]) * 0.5f, (y[1] - y[0]) * 0.5f, (x[2] - x[0]) * 0.5f};
 	for (int layer = 0; layer < 2; layer++)
 	{
 		const float inset = layer ? 0.78f : 1.0f;
@@ -244,7 +262,11 @@ int NativeHudIcons_DrawMenuArrow(const float x[4], const float y[4], const u32 c
 	NativeHudIcon_End(&mesh, primMem, ot);
 	return 1;
 #else
-	(void)x; (void)y; (void)colors; (void)primMem; (void)ot;
+	(void)x;
+	(void)y;
+	(void)colors;
+	(void)primMem;
+	(void)ot;
 	return 0;
 #endif
 }

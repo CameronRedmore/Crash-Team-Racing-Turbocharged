@@ -31,18 +31,23 @@ void DecalFont_DrawLine(char *str, int x, int y, s16 font, int flags)
 {
 	(void)font;
 	assert(str != NULL && x == 256 && (flags & JUSTIFY_CENTER));
-	if (y == 28) drawnName = str;
+	if (y == 28)
+		drawnName = str;
 	lines++;
 }
 void CTR_Box_DrawSolidBox(RECT *r, Color color, uint32_t *ot)
 {
-	(void)color; (void)ot;
+	(void)color;
+	(void)ot;
 	assert(r->x >= 16 && r->x + r->w <= 496 && r->y + r->h <= 240);
 	boxes++;
 }
 void CTR_Box_DrawWireBox(RECT *r, const Color *color, void *ot, struct PrimMem *mem)
 {
-	(void)r; (void)color; (void)ot; (void)mem;
+	(void)r;
+	(void)color;
+	(void)ot;
+	(void)mem;
 }
 
 #include "../game/NativeUnlock.c"
@@ -65,7 +70,8 @@ static void reset(void)
 
 static void drawFrames(int frames)
 {
-	for (int i = 0; i < frames; i++) NativeUnlock_Draw();
+	for (int i = 0; i < frames; i++)
+		NativeUnlock_Draw();
 }
 
 static void test_grants_and_save_import(void)

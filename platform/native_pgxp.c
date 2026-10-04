@@ -105,8 +105,10 @@ float NativePgxp_GetModelDepthScale(const void *key)
 	for (u32 probe = 0; probe < NATIVE_PGXP_MODEL_DEPTH_COUNT; probe++)
 	{
 		const NativePgxpModelDepth *slot = &s_pgxpModelDepth[index];
-		if (slot->generation != s_pgxpGeneration) break;
-		if (slot->key == key) return slot->scale;
+		if (slot->generation != s_pgxpGeneration)
+			break;
+		if (slot->key == key)
+			return slot->scale;
 		index = (index + 1) & (NATIVE_PGXP_MODEL_DEPTH_COUNT - 1);
 	}
 	// An untracked model retains retail ordering instead of guessing its units.
@@ -528,7 +530,8 @@ void NativePgxp_GteSetInput(int slot, const s16 *vector, const float *precise)
 
 int NativePgxp_GteGetInput(int slot, s16 vx, s16 vy, s16 vz, double *out)
 {
-	if ((slot < 0) || (slot >= 3)) return 0;
+	if ((slot < 0) || (slot >= 3))
+		return 0;
 	const NativePgxpInput *input = &s_pgxpInputs[slot];
 
 	if (!input->valid || (input->vector[0] != vx) || (input->vector[1] != vy) || (input->vector[2] != vz))
@@ -555,8 +558,7 @@ void NativePgxp_GteSetMvmvaResult(const double *precise, s16 ir1, s16 ir2, s16 i
 
 int NativePgxp_GteGetMvmvaResult(const s16 *ir, float *out)
 {
-	if (!s_pgxpMvmvaResult.valid || (s_pgxpMvmvaResult.vector[0] != ir[0]) || (s_pgxpMvmvaResult.vector[1] != ir[1]) ||
-	    (s_pgxpMvmvaResult.vector[2] != ir[2]))
+	if (!s_pgxpMvmvaResult.valid || (s_pgxpMvmvaResult.vector[0] != ir[0]) || (s_pgxpMvmvaResult.vector[1] != ir[1]) || (s_pgxpMvmvaResult.vector[2] != ir[2]))
 	{
 		return 0;
 	}
@@ -574,11 +576,8 @@ void NativePgxp_CameraRotation(const float *rot, double *rotation)
 	const double sy = sin(rot[1] * radians), cy = cos(rot[1] * radians);
 	const double sz = sin(rot[2] * radians), cz = cos(rot[2] * radians);
 	// ConvertRotToMatrix composes Ry * Rx * Rz.
-	const double camera[9] = {
-		cy*cz + sy*sx*sz, -cy*sz + sy*sx*cz, sy*cx,
-		cx*sz, cx*cz, -sx,
-		-sy*cz + cy*sx*sz, sy*sz + cy*sx*cz, cy*cx
-	};
+	const double camera[9] = {cy * cz + sy * sx * sz,  -cy * sz + sy * sx * cz, sy * cx, cx * sz, cx * cz, -sx,
+	                          -sy * cz + cy * sx * sz, sy * sz + cy * sx * cz,  cy * cx};
 	memcpy(rotation, camera, sizeof(camera));
 }
 
@@ -598,10 +597,9 @@ void NativePgxp_ModelViewTranslation(const double *view, const s32 *position, co
 	{
 		translation[row] = 0.0;
 		for (int col = 0; col < 3; col++)
-			translation[row] += view[row*3+col] * relative[col] / 4096.0;
+			translation[row] += view[row * 3 + col] * relative[col] / 4096.0;
 		// The view-position MVMVA saturates IR before near/DRAW_HUGE scaling.
-		translation[row] = translation[row] < -32768.0 ? -32768.0 :
-			(translation[row] > 32767.0 ? 32767.0 : translation[row]);
+		translation[row] = translation[row] < -32768.0 ? -32768.0 : (translation[row] > 32767.0 ? 32767.0 : translation[row]);
 	}
 }
 
@@ -643,15 +641,18 @@ void NativePgxp_GetTransform(const void *key, const s16 *rotation, const s32 *tr
 	b32 valid = slot->key == key && slot->generation == s_pgxpGeneration;
 	b32 rotValid = valid && memcmp(slot->rotation, rotation, sizeof(slot->rotation)) == 0;
 	b32 transValid = valid && memcmp(slot->translation, translation, sizeof(slot->translation)) == 0;
-	for (int i = 0; i < 9; i++) pr[i] = rotValid ? slot->preciseRotation[i] : rotation[i];
-	for (int i = 0; i < 3; i++) pt[i] = transValid ? slot->preciseTranslation[i] : translation[i];
+	for (int i = 0; i < 9; i++)
+		pr[i] = rotValid ? slot->preciseRotation[i] : rotation[i];
+	for (int i = 0; i < 3; i++)
+		pt[i] = transValid ? slot->preciseTranslation[i] : translation[i];
 }
 
 void NativePgxp_LoadTransform(const void *key, const s16 *rotation, const s32 *translation, int bank)
 {
 	NativePgxpTransform *slot = NativePgxp_TransformSlot(key);
 	int index = bank & 3;
-	if (index >= 3) return;
+	if (index >= 3)
+		return;
 	// bank 0..2 loads rotation; bank 4..6 loads translation only.
 	b32 valid = slot->key == key && slot->generation == s_pgxpGeneration;
 	if (bank < 4)
@@ -672,8 +673,10 @@ void NativePgxp_InvalidateTransform(int reg)
 {
 	for (int i = 0; i < 3; i++)
 	{
-		if (reg >= i * 8 && reg < i * 8 + 5) s_pgxpRotationValid[i] = 0;
-		if (reg >= i * 8 + 5 && reg < i * 8 + 8) s_pgxpTranslationValid[i] = 0;
+		if (reg >= i * 8 && reg < i * 8 + 5)
+			s_pgxpRotationValid[i] = 0;
+		if (reg >= i * 8 + 5 && reg < i * 8 + 8)
+			s_pgxpTranslationValid[i] = 0;
 	}
 }
 
@@ -695,10 +698,8 @@ void NativePgxp_Transform(int mx, int cv, const double *rotation, const double *
 #endif
 	for (int row = 0; row < 3; row++)
 	{
-		const double *r = (usePreciseTransforms && mx < 3 && s_pgxpRotationValid[mx]) ?
-			&s_pgxpTransformBanks[mx].preciseRotation[row * 3] : &rotation[row * 3];
-		const double t = (usePreciseTransforms && cv < 3 && s_pgxpTranslationValid[cv]) ?
-			s_pgxpTransformBanks[cv].preciseTranslation[row] : translation[row];
+		const double *r = (usePreciseTransforms && mx < 3 && s_pgxpRotationValid[mx]) ? &s_pgxpTransformBanks[mx].preciseRotation[row * 3] : &rotation[row * 3];
+		const double t = (usePreciseTransforms && cv < 3 && s_pgxpTranslationValid[cv]) ? s_pgxpTransformBanks[cv].preciseTranslation[row] : translation[row];
 		result[row] = r[0] * input[0] + r[1] * input[1] + r[2] * input[2] + t * 4096.0;
 	}
 }

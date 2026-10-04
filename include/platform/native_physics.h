@@ -22,7 +22,7 @@ enum NativePhysicsDomain
 void NativePhysics_SetDomain(enum NativePhysicsDomain domain, int enabled);
 double NativePhysics_ReadScalar(struct Driver *d, size_t offset, size_t size);
 void NativePhysics_WriteScalar(struct Driver *d, size_t offset, size_t size, double value);
-#define NATIVE_PHYSICS_READ(d, field) NativePhysics_ReadScalar(d, offsetof(struct Driver, field), sizeof((d)->field))
+#define NATIVE_PHYSICS_READ(d, field)         NativePhysics_ReadScalar(d, offsetof(struct Driver, field), sizeof((d)->field))
 #define NATIVE_PHYSICS_WRITE(d, field, value) NativePhysics_WriteScalar(d, offsetof(struct Driver, field), sizeof((d)->field), value)
 double NativePhysics_WrapAngle(double value);
 double NativePhysics_FrameScale(void);

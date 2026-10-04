@@ -8,7 +8,7 @@ void NativeUnlock_GrantMask(u32 mask);
 void NativeUnlock_NotifySlideColiseum(void);
 void NativeUnlock_Draw(void);
 #else
-#define NativeUnlock_GrantBit(bit) UNLOCK_ADV_BIT(sdata->gameProgress.unlocks, (bit))
+#define NativeUnlock_GrantBit(bit)   UNLOCK_ADV_BIT(sdata->gameProgress.unlocks, (bit))
 #define NativeUnlock_GrantMask(mask) (sdata->gameProgress.unlockFlags |= (mask))
 #endif
 

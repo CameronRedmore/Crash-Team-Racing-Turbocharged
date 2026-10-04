@@ -39,11 +39,7 @@ static void portal_translation(void)
 	// SpinRewards stores a negative sine in u32 before its logical shifts.
 	// The resulting high bits disappear when QueueDraw writes GTE IR1..IR3.
 	const u32 negativeSine = (u32)-4096;
-	const s32 position[3] = {
-		camera[0] + ((negativeSine * 0xa0u) >> 12),
-		camera[1] + 512 + ((negativeSine << 6) >> 12),
-		camera[2] + 800
-	};
+	const s32 position[3] = {camera[0] + ((negativeSine * 0xa0u) >> 12), camera[1] + 512 + ((negativeSine << 6) >> 12), camera[2] + 800};
 	double translation[3];
 	NativePgxp_ModelViewTranslation(view, position, camera, preciseCamera, translation);
 	close_to(translation[0], -160.5);
@@ -54,7 +50,8 @@ static void portal_translation(void)
 	MATRIX matrix = {0};
 	matrix.m[0][0] = matrix.m[1][1] = matrix.m[2][2] = 4096;
 	gte_SetLightMatrix(&matrix);
-	for (int i = 0; i < 3; i++) MTC2((u32)position[i] - (u32)(s32)camera[i], 9 + i);
+	for (int i = 0; i < 3; i++)
+		MTC2((u32)position[i] - (u32)(s32)camera[i], 9 + i);
 	GTE_operator(0x04be012);
 	for (int i = 0; i < 3; i++)
 	{
@@ -192,7 +189,8 @@ int main(void)
 		for (int b = 0; b < 3; b++)
 		{
 			double dot = 0;
-			for (int k = 0; k < 3; k++) dot += camera[a*3+k] * camera[b*3+k];
+			for (int k = 0; k < 3; k++)
+				dot += camera[a * 3 + k] * camera[b * 3 + k];
 			close_to(dot, a == b ? 1 : 0);
 		}
 	MATRIX matrix = {0};

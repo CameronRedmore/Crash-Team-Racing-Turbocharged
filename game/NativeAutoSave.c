@@ -85,16 +85,14 @@ void NativeAutoSave_Refresh(void)
 		return;
 	}
 	if ((save.magic != NATIVE_AUTOSAVE_MAGIC) ||
-	    !(((save.version == 1) && (save.size == legacySize)) ||
-	      ((save.version == NATIVE_AUTOSAVE_VERSION) && (save.size == sizeof(save)))))
+	    !(((save.version == 1) && (save.size == legacySize)) || ((save.version == NATIVE_AUTOSAVE_VERSION) && (save.size == sizeof(save)))))
 	{
 		return;
 	}
 	const u32 saveSize = save.size;
 	const u32 saveVersion = save.version;
-	if ((NativeMemcard_ReadSaveData(NATIVE_AUTOSAVE_NAME, (u8 *)&save, saveSize, 0) == NATIVE_MEMCARD_OK) &&
-	    (save.magic == NATIVE_AUTOSAVE_MAGIC) && (save.size == saveSize) && (save.version == saveVersion) &&
-	    (save.checksum == NativeAutoSave_Checksum(&save)) && (save.adv.characterID >= 0))
+	if ((NativeMemcard_ReadSaveData(NATIVE_AUTOSAVE_NAME, (u8 *)&save, saveSize, 0) == NATIVE_MEMCARD_OK) && (save.magic == NATIVE_AUTOSAVE_MAGIC) &&
+	    (save.size == saveSize) && (save.version == saveVersion) && (save.checksum == NativeAutoSave_Checksum(&save)) && (save.adv.characterID >= 0))
 	{
 		if (save.version == 1)
 		{
@@ -213,8 +211,7 @@ void NativeAutoSave_OnHubLoaded(void)
 		return;
 	}
 
-	if (!(((gGT->prevLEV >= 0) && (gGT->prevLEV < GEM_STONE_VALLEY)) ||
-	      ((u32)(gGT->prevLEV - ADVENTURE_CUP_SYNTHETIC_LEVEL_ID_BASE) < 5)))
+	if (!(((gGT->prevLEV >= 0) && (gGT->prevLEV < GEM_STONE_VALLEY)) || ((u32)(gGT->prevLEV - ADVENTURE_CUP_SYNTHETIC_LEVEL_ID_BASE) < 5)))
 	{
 		return;
 	}

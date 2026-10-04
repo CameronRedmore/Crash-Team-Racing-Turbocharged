@@ -4,9 +4,9 @@
 #if defined(CTR_NATIVE) && !defined(__vita__)
 u32 NativeCollision_Impact(struct Driver *d, struct Thread *t, struct ScratchpadStruct *sps, struct Scrub *scrub, Vec3 *output)
 {
-	NativePhysicsVec value=NativePhysics_ReadVelocity(d);
-	NativePhysicsVec *velocity=&value;
-	NativePhysicsVec normal=NativeCollision_Normal(sps);
+	NativePhysicsVec value = NativePhysics_ReadVelocity(d);
+	NativePhysicsVec *velocity = &value;
+	NativePhysicsVec normal = NativeCollision_Normal(sps);
 
 	if ((d->vShiftCount != 0) && (sps->boolDidTouchQuadblock != 0) && ((sps->hit.ptrQuadblock->quadFlags & QUADBLOCK_FLAG_GROUND) != 0) &&
 	    (sps->hit.reorderResult != COLL_TRIANGLE_CLIP_FACE) && (sps->hit.ptrQuadblock != d->underDriver))
@@ -28,8 +28,7 @@ u32 NativeCollision_Impact(struct Driver *d, struct Thread *t, struct Scratchpad
 		}
 	}
 
-	double dot =
-	    ldexp((((ldexp(velocity->x, -(3)) * normal.x) + (ldexp(velocity->y, -(3)) * normal.y)) + (ldexp(velocity->z, -(3)) * normal.z)), -(9));
+	double dot = ldexp((((ldexp(velocity->x, -(3)) * normal.x) + (ldexp(velocity->y, -(3)) * normal.y)) + (ldexp(velocity->z, -(3)) * normal.z)), -(9));
 
 	if (dot < -0xa00)
 	{
@@ -91,12 +90,11 @@ u32 NativeCollision_Impact(struct Driver *d, struct Thread *t, struct Scratchpad
 			    ((d->actionsFlagSetPrevFrame & ACTION_TOUCH_GROUND) == 0) && ((sps->hit.ptrQuadblock->quadFlags & QUADBLOCK_FLAG_GROUND) != 0))
 			{
 				NativePhysicsVec wallVelocity;
-				NativePhysicsVec oldVelocity={oldVelX,0,oldVelZ};
-				double projected=(oldVelX*normal.x+oldVelZ*normal.z)/16777216.0;
-				wallVelocity=(NativePhysicsVec){oldVelocity.x-normal.x*projected,-normal.y*projected,oldVelocity.z-normal.z*projected};
+				NativePhysicsVec oldVelocity = {oldVelX, 0, oldVelZ};
+				double projected = (oldVelX * normal.x + oldVelZ * normal.z) / 16777216.0;
+				wallVelocity = (NativePhysicsVec){oldVelocity.x - normal.x * projected, -normal.y * projected, oldVelocity.z - normal.z * projected};
 
-				double wallSpeedSq = (wallVelocity.x * wallVelocity.x) + (wallVelocity.y * wallVelocity.y) +
-				                  (wallVelocity.z * wallVelocity.z);
+				double wallSpeedSq = (wallVelocity.x * wallVelocity.x) + (wallVelocity.y * wallVelocity.y) + (wallVelocity.z * wallVelocity.z);
 				double wallSpeed = sqrt(wallSpeedSq);
 				double speedApprox = d->speedApprox;
 
@@ -123,15 +121,15 @@ u32 NativeCollision_Impact(struct Driver *d, struct Thread *t, struct Scratchpad
 
 				if (scrub->impactAngle != 0)
 				{
-					double trig = sin(scrub->impactAngle*(6.2831853071795864769/4096.0))*4096.0;
+					double trig = sin(scrub->impactAngle * (6.2831853071795864769 / 4096.0)) * 4096.0;
 					double scaledSpeed = ldexp((speedSq * trig), -(12));
 					double angleLimit = ldexp((scaledSpeed * trig), -(12));
 					double dotSq = ldexp((dot * dot), -(15));
 
 					if (angleLimit >= dotSq)
 					{
-						NativePhysics_WriteVelocity(d,*velocity);
-						*output=d->velocity;
+						NativePhysics_WriteVelocity(d, *velocity);
+						*output = d->velocity;
 						return 1;
 					}
 				}
@@ -170,11 +168,11 @@ u32 NativeCollision_Impact(struct Driver *d, struct Thread *t, struct Scratchpad
 					d->matrixArray = BAKED_GTE_MATRIX_CRASH_FALL;
 					d->matrixIndex = 0;
 
-					NativePhysics_WriteVelocity(d,*velocity);
-					*output=d->velocity;
+					NativePhysics_WriteVelocity(d, *velocity);
+					*output = d->velocity;
 					VehPhysProc_SlamWall_Init(t, d);
 					NativePhysics_ResetDriver(d);
-					*output=d->velocity;
+					*output = d->velocity;
 					return 2;
 				}
 			}
@@ -183,8 +181,8 @@ u32 NativeCollision_Impact(struct Driver *d, struct Thread *t, struct Scratchpad
 		}
 	}
 
-	NativePhysics_WriteVelocity(d,*velocity);
-	*output=d->velocity;
+	NativePhysics_WriteVelocity(d, *velocity);
+	*output = d->velocity;
 	return ret;
 }
 #endif

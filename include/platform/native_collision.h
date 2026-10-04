@@ -15,10 +15,10 @@ typedef struct NativeCollisionHit
 	NativePhysicsVec point, normal;
 	int feature;
 } NativeCollisionHit;
-int NativeCollision_SweepTriangle(NativePhysicsVec start, NativePhysicsVec end, double radius,
-                                 NativePhysicsVec a, NativePhysicsVec b, NativePhysicsVec c, NativeCollisionHit *hit);
-int NativeCollision_RayTriangle(NativePhysicsVec start, NativePhysicsVec end, NativePhysicsVec a,
-                               NativePhysicsVec b, NativePhysicsVec c, NativeCollisionHit *hit, double *u, double *v);
+int NativeCollision_SweepTriangle(NativePhysicsVec start, NativePhysicsVec end, double radius, NativePhysicsVec a, NativePhysicsVec b, NativePhysicsVec c,
+                                  NativeCollisionHit *hit);
+int NativeCollision_RayTriangle(NativePhysicsVec start, NativePhysicsVec end, NativePhysicsVec a, NativePhysicsVec b, NativePhysicsVec c,
+                                NativeCollisionHit *hit, double *u, double *v);
 void NativeCollision_BeginSweep(struct ScratchpadStruct *sps, NativePhysicsVec start, NativePhysicsVec step);
 void NativeCollision_EndSweep(void);
 NativePhysicsVec NativeCollision_Normal(struct ScratchpadStruct *sps);

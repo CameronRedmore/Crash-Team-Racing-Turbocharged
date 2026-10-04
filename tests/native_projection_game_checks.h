@@ -4,10 +4,12 @@
 
 static int ProjectionTest_IsMarker(const void *node, int *cameraId)
 {
-	if (getlen(node) != sizeof(NativeProjectionMarker) / sizeof(u32) - P_LEN) return 0;
+	if (getlen(node) != sizeof(NativeProjectionMarker) / sizeof(u32) - P_LEN)
+		return 0;
 	u32 code;
 	memcpy(&code, (const u8 *)node + sizeof(u32), sizeof(code));
-	if ((code & 0xff000000u) != 0xB4000000u) return 0;
+	if ((code & 0xff000000u) != 0xB4000000u)
+		return 0;
 	*cameraId = (int)(code & 0x00ffffffu);
 	return 1;
 }
@@ -64,7 +66,8 @@ static void ProjectionTest_CheckBarriers(void)
 			int cameraId = -1;
 			if (ProjectionTest_IsMarker(node, &cameraId))
 			{
-				if (activeCamera >= 0) assert(sawCameraPrimitive[activeCamera]);
+				if (activeCamera >= 0)
+					assert(sawCameraPrimitive[activeCamera]);
 				if (cameraId == 0)
 				{
 					assert(expectedCamera == count + 1);
@@ -107,7 +110,8 @@ static void ProjectionTest_CheckBarriers(void)
 		assert(node == NULL && steps < 10000);
 		assert(expectedCamera == count + 1);
 		assert(sawEnd && sawUI);
-		for (int camera = 0; camera < count; ++camera) assert(sawCameraPrimitive[camera]);
+		for (int camera = 0; camera < count; ++camera)
+			assert(sawCameraPrimitive[camera]);
 	}
 	NativeGpuLinks_Reset();
 	sdata->gGT = previousGT;
@@ -182,8 +186,7 @@ static void ProjectionTest_GamePaths(void)
 			{
 				const int degrees[] = {0, 45, 100};
 				gNativeFovDegrees = degrees[fovIndex];
-				const double focal = degrees[fovIndex] == 0 ? 1.0 :
-					0.75 / tan(degrees[fovIndex] * 3.14159265358979323846 / 360.0);
+				const double focal = degrees[fovIndex] == 0 ? 1.0 : 0.75 / tan(degrees[fovIndex] * 3.14159265358979323846 / 360.0);
 				for (int camera = 0; camera < 4; ++camera)
 				{
 					struct PushBuffer *pb = &tracker.pushBuffer[camera];
@@ -193,14 +196,12 @@ static void ProjectionTest_GamePaths(void)
 					pb->distanceToScreen_PREV = 256;
 					NativePgxp_EndFrame();
 					PushBuffer_SetMatrixVP(pb);
-					const double overscan = (mode == NATIVE_PROJECTION_EDGE) ?
-						NativeProjection_GetWorldOverscan() : 1.0;
+					const double overscan = (mode == NATIVE_PROJECTION_EDGE) ? NativeProjection_GetWorldOverscan() : 1.0;
 					const int32_t integerAspectX = NativeAspect_ScaleX(4096);
 					assert(pb->matrix_ViewProj.m[0][0] == (s16)(integerAspectX * focal / overscan));
 					assert(pb->matrix_ViewProj.m[1][1] == (s16)(2304.0 * focal));
 					double preciseRotation[9], preciseTranslation[3];
-					NativePgxp_GetTransform(&pb->matrix_ViewProj, &pb->matrix_ViewProj.m[0][0],
-						pb->matrix_ViewProj.t, preciseRotation, preciseTranslation);
+					NativePgxp_GetTransform(&pb->matrix_ViewProj, &pb->matrix_ViewProj.m[0][0], pb->matrix_ViewProj.t, preciseRotation, preciseTranslation);
 					assert(fabs(preciseRotation[0] / 4096.0 - aspectScale[ratio] * focal / overscan) < 1e-10);
 					assert(fabs(preciseRotation[4] / 4096.0 - 0.5625 * focal) < 1e-10);
 				}
@@ -218,10 +219,7 @@ static void ProjectionTest_GamePaths(void)
 
 	// Projection controls are editable in a paused race. Changes stay stored
 	// under Classic and are displayed as Native preferences.
-	struct MenuRow rows[2] = {
-		{.stringIndex = NATIVE_MENU_STRING_PROJECTION},
-		{.stringIndex = RECTMENU_STRING_NONE}
-	};
+	struct MenuRow rows[2] = {{.stringIndex = NATIVE_MENU_STRING_PROJECTION}, {.stringIndex = RECTMENU_STRING_NONE}};
 	struct RectMenu menu = {0};
 	menu.rows = rows;
 	menu.rowSelected = 0;
@@ -305,22 +303,24 @@ static void ProjectionTest_GamePaths(void)
 	assert(NativeProjection_GetWorldOverscan() == 1.0);
 	struct PushBuffer *world = &tracker.pushBuffer[0];
 	memset(world, 0, sizeof(*world));
-	world->rect.w = 512; world->rect.h = 216; world->distanceToScreen_PREV = 256;
-	NativePgxp_EndFrame(); PushBuffer_SetMatrixVP(world);
+	world->rect.w = 512;
+	world->rect.h = 216;
+	world->distanceToScreen_PREV = 256;
+	NativePgxp_EndFrame();
+	PushBuffer_SetMatrixVP(world);
 	const double focal = 0.75 / tan(100 * 3.14159265358979323846 / 360.0);
 	assert(world->matrix_ViewProj.m[0][0] == (s16)(NativeAspect_ScaleX(4096) * focal));
 	double preciseRotation[9], preciseTranslation[3];
-	NativePgxp_GetTransform(&world->matrix_ViewProj, &world->matrix_ViewProj.m[0][0],
-	                        world->matrix_ViewProj.t, preciseRotation, preciseTranslation);
+	NativePgxp_GetTransform(&world->matrix_ViewProj, &world->matrix_ViewProj.m[0][0], world->matrix_ViewProj.t, preciseRotation, preciseTranslation);
 	assert(fabs(preciseRotation[0] / 4096.0 - 0.75 * focal) < 1e-10);
 	tracker.gameMode1 = 0;
 	assert(NativeProjection_IsGameplayActive());
 	const double resumedOverscan = NativeProjection_GetWorldOverscan();
 	assert(resumedOverscan > 1.0);
-	NativePgxp_EndFrame(); PushBuffer_SetMatrixVP(world);
+	NativePgxp_EndFrame();
+	PushBuffer_SetMatrixVP(world);
 	assert(world->matrix_ViewProj.m[0][0] == (s16)(NativeAspect_ScaleX(4096) * focal / resumedOverscan));
-	NativePgxp_GetTransform(&world->matrix_ViewProj, &world->matrix_ViewProj.m[0][0],
-	                        world->matrix_ViewProj.t, preciseRotation, preciseTranslation);
+	NativePgxp_GetTransform(&world->matrix_ViewProj, &world->matrix_ViewProj.m[0][0], world->matrix_ViewProj.t, preciseRotation, preciseTranslation);
 	assert(fabs(preciseRotation[0] / 4096.0 - 0.75 * focal / resumedOverscan) < 1e-10);
 
 	ProjectionTest_CheckBarriers();

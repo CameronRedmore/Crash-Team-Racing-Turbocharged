@@ -51,7 +51,7 @@ typedef struct
 extern int gNativePreciseMinimapEnabled;
 // Centre Adventure map markers on their world positions (see UI_Map.c).
 // Explicit HUD coordinates are independent of the 3D PGXP mode.
-#define NATIVE_PGXP_SCREEN_W (-1.0f)
+#define NATIVE_PGXP_SCREEN_W         (-1.0f)
 
 // Native 3D layers depth test against retail geometry, so the native renderer
 // implies the depth buffer.
@@ -60,7 +60,8 @@ extern int gNativePreciseMinimapEnabled;
 #if NATIVE_PGXP_SUPPORTED
 
 #define NATIVE_PGXP_ACTIVE() (gNativePgxpMode != NATIVE_PGXP_MODE_OFF)
-#define NATIVE_VERTEX_TRACKING_ACTIVE() (NATIVE_PGXP_ACTIVE() || NATIVE_DEPTH_BUFFER_ACTIVE() || gNativePreciseMinimapEnabled || gNativeModernMapEnabled || gNativeModernHudIconsEnabled)
+#define NATIVE_VERTEX_TRACKING_ACTIVE() \
+	(NATIVE_PGXP_ACTIVE() || NATIVE_DEPTH_BUFFER_ACTIVE() || gNativePreciseMinimapEnabled || gNativeModernMapEnabled || gNativeModernHudIconsEnabled)
 
 // Host range holding the double-buffered primitive memory. Lookups inside it
 // use a collision-free direct map; everything else goes through a small cache.
@@ -143,7 +144,7 @@ void NativePgxp_DebugCountPolygon(int vertexCount, int recoveredCount, int persp
 
 #else
 
-#define NATIVE_PGXP_ACTIVE() 0
+#define NATIVE_PGXP_ACTIVE()            0
 #define NATIVE_VERTEX_TRACKING_ACTIVE() 0
 
 static inline void NativePgxp_SetPrimRegion(const void *start, size_t size)
@@ -207,7 +208,9 @@ static inline void NativePgxp_PushDepth(const void *addr, u32 value, float offse
 }
 static inline void NativePgxp_SetScreenXY(const s16 *dst, float x, float y)
 {
-	(void)dst; (void)x; (void)y;
+	(void)dst;
+	(void)x;
+	(void)y;
 }
 static inline void NativePgxp_SetWorldPhase(int active)
 {
@@ -285,18 +288,54 @@ static inline int NativePgxp_GteGetMvmvaResult(const s16 *ir, float *out)
 	return 0;
 }
 static inline void NativePgxp_CameraRotation(const float *angles, double *rotation)
-{ (void)angles; (void)rotation; }
+{
+	(void)angles;
+	(void)rotation;
+}
 static inline void NativePgxp_ModelViewTranslation(const double *view, const s32 *position, const s16 *camera, const float *preciseCamera, double *translation)
-{ (void)view; (void)position; (void)camera; (void)preciseCamera; (void)translation; }
+{
+	(void)view;
+	(void)position;
+	(void)camera;
+	(void)preciseCamera;
+	(void)translation;
+}
 static inline void NativePgxp_SetTransform(const void *key, const s16 *r, const s32 *t, const double *pr, const double *pt)
-{ (void)key; (void)r; (void)t; (void)pr; (void)pt; }
+{
+	(void)key;
+	(void)r;
+	(void)t;
+	(void)pr;
+	(void)pt;
+}
 static inline void NativePgxp_GetTransform(const void *key, const s16 *r, const s32 *t, double *pr, double *pt)
-{ (void)key; for (int i = 0; i < 9; i++) pr[i] = r[i]; for (int i = 0; i < 3; i++) pt[i] = t[i]; }
+{
+	(void)key;
+	for (int i = 0; i < 9; i++)
+		pr[i] = r[i];
+	for (int i = 0; i < 3; i++)
+		pt[i] = t[i];
+}
 static inline void NativePgxp_LoadTransform(const void *key, const s16 *r, const s32 *t, int bank)
-{ (void)key; (void)r; (void)t; (void)bank; }
-static inline void NativePgxp_InvalidateTransform(int reg) { (void)reg; }
+{
+	(void)key;
+	(void)r;
+	(void)t;
+	(void)bank;
+}
+static inline void NativePgxp_InvalidateTransform(int reg)
+{
+	(void)reg;
+}
 static inline void NativePgxp_Transform(int mx, int cv, const double *rotation, const double *translation, const double *input, double *result)
-{ (void)mx; (void)cv; (void)rotation; (void)translation; (void)input; (void)result; }
+{
+	(void)mx;
+	(void)cv;
+	(void)rotation;
+	(void)translation;
+	(void)input;
+	(void)result;
+}
 static inline int NativePgxp_Lookup(const void *addr, u32 value, NativePgxpVertex *out)
 {
 	(void)addr;

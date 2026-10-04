@@ -5,27 +5,40 @@
 #if defined(CTR_NATIVE) && !defined(__vita__)
 // Floating point counterpart of the original gravity/friction and jump rules.
 // Gameplay flags, timers and feedback retain their original integer rules.
-static double Smoothed_Neg(double a) { return -a; }
-static double Smoothed_Down(double a, int bits) { return ldexp(a, -bits); }
-static double Smoothed_Up(double a, int bits) { return ldexp(a, bits); }
+static double Smoothed_Neg(double a)
+{
+	return -a;
+}
+static double Smoothed_Down(double a, int bits)
+{
+	return ldexp(a, -bits);
+}
+static double Smoothed_Up(double a, int bits)
+{
+	return ldexp(a, bits);
+}
 static double Smoothed_Approach(double value, double step, double target)
 {
-	if (value < target) return fmin(value + step, target);
+	if (value < target)
+		return fmin(value + step, target);
 	return fmax(value - step, target);
 }
 static double Smoothed_JumpVelY(s16 *normal, NativePhysicsVec *velocity)
 {
-	if (abs(normal[1]) < VEH_PHYS_JUMP_NORMAL_Y_MIN) return 0;
+	if (abs(normal[1]) < VEH_PHYS_JUMP_NORMAL_Y_MIN)
+		return 0;
 	return (velocity->x * normal[0] + velocity->z * normal[2]) / normal[1];
 }
 void NativePhysics_SurfacePushback(struct Driver *d)
 {
-	if (!(d->collisionFlags & DRIVER_COLL_FLAG_SURFACE_PUSHBACK)) return;
+	if (!(d->collisionFlags & DRIVER_COLL_FLAG_SURFACE_PUSHBACK))
+		return;
 	NativePhysicsVec position = NativePhysics_ReadPosition(d);
 	double diffX = position.x / 256.0 - d->spsHitPos.x;
 	double diffZ = position.z / 256.0 - d->spsHitPos.z;
 	double floorDiffY = d->quadBlockHeight / 256.0 - d->spsHitPos.y + VEH_PHYS_FORCE_SURFACE_PUSHBACK_Y_BIAS;
-	if (d->spsNormalVec.x * diffX + d->spsNormalVec.y * floorDiffY + d->spsNormalVec.z * diffZ >= 0) return;
+	if (d->spsNormalVec.x * diffX + d->spsNormalVec.y * floorDiffY + d->spsNormalVec.z * diffZ >= 0)
+		return;
 	// Recovery acceleration retains fractional impulses and scales with the
 	// simulation duration rather than applying it once per rendered frame.
 	double scale = ldexp(NativePhysics_ElapsedMS(sdata->gGT->elapsedTimeMS) / 32.0, VEH_PHYS_FORCE_SURFACE_PUSHBACK_SHIFT);
@@ -159,7 +172,7 @@ void NativePhysics_Gravity(struct Driver *driver, Vec3 *output)
 		localZ = 0;
 	}
 	else if (((driver->actionsFlagSetPrevFrame & ACTION_TOUCH_GROUND) != 0) || (driver->kartState == KS_BLASTED) ||
-			 ((driver->terrainScaledBaseSpeed < driver->speedApprox) && (driver->terrainMeta2->speedMultiplier < VEH_PHYS_FORCE_TERRAIN_SCALE_NEUTRAL)))
+	         ((driver->terrainScaledBaseSpeed < driver->speedApprox) && (driver->terrainMeta2->speedMultiplier < VEH_PHYS_FORCE_TERRAIN_SCALE_NEUTRAL)))
 	{
 		double perpendicularFriction;
 		double forwardFriction;
@@ -181,7 +194,7 @@ void NativePhysics_Gravity(struct Driver *driver, Vec3 *output)
 			{
 				double absSpeedApprox = fabs(speedApprox);
 				if ((absSpeedApprox < (VEH_PHYS_FORCE_SKID_SPEED_THRESHOLD + 1)) ||
-					(((baseSpeed < 1) || (speedApprox >= 0)) && ((baseSpeed >= 0) || (speedApprox < 1))))
+				    (((baseSpeed < 1) || (speedApprox >= 0)) && ((baseSpeed >= 0) || (speedApprox < 1))))
 				{
 					if (driver->kartState == KS_DRIFTING)
 					{
@@ -266,8 +279,7 @@ void NativePhysics_Gravity(struct Driver *driver, Vec3 *output)
 			}
 			else
 			{
-				perpendicularFriction =
-					(perpendicularFriction + Smoothed_Down((perpendicularFriction * driver->const_TerrainFrictionBoost), 8));
+				perpendicularFriction = (perpendicularFriction + Smoothed_Down((perpendicularFriction * driver->const_TerrainFrictionBoost), 8));
 				if (perpendicularFriction < 0)
 				{
 					perpendicularFriction = 0;
@@ -298,8 +310,7 @@ void NativePhysics_Gravity(struct Driver *driver, Vec3 *output)
 				terrainTimer = 0;
 			}
 
-			perpendicularFriction =
-				(perpendicularFriction + Smoothed_Down((perpendicularFriction * driver->const_TerrainFrictionBoost), 8));
+			perpendicularFriction = (perpendicularFriction + Smoothed_Down((perpendicularFriction * driver->const_TerrainFrictionBoost), 8));
 			driver->terrainFrictionTimer = (s16)terrainTimer;
 			if (perpendicularFriction < 0)
 			{
@@ -341,20 +352,20 @@ void NativePhysics_Gravity(struct Driver *driver, Vec3 *output)
 		}
 
 	APPLY_TERRAIN_FRICTION:
-	{
-		double xFriction = perpendicularFriction;
-		if ((terrainFlags & TERRAIN_FLAG_SIDESLIP_FRICTION) != 0)
 		{
-			xFriction = Smoothed_Down((perpendicularFriction * 3), 2);
-			if (xFriction < forwardFriction)
+			double xFriction = perpendicularFriction;
+			if ((terrainFlags & TERRAIN_FLAG_SIDESLIP_FRICTION) != 0)
 			{
-				xFriction = forwardFriction;
+				xFriction = Smoothed_Down((perpendicularFriction * 3), 2);
+				if (xFriction < forwardFriction)
+				{
+					xFriction = forwardFriction;
+				}
 			}
-		}
 
-		localX = Smoothed_Approach(localX, xFriction, 0);
-		localZ = Smoothed_Approach(localZ, forwardFriction, 0);
-	}
+			localX = Smoothed_Approach(localX, xFriction, 0);
+			localZ = Smoothed_Approach(localZ, forwardFriction, 0);
+		}
 	}
 
 	*velocity = NativePhysics_RotateDriver(driver, (NativePhysicsVec){localX, localY, localZ}, 0);
@@ -428,7 +439,6 @@ START_ROLLBACK:
 }
 void NativePhysics_JumpAndFriction(struct Driver *d)
 {
-
 	// Jump state and feedback use the original rules; impulses retain fractions.
 
 
@@ -436,7 +446,8 @@ void NativePhysics_JumpAndFriction(struct Driver *d)
 	{
 		int ampTurn = abs(CTR_MipsSra((s16)d->ampTurnState, 8));
 
-		int turnDecrease = (ampTurn >= (u8)d->const_BackwardTurnRate ? d->const_TurnDecreaseRate : ampTurn * d->const_TurnDecreaseRate / (u8)d->const_BackwardTurnRate);
+		int turnDecrease =
+		    (ampTurn >= (u8)d->const_BackwardTurnRate ? d->const_TurnDecreaseRate : ampTurn * d->const_TurnDecreaseRate / (u8)d->const_BackwardTurnRate);
 		int baseSpeed = d->baseSpeed;
 		int absBaseSpeed = abs(baseSpeed);
 
@@ -490,7 +501,7 @@ void NativePhysics_JumpAndFriction(struct Driver *d)
 			int absSpeedApprox = abs(speedApprox);
 
 			if ((absSpeedApprox > VEH_PHYS_JUMP_REVERSE_SLIDE_SPEED_COMPARE) && ((d->baseSpeed < 1) || (speedApprox < 1)) &&
-				((d->baseSpeed >= 0) || (speedApprox >= 0)))
+			    ((d->baseSpeed >= 0) || (speedApprox >= 0)))
 			{
 				goto PROCESS_ACCEL;
 			}
@@ -518,64 +529,64 @@ void NativePhysics_JumpAndFriction(struct Driver *d)
 	}
 
 PROCESS_ACCEL:
-{
-	double forwardImpulse = Smoothed_Down((acceleration * NativePhysics_ElapsedMS(sdata->gGT->elapsedTimeMS)), 5);
-	NativePhysicsVec rotated = NativePhysics_RotateDriver(d, (NativePhysicsVec){0, 0, forwardImpulse}, 0);
-
-	if (d->baseSpeed < 0)
 	{
-		d->forwardAccelImpulse = (s16)CTR_MipsNegLo(forwardImpulse);
+		double forwardImpulse = Smoothed_Down((acceleration * NativePhysics_ElapsedMS(sdata->gGT->elapsedTimeMS)), 5);
+		NativePhysicsVec rotated = NativePhysics_RotateDriver(d, (NativePhysicsVec){0, 0, forwardImpulse}, 0);
 
-		movement.x = (movement.x - rotated.x);
-		movement.y = (movement.y - rotated.y);
-		movement.z = (movement.z - rotated.z);
+		if (d->baseSpeed < 0)
+		{
+			d->forwardAccelImpulse = (s16)CTR_MipsNegLo(forwardImpulse);
 
-		d->forwardAccelVector.x = (s16)CTR_MipsNegLo(rotated.x);
-		d->forwardAccelVector.y = (s16)CTR_MipsNegLo(rotated.y);
-		d->forwardAccelVector.z = (s16)CTR_MipsNegLo(rotated.z);
+			movement.x = (movement.x - rotated.x);
+			movement.y = (movement.y - rotated.y);
+			movement.z = (movement.z - rotated.z);
+
+			d->forwardAccelVector.x = (s16)CTR_MipsNegLo(rotated.x);
+			d->forwardAccelVector.y = (s16)CTR_MipsNegLo(rotated.y);
+			d->forwardAccelVector.z = (s16)CTR_MipsNegLo(rotated.z);
+		}
+		else
+		{
+			d->forwardAccelImpulse = (s16)forwardImpulse;
+
+			movement.x = (movement.x + rotated.x);
+			movement.y = (movement.y + rotated.y);
+			movement.z = (movement.z + rotated.z);
+
+			d->forwardAccelVector.x = (s16)rotated.x;
+			d->forwardAccelVector.y = (s16)rotated.y;
+			d->forwardAccelVector.z = (s16)rotated.z;
+		}
+
+		speedLoss = sqrt(movement.x * movement.x + movement.y * movement.y + movement.z * movement.z) - abs(d->baseSpeed);
+
+		b32 clampToForwardImpulse = forwardImpulse < speedLoss;
+		if (speedLoss < 0)
+		{
+			speedLoss = 0;
+			clampToForwardImpulse = forwardImpulse < 0;
+		}
+		if (clampToForwardImpulse)
+		{
+			speedLoss = forwardImpulse;
+		}
+
+		if (((d->actionsFlagSet & ACTION_TOUCH_GROUND) == 0) || (d->jump_ForcedMS == 0))
+		{
+			goto CHECK_FOR_ANY_JUMP;
+		}
+
+		if (d->jump_HighJumpTimerMS != 0)
+		{
+			d->jump_HighJumpTimerMS = VEH_PHYS_JUMP_HIGH_TIMER_MS;
+		}
+
+		if (d->kartState == KS_BLASTED)
+		{
+			GAMEPAD_ShockFreq(d, VEH_PHYS_JUMP_RUMBLE_CHANNEL, 0);
+			GAMEPAD_ShockForce1(d, VEH_PHYS_JUMP_RUMBLE_CHANNEL, VEH_PHYS_JUMP_RUMBLE_FORCE);
+		}
 	}
-	else
-	{
-		d->forwardAccelImpulse = (s16)forwardImpulse;
-
-		movement.x = (movement.x + rotated.x);
-		movement.y = (movement.y + rotated.y);
-		movement.z = (movement.z + rotated.z);
-
-		d->forwardAccelVector.x = (s16)rotated.x;
-		d->forwardAccelVector.y = (s16)rotated.y;
-		d->forwardAccelVector.z = (s16)rotated.z;
-	}
-
-	speedLoss = sqrt(movement.x * movement.x + movement.y * movement.y + movement.z * movement.z) - abs(d->baseSpeed);
-
-	b32 clampToForwardImpulse = forwardImpulse < speedLoss;
-	if (speedLoss < 0)
-	{
-		speedLoss = 0;
-		clampToForwardImpulse = forwardImpulse < 0;
-	}
-	if (clampToForwardImpulse)
-	{
-		speedLoss = forwardImpulse;
-	}
-
-	if (((d->actionsFlagSet & ACTION_TOUCH_GROUND) == 0) || (d->jump_ForcedMS == 0))
-	{
-		goto CHECK_FOR_ANY_JUMP;
-	}
-
-	if (d->jump_HighJumpTimerMS != 0)
-	{
-		d->jump_HighJumpTimerMS = VEH_PHYS_JUMP_HIGH_TIMER_MS;
-	}
-
-	if (d->kartState == KS_BLASTED)
-	{
-		GAMEPAD_ShockFreq(d, VEH_PHYS_JUMP_RUMBLE_CHANNEL, 0);
-		GAMEPAD_ShockForce1(d, VEH_PHYS_JUMP_RUMBLE_CHANNEL, VEH_PHYS_JUMP_RUMBLE_FORCE);
-	}
-}
 
 	goto PROCESS_JUMP;
 
@@ -736,21 +747,21 @@ NOT_JUMPING:
 		if (speedApprox < VEH_PHYS_JUMP_SPEEDOMETER_REVERSE_THRESHOLD)
 		{
 			d->speedometerNeedleValue =
-				(s16)CTR_MipsSubLo((u16)d->speedometerNeedleValue, CTR_MipsSra(d->speedometerNeedleValue, VEH_PHYS_JUMP_SPEEDOMETER_DECAY_SHIFT));
+			    (s16)CTR_MipsSubLo((u16)d->speedometerNeedleValue, CTR_MipsSra(d->speedometerNeedleValue, VEH_PHYS_JUMP_SPEEDOMETER_DECAY_SHIFT));
 		}
 		else
 		{
 			d->speedometerNeedleValue =
-				(s16)((u32)CTR_MipsAddLo(CTR_MipsMulLo(d->speedometerNeedleValue, VEH_PHYS_JUMP_SPEEDOMETER_BLEND_OLD),
-										 CTR_MipsMulLo(sdata->gGT->timer & VEH_PHYS_JUMP_SPEEDOMETER_TIMER_MASK, VEH_PHYS_JUMP_SPEEDOMETER_TIMER_SCALE)) >>
-					  VEH_PHYS_JUMP_SPEEDOMETER_BLEND_SHIFT);
+			    (s16)((u32)CTR_MipsAddLo(CTR_MipsMulLo(d->speedometerNeedleValue, VEH_PHYS_JUMP_SPEEDOMETER_BLEND_OLD),
+				                         CTR_MipsMulLo(sdata->gGT->timer & VEH_PHYS_JUMP_SPEEDOMETER_TIMER_MASK, VEH_PHYS_JUMP_SPEEDOMETER_TIMER_SCALE)) >>
+				      VEH_PHYS_JUMP_SPEEDOMETER_BLEND_SHIFT);
 		}
 	}
 	else
 	{
 		d->speedometerNeedleValue = (s16)CTR_MipsSra(CTR_MipsAddLo(CTR_MipsMulLo(d->speedometerNeedleValue, VEH_PHYS_JUMP_SPEEDOMETER_BLEND_OLD),
-																   CTR_MipsMulLo(speedApprox, VEH_PHYS_JUMP_SPEEDOMETER_BLEND_NEW)),
-													 VEH_PHYS_JUMP_SPEEDOMETER_BLEND_SHIFT);
+		                                                           CTR_MipsMulLo(speedApprox, VEH_PHYS_JUMP_SPEEDOMETER_BLEND_NEW)),
+		                                             VEH_PHYS_JUMP_SPEEDOMETER_BLEND_SHIFT);
 	}
 }
 

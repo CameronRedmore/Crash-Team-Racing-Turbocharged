@@ -28,21 +28,9 @@ struct NativeKartPaintBand
 };
 
 static const struct NativeKartPaintBand s_nativeKartBands[] = {
-    {"crash", 190, 240, 30, 25},
-    {"cortex", 340, 15, 30, 25},
-    {"tiny", 70, 170, 30, 25},
-    {"coco", 270, 340, 30, 25},
-    {"ngin", 265, 295, 30, 25},
-    {"dingo", 55, 85, 30, 15},
-    {"polar", 165, 200, 30, 25},
-    {"pura", 230, 290, 30, 25},
-    {"pinstripe", 195, 225, 30, 8},
-    {"papu", 52, 70, 30, 25},
-    {"roo", 12, 35, 30, 25},
-    {"joe", 30, 70, 30, 25},
-    {"ntropy", 170, 230, 30, 25},
-    {"oxide", 80, 160, 30, 25},
-    {"fake", 190, 240, 30, 15},
+    {"crash", 190, 240, 30, 25}, {"cortex", 340, 15, 30, 25}, {"tiny", 70, 170, 30, 25},    {"coco", 270, 340, 30, 25},     {"ngin", 265, 295, 30, 25},
+    {"dingo", 55, 85, 30, 15},   {"polar", 165, 200, 30, 25}, {"pura", 230, 290, 30, 25},   {"pinstripe", 195, 225, 30, 8}, {"papu", 52, 70, 30, 25},
+    {"roo", 12, 35, 30, 25},     {"joe", 30, 70, 30, 25},     {"ntropy", 170, 230, 30, 25}, {"oxide", 80, 160, 30, 25},     {"fake", 190, 240, 30, 15},
 };
 
 // Palettes shared by three or more characters (tyres, exhausts, chassis trim);
@@ -117,12 +105,36 @@ static u16 NativeKartColor_RotateEntry(u16 color, const struct NativeKartPaintBa
 	float nr, ng, nb;
 	switch (sector % 6)
 	{
-	case 0: nr = mx; ng = t; nb = p; break;
-	case 1: nr = q; ng = mx; nb = p; break;
-	case 2: nr = p; ng = mx; nb = t; break;
-	case 3: nr = p; ng = q; nb = mx; break;
-	case 4: nr = t; ng = p; nb = mx; break;
-	default: nr = mx; ng = p; nb = q; break;
+	case 0:
+		nr = mx;
+		ng = t;
+		nb = p;
+		break;
+	case 1:
+		nr = q;
+		ng = mx;
+		nb = p;
+		break;
+	case 2:
+		nr = p;
+		ng = mx;
+		nb = t;
+		break;
+	case 3:
+		nr = p;
+		ng = q;
+		nb = mx;
+		break;
+	case 4:
+		nr = t;
+		ng = p;
+		nb = mx;
+		break;
+	default:
+		nr = mx;
+		ng = p;
+		nb = q;
+		break;
 	}
 	return (u16)((color & 0x8000) | (int)(nr * 31.0f + 0.5f) | ((int)(ng * 31.0f + 0.5f) << 5) | ((int)(nb * 31.0f + 0.5f) << 10));
 }
@@ -132,18 +144,22 @@ static void NativeKartColor_DumpLayout(const struct Instance *inst, const struct
 {
 	static u64 seen[4096];
 	static int seenCount;
-	u64 key = ((u64)layout->clut << 48) ^ ((u64)layout->tpage << 32) ^ ((u64)layout->u0 << 24) ^ ((u64)layout->v0 << 16) ^
-	          ((u64)layout->u3 << 8) ^ (u64)layout->v3;
-	for (int i = 0; i < 16 && inst->model->name[i]; i++) key = key * 1099511628211ull + (u8)inst->model->name[i];
+	u64 key =
+	    ((u64)layout->clut << 48) ^ ((u64)layout->tpage << 32) ^ ((u64)layout->u0 << 24) ^ ((u64)layout->v0 << 16) ^ ((u64)layout->u3 << 8) ^ (u64)layout->v3;
+	for (int i = 0; i < 16 && inst->model->name[i]; i++)
+		key = key * 1099511628211ull + (u8)inst->model->name[i];
 	for (int i = 0; i < seenCount; i++)
-		if (seen[i] == key) return;
-	if (seenCount >= 4096) return;
+		if (seen[i] == key)
+			return;
+	if (seenCount >= 4096)
+		return;
 	seen[seenCount++] = key;
 	u16 pal[KART_CLUT_ENTRIES];
 	NativeRenderer_ReadVRAM(pal, (layout->clut & 0x3f) << 4, layout->clut >> 6, KART_CLUT_ENTRIES, 1);
-	fprintf(stderr, "KARTLAYOUT model=%.16s clut=%04x tpage=%04x uv=%d,%d %d,%d %d,%d %d,%d pal:", inst->model->name, layout->clut, layout->tpage,
-	        layout->u0, layout->v0, layout->u1, layout->v1, layout->u2, layout->v2, layout->u3, layout->v3);
-	for (int i = 0; i < KART_CLUT_ENTRIES; i++) fprintf(stderr, " %04x", pal[i]);
+	fprintf(stderr, "KARTLAYOUT model=%.16s clut=%04x tpage=%04x uv=%d,%d %d,%d %d,%d %d,%d pal:", inst->model->name, layout->clut, layout->tpage, layout->u0,
+	        layout->v0, layout->u1, layout->v1, layout->u2, layout->v2, layout->u3, layout->v3);
+	for (int i = 0; i < KART_CLUT_ENTRIES; i++)
+		fprintf(stderr, " %04x", pal[i]);
 	fprintf(stderr, "\n");
 }
 
@@ -153,10 +169,13 @@ static void NativeKartColor_PaintLayout(const struct Instance *inst, const struc
 {
 	static u16 painted[1024];
 	static int paintedCount;
-	if (NativeKartColor_FindBand(inst->model->name) == NULL) return;
+	if (NativeKartColor_FindBand(inst->model->name) == NULL)
+		return;
 	for (int i = 0; i < paintedCount; i++)
-		if (painted[i] == layout->clut) return;
-	if (paintedCount >= 1024) return;
+		if (painted[i] == layout->clut)
+			return;
+	if (paintedCount >= 1024)
+		return;
 	painted[paintedCount] = layout->clut;
 	const float hue = fmodf(paintedCount * 137.5f, 360.0f) / 60.0f;
 	paintedCount++;
@@ -168,19 +187,44 @@ static void NativeKartColor_PaintLayout(const struct Instance *inst, const struc
 	const float f = hue - (float)sector;
 	for (int i = 0; i < KART_CLUT_ENTRIES; i++)
 	{
-		if (pal[i] == 0) continue;
+		if (pal[i] == 0)
+			continue;
 		const float r = (pal[i] & 31) / 31.0f, g = ((pal[i] >> 5) & 31) / 31.0f, b = ((pal[i] >> 10) & 31) / 31.0f;
 		const float v = fmaxf(0.35f, fmaxf(r, fmaxf(g, b)));
 		const float p = 0.0f, q = v * (1.0f - f), t = v * f;
 		float nr, ng, nb;
 		switch (sector % 6)
 		{
-		case 0: nr = v; ng = t; nb = p; break;
-		case 1: nr = q; ng = v; nb = p; break;
-		case 2: nr = p; ng = v; nb = t; break;
-		case 3: nr = p; ng = q; nb = v; break;
-		case 4: nr = t; ng = p; nb = v; break;
-		default: nr = v; ng = p; nb = q; break;
+		case 0:
+			nr = v;
+			ng = t;
+			nb = p;
+			break;
+		case 1:
+			nr = q;
+			ng = v;
+			nb = p;
+			break;
+		case 2:
+			nr = p;
+			ng = v;
+			nb = t;
+			break;
+		case 3:
+			nr = p;
+			ng = q;
+			nb = v;
+			break;
+		case 4:
+			nr = t;
+			ng = p;
+			nb = v;
+			break;
+		default:
+			nr = v;
+			ng = p;
+			nb = q;
+			break;
 		}
 		pal[i] = (u16)((pal[i] & 0x8000) | (int)(nr * 31.0f + 0.5f) | ((int)(ng * 31.0f + 0.5f) << 5) | ((int)(nb * 31.0f + 0.5f) << 10));
 	}
@@ -191,15 +235,18 @@ static void NativeKartColor_PaintLayout(const struct Instance *inst, const struc
 void NativeKartColor_OnLayout(const struct Instance *inst, const struct TextureLayout *layout)
 {
 	static int paint = -1;
-	if (paint < 0) paint = getenv("CTR_KART_CLUT_PAINT") != NULL;
+	if (paint < 0)
+		paint = getenv("CTR_KART_CLUT_PAINT") != NULL;
 	if (paint)
 	{
 		NativeKartColor_PaintLayout(inst, layout);
 		return;
 	}
 	static int dump = -1;
-	if (dump < 0) dump = getenv("CTR_DUMP_KART_LAYOUTS") != NULL;
-	if (dump) NativeKartColor_DumpLayout(inst, layout);
+	if (dump < 0)
+		dump = getenv("CTR_DUMP_KART_LAYOUTS") != NULL;
+	if (dump)
+		NativeKartColor_DumpLayout(inst, layout);
 	const u16 clut = layout->clut;
 	if (clut >= KART_CLUT_KEY_COUNT)
 	{

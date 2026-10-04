@@ -36,10 +36,10 @@ enum NativeFontId
 
 // Distance field range around the outline, and the outline width, in ems.
 // The atlas stores 0.5 on the glyph edge and falls to 0 at the padding.
-#define NATIVE_FONT_SDF_PAD_EM     0.16f
-#define NATIVE_FONT_OUTLINE_EM     0.07f
-#define NATIVE_FONT_SDF_EDGE       (128.0f / 255.0f)
-#define NATIVE_FONT_SDF_OUTLINE    (NATIVE_FONT_SDF_EDGE - (NATIVE_FONT_OUTLINE_EM / NATIVE_FONT_SDF_PAD_EM) * (128.0f / 255.0f))
+#define NATIVE_FONT_SDF_PAD_EM        0.16f
+#define NATIVE_FONT_OUTLINE_EM        0.07f
+#define NATIVE_FONT_SDF_EDGE          (128.0f / 255.0f)
+#define NATIVE_FONT_SDF_OUTLINE       (NATIVE_FONT_SDF_EDGE - (NATIVE_FONT_OUTLINE_EM / NATIVE_FONT_SDF_PAD_EM) * (128.0f / 255.0f))
 
 struct NativeFontGlyph
 {

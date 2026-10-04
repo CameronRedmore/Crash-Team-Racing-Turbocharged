@@ -29,33 +29,33 @@
 // ---------------------------------------------------------------------------
 
 // Display
-extern int gNativeAspectRatio;      // enum NativeAspectRatio
-extern int gNativeFovDegrees;       // 0 = retail, else 45..100
-extern int gNativeProjectionMode;   // enum NativeProjectionMode
+extern int gNativeAspectRatio;    // enum NativeAspectRatio
+extern int gNativeFovDegrees;     // 0 = retail, else 45..100
+extern int gNativeProjectionMode; // enum NativeProjectionMode
 extern int gNativeProjectionStrength;
 extern int gNativeAntiAliasingMode; // enum NativeAntiAliasingMode
 extern int gNativeDitheringEnabled;
 extern int gNativeBorderlessEnabled;
-extern int gNativePgxpMode;         // enum NativePgxpMode
+extern int gNativePgxpMode; // enum NativePgxpMode
 extern int gNativePgxpIntegerNclipEnabled;
-extern int gNativeRendererMode;     // enum NativeRendererMode
-extern int gNativeColorDepth;       // enum NativeColorDepth
+extern int gNativeRendererMode; // enum NativeRendererMode
+extern int gNativeColorDepth;   // enum NativeColorDepth
 extern int gNativeDepthBufferEnabled;
-extern int gNativeHdPauseMode;      // 0 retail VRAM copy, 1 posterised, 2 smooth
+extern int gNativeHdPauseMode; // 0 retail VRAM copy, 1 posterised, 2 smooth
 
 // Interface
 extern int gNativeModernMapEnabled;
 extern int gNativeModernHudIconsEnabled;
-extern int gNativeFont;             // enum NativeFont
-extern int gNativeKartHue;          // 0 = retail, else 1..NATIVE_KART_HUE_STEPS - 1
+extern int gNativeFont;    // enum NativeFont
+extern int gNativeKartHue; // 0 = retail, else 1..NATIVE_KART_HUE_STEPS - 1
 extern int gNativeDefaultCameraFar;
 extern int gNativeDefaultHudSpeedometer;
 extern int gNativeSkipMaskHints;
 
 // Gameplay
-extern int gNative60FpsEnabled;         // frame-rate index, see native_framerate.h
+extern int gNative60FpsEnabled; // frame-rate index, see native_framerate.h
 extern int gNativeMirrorModeEnabled;
-extern int gNativeAIRacersMode;         // enum NativeAIRacersMode
+extern int gNativeAIRacersMode; // enum NativeAIRacersMode
 extern int gNativeEngineSelectionEnabled;
 extern int gNativeAdditionalUnlocksEnabled;
 extern int gNativeSmoothedPhysicsEnabled;

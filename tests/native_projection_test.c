@@ -18,8 +18,7 @@ static double EdgeForwardX(const NativeProjectionParams *params, double sourceX)
 	return copysign(output, sourceX);
 }
 
-static void PaniniForward(const NativeProjectionParams *params, double sourceX, double sourceY,
-	double *outputX, double *outputY)
+static void PaniniForward(const NativeProjectionParams *params, double sourceX, double sourceY, double *outputX, double *outputY)
 {
 	const double d = (double)params->strength / 100.0;
 	const double rayX = sourceX * params->horizontalTanHalf;

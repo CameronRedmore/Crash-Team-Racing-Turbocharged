@@ -48,11 +48,11 @@ const char *NativeFont_GetName(int font)
 #define NATIVE_FONT_GLYPH_PIXELS      (NATIVE_FONT_ATLAS_GLYPH_UNITS * NATIVE_FONT_ATLAS_UNIT_PIXELS)
 
 // Printable ASCII, then Latin-1 from 0xA0.
-#define NATIVE_FONT_ASCII_FIRST  0x20
-#define NATIVE_FONT_ASCII_LAST   0x7e
-#define NATIVE_FONT_LATIN1_FIRST 0xa0
-#define NATIVE_FONT_LATIN1_CELL  (NATIVE_FONT_ASCII_LAST - NATIVE_FONT_ASCII_FIRST + 1)
-#define NATIVE_FONT_GLYPH_COUNT  256
+#define NATIVE_FONT_ASCII_FIRST       0x20
+#define NATIVE_FONT_ASCII_LAST        0x7e
+#define NATIVE_FONT_LATIN1_FIRST      0xa0
+#define NATIVE_FONT_LATIN1_CELL       (NATIVE_FONT_ASCII_LAST - NATIVE_FONT_ASCII_FIRST + 1)
+#define NATIVE_FONT_GLYPH_COUNT       256
 
 struct NativeFontState
 {
@@ -101,9 +101,13 @@ internal u32 NativeFont_Hash(u32 hash, const void *data, size_t size)
 
 internal u32 NativeFont_CacheKey(const struct NativeFontDesc *desc, const struct NativeAssetsByteBuffer *bytes)
 {
-	const u32 layout[] = {NATIVE_FONT_CACHE_REVISION, NATIVE_FONT_ATLAS_SIZE,
-	                     NATIVE_FONT_CELL_PIXELS, NATIVE_FONT_GLYPH_PIXELS,
-	                     sizeof(struct NativeFontState), sizeof(float), 0x01020304};
+	const u32 layout[] = {NATIVE_FONT_CACHE_REVISION,
+	                      NATIVE_FONT_ATLAS_SIZE,
+	                      NATIVE_FONT_CELL_PIXELS,
+	                      NATIVE_FONT_GLYPH_PIXELS,
+	                      sizeof(struct NativeFontState),
+	                      sizeof(float),
+	                      0x01020304};
 	const float settings[] = {desc->tracking, desc->space, NATIVE_FONT_SDF_PAD_EM};
 	u32 hash = NativeFont_Hash(2166136261u, layout, sizeof(layout));
 	hash = NativeFont_Hash(hash, settings, sizeof(settings));
@@ -113,7 +117,8 @@ internal u32 NativeFont_CacheKey(const struct NativeFontDesc *desc, const struct
 internal b32 NativeFont_ReadCache(const char *path, u32 key)
 {
 	FILE *file = NativeAssets_OpenHost(path, "rb");
-	if (!file) return false;
+	if (!file)
+		return false;
 	u32 header[3];
 	struct NativeFontState cached;
 	const size_t atlasSize = (size_t)NATIVE_FONT_ATLAS_SIZE * NATIVE_FONT_ATLAS_SIZE;
@@ -122,15 +127,16 @@ internal b32 NativeFont_ReadCache(const char *path, u32 key)
 	if (fread(header, sizeof(header), 1, file) != 1 || header[0] != 0x43544643 || header[1] != key)
 		goto done;
 	atlas = (u8 *)malloc(atlasSize);
-	if (!atlas || fread(&cached, sizeof(cached), 1, file) != 1 ||
-	    fread(atlas, atlasSize, 1, file) != 1 || fgetc(file) != EOF || ferror(file))
+	if (!atlas || fread(&cached, sizeof(cached), 1, file) != 1 || fread(atlas, atlasSize, 1, file) != 1 || fgetc(file) != EOF || ferror(file))
 		goto done;
 	u32 checksum = NativeFont_Hash(2166136261u, &cached, sizeof(cached));
 	checksum = NativeFont_Hash(checksum, atlas, atlasSize);
-	if (checksum != header[2]) goto done;
+	if (checksum != header[2])
+		goto done;
 	// Never restore GPU handles from disk.
 	cached.atlasTexture = NativeRenderer_CreateFontAtlasTexture(NATIVE_FONT_ATLAS_SIZE, NATIVE_FONT_ATLAS_SIZE, atlas);
-	if (!cached.atlasTexture) goto done;
+	if (!cached.atlasTexture)
+		goto done;
 	cached.loadedFont = -1;
 	cached.failedFont = -1;
 	s_nativeFont = cached;
@@ -144,10 +150,13 @@ done:
 internal void NativeFont_WriteCache(const char *path, u32 key, const u8 *atlas)
 {
 	char finalPath[1024], tempPath[1030];
-	if (!NativeAssets_BuildPath(path, finalPath, sizeof(finalPath))) return;
-	if (snprintf(tempPath, sizeof(tempPath), "%s.tmp", finalPath) >= (int)sizeof(tempPath)) return;
+	if (!NativeAssets_BuildPath(path, finalPath, sizeof(finalPath)))
+		return;
+	if (snprintf(tempPath, sizeof(tempPath), "%s.tmp", finalPath) >= (int)sizeof(tempPath))
+		return;
 	FILE *file = fopen(tempPath, "wb");
-	if (!file) return; // Read-only assets still work without caching.
+	if (!file)
+		return; // Read-only assets still work without caching.
 	struct NativeFontState cached = s_nativeFont;
 	cached.loadedFont = cached.failedFont = -1;
 	cached.atlasTexture = 0;
@@ -155,11 +164,11 @@ internal void NativeFont_WriteCache(const char *path, u32 key, const u8 *atlas)
 	u32 checksum = NativeFont_Hash(2166136261u, &cached, sizeof(cached));
 	checksum = NativeFont_Hash(checksum, atlas, atlasSize);
 	const u32 header[] = {0x43544643, key, checksum};
-	b32 ok = fwrite(header, sizeof(header), 1, file) == 1 &&
-	         fwrite(&cached, sizeof(cached), 1, file) == 1 &&
-	         fwrite(atlas, atlasSize, 1, file) == 1;
-	if (fclose(file) != 0) ok = false;
-	if (ok && rename(tempPath, finalPath) == 0) return;
+	b32 ok = fwrite(header, sizeof(header), 1, file) == 1 && fwrite(&cached, sizeof(cached), 1, file) == 1 && fwrite(atlas, atlasSize, 1, file) == 1;
+	if (fclose(file) != 0)
+		ok = false;
+	if (ok && rename(tempPath, finalPath) == 0)
+		return;
 	remove(tempPath);
 }
 
@@ -197,8 +206,7 @@ internal b32 NativeFont_Build(int font)
 	for (int c = 0; c < NATIVE_FONT_GLYPH_COUNT; c++)
 	{
 		int x0, y0, x1, y1;
-		if ((NativeFont_CellForCharacter(c) < 0) || (stbtt_FindGlyphIndex(&info, c) == 0) ||
-		    !stbtt_GetCodepointBox(&info, c, &x0, &y0, &x1, &y1))
+		if ((NativeFont_CellForCharacter(c) < 0) || (stbtt_FindGlyphIndex(&info, c) == 0) || !stbtt_GetCodepointBox(&info, c, &x0, &y0, &x1, &y1))
 		{
 			continue;
 		}
@@ -304,7 +312,8 @@ internal b32 NativeFont_Build(int font)
 	if (ok)
 	{
 		Platform_Log("[CTR Font] Loaded %s (%.1f px em atlas)\n", desc->menuName, emPixels);
-		if (cachePathValid) NativeFont_WriteCache(cachePath, cacheKey, atlas);
+		if (cachePathValid)
+			NativeFont_WriteCache(cachePath, cacheKey, atlas);
 	}
 
 done:

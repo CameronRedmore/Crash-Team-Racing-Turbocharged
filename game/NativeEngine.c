@@ -11,24 +11,16 @@ enum
 int gNativeEngineSelectionEnabled = 0;
 int gNativeAdditionalUnlocksEnabled = 1;
 
-static int s_selectedProfiles[NATIVE_ENGINE_PLAYER_COUNT] =
-{
-	NATIVE_ENGINE_DEFAULT,
-	NATIVE_ENGINE_DEFAULT,
-	NATIVE_ENGINE_DEFAULT,
-	NATIVE_ENGINE_DEFAULT,
+static int s_selectedProfiles[NATIVE_ENGINE_PLAYER_COUNT] = {
+    NATIVE_ENGINE_DEFAULT,
+    NATIVE_ENGINE_DEFAULT,
+    NATIVE_ENGINE_DEFAULT,
+    NATIVE_ENGINE_DEFAULT,
 };
 
-static int s_replayOverrides[NATIVE_ENGINE_DRIVER_COUNT] =
-{
-	NATIVE_ENGINE_DEFAULT,
-	NATIVE_ENGINE_DEFAULT,
-	NATIVE_ENGINE_DEFAULT,
-	NATIVE_ENGINE_DEFAULT,
-	NATIVE_ENGINE_DEFAULT,
-	NATIVE_ENGINE_DEFAULT,
-	NATIVE_ENGINE_DEFAULT,
-	NATIVE_ENGINE_DEFAULT,
+static int s_replayOverrides[NATIVE_ENGINE_DRIVER_COUNT] = {
+    NATIVE_ENGINE_DEFAULT, NATIVE_ENGINE_DEFAULT, NATIVE_ENGINE_DEFAULT, NATIVE_ENGINE_DEFAULT,
+    NATIVE_ENGINE_DEFAULT, NATIVE_ENGINE_DEFAULT, NATIVE_ENGINE_DEFAULT, NATIVE_ENGINE_DEFAULT,
 };
 
 static int NativeEngine_IsProfileValid(int profile)
@@ -125,8 +117,7 @@ int NativeEngine_GetEffectiveProfile(int driverID)
 	}
 
 	struct GameTracker *gGT = (sdata != NULL) ? sdata->gGT : NULL;
-	if ((gNativeEngineSelectionEnabled == 0) || (gGT == NULL) ||
-	    (driverID >= gGT->numPlyrCurrGame) || (driverID >= NATIVE_ENGINE_PLAYER_COUNT))
+	if ((gNativeEngineSelectionEnabled == 0) || (gGT == NULL) || (driverID >= gGT->numPlyrCurrGame) || (driverID >= NATIVE_ENGINE_PLAYER_COUNT))
 	{
 		return defaultProfile;
 	}
@@ -163,8 +154,7 @@ const char *NativeEngine_GetProfileName(int profile)
 
 void NativeEngine_SetReplayOverride(int driverID, int profile)
 {
-	if (((u32)driverID >= NATIVE_ENGINE_DRIVER_COUNT) ||
-	    ((profile != NATIVE_ENGINE_DEFAULT) && !NativeEngine_IsProfileValid(profile)))
+	if (((u32)driverID >= NATIVE_ENGINE_DRIVER_COUNT) || ((profile != NATIVE_ENGINE_DEFAULT) && !NativeEngine_IsProfileValid(profile)))
 	{
 		return;
 	}

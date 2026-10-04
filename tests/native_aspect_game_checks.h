@@ -64,14 +64,19 @@ static void AspectTest_GamePaths(void)
 			// triangle entirely beyond the edge is rejected before rasterisation.
 			const float right = (float)(view.width * 0.5 / scales[ratio]);
 			NativeDraw3DVertex a = {0}, b = {0}, c = {0};
-			a.x = right - 8; b.x = right - 4; c.x = right - 8;
-			a.z = b.z = c.z = 256; c.y = 2;
+			a.x = right - 8;
+			b.x = right - 4;
+			c.x = right - 8;
+			a.z = b.z = c.z = 256;
+			c.y = 2;
 			NativeDraw3DMaterial material = {0};
 			material.flags = NATIVE_DRAW3D_DOUBLE_SIDED;
 			NativeDraw3D_BeginFrame();
 			int layerIndex = NativeDraw3D_BeginLayer(&view);
 			assert(NativeDraw3D_AddTriangle(layerIndex, &a, &b, &c, &material));
-			a.x = right + 4; b.x = right + 8; c.x = right + 4;
+			a.x = right + 4;
+			b.x = right + 8;
+			c.x = right + 4;
 			assert(!NativeDraw3D_AddTriangle(layerIndex, &a, &b, &c, &material));
 			NativeDraw3D_EndLayer(layerIndex);
 		}
@@ -79,8 +84,7 @@ static void AspectTest_GamePaths(void)
 		const int invisibleLeaves[] = {0};
 		const int expanded = ratio == NATIVE_ASPECT_21_9 || ratio == NATIVE_ASPECT_32_9;
 		assert(RenderLists_IsVisible(invisibleLeaves, 0) == expanded);
-		assert((void *)RenderBucket_GetVisibleLevelInstances(&tracker.cameraDC[0]) ==
-		       (expanded ? (void *)allInstances : (void *)pvsInstances));
+		assert((void *)RenderBucket_GetVisibleLevelInstances(&tracker.cameraDC[0]) == (expanded ? (void *)allInstances : (void *)pvsInstances));
 		assert(fabs(AH_Map_MarkerAspectX() - (512.0 / 216.0 / (4.0 / 3.0)) * scales[ratio]) < 1e-6);
 
 		// Map origin, artwork and markers move together toward the screen
@@ -128,7 +132,8 @@ static void AspectTest_GamePaths(void)
 		{
 			struct PushBuffer *pb = &tracker.pushBuffer[camera];
 			memset(pb, 0, sizeof(*pb));
-			pb->rect.w = 512; pb->rect.h = 216;
+			pb->rect.w = 512;
+			pb->rect.h = 216;
 			pb->distanceToScreen_PREV = 256;
 			PushBuffer_UpdateFrustum(pb);
 			assert(pb->matrix_ViewProj.m[0][0] == (s16)(3072 * focal));
@@ -137,12 +142,12 @@ static void AspectTest_GamePaths(void)
 			NativeDrawLevel_BuildView(pb, &view);
 			assert(fabs(view.rotation[0] - 0.75 * focal) < 1e-10);
 			assert(fabs(view.rotation[4] - 0.5625 * focal) < 1e-10);
-			assert(fabs(2 * atan(view.height / (2 * view.projection * view.rotation[4])) *
-			            180 / 3.14159265358979323846 - degrees) < 1e-8);
+			assert(fabs(2 * atan(view.height / (2 * view.projection * view.rotation[4])) * 180 / 3.14159265358979323846 - degrees) < 1e-8);
 		}
 		struct PushBuffer *ui = &tracker.pushBuffer_UI;
 		memset(ui, 0, sizeof(*ui));
-		ui->rect.w = 512; ui->rect.h = 216;
+		ui->rect.w = 512;
+		ui->rect.h = 216;
 		ui->distanceToScreen_PREV = 256;
 		PushBuffer_SetMatrixVP(ui);
 		assert(ui->matrix_ViewProj.m[0][0] == 3072);
@@ -274,7 +279,8 @@ static void AspectTest_RenderTargets(void)
 		NativeRenderer_BeginScene();
 		NativeRenderer_Clear(0, 0, 512, 216, 0, 0, 0);
 		struct PushBuffer pb = {0};
-		pb.rect.w = 512; pb.rect.h = 216;
+		pb.rect.w = 512;
+		pb.rect.h = 216;
 		pb.distanceToScreen_PREV = 256;
 		PushBuffer_SetMatrixVP(&pb);
 		NativeDraw3DView view;
@@ -298,14 +304,20 @@ static void AspectTest_RenderTargets(void)
 		glBindFramebuffer(GL_FRAMEBUFFER, target->framebuffer);
 		glReadPixels(0, 0, target->width, target->height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 		int left = target->width, right = -1, bottom = target->height, top = -1;
-		for (int y = 0; y < target->height; y++) for (int x = 0; x < target->width; x++)
-		{
-			if (pixels[((size_t)y * target->width + x) * 4] < 100) continue;
-			if (x < left) left = x;
-			if (x > right) right = x;
-			if (y < bottom) bottom = y;
-			if (y > top) top = y;
-		}
+		for (int y = 0; y < target->height; y++)
+			for (int x = 0; x < target->width; x++)
+			{
+				if (pixels[((size_t)y * target->width + x) * 4] < 100)
+					continue;
+				if (x < left)
+					left = x;
+				if (x > right)
+					right = x;
+				if (y < bottom)
+					bottom = y;
+				if (y > top)
+					top = y;
+			}
 		free(pixels);
 		assert(right >= left && top >= bottom);
 		assert(abs((right - left) - (top - bottom)) <= 1);
