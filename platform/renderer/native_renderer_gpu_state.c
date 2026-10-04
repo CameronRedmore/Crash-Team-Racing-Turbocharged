@@ -17,6 +17,30 @@
 #include "platform/native_options.h"
 #include "platform/native_renderer_internal.h"
 
+// Last scissor and stencil state pushed to GL. Only the cached setters here
+// read or write them; other modules go through the setters.
+global_variable int s_previousStencilMode = 0;
+global_variable int s_previousScissorRectValid = 0;
+global_variable int s_previousScissorX = 0;
+global_variable int s_previousScissorY = 0;
+global_variable int s_previousScissorW = 0;
+global_variable int s_previousScissorH = 0;
+
+// Uniform locations of the currently bound PSX shader. SetShader writes them
+// when a shader binds and the setters below read them; no other module does
+// either. They were plain globals in the single-file renderer, and are static
+// here because nothing outside this file ever referenced them.
+global_variable GLint u_projectionLoc;
+global_variable GLint u_bilinearFilterLoc;
+global_variable GLint u_texelSizeLoc;
+#ifndef __vita__
+global_variable GLint u_psxSemiTransPassLoc;
+global_variable GLint u_psxDitherEnabledLoc;
+global_variable GLint u_psxColorDepth15Loc;
+#endif
+global_variable GLint u_psxDrawMaskSetLoc;
+global_variable GLint u_psxTextureOutputStpLoc;
+
 internal void NativeRenderer_InvalidateScissorRectCache(void)
 {
 	s_previousScissorRectValid = 0;

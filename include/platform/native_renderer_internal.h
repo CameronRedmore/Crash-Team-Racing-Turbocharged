@@ -175,13 +175,7 @@ global_variable int s_previousMixedSTPBlend;
 global_variable int s_previousDepthMode;
 global_variable int s_previousDepthWrite;
 global_variable int s_previousDepthAlwaysPass;
-global_variable int s_previousStencilMode;
 global_variable int s_previousScissorState;
-global_variable int s_previousScissorRectValid;
-global_variable int s_previousScissorX;
-global_variable int s_previousScissorY;
-global_variable int s_previousScissorW;
-global_variable int s_previousScissorH;
 global_variable int s_previousOffscreenState;
 global_variable RECT16 s_previousOffscreen;
 global_variable ShaderID s_previousShader;
@@ -189,14 +183,11 @@ global_variable ShaderID s_previousShader;
 // vram.
 global_variable struct NativeVramState s_vram;
 #ifdef __vita__
-global_variable u8 s_vitaVramTransferPixels[VRAM_WIDTH * VRAM_HEIGHT * 4];
 #endif
 
 // targets: presentation size and aspect.
 global_variable struct NativeRenderTarget s_mainRenderTarget;
 global_variable struct NativeRenderTarget s_offscreenRenderTarget;
-global_variable int s_presentAspectW;
-global_variable int s_presentAspectH;
 global_variable int s_startupAspectW;
 global_variable int s_startupAspectH;
 global_variable SDL_Rect s_presentViewport;
@@ -209,14 +200,11 @@ global_variable int s_gamePresentationEnabled;
 global_variable int s_frameAntiAliasingMode; // latched at BeginScene
 global_variable GLint s_maxSamples;
 global_variable GLint s_maxRenderTargetSize;
-global_variable struct NativeRenderTarget s_supersampleResolveTarget;
 global_variable s32 s_mainResolveWidth;
 global_variable s32 s_mainResolveHeight;
 global_variable struct NativeRenderTarget s_projectedWorldTarget;
 global_variable b32 s_projectedWorldTargetReady;
 global_variable b32 s_projectedWorldBound;
-global_variable struct NativeRenderTarget s_pauseBackgroundTarget;
-global_variable b32 s_pauseBackgroundTargetReady;
 #endif
 
 // textures.
@@ -227,18 +215,7 @@ global_variable TextureID s_rgLutTexture;
 global_variable TextureID s_presentLutTexture;
 #endif
 
-// shaders: PSX shader uniform locations for the currently bound PSX shader,
-// plus the full-screen blit pipelines and their locations.
-extern GLint u_projectionLoc;
-extern GLint u_bilinearFilterLoc;
-extern GLint u_texelSizeLoc;
-#ifndef __vita__
-extern GLint u_psxSemiTransPassLoc;
-extern GLint u_psxDitherEnabledLoc;
-extern GLint u_psxColorDepth15Loc;
-#endif
-extern GLint u_psxDrawMaskSetLoc;
-extern GLint u_psxTextureOutputStpLoc;
+// shaders: the 15-bit colour lookup table shared with the LUT texture.
 global_variable u8 rgLUT[LUT_WIDTH * LUT_HEIGHT * sizeof(u32)];
 
 // Pack native RGBA render targets into the persistent RG8 VRAM texture on the
@@ -251,7 +228,6 @@ global_variable GLint s_pauseBackgroundFlipYLoc;
 global_variable GLint s_pauseBackgroundPaletteLoc;
 global_variable GLint s_pauseBackgroundSmoothLoc;
 global_variable GLuint s_projectedWorldShader;
-global_variable GLint s_projectedWorldSourceLoc;
 global_variable GLint s_projectedWorldRectLoc;
 global_variable GLint s_projectedWorldTexelLoc;
 global_variable GLint s_projectedWorldModeLoc;
@@ -277,7 +253,6 @@ global_variable GLuint s_vramQuadVBO;
 // submit / device: the PSX vertex buffers and the VRAM staging framebuffer.
 global_variable GLuint s_glVertexArray[MAX_NUM_VERTEX_BUFFERS];
 global_variable GLuint s_glVertexBuffer[MAX_NUM_VERTEX_BUFFERS];
-global_variable int s_curVertexBuffer;
 global_variable int s_boundVertexBuffer;
 global_variable GLuint s_glVramFramebuffer;
 
@@ -286,7 +261,7 @@ global_variable GLuint s_glVramFramebuffer;
 // ---------------------------------------------------------------------------
 
 // native_renderer_targets.c -- render targets, MSAA/SSAA, presentation.
-internal void NativeRenderer_DestroyAllTargets(void);
+internal void NativeRenderer_DestroySceneTargets(void);
 internal void NativeRenderer_InitRenderTarget(struct NativeRenderTarget *target);
 internal void NativeRenderer_DestroyRenderTarget(struct NativeRenderTarget *target);
 internal void NativeRenderer_EnsureRenderTarget(struct NativeRenderTarget *target, int width, int height);

@@ -105,6 +105,12 @@ internal void NativeRenderer_GpuPackTextureToVRAM(TextureID sourceTexture, int x
 
 global_variable b32 s_projectedWorldSeeded = false;
 
+#ifndef __vita__
+// Full-resolution greyscale copy of the main target, used as the pause backdrop.
+global_variable struct NativeRenderTarget s_pauseBackgroundTarget;
+global_variable b32 s_pauseBackgroundTargetReady = false;
+#endif
+
 int NativeRenderer_BindProjectedWorld(int enable)
 {
 #ifndef __vita__

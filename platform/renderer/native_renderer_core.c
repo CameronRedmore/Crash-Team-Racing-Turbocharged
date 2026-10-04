@@ -27,13 +27,7 @@ global_variable int s_previousMixedSTPBlend = 0;
 global_variable int s_previousDepthMode = 0;
 global_variable int s_previousDepthWrite = 1;
 global_variable int s_previousDepthAlwaysPass = 0;
-global_variable int s_previousStencilMode = 0;
 global_variable int s_previousScissorState = 0;
-global_variable int s_previousScissorRectValid = 0;
-global_variable int s_previousScissorX = 0;
-global_variable int s_previousScissorY = 0;
-global_variable int s_previousScissorW = 0;
-global_variable int s_previousScissorH = 0;
 global_variable int s_previousOffscreenState = 0;
 global_variable RECT16 s_previousOffscreen = {0, 0, 0, 0};
 
@@ -47,24 +41,15 @@ global_variable TextureID s_presentLutTexture = (TextureID)-1;
 
 global_variable struct NativeVramState s_vram;
 
-#ifdef __vita__
-global_variable u8 s_vitaVramTransferPixels[VRAM_WIDTH * VRAM_HEIGHT * 4];
-#endif
-
-
 global_variable struct NativeRenderTarget s_mainRenderTarget;
 global_variable struct NativeRenderTarget s_offscreenRenderTarget;
 #ifndef __vita__
 global_variable struct NativeRenderTarget s_projectedWorldTarget;
 global_variable b32 s_projectedWorldTargetReady = false;
 global_variable b32 s_projectedWorldBound = false;
-// Full-resolution greyscale copy of the main target, used as the pause backdrop.
-global_variable struct NativeRenderTarget s_pauseBackgroundTarget;
-global_variable b32 s_pauseBackgroundTargetReady = false;
 
 // SSAA renders the main target above presentation resolution and box-filters
 // it down into this target. Width/height below are the presentation size.
-global_variable struct NativeRenderTarget s_supersampleResolveTarget;
 global_variable s32 s_mainResolveWidth;
 global_variable s32 s_mainResolveHeight;
 
@@ -81,8 +66,6 @@ global_variable TextureID s_lastBoundTexture = (TextureID)-1;
 int g_windowWidth = 0;
 int g_windowHeight = 0;
 
-global_variable int s_presentAspectW = 4;
-global_variable int s_presentAspectH = 3;
 global_variable int s_startupAspectW = 4;
 global_variable int s_startupAspectH = 3;
 global_variable SDL_Rect s_presentViewport = {0, 0, 0, 0};
@@ -105,7 +88,6 @@ global_variable GLint s_pauseBackgroundFlipYLoc = -1;
 global_variable GLint s_pauseBackgroundPaletteLoc = -1;
 global_variable GLint s_pauseBackgroundSmoothLoc = -1;
 global_variable GLuint s_projectedWorldShader = 0;
-global_variable GLint s_projectedWorldSourceLoc = -1;
 global_variable GLint s_projectedWorldRectLoc = -1;
 global_variable GLint s_projectedWorldTexelLoc = -1;
 global_variable GLint s_projectedWorldModeLoc = -1;
@@ -131,7 +113,6 @@ global_variable GLuint s_vramQuadVBO = 0;
 
 global_variable GLuint s_glVertexArray[MAX_NUM_VERTEX_BUFFERS];
 global_variable GLuint s_glVertexBuffer[MAX_NUM_VERTEX_BUFFERS];
-global_variable int s_curVertexBuffer = 0;
 global_variable int s_boundVertexBuffer = -1;
 
 global_variable GLuint s_glVramFramebuffer;

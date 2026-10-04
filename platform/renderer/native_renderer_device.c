@@ -164,7 +164,7 @@ void NativeRenderer_Shutdown(void)
 	glDeleteVertexArrays(MAX_NUM_VERTEX_BUFFERS, s_glVertexArray);
 	glDeleteBuffers(MAX_NUM_VERTEX_BUFFERS, s_glVertexBuffer);
 
-	NativeRenderer_DestroyAllTargets();
+	NativeRenderer_DestroySceneTargets();
 #ifndef __vita__
 	NativeRenderer_DestroyPassTargets();
 #endif

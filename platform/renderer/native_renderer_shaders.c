@@ -21,6 +21,12 @@
 #include "platform/native_font.h"
 #include "platform/native_renderer_internal.h"
 
+#ifndef __vita__
+// Uniform cache for the blit pipelines compiled here. s_src of the projected
+// world pass is only ever set from this file; the rest live with their owner.
+global_variable GLint s_projectedWorldSourceLoc = -1;
+#endif
+
 #ifdef __vita__
 enum NativePsxShaderVariant
 {
@@ -52,17 +58,6 @@ global_variable GTEShader s_gteShader16SuperTurbo;
 global_variable GTEShader s_gteShader32Rgba;
 global_variable GTEShader s_gteShaderTextSdf;
 #endif
-
-GLint u_projectionLoc;
-GLint u_bilinearFilterLoc;
-GLint u_texelSizeLoc;
-#ifndef __vita__
-GLint u_psxSemiTransPassLoc;
-GLint u_psxDitherEnabledLoc;
-GLint u_psxColorDepth15Loc;
-#endif
-GLint u_psxDrawMaskSetLoc;
-GLint u_psxTextureOutputStpLoc;
 
 internal void NativeRenderer_DestroyPSXShaders(void)
 {

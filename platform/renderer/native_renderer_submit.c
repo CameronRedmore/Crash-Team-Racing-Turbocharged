@@ -13,6 +13,10 @@
 #include "platform/native_log.h"
 #include "platform/native_renderer_internal.h"
 
+// Which of the two vertex buffers the next submission writes. Only this module
+// rotates it.
+global_variable int s_curVertexBuffer = 0;
+
 void NativeRenderer_UpdateVertexBuffer(const GrVertex *vertices, int num_vertices)
 {
 	NativePerf_BeginScope(NATIVE_PERF_BUCKET_RENDERER_VERTEX_UPLOAD);

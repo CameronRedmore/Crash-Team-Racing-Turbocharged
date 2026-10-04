@@ -14,6 +14,12 @@
 #include "platform/native_log.h"
 #include "platform/native_renderer_internal.h"
 
+#ifdef __vita__
+// Scratch staging buffer for VRAM readback and upload. Vita has no PBO path,
+// so transfers bounce through this; only this module touches it.
+global_variable u8 s_vitaVramTransferPixels[VRAM_WIDTH * VRAM_HEIGHT * 4];
+#endif
+
 TextureID NativeRenderer_GetVRAMTexture(void)
 {
 	return s_vram.texture;

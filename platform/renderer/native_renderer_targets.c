@@ -21,6 +21,10 @@
 // is not retried on every target every frame.
 global_variable int s_multisampleFailedSamples = 0;
 
+// Aspect the presentation viewport is built from.
+global_variable int s_presentAspectW = 4;
+global_variable int s_presentAspectH = 3;
+
 internal int NativeRenderer_IntAbs(int value)
 {
 	return value < 0 ? -value : value;
@@ -495,8 +499,9 @@ void NativeRenderer_EnableGamePresentation(int enabled)
 }
 
 #ifndef __vita__
-// Whether s_supersampleResolveTarget has allocated storage yet. Paired with it,
-// and only ever touched from this file.
+// SSAA target holding the presentation-resolution result, and whether it has
+// allocated storage yet. Both are only ever touched from this file.
+global_variable struct NativeRenderTarget s_supersampleResolveTarget;
 global_variable b32 s_supersampleResolveTargetReady = false;
 
 // Blit the multisampled samples into the target's single-sample texture.
@@ -731,7 +736,10 @@ void NativeRenderer_SwapWindow(void)
 	NativePerf_EndScope(NATIVE_PERF_BUCKET_SWAP_WINDOW);
 }
 
-internal void NativeRenderer_DestroyAllTargets(void)
+// The targets the scene itself renders into. The projected-world and pause
+// backdrop targets belong to native_renderer_passes.c and are freed by
+// NativeRenderer_DestroyPassTargets; a reset path has to call both.
+internal void NativeRenderer_DestroySceneTargets(void)
 {
 	NativeRenderer_DestroyRenderTarget(&s_mainRenderTarget);
 	NativeRenderer_DestroyRenderTarget(&s_offscreenRenderTarget);
