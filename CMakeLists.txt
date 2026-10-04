@@ -162,7 +162,9 @@ else()
     )
 
     if(NOT EMSCRIPTEN)
-        target_compile_options(ctr_native PRIVATE -msse)
+        # i386 GCC defaults to x87 maths even with -msse; the native renderer is
+        # float-heavy, so keep floats and doubles in SSE registers.
+        target_compile_options(ctr_native PRIVATE -msse2 -mfpmath=sse)
     endif()
 
     if(CMAKE_C_COMPILER_ID STREQUAL "GNU")

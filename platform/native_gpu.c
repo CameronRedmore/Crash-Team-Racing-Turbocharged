@@ -3957,6 +3957,7 @@ internal void ProcessDrawEnvCommand(u32 code)
 global_variable u32 s_gpuDraw3DOrder[NATIVE_DRAW3D_MAX_TRIANGLES];
 global_variable const NativeDraw3DTriangle *s_gpuDraw3DSortTriangles;
 static u32 s_gpuDraw3DOverlayLayer;
+static const NativeDraw3DTriangle *s_gpuDraw3DPrevious;
 
 internal u32 NativeGpu_Draw3DStateKey(const NativeDraw3DMaterial *material)
 {
@@ -4026,6 +4027,15 @@ internal void NativeGpu_EmitDraw3DTriangle(const NativeDraw3DView *view, const N
 	const bool superTurboTint = textured && ((material->flags & NATIVE_DRAW3D_SUPER_TURBO_TINT) != 0);
 	const u16 tpage = (u16)(material->tpage | (superTurboTint ? NATIVE_GPU_TPAGE_SUPER_TURBO_TINT : 0));
 
+	// Split state follows only these fields within a layer (clut is Vita-only),
+	// so runs of identical state skip AddSplit's comparison.
+	const NativeDraw3DTriangle *previous = s_gpuDraw3DPrevious;
+	s_gpuDraw3DPrevious = triangle;
+	activeDrawEnv.tpage = tpage;
+	if ((previous != NULL) && (previous->transformIndex == triangle->transformIndex) && (previous->material.tpage == material->tpage) &&
+	    (previous->material.flags == material->flags) && (previous->material.screenOffsetX == material->screenOffsetX))
+		goto emitVertices;
+
 	memset(&s_gpuObjectState, 0, sizeof(s_gpuObjectState));
 	if (triangle->transformIndex)
 	{
@@ -4039,13 +4049,14 @@ internal void NativeGpu_EmitDraw3DTriangle(const NativeDraw3DView *view, const N
 		s_gpuObjectState.view[2] = view->centerX + ofsX + material->screenOffsetX;
 		s_gpuObjectState.view[3] = view->centerY + ofsY;
 	}
-	activeDrawEnv.tpage = tpage;
 	AddSplit(semiTrans, textured, false, (s16)material->clut);
 	NativeGpu_SetDepthSplit((material->flags & NATIVE_DRAW3D_BACKGROUND)      ? NATIVE_GPU_WORLD_DEPTH_BACKGROUND
 	                        : (material->flags & NATIVE_DRAW3D_ORDERED_BLEND) ? NATIVE_GPU_WORLD_DEPTH_ORDERED_BLEND
 	                                                                          : NATIVE_GPU_WORLD_DEPTH_TESTED,
 	                        (material->flags & NATIVE_DRAW3D_OVERLAY) ? s_gpuDraw3DOverlayLayer : 0);
+	memset(&s_gpuObjectState, 0, sizeof(s_gpuObjectState));
 
+emitVertices:;
 	GrVertex *vertex = &s_gpu.vertexBuffer[s_gpu.vertexIndex];
 	memset(vertex, 0, sizeof(GrVertex) * 3);
 
@@ -4142,7 +4153,6 @@ internal void NativeGpu_EmitDraw3DTriangle(const NativeDraw3DView *view, const N
 	}
 
 	s_gpu.vertexIndex += 3;
-	memset(&s_gpuObjectState, 0, sizeof(s_gpuObjectState));
 }
 
 internal void NativeGpu_EmitDraw3DLayer(int layerIndex)
@@ -4181,6 +4191,7 @@ internal void NativeGpu_EmitDraw3DLayer(int layerIndex)
 
 	const u16 savedTpage = activeDrawEnv.tpage;
 	s_gpu.mergeSemiTransSplits = true;
+	s_gpuDraw3DPrevious = NULL;
 	for (u32 i = 0; (i < count) && NativeGpu_HasPacketVertexRoom(); i++)
 	{
 		const NativeDraw3DTriangle *triangle = &triangles[s_gpuDraw3DOrder[i]];
