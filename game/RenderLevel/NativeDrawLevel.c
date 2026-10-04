@@ -11,7 +11,6 @@
 
 #if NATIVE_DRAW3D_SUPPORTED
 
-extern int gNativeMirrorModeRenderActive;
 
 enum
 {

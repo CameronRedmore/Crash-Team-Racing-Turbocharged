@@ -3,7 +3,6 @@
 #if defined(CTR_NATIVE)
 #include "platform/native_adhoc.h"
 #include "platform/native_pgxp.h"
-extern int gNativeMirrorModeRenderActive;
 #endif
 
 #define RED_BEAKER_CENTER_XY 0x02000080u

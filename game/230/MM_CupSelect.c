@@ -34,7 +34,6 @@ static const struct MMCupSelectCustomCupsText s_customCupsText[MM_CUSTOM_CUPS_LA
 };
 
 #if defined(CTR_NATIVE)
-extern int cfg_language;
 #endif
 
 static const struct MMCupSelectCustomCupsText *MM_CupSelect_CustomCups_GetText(void)

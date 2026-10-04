@@ -473,7 +473,6 @@ void NativeReverseTrack_ApplyToLevel(struct Level *level)
 
 const char *NativeReverseTrack_GetSuffix(void)
 {
-	extern int cfg_language;
 	static const char *suffix[6] =
 	{
 		" REVERSE",
@@ -489,7 +488,6 @@ const char *NativeReverseTrack_GetSuffix(void)
 
 const char *NativeReverseTrack_GetAlternativeSuffix(void)
 {
-	extern int cfg_language;
 	static const char *suffix[6] =
 	{
 		" ALTERNATIVE",

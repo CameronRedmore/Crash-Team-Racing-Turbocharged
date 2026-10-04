@@ -2,7 +2,6 @@
 
 #if defined(CTR_NATIVE)
 #include "platform/native_pgxp.h"
-extern int gNativeMirrorModeEnabled;
 #endif
 
 static inline u32 FLARE_PackXY(s16 x, s16 y)

@@ -2,6 +2,7 @@
 #define NATIVE_KART_COLOR_H
 
 #include <macros.h>
+#include <platform/native_options.h>
 
 // Experimental > Kart Hue: rotates the paint colour of the human players' karts.
 //
@@ -21,7 +22,6 @@
 #define NATIVE_KART_HUE_STEPS        (360 / NATIVE_KART_HUE_STEP_DEGREES)
 
 // 0 keeps the retail colours; n rotates the hue by n * NATIVE_KART_HUE_STEP_DEGREES.
-extern int gNativeKartHue;
 
 struct Instance;
 struct TextureLayout;

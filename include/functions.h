@@ -144,6 +144,20 @@ extern int gNativeGhostReplayMode;
 extern int gNativeBootSkipRequested;
 extern int gNativeBossFightMode;
 extern int gNativeBossFightBossID;
+// Runtime state derived from the settings in platform/native_options.h. These
+// are not persisted; they are recomputed per level, race or frame, and were
+// previously re-declared by hand in each file that read them.
+extern int gNativeMirrorModeRenderActive;
+extern int gNativeMirrorModeDoubleFlipActive;
+extern int gNativeReverseTrackEnabled;
+extern int gNativeAlternativeTrackEnabled;
+extern int gNativeRelicRaceMode;
+extern int gNativeRelicRaceResultTier;
+extern int gNativePresetPending;
+extern int gNativeControlsSelectedColumn;
+extern int gNativeControlsSelectedAction;
+extern int gNativeControlsCaptureActive;
+extern int gNativeDebugOverlayEnabled;
 int NativeBossFight_GetBossCharacter(int bossID);
 void NativeBossFight_SelectBoss(int bossID);
 void NativeBossFight_ArmGameplay(void);

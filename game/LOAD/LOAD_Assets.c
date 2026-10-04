@@ -17,7 +17,6 @@ enum
 static DriverModelExtraSlot s_nativeAIRandomizerModels[NATIVE_AI_RANDOMIZER_DRIVER_COUNT];
 static void *s_nativeAIRandomizer2PBuffers[NATIVE_AI_RANDOMIZER_2P_AI_COUNT];
 static struct Model *s_nativeAIRandomizer2PModels[NATIVE_AI_RANDOMIZER_2P_AI_COUNT];
-extern int gNativeAIRacersMode;
 
 static b32 NativeAIRandomizer_ShouldUse(const struct GameTracker *gGT)
 {

@@ -88,7 +88,6 @@ static const char *s_nativeGhostReplayPausedText[6] = {
     "PAUSED", "PAUSE", "PAUSE", "PAUSA", "PAUSA", "PAUZE",
 };
 static char s_nativeGhostReplayStatusText[32];
-extern int cfg_language;
 
 static int s_nativeGhostReplaySpeedIndex = NATIVE_GHOST_REPLAY_SPEED_NORMAL;
 static b32 s_nativeGhostReplayPaused;

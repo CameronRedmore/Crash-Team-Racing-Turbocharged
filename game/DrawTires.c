@@ -3,7 +3,6 @@
 #if defined(CTR_NATIVE)
 #include "platform/native_adhoc.h"
 #include "platform/native_pgxp.h"
-extern int gNativeMirrorModeRenderActive;
 #endif
 
 static const u32 sDrawTiresSolidJumpTable[8] = {

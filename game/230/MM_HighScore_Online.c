@@ -1,4 +1,3 @@
-extern int cfg_language;
 
 enum
 {

@@ -1,6 +1,8 @@
 #ifndef NATIVE_PROJECTION_H
 #define NATIVE_PROJECTION_H
 
+#include <platform/native_options.h>
+
 enum NativeProjectionMode
 {
 	NATIVE_PROJECTION_PERSPECTIVE = 0,
@@ -9,8 +11,6 @@ enum NativeProjectionMode
 	NATIVE_PROJECTION_MODE_COUNT
 };
 
-extern int gNativeProjectionMode;
-extern int gNativeProjectionStrength;
 
 // Runtime activation and conservative world-target overscan are provided by the game layer.
 int NativeProjection_IsGameplayActive(void);

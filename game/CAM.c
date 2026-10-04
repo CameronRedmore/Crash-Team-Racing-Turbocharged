@@ -4,9 +4,6 @@
 #include <platform/native_pgxp.h>
 #endif
 
-#if defined(CTR_NATIVE)
-extern int gNativeDefaultCameraFar;
-#endif
 
 #if defined(CTR_NATIVE)
 #include "platform/native_adhoc.h"

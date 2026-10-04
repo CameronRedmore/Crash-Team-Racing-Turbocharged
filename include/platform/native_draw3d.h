@@ -2,6 +2,7 @@
 #define NATIVE_DRAW3D_H
 
 #include <macros.h>
+#include <platform/native_options.h>
 
 // NOTE: Depth-first native 3D path. Retail draw code projects every vertex to
 // an integer screen position and sorts polygons through the ordering table;
@@ -45,8 +46,6 @@ enum NativeTextureFilter
 	NATIVE_TEXTURE_FILTER_COUNT,
 };
 
-extern int gNativeRendererMode;
-extern int gNativeColorDepth;
 
 #if NATIVE_DRAW3D_SUPPORTED
 #define NATIVE_DRAW3D_ACTIVE() (gNativeRendererMode == NATIVE_RENDERER_NATIVE)

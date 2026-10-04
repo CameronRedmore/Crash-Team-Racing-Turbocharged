@@ -2,6 +2,7 @@
 #define NATIVE_PGXP_H
 
 #include <macros.h>
+#include <platform/native_options.h>
 #include <stddef.h>
 #include <platform/native_draw3d.h>
 
@@ -46,14 +47,9 @@ typedef struct
 	u32 value;
 } NativePgxpVertex;
 
-extern int gNativePgxpMode;
 // Use retail integer winding calculations while retaining PGXP geometry.
-extern int gNativePgxpIntegerNclipEnabled;
-extern int gNativeDepthBufferEnabled;
 extern int gNativePreciseMinimapEnabled;
 // Centre Adventure map markers on their world positions (see UI_Map.c).
-extern int gNativeModernMapEnabled;
-extern int gNativeModernHudIconsEnabled;
 // Explicit HUD coordinates are independent of the 3D PGXP mode.
 #define NATIVE_PGXP_SCREEN_W (-1.0f)
 

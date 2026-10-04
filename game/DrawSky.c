@@ -2,7 +2,6 @@
 
 #if defined(CTR_NATIVE)
 #include "platform/native_pgxp.h"
-extern int gNativeMirrorModeRenderActive;
 #endif
 
 struct DrawSkyContext

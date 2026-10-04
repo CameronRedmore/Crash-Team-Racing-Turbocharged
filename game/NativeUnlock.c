@@ -2,7 +2,6 @@
 #include <platform/native_unlock.h>
 
 #if defined(CTR_NATIVE)
-extern int cfg_language;
 enum NativeUnlockKind
 {
 	NATIVE_UNLOCK_CHARACTER,

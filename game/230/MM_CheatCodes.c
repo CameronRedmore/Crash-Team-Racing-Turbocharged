@@ -4,7 +4,6 @@
 #if defined(CTR_NATIVE)
 #include <platform/native_custom_racer.h>
 
-extern u32 gNativeCheatConfigMask;
 
 static const u32 s_nativeCheatMenuBits[] =
 {

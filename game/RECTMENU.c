@@ -6,22 +6,6 @@
 #include <platform/native_aspect.h>
 #include <platform/native_projection.h>
 
-extern int cfg_language;
-extern int gNativeMirrorModeEnabled;
-extern int gNative60FpsEnabled;
-extern int gNativeDefaultCameraFar;
-extern int gNativeDefaultHudSpeedometer;
-extern int gNativeSkipMaskHints;
-extern int gNativeAIRacersMode;
-extern u32 gNativeCheatConfigMask;
-#ifndef __vita__
-extern int gNativeDitheringEnabled;
-extern int gNativeBorderlessEnabled;
-extern int g_cfg_bilinearFiltering;
-#endif
-extern int gNativeControlsSelectedColumn;
-extern int gNativeControlsSelectedAction;
-extern int gNativeControlsCaptureActive;
 
 // Translations for the native menu rows. Language order matches the retail menus: EN, FR, DE, IT, ES, NL.
 static const char *const s_txtOn[6] =

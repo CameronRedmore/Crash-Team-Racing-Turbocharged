@@ -1,9 +1,5 @@
 #include <common.h>
 
-extern int gNativeGhostReplayMode;
-#if defined(CTR_NATIVE)
-extern int gNativeDefaultHudSpeedometer;
-#endif
 
 static void MainInit_InitVisMemBspListNodes(struct VisMem *visMem, struct mesh_info *mesh)
 {

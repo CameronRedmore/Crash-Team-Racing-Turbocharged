@@ -2,7 +2,6 @@
 
 #if defined(CTR_NATIVE)
 #include "platform/native_pgxp.h"
-extern int gNativeMirrorModeRenderActive;
 #endif
 
 CTR_STATIC_ASSERT(sizeof(TILE_1) == 0x0C);

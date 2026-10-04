@@ -3,7 +3,6 @@
 #if defined(CTR_NATIVE)
 #include "platform/native_adhoc.h"
 #include "platform/native_pgxp.h"
-extern int gNativeMirrorModeRenderActive;
 #endif
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b95fc-0x800b9848.

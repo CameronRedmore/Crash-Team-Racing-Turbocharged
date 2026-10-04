@@ -2,6 +2,7 @@
 #define NATIVE_FONT_H
 
 #include <macros.h>
+#include <platform/native_options.h>
 
 // Enhancements > Font: replaces the retail 2D text glyphs with a TrueType
 // font. The font is rasterised into a cached signed distance field atlas, so
@@ -25,7 +26,6 @@ enum NativeFontId
 	NATIVE_FONT_COUNT,
 };
 
-extern int gNativeFont;
 
 // The atlas is a 16x16 grid of cells addressed with u8 texture coordinates:
 // 16 units per cell, of which the glyph uses 15 so the far edge stays reachable.

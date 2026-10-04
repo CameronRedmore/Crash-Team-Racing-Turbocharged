@@ -704,20 +704,6 @@ int gNativeControlsCaptureActive = 0;
 static s32 s_nativeControlsWaitForRelease;
 static s32 s_nativeControlsWaitDevice;
 static s32 s_nativeControlsWaitBinding;
-extern int cfg_language;
-extern int gNativeMirrorModeEnabled;
-extern int gNative60FpsEnabled;
-extern int gNativeDefaultCameraFar;
-extern int gNativeDefaultHudSpeedometer;
-extern int gNativeSkipMaskHints;
-extern int gNativeAIRacersMode;
-extern u32 gNativeCheatConfigMask;
-#ifndef __vita__
-extern int gNativeDitheringEnabled;
-extern int gNativeBorderlessEnabled;
-extern int g_cfg_bilinearFiltering;
-#endif
-extern int gNativeGhostReplayMode;
 extern void save_config();
 
 int gNativePresetPending = 0;

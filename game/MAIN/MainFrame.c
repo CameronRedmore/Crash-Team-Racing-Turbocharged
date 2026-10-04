@@ -3,7 +3,6 @@
 #if defined(CTR_NATIVE)
 #include "platform/native_adhoc.h"
 
-extern int gNativeSkipMaskHints;
 
 static void MainFrame_RegisterGpuLinkRanges(struct GameTracker *gGT)
 {

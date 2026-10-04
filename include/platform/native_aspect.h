@@ -2,6 +2,7 @@
 #define NATIVE_ASPECT_H
 
 #include <stdint.h>
+#include <platform/native_options.h>
 
 enum NativeAspectRatio
 {
@@ -13,8 +14,6 @@ enum NativeAspectRatio
 	NATIVE_ASPECT_COUNT
 };
 
-extern int gNativeAspectRatio;
-extern int gNativeFovDegrees;
 
 int NativeAspect_IsActive(void);
 // Retail PVS masks can omit geometry with ultrawide aspect or wider FOV.

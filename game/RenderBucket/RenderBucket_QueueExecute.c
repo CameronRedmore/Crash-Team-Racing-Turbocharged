@@ -4,9 +4,6 @@
 
 #if defined(CTR_NATIVE)
 #include "platform/native_adhoc.h"
-extern int gNativeMirrorModeRenderActive;
-extern int gNativeMirrorModeDoubleFlipActive;
-extern int gNativeReverseTrackEnabled;
 #endif
 
 

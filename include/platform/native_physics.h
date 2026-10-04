@@ -2,6 +2,7 @@
 #define NATIVE_PHYSICS_H
 
 #include <macros.h>
+#include <platform/native_options.h>
 #include <ctr_math.h>
 #include <psx/libgte.h>
 
@@ -18,10 +19,6 @@ enum NativePhysicsDomain
 	NATIVE_PHYSICS_COLLISION,
 	NATIVE_PHYSICS_STEERING,
 };
-extern int gNativeSmoothedPhysicsEnabled;
-extern int gNativeSmoothedAIEnabled;
-extern int gNativeSmoothedCollisionEnabled;
-extern int gNativeSmoothedSteeringEnabled;
 void NativePhysics_SetDomain(enum NativePhysicsDomain domain, int enabled);
 double NativePhysics_ReadScalar(struct Driver *d, size_t offset, size_t size);
 void NativePhysics_WriteScalar(struct Driver *d, size_t offset, size_t size, double value);

@@ -68,8 +68,6 @@ static void MainFrame_AppendProjectionMarkers(struct GameTracker *gt)
 volatile int gCtrDebugSkipLevelGeometry = 0;
 #endif
 
-extern int gNativeMirrorModeEnabled;
-extern int gNativeMirrorModeRenderActive;
 
 static int MainFrame_NativeMirrorWorldActive(struct GameTracker *gGT)
 {

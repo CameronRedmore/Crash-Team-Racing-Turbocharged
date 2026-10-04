@@ -6,7 +6,6 @@
 #include <platform/native_engine_metadata.h>
 #endif
 
-extern int gNativeGhostReplayMode;
 
 #if defined(CTR_NATIVE)
 static struct SelectProfileLoadSaveIcon s_autoSaveIcons[3];

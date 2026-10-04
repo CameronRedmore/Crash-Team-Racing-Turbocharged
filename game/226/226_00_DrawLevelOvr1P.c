@@ -1,8 +1,5 @@
 #include <common.h>
 
-#if defined(CTR_NATIVE)
-extern int gNativeReverseTrackEnabled;
-#endif
 
 #define NATIVE_LEVEL_TPAGE_SUPER_TURBO_TINT 0x8000u
 

@@ -6,7 +6,6 @@
 #include <platform/native_savestate.h>
 #endif
 
-extern int cfg_language;
 
 #if defined(CTR_NATIVE) && defined(CTR_INTERNAL)
 // Skips game logic while rendering continues (Scroll Lock in internal builds).

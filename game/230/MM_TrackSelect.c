@@ -2,7 +2,6 @@
 
 #if defined(CTR_NATIVE)
 #include "platform/native_minimap.h"
-extern int gNativeGhostReplayMode;
 #endif
 
 enum TrackSelectVideoState

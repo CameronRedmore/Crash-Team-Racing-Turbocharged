@@ -21,6 +21,12 @@ typedef int8_t s8;
 typedef float f32;
 typedef double f64;
 
+// Setting globals live in one header so game code never re-declares them.
+// Included here because the CTR_NATIVE_*_ACTIVE macros below expand at call
+// sites that may only see this header. native_options.h's own include of
+// macros.h is a no-op by guard, and it needs only the typedefs above.
+#include <platform/native_options.h>
+
 #define AugReview 805
 // TODO: Aug5 and Aug14
 #define SepReview 903
@@ -57,7 +63,7 @@ typedef double f64;
 #if defined(CTR_NATIVE)
 #include <native_framerate.h>
 #define CTR_NATIVE_60FPS 1
-extern int gNative60FpsEnabled;
+// gNative60FpsEnabled is declared in platform/native_options.h.
 extern int gNativeForce30Fps;
 extern int gNativeGhostReplayFpsOverride;
 #define CTR_NATIVE_60FPS_SELECTED   ((gNativeGhostReplayFpsOverride >= 0) ? gNativeGhostReplayFpsOverride : gNative60FpsEnabled)
@@ -89,10 +95,7 @@ extern int gNativeGhostReplayFpsOverride;
 #endif
 
 #if defined(CTR_NATIVE) && !defined(__vita__)
-extern int gNativeSmoothedPhysicsEnabled;
-extern int gNativeSmoothedAIEnabled;
-extern int gNativeSmoothedCollisionEnabled;
-extern int gNativeSmoothedSteeringEnabled;
+// The four smoothed globals are declared in platform/native_options.h.
 #define CTR_NATIVE_SMOOTHED_AI_ACTIVE (gNativeSmoothedAIEnabled != 0)
 #define CTR_NATIVE_SMOOTHED_COLLISION_ACTIVE (gNativeSmoothedCollisionEnabled != 0)
 #define CTR_NATIVE_SMOOTHED_STEERING_ACTIVE (gNativeSmoothedSteeringEnabled != 0)
@@ -106,7 +109,7 @@ extern int gNativeSmoothedSteeringEnabled;
 
 // Max detail option: level geometry and models always use their highest LOD.
 #if defined(CTR_NATIVE) && !defined(__vita__)
-extern int gNativeMaxLodEnabled;
+// gNativeMaxLodEnabled is declared in platform/native_options.h.
 #define CTR_NATIVE_MAX_LOD_ACTIVE (gNativeMaxLodEnabled != 0)
 #else
 #define CTR_NATIVE_MAX_LOD_ACTIVE 0
@@ -114,7 +117,7 @@ extern int gNativeMaxLodEnabled;
 
 // Pause screen backdrop: 0 = retail VRAM copy, 1 = full resolution (posterised), 2 = full resolution (smooth).
 #if defined(CTR_NATIVE) && !defined(__vita__)
-extern int gNativeHdPauseMode;
+// gNativeHdPauseMode is declared in platform/native_options.h.
 #define CTR_NATIVE_HD_PAUSE_MODE (gNativeHdPauseMode)
 #else
 #define CTR_NATIVE_HD_PAUSE_MODE 0
@@ -134,7 +137,7 @@ enum NativeAntiAliasingMode
 	NATIVE_AA_SSAA_4X,
 	NATIVE_AA_MODE_COUNT,
 };
-extern int gNativeAntiAliasingMode;
+// gNativeAntiAliasingMode is declared in platform/native_options.h.
 #endif
 #define CTR_SECONDS_TO_FRAMES(sec) ((s32)((sec) * FPS))
 

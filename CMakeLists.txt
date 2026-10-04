@@ -47,6 +47,17 @@ else()
     set(CTR_NATIVE_BUILD_ID "${CTR_NATIVE_GIT_HASH}-dirty")
 endif()
 
+function(ctr_native_add_test name source)
+    add_executable(ctr_native_${name}_test ${source} ${ARGN})
+    set_target_properties(ctr_native_${name}_test PROPERTIES C_STANDARD 17 C_STANDARD_REQUIRED ON C_EXTENSIONS OFF)
+    target_include_directories(ctr_native_${name}_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
+    target_compile_definitions(ctr_native_${name}_test PRIVATE CTR_NATIVE BUILD=926)
+    if(NOT CTR_NATIVE_MSVC_FRONTEND)
+        target_link_libraries(ctr_native_${name}_test PRIVATE m)
+    endif()
+    add_test(NAME ctr_native_${name} COMMAND ctr_native_${name}_test)
+endfunction()
+
 function(ctr_native_add_label_warning_if_supported target warning flag_check)
     set(saved_required_flags "${CMAKE_REQUIRED_FLAGS}")
     if(CMAKE_C_COMPILER_ID MATCHES "Clang")
@@ -218,6 +229,7 @@ if(BUILD_TESTING AND NOT EMSCRIPTEN)
     target_include_directories(ctr_native_framerate_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
     target_compile_definitions(ctr_native_framerate_test PRIVATE CTR_NATIVE BUILD=926)
     add_test(NAME ctr_native_framerate COMMAND ctr_native_framerate_test)
+    ctr_native_add_test(options tests/native_options_test.c)
     add_executable(ctr_native_precision_test
         tests/native_precision_test.c
         platform/native_pgxp.c

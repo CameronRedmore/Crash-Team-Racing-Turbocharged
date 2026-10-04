@@ -1,6 +1,8 @@
 #ifndef PLATFORM_NATIVE_ENGINE_H
 #define PLATFORM_NATIVE_ENGINE_H
 
+#include <platform/native_options.h>
+
 enum NativeEngineProfile
 {
 	NATIVE_ENGINE_DEFAULT = -1,
@@ -12,8 +14,6 @@ enum NativeEngineProfile
 	NATIVE_ENGINE_COUNT = 5,
 };
 
-extern int gNativeEngineSelectionEnabled;
-extern int gNativeAdditionalUnlocksEnabled;
 
 struct AdvProgress;
 void NativeEngine_SaveAdventureProfile(struct AdvProgress *adv);
