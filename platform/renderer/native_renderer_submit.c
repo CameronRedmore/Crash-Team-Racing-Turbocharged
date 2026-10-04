@@ -93,6 +93,57 @@ void NativeRenderer_DrawTriangles(int start_vertex, int triangles)
 }
 
 #if NATIVE_DRAW3D_SUPPORTED
+static GLuint s_glStaticVertexArray;
+static GLuint s_glStaticVertexBuffer;
+
+internal void NativeRenderer_RestoreVertexArray(void)
+{
+	glBindVertexArray(s_boundVertexBuffer >= 0 ? s_glVertexArray[s_boundVertexBuffer] : 0);
+}
+
+void NativeRenderer_UploadStaticVertices(const GrVertex *vertices, int count)
+{
+	if (count <= 0 || vertices == NULL)
+	{
+		if (s_glStaticVertexBuffer)
+		{
+			glBindBuffer(GL_ARRAY_BUFFER, s_glStaticVertexBuffer);
+			glBufferData(GL_ARRAY_BUFFER, 0, NULL, GL_STATIC_DRAW);
+		}
+		return;
+	}
+	if (!s_glStaticVertexArray)
+	{
+		glGenVertexArrays(1, &s_glStaticVertexArray);
+		glGenBuffers(1, &s_glStaticVertexBuffer);
+		glBindVertexArray(s_glStaticVertexArray);
+		glBindBuffer(GL_ARRAY_BUFFER, s_glStaticVertexBuffer);
+		NativeRenderer_SetupVertexAttributes();
+	}
+	glBindBuffer(GL_ARRAY_BUFFER, s_glStaticVertexBuffer);
+	glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)count * (GLsizeiptr)sizeof(GrVertex), vertices, GL_STATIC_DRAW);
+	NativeRenderer_RestoreVertexArray();
+}
+
+void NativeRenderer_DrawStaticObjectTriangles(const s32 *firstVertex, const s32 *vertexCount, int draws, u32 cullMode)
+{
+	if (!s_glStaticVertexArray || draws <= 0)
+		return;
+	NativePerf_BeginScope(NATIVE_PERF_BUCKET_RENDERER_DRAW_TRIANGLES);
+	glBindVertexArray(s_glStaticVertexArray);
+	if (cullMode)
+	{
+		glEnable(GL_CULL_FACE);
+		glCullFace(GL_BACK);
+		glFrontFace(cullMode == 1 ? GL_CW : GL_CCW);
+	}
+	glMultiDrawArrays(GL_TRIANGLES, (const GLint *)firstVertex, (const GLsizei *)vertexCount, draws);
+	if (cullMode)
+		glDisable(GL_CULL_FACE);
+	NativeRenderer_RestoreVertexArray();
+	NativePerf_EndScope(NATIVE_PERF_BUCKET_RENDERER_DRAW_TRIANGLES);
+}
+
 void NativeRenderer_DrawObjectTriangles(int startVertex, int triangles, u32 cullMode)
 {
 	// Scope culling to one draw: legacy and utility passes never inherit it.

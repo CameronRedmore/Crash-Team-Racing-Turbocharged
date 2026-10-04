@@ -289,6 +289,7 @@ internal int NativeRenderer_BuildDebugOverlayLines(char lines[][NATIVE_DEBUG_OVE
 		NativeDraw3D_GetGeometryCounts(&gpu, &cpu);
 		NativeRenderer_GetUploadCounts(&vertices, &uploads);
 		DBG_LINE("Transform GPU %u  CPU %u tris/frame", gpu, cpu);
+		DBG_LINE("Static %u of %u level tris/frame", NativeDraw3D_GetStaticTriangleCount(), NativeGpu_GetStaticTriangleCount());
 		DBG_LINE("Upload %u vertices  %u batches/frame", vertices, uploads);
 	}
 #endif

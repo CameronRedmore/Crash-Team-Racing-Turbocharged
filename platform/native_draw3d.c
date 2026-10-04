@@ -47,6 +47,12 @@ int gNativeGpuTransformEnabled = 0;
 static NativeDraw3DTransform s_draw3dTransforms[NATIVE_DRAW3D_MAX_TRANSFORMS];
 static u32 s_draw3dTransformCount;
 static u32 s_draw3dGpuTriangleCount;
+#define NATIVE_DRAW3D_MAX_STATIC_RANGES 65536
+static NativeDraw3DStaticRange s_draw3dStaticRanges[NATIVE_DRAW3D_MAX_STATIC_RANGES];
+static u32 s_draw3dStaticRangeCount;
+static u32 s_draw3dStaticTriangleCount;
+// Last range of each bucket in the open layer, plus one; zero for none.
+static u32 s_draw3dStaticLastRange[NATIVE_DRAW3D_STATIC_BUCKETS];
 
 const NativeDraw3DTransform *NativeDraw3D_GetTransform(u32 index)
 {
@@ -134,6 +140,8 @@ void NativeDraw3D_BeginFrame(void)
 	s_draw3dTransformCount = 0;
 	s_draw3dGpuTriangleCount = 0;
 	s_draw3dLayerCount = 0;
+	s_draw3dStaticRangeCount = 0;
+	s_draw3dStaticTriangleCount = 0;
 }
 
 int NativeDraw3D_BeginLayer(const NativeDraw3DView *view)
@@ -161,7 +169,11 @@ int NativeDraw3D_BeginLayer(const NativeDraw3DView *view)
 	layer->transformIndex = 0;
 	layer->firstTriangle = s_draw3dTriangleCount;
 	layer->triangleCount = 0;
+	layer->firstStaticRange = s_draw3dStaticRangeCount;
+	layer->staticRangeCount = 0;
+	layer->staticTransform = 0;
 	layer->open = 1;
+	memset(s_draw3dStaticLastRange, 0, sizeof(s_draw3dStaticLastRange));
 	return index;
 }
 
@@ -397,6 +409,51 @@ int NativeDraw3D_AddLine(int layerIndex, const NativeDraw3DVertex *v0, const Nat
 	int count = NativeDraw3D_AddQuad(layerIndex, &vertices[0], &vertices[1], &vertices[2], &vertices[3], &lineMaterial);
 	NativeDraw3D_SetObjectTransform(layerIndex, savedRotation, savedTranslation);
 	return count;
+}
+
+u32 NativeDraw3D_GetLayerTransform(int layer)
+{
+	if (layer < 0 || layer >= s_draw3dLayerCount)
+		return 0;
+	return NativeDraw3D_SnapshotTransform(&s_draw3dLayers[layer]);
+}
+
+int NativeDraw3D_AddStaticRanges(int layerIndex, const NativeDraw3DStaticRange *ranges, u32 count)
+{
+	if (layerIndex < 0 || layerIndex >= s_draw3dLayerCount)
+		return 0;
+	NativeDraw3DLayer *layer = &s_draw3dLayers[layerIndex];
+	if (!layer->open || count > NATIVE_DRAW3D_MAX_STATIC_RANGES - s_draw3dStaticRangeCount)
+		return 0;
+	const u32 transform = NativeDraw3D_SnapshotTransform(layer);
+	if (!transform || (layer->staticTransform && layer->staticTransform != transform))
+		return 0;
+	layer->staticTransform = transform;
+	for (u32 i = 0; i < count; i++)
+	{
+		const NativeDraw3DStaticRange *range = &ranges[i];
+		const u32 last = s_draw3dStaticLastRange[range->bucket];
+		s_draw3dStaticTriangleCount += range->count;
+		if (last && s_draw3dStaticRanges[last - 1].first + s_draw3dStaticRanges[last - 1].count == range->first)
+		{
+			s_draw3dStaticRanges[last - 1].count += range->count;
+			continue;
+		}
+		s_draw3dStaticRanges[s_draw3dStaticRangeCount++] = *range;
+		s_draw3dStaticLastRange[range->bucket] = s_draw3dStaticRangeCount;
+		layer->staticRangeCount++;
+	}
+	return 1;
+}
+
+const NativeDraw3DStaticRange *NativeDraw3D_GetStaticRanges(void)
+{
+	return s_draw3dStaticRanges;
+}
+
+u32 NativeDraw3D_GetStaticTriangleCount(void)
+{
+	return s_draw3dStaticTriangleCount;
 }
 
 void NativeDraw3D_SetMarker(void *packet, int layer)

@@ -70,9 +70,15 @@ static const struct NativeDrawLevelMosaicShape sNativeDrawLevelMosaicShapes[REND
     [RENDER_LIST_SLOT_4X1] = {{NATIVE_DRAW_LEVEL_SPLIT_HALVES, NATIVE_DRAW_LEVEL_SPLIT_HALVES}, 1, NATIVE_DRAW_LEVEL_FULL_NEAR_SETS_HALVES},
 };
 
+struct NativeDrawLevelCapture;
+
 struct NativeDrawLevelContext
 {
 	int layer;
+	// Static cache build: triangles go here instead of the layer.
+	struct NativeDrawLevelCapture *capture;
+	// Render list slot whose cached blocks draw from static geometry, or -1.
+	int staticSlot;
 	struct PushBuffer *pushBuffer;
 	const struct LevVertex *vertices;
 	const struct MainRenderLevelGeometryScratch *lod;
@@ -90,6 +96,96 @@ struct NativeDrawLevelVisibility
 	u32 value;
 	s32 bit;
 };
+
+// Static level geometry (native_draw3d.h). With Max LOD every threshold lies
+// beyond any camera depth, so a quadblock's faces, subdivision and textures no
+// longer depend on the camera. Cacheable blocks are captured once per level
+// through the emission code below and drawn from a GPU buffer; the rest stay
+// dynamic: water leaves, blocks with animated vertices or textures, and blocks
+// with translucent or pushed-back faces.
+struct NativeDrawLevelCapture
+{
+	NativeDraw3DTriangle *triangles;
+	u32 count;
+	u32 capacity;
+	b32 ineligible;
+	b32 failed;
+};
+
+enum
+{
+	NATIVE_DRAW_LEVEL_STATIC_MAX_LOD_DEPTH = 0x100000, // RENDER_LEVEL_NATIVE_MAX_LOD_DEPTH
+	NATIVE_DRAW_LEVEL_STATIC_NO_SLOT = 0xff,
+};
+
+static struct
+{
+	const struct mesh_info *mesh;
+	const struct QuadBlock *blocks;
+	const struct LevVertex *vertices;
+	int numQuadBlock;
+	// Build slot of each cached block, NATIVE_DRAW_LEVEL_STATIC_NO_SLOT otherwise.
+	u8 *blockSlot;
+	// numQuadBlock + 1 offsets into ranges.
+	u32 *blockRange;
+	NativeDraw3DStaticRange *ranges;
+} sNativeDrawLevelStatic;
+
+static void NativeDrawLevel_CaptureTriangle(struct NativeDrawLevelCapture *capture, const NativeDraw3DVertex *v0, const NativeDraw3DVertex *v1,
+                                            const NativeDraw3DVertex *v2, const NativeDraw3DMaterial *material)
+{
+	if (NativeDraw3D_StaticBucket(material) == NATIVE_DRAW3D_STATIC_NONE)
+	{
+		capture->ineligible = 1;
+		return;
+	}
+	if (capture->count == capture->capacity)
+	{
+		const u32 capacity = capture->capacity ? capture->capacity * 2 : 65536;
+		NativeDraw3DTriangle *triangles = realloc(capture->triangles, sizeof(*triangles) * capacity);
+		if (triangles == NULL)
+		{
+			capture->failed = 1;
+			return;
+		}
+		capture->triangles = triangles;
+		capture->capacity = capacity;
+	}
+	NativeDraw3DTriangle *triangle = &capture->triangles[capture->count++];
+	const NativeDraw3DVertex *vertices[3] = {v0, v1, v2};
+	memset(triangle, 0, sizeof(*triangle));
+	for (int i = 0; i < 3; i++)
+	{
+		triangle->position[i][0] = vertices[i]->x;
+		triangle->position[i][1] = vertices[i]->y;
+		triangle->position[i][2] = vertices[i]->z;
+		triangle->uv[i][0] = vertices[i]->u;
+		triangle->uv[i][1] = vertices[i]->v;
+		triangle->color[i][0] = vertices[i]->r;
+		triangle->color[i][1] = vertices[i]->g;
+		triangle->color[i][2] = vertices[i]->b;
+	}
+	triangle->material = *material;
+	triangle->transformIndex = 1; // object space
+}
+
+static void NativeDrawLevel_AddTriangle(const struct NativeDrawLevelContext *ctx, const NativeDraw3DVertex *v0, const NativeDraw3DVertex *v1,
+                                        const NativeDraw3DVertex *v2, const NativeDraw3DMaterial *material)
+{
+	if (ctx->capture != NULL)
+	{
+		NativeDrawLevel_CaptureTriangle(ctx->capture, v0, v1, v2, material);
+		return;
+	}
+	NativeDraw3D_AddTriangle(ctx->layer, v0, v1, v2, material);
+}
+
+static void NativeDrawLevel_AddQuad(const struct NativeDrawLevelContext *ctx, const NativeDraw3DVertex *v0, const NativeDraw3DVertex *v1,
+                                    const NativeDraw3DVertex *v2, const NativeDraw3DVertex *v3, const NativeDraw3DMaterial *material)
+{
+	NativeDrawLevel_AddTriangle(ctx, v0, v1, v2, material);
+	NativeDrawLevel_AddTriangle(ctx, v1, v3, v2, material);
+}
 
 // Retail 0x800a0f0c/0x800a0f34: seed from the leaf's first blockID, then
 // consume one bit per quadblock.
@@ -277,7 +373,7 @@ static void NativeDrawLevel_EmitMosaic(const struct NativeDrawLevelContext *ctx,
 
 		if ((shape->fullNearSets & (1u << nearSet)) == 0)
 		{
-			NativeDraw3D_AddQuad(ctx->layer, &part[0], &part[1], &part[2], &part[3], faceMaterial);
+			NativeDrawLevel_AddQuad(ctx, &part[0], &part[1], &part[2], &part[3], faceMaterial);
 			continue;
 		}
 
@@ -307,7 +403,7 @@ static void NativeDrawLevel_EmitMosaic(const struct NativeDrawLevelContext *ctx,
 			material.tpage = record->tpage;
 			material.clut = record->clut;
 			material.flags = NativeDrawLevel_BaseFlags(block, record) | (faceMaterial->flags & NATIVE_DRAW3D_REVERSE_WINDING);
-			NativeDraw3D_AddQuad(ctx->layer, &cell[0], &cell[1], &cell[2], &cell[3], &material);
+			NativeDrawLevel_AddQuad(ctx, &cell[0], &cell[1], &cell[2], &cell[3], &material);
 		}
 	}
 }
@@ -386,11 +482,11 @@ static void NativeDrawLevel_EmitFace(const struct NativeDrawLevelContext *ctx, c
 	}
 	else if (triangle)
 	{
-		NativeDraw3D_AddTriangle(ctx->layer, &v[0], &v[1], &v[2], &material);
+		NativeDrawLevel_AddTriangle(ctx, &v[0], &v[1], &v[2], &material);
 	}
 	else
 	{
-		NativeDraw3D_AddQuad(ctx->layer, &v[0], &v[1], &v[2], &v[3], &material);
+		NativeDrawLevel_AddQuad(ctx, &v[0], &v[1], &v[2], &v[3], &material);
 	}
 }
 
@@ -515,7 +611,7 @@ static void NativeDrawLevel_EmitFullDynamic(const struct NativeDrawLevelContext 
 
 	if (nearSet == 0)
 	{
-		NativeDraw3D_AddQuad(ctx->layer, &grid[0], &grid[1], &grid[2], &grid[3], &material);
+		NativeDrawLevel_AddQuad(ctx, &grid[0], &grid[1], &grid[2], &grid[3], &material);
 		return;
 	}
 
@@ -533,11 +629,11 @@ static void NativeDrawLevel_EmitFullDynamic(const struct NativeDrawLevelContext 
 		const NativeDraw3DVertex *v[4] = {&grid[part->index[0]], &grid[part->index[1]], &grid[part->index[2]], &grid[part->index[3]]};
 		if ((part->triangles & NATIVE_DRAW_LEVEL_PART_PRIMARY) != 0)
 		{
-			NativeDraw3D_AddTriangle(ctx->layer, v[0], v[1], v[2], &material);
+			NativeDrawLevel_AddTriangle(ctx, v[0], v[1], v[2], &material);
 		}
 		if ((part->triangles & NATIVE_DRAW_LEVEL_PART_SECONDARY) != 0)
 		{
-			NativeDraw3D_AddTriangle(ctx->layer, v[1], v[3], v[2], &material);
+			NativeDrawLevel_AddTriangle(ctx, v[1], v[3], v[2], &material);
 		}
 	}
 }
@@ -602,13 +698,250 @@ static void NativeDrawLevel_EmitWater(const struct NativeDrawLevelContext *ctx, 
 		// Retail skips triangles whose corners have all faded out.
 		if (lit[f[0]] || lit[f[1]] || lit[f[2]])
 		{
-			NativeDraw3D_AddTriangle(ctx->layer, &grid[f[0]], &grid[f[1]], &grid[f[2]], &material);
+			NativeDrawLevel_AddTriangle(ctx, &grid[f[0]], &grid[f[1]], &grid[f[2]], &material);
 		}
 		if (lit[f[1]] || lit[f[2]] || lit[f[3]])
 		{
-			NativeDraw3D_AddTriangle(ctx->layer, &grid[f[1]], &grid[f[3]], &grid[f[2]], &material);
+			NativeDrawLevel_AddTriangle(ctx, &grid[f[1]], &grid[f[3]], &grid[f[2]], &material);
 		}
 	}
+}
+
+void NativeDrawLevel_InvalidateStaticCache(void)
+{
+	free(sNativeDrawLevelStatic.blockSlot);
+	free(sNativeDrawLevelStatic.blockRange);
+	free(sNativeDrawLevelStatic.ranges);
+	memset(&sNativeDrawLevelStatic, 0, sizeof(sNativeDrawLevelStatic));
+	NativeGpu_SetStaticGeometry(NULL, 0);
+}
+
+// Retail 1P slot selection without the distance test, which Max LOD disables.
+static u8 NativeDrawLevel_StaticSlot(const struct BSP *leaf)
+{
+	if (leaf->flag & BSP_LEAF_FLAG_WATER)
+		return NATIVE_DRAW_LEVEL_STATIC_NO_SLOT;
+	if (leaf->flag & BSP_RENDER_LEAF_FLAG_DYNAMIC_SUBDIV)
+		return RENDER_LIST_SLOT_DYNAMIC_SUBDIV;
+	if (leaf->flag & BSP_RENDER_LEAF_FLAG_4X4)
+		return RENDER_LIST_SLOT_4X4;
+	if (leaf->flag & BSP_RENDER_LEAF_FLAG_4X1)
+		return RENDER_LIST_SLOT_4X1;
+	if (leaf->flag & BSP_RENDER_LEAF_FLAG_4X2)
+		return RENDER_LIST_SLOT_4X2;
+	return RENDER_LIST_SLOT_DYNAMIC_SUBDIV;
+}
+
+static void NativeDrawLevel_MarkAnimatedVertex(u8 *animated, const struct mesh_info *mesh, const struct LevVertex *vertex)
+{
+	const intptr_t index = vertex - mesh->ptrVertexArray;
+	if (index >= 0 && index < mesh->numVertex)
+		animated[index] = 1;
+}
+
+static b32 NativeDrawLevel_BlockCacheable(const struct QuadBlock *block, const u8 *animated, const struct mesh_info *mesh)
+{
+	for (int i = 0; i < NATIVE_DRAW_LEVEL_GRID_VERTICES; i++)
+	{
+		if (block->index[i] >= mesh->numVertex || animated[block->index[i]])
+			return 0;
+	}
+	// Odd pointers select a texture through an animated slot.
+	for (int face = 0; face < 4; face++)
+	{
+		if (((uintptr_t)block->ptr_texture_mid[face] & 1) != 0)
+			return 0;
+	}
+	return 1;
+}
+
+static void NativeDrawLevel_BuildStaticCache(const struct mesh_info *mesh)
+{
+	const u64 started = SDL_GetPerformanceCounter();
+	const int numBlocks = mesh->numQuadBlock;
+	const struct Level *level = sdata->gGT ? sdata->gGT->level1 : NULL;
+	sNativeDrawLevelStatic.mesh = mesh;
+	sNativeDrawLevelStatic.blocks = mesh->ptrQuadBlockArray;
+	sNativeDrawLevelStatic.vertices = mesh->ptrVertexArray;
+	sNativeDrawLevelStatic.numQuadBlock = numBlocks;
+	if (numBlocks <= 0 || mesh->numVertex <= 0 || mesh->bspRoot == NULL || level == NULL)
+		return;
+
+	struct NativeDrawLevelCapture capture = {0};
+	NativeDraw3DTriangle *sorted = NULL;
+	NativeDraw3DStaticRange *ranges = NULL;
+	u8 *buckets = NULL;
+	u8 *animated = calloc((size_t)mesh->numVertex, 1);
+	u8 *blockSlot = malloc((size_t)numBlocks);
+	u32 *blockFirst = malloc(sizeof(u32) * (size_t)(numBlocks + 1));
+	u32 *blockRange = malloc(sizeof(u32) * (size_t)(numBlocks + 1));
+	if (animated == NULL || blockSlot == NULL || blockFirst == NULL || blockRange == NULL)
+		goto fail;
+	memset(blockSlot, NATIVE_DRAW_LEVEL_STATIC_NO_SLOT, (size_t)numBlocks);
+
+	for (int i = 0; level->ptr_water != NULL && i < level->numWaterVertices; i++)
+		NativeDrawLevel_MarkAnimatedVertex(animated, mesh, level->ptr_water[i].v);
+	for (int i = 0; level->ptrSCVert != NULL && i < level->numSCVert; i++)
+		NativeDrawLevel_MarkAnimatedVertex(animated, mesh, level->ptrSCVert[i].v);
+
+	// Each block takes its leaf's slot first; uncached blocks reset it below.
+	for (int i = 0; i < mesh->numBspNodes; i++)
+	{
+		const struct BSP *leaf = &mesh->bspRoot[i];
+		if ((leaf->flag & BSP_NODE_FLAG_LEAF) == 0 || leaf->data.leaf.ptrQuadBlockArray == NULL)
+			continue;
+		const intptr_t first = leaf->data.leaf.ptrQuadBlockArray - mesh->ptrQuadBlockArray;
+		const u8 slot = NativeDrawLevel_StaticSlot(leaf);
+		for (int k = 0; k < leaf->data.leaf.numQuads; k++)
+		{
+			if (first + k >= 0 && first + k < numBlocks)
+				blockSlot[first + k] = slot;
+		}
+	}
+
+	struct MainRenderLevelGeometryScratch lod;
+	memset(&lod, 0, sizeof(lod));
+	lod.depthScale = lod.bspLodDistanceThreshold = lod.textureLodDepthThreshold0 = lod.textureLodDepthThreshold1 = lod.topLevelNearDepthThreshold =
+	    lod.recursiveNearDepthThreshold = lod.fullDynamicFadeDepthStart = NATIVE_DRAW_LEVEL_STATIC_MAX_LOD_DEPTH;
+	NativeDraw3DView view;
+	memset(&view, 0, sizeof(view));
+	view.rotation[0] = view.rotation[4] = view.rotation[8] = 1.0;
+	struct NativeDrawLevelContext ctx;
+	memset(&ctx, 0, sizeof(ctx));
+	ctx.layer = -1;
+	ctx.capture = &capture;
+	ctx.staticSlot = -1;
+	ctx.vertices = mesh->ptrVertexArray;
+	ctx.lod = &lod;
+	ctx.view = &view;
+
+	int cachedBlocks = 0;
+	for (int i = 0; i < numBlocks; i++)
+	{
+		blockFirst[i] = capture.count;
+		const struct QuadBlock *block = &mesh->ptrQuadBlockArray[i];
+		const u8 slot = blockSlot[i];
+		if (slot >= RENDER_LIST_SLOT_WATER || !NativeDrawLevel_BlockCacheable(block, animated, mesh))
+		{
+			blockSlot[i] = NATIVE_DRAW_LEVEL_STATIC_NO_SLOT;
+			continue;
+		}
+		capture.ineligible = 0;
+		ctx.mosaic = &sNativeDrawLevelMosaicShapes[slot];
+		NativeDraw3DVertex grid[NATIVE_DRAW_LEVEL_GRID_VERTICES];
+		NativeDrawLevel_LoadGrid(&ctx, block, grid);
+		for (int face = 0; face < 4; face++)
+			NativeDrawLevel_EmitFace(&ctx, block, grid, face);
+		if (capture.failed)
+			goto fail;
+		if (capture.ineligible)
+		{
+			capture.count = blockFirst[i];
+			blockSlot[i] = NATIVE_DRAW_LEVEL_STATIC_NO_SLOT;
+			continue;
+		}
+		cachedBlocks++;
+	}
+	blockFirst[numBlocks] = capture.count;
+
+	// Order triangles by bucket, then block, so each block's triangles of one
+	// bucket are contiguous and neighbouring visible blocks merge into one draw.
+	const u32 total = capture.count;
+	u32 bucketStart[NATIVE_DRAW3D_STATIC_BUCKETS] = {0};
+	buckets = malloc(total ? total : 1);
+	sorted = malloc(sizeof(*sorted) * (total ? total : 1));
+	// Every range holds at least one triangle.
+	ranges = malloc(sizeof(*ranges) * (total ? total : 1));
+	if (buckets == NULL || sorted == NULL || ranges == NULL)
+		goto fail;
+	for (u32 i = 0; i < total; i++)
+	{
+		buckets[i] = (u8)NativeDraw3D_StaticBucket(&capture.triangles[i].material);
+		bucketStart[buckets[i]]++;
+	}
+	for (u32 b = 0, sum = 0; b < NATIVE_DRAW3D_STATIC_BUCKETS; b++)
+	{
+		const u32 n = bucketStart[b];
+		bucketStart[b] = sum;
+		sum += n;
+	}
+	u32 rangeCount = 0;
+	for (int i = 0; i < numBlocks; i++)
+	{
+		blockRange[i] = rangeCount;
+		u32 blockRangeOf[NATIVE_DRAW3D_STATIC_BUCKETS];
+		memset(blockRangeOf, 0xff, sizeof(blockRangeOf));
+		for (u32 t = blockFirst[i]; t < blockFirst[i + 1]; t++)
+		{
+			const u32 b = buckets[t];
+			const u32 dst = bucketStart[b]++;
+			sorted[dst] = capture.triangles[t];
+			if (blockRangeOf[b] == 0xffffffffu)
+			{
+				blockRangeOf[b] = rangeCount;
+				ranges[rangeCount++] = (NativeDraw3DStaticRange){dst, 0, b};
+			}
+			ranges[blockRangeOf[b]].count++;
+		}
+	}
+	blockRange[numBlocks] = rangeCount;
+
+	free(capture.triangles);
+	free(buckets);
+	free(blockFirst);
+	free(animated);
+	sNativeDrawLevelStatic.blockSlot = blockSlot;
+	sNativeDrawLevelStatic.blockRange = blockRange;
+	sNativeDrawLevelStatic.ranges = ranges;
+	NativeGpu_SetStaticGeometry(sorted, total);
+	Platform_Log("[CTR Draw3D] static level geometry: %d of %d quadblocks, %u triangles, %u ranges, %.1f ms\n", cachedBlocks, numBlocks, total, rangeCount,
+	             (double)(SDL_GetPerformanceCounter() - started) * 1000.0 / (double)SDL_GetPerformanceFrequency());
+	return;
+
+fail:
+	Platform_LogWarn("[CTR Draw3D] static level geometry unavailable: allocation failed\n");
+	free(capture.triangles);
+	free(buckets);
+	free(sorted);
+	free(ranges);
+	free(blockFirst);
+	free(blockRange);
+	free(blockSlot);
+	free(animated);
+}
+
+// Static geometry applies when Max LOD fixes every texture and subdivision
+// decision and the GPU transforms object-space triangles. CTR_STATIC_LEVEL=0
+// keeps every block dynamic.
+static b32 NativeDrawLevel_StaticActive(const struct mesh_info *mesh, const struct MainRenderLevelGeometryScratch *lod)
+{
+	static int enabled = -1;
+	if (enabled < 0)
+	{
+		const char *env = getenv("CTR_STATIC_LEVEL");
+		enabled = (env == NULL) || (env[0] != '0');
+	}
+	if (!enabled || !gNativeGpuTransformEnabled || lod->textureLodDepthThreshold0 < NATIVE_DRAW_LEVEL_STATIC_MAX_LOD_DEPTH ||
+	    lod->textureLodDepthThreshold1 < NATIVE_DRAW_LEVEL_STATIC_MAX_LOD_DEPTH || lod->topLevelNearDepthThreshold < NATIVE_DRAW_LEVEL_STATIC_MAX_LOD_DEPTH ||
+	    lod->recursiveNearDepthThreshold < NATIVE_DRAW_LEVEL_STATIC_MAX_LOD_DEPTH)
+		return 0;
+	if (sNativeDrawLevelStatic.mesh != mesh || sNativeDrawLevelStatic.blocks != mesh->ptrQuadBlockArray ||
+	    sNativeDrawLevelStatic.vertices != mesh->ptrVertexArray || sNativeDrawLevelStatic.numQuadBlock != mesh->numQuadBlock)
+	{
+		NativeDrawLevel_InvalidateStaticCache();
+		NativeDrawLevel_BuildStaticCache(mesh);
+	}
+	return sNativeDrawLevelStatic.blockSlot != NULL;
+}
+
+static b32 NativeDrawLevel_AddStaticBlock(const struct NativeDrawLevelContext *ctx, const struct QuadBlock *block)
+{
+	const intptr_t index = block - sNativeDrawLevelStatic.blocks;
+	if (index < 0 || index >= sNativeDrawLevelStatic.numQuadBlock || sNativeDrawLevelStatic.blockSlot[index] != (u8)ctx->staticSlot)
+		return 0;
+	const u32 first = sNativeDrawLevelStatic.blockRange[index];
+	const u32 count = sNativeDrawLevelStatic.blockRange[index + 1] - first;
+	return count == 0 || NativeDraw3D_AddStaticRanges(ctx->layer, &sNativeDrawLevelStatic.ranges[first], count);
 }
 
 enum NativeDrawLevelKind
@@ -652,6 +985,8 @@ static void NativeDrawLevel_BspList(const struct NativeDrawLevelContext *ctx, co
 			{
 			case NATIVE_DRAW_LEVEL_HIGH:
 			{
+				if (ctx->staticSlot >= 0 && NativeDrawLevel_AddStaticBlock(ctx, block))
+					break;
 				NativeDraw3DVertex grid[NATIVE_DRAW_LEVEL_GRID_VERTICES];
 				NativeDrawLevel_LoadGrid(ctx, block, grid);
 				for (int face = 0; face < 4; face++)
@@ -735,6 +1070,7 @@ static void NativeDrawLevel_Viewport(struct PushBuffer *pb, struct PrimMem *prim
 
 	struct NativeDrawLevelContext ctx;
 	ctx.layer = layer;
+	ctx.capture = NULL;
 	ctx.vertices = mesh->ptrVertexArray;
 	ctx.lod = CTR_SCRATCHPAD_PTR(struct MainRenderLevelGeometryScratch, 0);
 	ctx.waterEnvMap = waterEnvMap;
@@ -745,17 +1081,26 @@ static void NativeDrawLevel_Viewport(struct PushBuffer *pb, struct PrimMem *prim
 		ctx.center[i] = (s16)((u16)(u8)pb->data6[i * 2] | ((u16)(u8)pb->data6[i * 2 + 1] << 8));
 	}
 
+	const b32 useStatic = NativeDrawLevel_StaticActive(mesh, ctx.lod);
 	for (int slot = 0; slot < DRAW_LEVEL_OVR1P_RENDER_LIST_SLOT_COUNT; slot++)
 	{
 		const enum NativeDrawLevelKind kind = (slot == RENDER_LIST_SLOT_WATER) ? NATIVE_DRAW_LEVEL_WATER : NATIVE_DRAW_LEVEL_HIGH;
 		ctx.mosaic = (slot < RENDER_LIST_SLOT_WATER) ? &sNativeDrawLevelMosaicShapes[slot] : NULL;
+		ctx.staticSlot = (useStatic && slot < RENDER_LIST_SLOT_WATER) ? slot : -1;
 		NativeDrawLevel_BspList(&ctx, renderList->list[slot].bspListStart, visFaceList, kind);
 	}
 	ctx.mosaic = NULL;
+	ctx.staticSlot = -1;
 	NativeDrawLevel_BspList(&ctx, renderList->bspListStart_FullDynamic, visFaceList, NATIVE_DRAW_LEVEL_LOW);
 
 	NativeDraw3D_EndLayer(layer);
 	NativeDrawLevel_LinkLayer(pb, primMem, layer, NATIVE_DRAW_LEVEL_MARKER_OT_INDEX);
+}
+
+#else
+
+void NativeDrawLevel_InvalidateStaticCache(void)
+{
 }
 
 #endif

@@ -88,6 +88,9 @@ void NativeRenderer_DrawTriangles(int startVertex, int triangles);
 #if NATIVE_DRAW3D_SUPPORTED
 void NativeRenderer_DrawObjectTriangles(int startVertex, int triangles, u32 cullMode);
 void NativeRenderer_SetObjectGeometry(const NativeDraw3DTransform *transform, const float *view);
+// Replaces the static geometry buffer; NULL/0 releases it.
+void NativeRenderer_UploadStaticVertices(const GrVertex *vertices, int count);
+void NativeRenderer_DrawStaticObjectTriangles(const s32 *firstVertex, const s32 *vertexCount, int draws, u32 cullMode);
 #endif
 #ifndef __vita__
 void NativeRenderer_GetUploadCounts(u32 *vertices, u32 *uploads);

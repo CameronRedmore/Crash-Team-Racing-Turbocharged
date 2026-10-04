@@ -351,6 +351,152 @@ static void DepthTest_GpuParity(void)
 	gNativeGpuTransformEnabled = 1;
 }
 
+// Static geometry must render exactly like the same triangles submitted through
+// the dynamic GPU path, with the layer's object transform, every cull class,
+// baked depth bias, textures, dithering and bilinear offsets, and must rebuild
+// its vertices when the bilinear state they bake changes between frames.
+static void DepthTest_StaticTriangle(NativeDraw3DTriangle *t, const NativeDraw3DVertex *a, const NativeDraw3DVertex *b, const NativeDraw3DVertex *c,
+                                     const NativeDraw3DMaterial *m)
+{
+	const NativeDraw3DVertex *v[3] = {a, b, c};
+	memset(t, 0, sizeof(*t));
+	for (int i = 0; i < 3; i++)
+	{
+		t->position[i][0] = v[i]->x;
+		t->position[i][1] = v[i]->y;
+		t->position[i][2] = v[i]->z;
+		t->uv[i][0] = v[i]->u;
+		t->uv[i][1] = v[i]->v;
+		t->color[i][0] = v[i]->r;
+		t->color[i][1] = v[i]->g;
+		t->color[i][2] = v[i]->b;
+	}
+	t->material = *m;
+	t->transformIndex = 1;
+}
+
+static void DepthTest_StaticParity(void)
+{
+	u8 *images[2] = {NULL, NULL};
+	u32 pixelCount = 0;
+	gNativeRendererMode = NATIVE_RENDERER_NATIVE;
+	gNativeAntiAliasingMode = NATIVE_AA_OFF;
+	gNativeGpuTransformEnabled = 1;
+	u16 texels[64];
+	for (int i = 0; i < 64; i++)
+		texels[i] = (u16)(1 + i % 31) | (u16)(1 + i / 8) << 5 | (u16)(i % 8) << 10;
+	RECT16 rect = {640, 256, 8, 8};
+	LoadImage(&rect, texels);
+	for (int mirror = 0; mirror < 2; mirror++)
+		for (int variant = 0; variant < 8; variant++)
+		{
+			NativeDraw3DMaterial m = {0};
+			m.flags = variant == 1 ? NATIVE_DRAW3D_DOUBLE_SIDED : variant == 2 ? NATIVE_DRAW3D_REVERSE_WINDING : 0;
+			m.depthBias = variant == 3 ? -10 : 0;
+			if (variant >= 4)
+			{
+				m.flags = NATIVE_DRAW3D_TEXTURED | (variant == 7 ? NATIVE_DRAW3D_SUPER_TURBO_TINT : 0);
+				m.tpage = getTPage(2, 0, 640, 256);
+			}
+			NativeDraw3DVertex a = DepthTest_NativeVertex(30, 40, 256, 0);
+			NativeDraw3DVertex b = DepthTest_NativeVertex(140, 40, 256, 0);
+			NativeDraw3DVertex c = DepthTest_NativeVertex(80, 180, 300, 0);
+			if (variant >= 4)
+			{
+				a.r = a.g = a.b = b.r = b.g = b.b = c.r = c.g = c.b = 128;
+				a.u = a.v = b.v = c.u = 0;
+				b.u = c.v = 7;
+			}
+			if (variant == 1 || variant == 2)
+			{
+				NativeDraw3DVertex tmp = b;
+				b = c;
+				c = tmp;
+			}
+			// A back face that only double-sided geometry keeps.
+			NativeDraw3DVertex d = DepthTest_NativeVertex(200, 40, 256, 1), e = DepthTest_NativeVertex(250, 180, 256, 1),
+			                   f = DepthTest_NativeVertex(300, 40, 256, 1);
+			NativeDraw3DMaterial back = {.flags = NATIVE_DRAW3D_DOUBLE_SIDED};
+			const double rotation[9] = {1, 0, 0, 0, 1, 0, 0, 0, 1};
+			const double translation[3] = {12, -8, 0};
+			const int passes = variant == 5 ? 3 : 2;
+			for (int pass = 0; pass < passes; pass++)
+			{
+				const int useStatic = pass > 0;
+				// Variant 5 draws a static frame first with the opposite bilinear state.
+				g_cfg_bilinearFiltering = (variant == 5) ? (pass != 1) : 0;
+				gNativeDitheringEnabled = variant == 6;
+				gNativeColorDepth = variant == 6 ? NATIVE_COLOR_DEPTH_15BIT : NATIVE_COLOR_DEPTH_TRUE;
+				if (variant == 6)
+					m.flags |= NATIVE_DRAW3D_DITHER;
+				DepthTest_Begin(1, NATIVE_PGXP_MODE_PERSPECTIVE);
+				activeDrawEnv.dtd = variant == 6;
+				const int layer = DepthTest_BeginNativeLayer(mirror);
+				NativeDraw3D_SetObjectTransform(layer, rotation, translation);
+				if (useStatic)
+				{
+					// Later passes reuse the uploaded geometry.
+					if (pass == 1)
+					{
+						NativeDraw3DTriangle *triangles = malloc(sizeof(*triangles) * 2);
+						assert(triangles);
+						DepthTest_StaticTriangle(&triangles[0], &d, &e, &f, &back);
+						DepthTest_StaticTriangle(&triangles[1], &a, &b, &c, &m);
+						NativeGpu_SetStaticGeometry(triangles, 2);
+					}
+					const NativeDraw3DStaticRange ranges[2] = {{0, 1, NativeDraw3D_StaticBucket(&back)}, {1, 1, NativeDraw3D_StaticBucket(&m)}};
+					assert(ranges[1].bucket != NATIVE_DRAW3D_STATIC_NONE);
+					assert(NativeDraw3D_AddStaticRanges(layer, ranges, 2));
+				}
+				else
+				{
+					NativeDraw3D_AddTriangle(layer, &d, &e, &f, &back);
+					NativeDraw3D_AddTriangle(layer, &a, &b, &c, &m);
+				}
+				// CPU and transparent geometry share the frame.
+				NativeDraw3DMaterial pushed = {.flags = NATIVE_DRAW3D_DOUBLE_SIDED, .depthSlots = 1};
+				NativeDraw3DVertex g = DepthTest_NativeVertex(20, 200, 600, 2), h = DepthTest_NativeVertex(60, 200, 600, 2),
+				                   k = DepthTest_NativeVertex(40, 230, 600, 2);
+				NativeDraw3D_AddTriangle(layer, &g, &h, &k, &pushed);
+				DepthTest_Marker(0, layer);
+				int blend = DepthTest_BeginNativeLayer(mirror);
+				DepthTest_NativeTriangle(blend, 2, 512, NATIVE_DRAW3D_SEMI_TRANS, 0);
+				DepthTest_Marker(1, blend);
+				void *packets[] = {&depthTestMarkers[0], &depthTestMarkers[1]};
+				DepthTest_DrawPackets(packets, 2);
+				if (useStatic && pass + 1 < passes)
+				{
+					NativeRenderer_EndScene();
+					continue;
+				}
+				const struct NativeRenderTarget *resolved = NativeRenderer_ResolveMainRenderTarget();
+				pixelCount = (u32)resolved->width * resolved->height;
+				images[useStatic] = realloc(images[useStatic], pixelCount * 4);
+				assert(images[useStatic]);
+				glBindFramebuffer(GL_FRAMEBUFFER, resolved->framebuffer);
+				glReadPixels(0, 0, resolved->width, resolved->height, GL_RGBA, GL_UNSIGNED_BYTE, images[useStatic]);
+				NativeRenderer_BindMainRenderTarget();
+				assert(!glIsEnabled(GL_CULL_FACE));
+				assert(glGetError() == GL_NO_ERROR);
+				NativeRenderer_EndScene();
+			}
+			u32 differing = 0, lit = 0;
+			for (u32 i = 0; i < pixelCount; i++)
+			{
+				lit += images[0][4 * i] || images[0][4 * i + 1] || images[0][4 * i + 2];
+				differing += memcmp(images[0] + 4 * i, images[1] + 4 * i, 4) != 0;
+			}
+			if (differing != 0)
+				fprintf(stderr, "Static parity mirror=%d variant=%d: %u differing pixels\n", mirror, variant, differing);
+			assert(lit > 100 && differing == 0);
+		}
+	NativeGpu_SetStaticGeometry(NULL, 0);
+	free(images[0]);
+	free(images[1]);
+	g_cfg_bilinearFiltering = gNativeDitheringEnabled = 0;
+	gNativeColorDepth = NATIVE_COLOR_DEPTH_TRUE;
+}
+
 static void DepthTest_GpuBenchmark(void)
 {
 	gNativeRendererMode = NATIVE_RENDERER_NATIVE;
@@ -2039,6 +2185,7 @@ int main(int argc, char **argv)
 	if (argc == 2 && strcmp(argv[1], "--gpu-transform-only") == 0)
 	{
 		DepthTest_GpuParity();
+		DepthTest_StaticParity();
 		DepthTest_GpuBenchmark();
 		NativeRenderer_Shutdown();
 		SDL_DestroyWindow(g_window);

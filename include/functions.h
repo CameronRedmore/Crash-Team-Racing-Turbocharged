@@ -383,6 +383,8 @@ void LevInstDef_RePack(struct mesh_info *ptr_mesh_info, b32 boolAdvHub);
 b32 LevInstDef_IsTurboVisualQuad(const struct QuadBlock *quad);
 b32 LevInstDef_IsSuperTurboVisualQuad(const struct QuadBlock *quad);
 struct Instance **LevInstDef_GetReachableInstances(const struct Level *level);
+// Drops static level geometry built from the previous unpacked level.
+void NativeDrawLevel_InvalidateStaticCache(void);
 #endif
 
 struct Instance *LinkedCollide_Hitbox_Desc(struct HitboxDesc *objBoxDesc);

@@ -442,6 +442,7 @@ void LevInstDef_UnPack(struct mesh_info *ptr_mesh_info)
 
 #if defined(CTR_NATIVE)
 	LevInstDef_BuildReachableInstances(ptr_mesh_info, level1);
+	NativeDrawLevel_InvalidateStaticCache();
 #endif
 }
 
@@ -459,6 +460,7 @@ void LevInstDef_RePack(struct mesh_info *ptr_mesh_info, b32 boolAdvHub)
 
 #if defined(CTR_NATIVE)
 	s_nativeReachableLevel = NULL;
+	NativeDrawLevel_InvalidateStaticCache();
 #endif
 
 	numQuadBlock = ptr_mesh_info->numQuadBlock;

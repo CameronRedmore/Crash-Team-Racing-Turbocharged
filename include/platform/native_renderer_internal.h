@@ -275,6 +275,8 @@ global_variable GLuint s_glVertexArray[MAX_NUM_VERTEX_BUFFERS];
 global_variable GLuint s_glVertexBuffer[MAX_NUM_VERTEX_BUFFERS];
 global_variable int s_boundVertexBuffer;
 global_variable GLuint s_glVramFramebuffer;
+// device: GrVertex attribute layout for the bound vertex array and buffer.
+internal void NativeRenderer_SetupVertexAttributes(void);
 
 // ---------------------------------------------------------------------------
 // Cross-module operations

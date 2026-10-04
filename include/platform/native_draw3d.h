@@ -182,8 +182,42 @@ typedef struct
 	u32 transformIndex;
 	u32 firstTriangle;
 	u32 triangleCount;
+	// Ranges of the static geometry buffer drawn with this layer's transform.
+	u32 firstStaticRange;
+	u32 staticRangeCount;
+	u32 staticTransform;
 	b32 open;
 } NativeDraw3DLayer;
+
+// Static geometry (GPU buffer uploaded once) groups triangles by the state an
+// opaque split depends on: texture format, textured and super turbo tint (the
+// opaque state key) and three cull classes.
+#define NATIVE_DRAW3D_STATE_KEYS     16
+#define NATIVE_DRAW3D_STATIC_BUCKETS (NATIVE_DRAW3D_STATE_KEYS * 3)
+#define NATIVE_DRAW3D_STATIC_NONE    0xffffffffu
+
+static inline u32 NativeDraw3D_StateKey(const NativeDraw3DMaterial *material)
+{
+	return ((u32)(material->tpage >> 7) & 3u) | (((material->flags & NATIVE_DRAW3D_TEXTURED) != 0) ? 4u : 0u) |
+	       (((material->flags & NATIVE_DRAW3D_SUPER_TURBO_TINT) != 0) ? 8u : 0u);
+}
+
+// Cull class 0 draws both windings, 1 retail winding, 2 reversed winding.
+static inline u32 NativeDraw3D_StaticBucket(const NativeDraw3DMaterial *material)
+{
+	if (material->depthSlots != 0 ||
+	    (material->flags & (NATIVE_DRAW3D_SEMI_TRANS | NATIVE_DRAW3D_ORDERED_BLEND | NATIVE_DRAW3D_BACKGROUND | NATIVE_DRAW3D_OVERLAY)) != 0)
+		return NATIVE_DRAW3D_STATIC_NONE;
+	const u32 cull = (material->flags & NATIVE_DRAW3D_DOUBLE_SIDED) ? 0u : (material->flags & NATIVE_DRAW3D_REVERSE_WINDING) ? 2u : 1u;
+	return NativeDraw3D_StateKey(material) * 3u + cull;
+}
+
+typedef struct
+{
+	u32 first; // static triangle index
+	u32 count; // triangles
+	u32 bucket;
+} NativeDraw3DStaticRange;
 
 #if NATIVE_DRAW3D_SUPPORTED
 
@@ -214,6 +248,19 @@ int NativeDraw3D_AddQuad(int layer, const NativeDraw3DVertex *v0, const NativeDr
 // A coloured line becomes a one-pixel-wide camera-space ribbon. Clips its
 // endpoints before constructing the ribbon, preserving perspective depth.
 int NativeDraw3D_AddLine(int layer, const NativeDraw3DVertex *v0, const NativeDraw3DVertex *v1, const NativeDraw3DMaterial *material, float width);
+
+// Appends static geometry ranges to an open layer, merging contiguous ranges
+// of one bucket. All or nothing: returns 0 when storage cannot hold them, or
+// when the layer has no GPU transform.
+int NativeDraw3D_AddStaticRanges(int layer, const NativeDraw3DStaticRange *ranges, u32 count);
+const NativeDraw3DStaticRange *NativeDraw3D_GetStaticRanges(void);
+// 1-based transform snapshot of the layer's current object transform.
+u32 NativeDraw3D_GetLayerTransform(int layer);
+u32 NativeDraw3D_GetStaticTriangleCount(void);
+// Takes ownership of a malloc'd array of object-space triangles (transformIndex
+// non-zero) addressed by NativeDraw3DStaticRange. NULL releases it.
+void NativeGpu_SetStaticGeometry(NativeDraw3DTriangle *triangles, u32 count);
+u32 NativeGpu_GetStaticTriangleCount(void);
 
 // Writes a DR_PSYX_DRAW3D marker that draws `layer` at its OT position.
 void NativeDraw3D_SetMarker(void *packet, int layer);

@@ -344,6 +344,32 @@ void NativeRenderer_ResetDevice(void)
 	NativeRenderer_UpdateSwapIntervalState(0);
 }
 
+// GrVertex layout of the bound vertex array and buffer.
+internal void NativeRenderer_SetupVertexAttributes(void)
+{
+	glEnableVertexAttribArray(a_position);
+	glEnableVertexAttribArray(a_texcoord);
+	glEnableVertexAttribArray(a_color);
+	glEnableVertexAttribArray(a_extra);
+#ifdef __vita__
+	glEnableVertexAttribArray(a_order_depth);
+#endif
+
+#if NATIVE_PGXP_SUPPORTED
+	glEnableVertexAttribArray(a_page_clut);
+	glVertexAttribPointer(a_position, 4, GL_FLOAT, GL_FALSE, sizeof(GrVertex), &((GrVertex *)NULL)->x);
+	glVertexAttribPointer(a_page_clut, 2, GL_SHORT, GL_FALSE, sizeof(GrVertex), &((GrVertex *)NULL)->page);
+#else
+	glVertexAttribPointer(a_position, 4, GL_SHORT, GL_FALSE, sizeof(GrVertex), &((GrVertex *)NULL)->x);
+#endif
+	glVertexAttribPointer(a_texcoord, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(GrVertex), &((GrVertex *)NULL)->u);
+	glVertexAttribPointer(a_color, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(GrVertex), &((GrVertex *)NULL)->r);
+	glVertexAttribPointer(a_extra, 4, GL_BYTE, GL_FALSE, sizeof(GrVertex), &((GrVertex *)NULL)->tcx);
+#ifdef __vita__
+	glVertexAttribPointer(a_order_depth, 1, GL_UNSIGNED_SHORT, GL_FALSE, sizeof(GrVertex), &((GrVertex *)NULL)->orderDepth);
+#endif
+}
+
 int NativeRenderer_InitialisePSX(void)
 {
 	SDL_memset(s_vram.cpuPixels, 0, sizeof(s_vram.cpuPixels));
@@ -456,27 +482,7 @@ int NativeRenderer_InitialisePSX(void)
 #else
 			glBufferData(GL_ARRAY_BUFFER, sizeof(GrVertex) * MAX_VERTEX_BUFFER_SIZE, NULL, GL_DYNAMIC_DRAW);
 #endif
-			glEnableVertexAttribArray(a_position);
-			glEnableVertexAttribArray(a_texcoord);
-			glEnableVertexAttribArray(a_color);
-			glEnableVertexAttribArray(a_extra);
-#ifdef __vita__
-			glEnableVertexAttribArray(a_order_depth);
-#endif
-
-#if NATIVE_PGXP_SUPPORTED
-			glEnableVertexAttribArray(a_page_clut);
-			glVertexAttribPointer(a_position, 4, GL_FLOAT, GL_FALSE, sizeof(GrVertex), &((GrVertex *)NULL)->x);
-			glVertexAttribPointer(a_page_clut, 2, GL_SHORT, GL_FALSE, sizeof(GrVertex), &((GrVertex *)NULL)->page);
-#else
-			glVertexAttribPointer(a_position, 4, GL_SHORT, GL_FALSE, sizeof(GrVertex), &((GrVertex *)NULL)->x);
-#endif
-			glVertexAttribPointer(a_texcoord, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(GrVertex), &((GrVertex *)NULL)->u);
-			glVertexAttribPointer(a_color, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(GrVertex), &((GrVertex *)NULL)->r);
-			glVertexAttribPointer(a_extra, 4, GL_BYTE, GL_FALSE, sizeof(GrVertex), &((GrVertex *)NULL)->tcx);
-#ifdef __vita__
-			glVertexAttribPointer(a_order_depth, 1, GL_UNSIGNED_SHORT, GL_FALSE, sizeof(GrVertex), &((GrVertex *)NULL)->orderDepth);
-#endif
+			NativeRenderer_SetupVertexAttributes();
 		}
 		glBindVertexArray(0);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);

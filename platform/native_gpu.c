@@ -88,6 +88,20 @@ typedef struct
 	float view[4]; // Hx, Hy, centerX, centerY, including draw offsets
 } NativeGpuObjectState;
 static NativeGpuObjectState s_gpuObjectState;
+
+// Static geometry: object-space triangles (transformIndex set) whose vertices
+// live in their own GPU buffer. Vertices are rebuilt when the dither or
+// bilinear state they bake changes.
+static NativeDraw3DTriangle *s_gpuStaticTriangles;
+static u32 s_gpuStaticTriangleCount;
+static bool s_gpuStaticDirty;
+static int s_gpuStaticBilinear = -1;
+static int s_gpuStaticDither = -1;
+#define NATIVE_GPU_MAX_STATIC_DRAWS 65536
+// glMultiDrawArrays arguments in vertices, valid until ClearSplits.
+static s32 s_gpuStaticDrawFirst[NATIVE_GPU_MAX_STATIC_DRAWS];
+static s32 s_gpuStaticDrawCount[NATIVE_GPU_MAX_STATIC_DRAWS];
+static u32 s_gpuStaticDrawCursor;
 #endif
 
 typedef struct
@@ -132,6 +146,9 @@ typedef struct
 #if NATIVE_DRAW3D_SUPPORTED
 	bool projectedWorld;
 	NativeGpuObjectState objectState;
+	// Static geometry draws (s_gpuStaticDrawFirst/Count) after the stream range.
+	u32 staticFirst;
+	u32 staticCount;
 #endif
 } GPUDrawSplit;
 
@@ -261,6 +278,9 @@ void NativeGpu_FinishProjection(void)
 #endif
 
 internal void NativeGpu_DrawPreparedFrame(GrVertex *vertices, GPUDrawSplit *splits, int vertexCount, int splitCount);
+#if NATIVE_DRAW3D_SUPPORTED
+internal void NativeGpu_PrepareStaticGeometry(void);
+#endif
 
 #if NATIVE_PGXP_SUPPORTED
 typedef enum
@@ -290,6 +310,7 @@ internal void NativeGpu_SetDepthSplit(NativeGpuWorldDepth mode, u32 overlayLayer
 		*next = *current;
 		next->startVertex = s_gpu.vertexIndex;
 		next->numVerts = 0;
+		next->staticCount = 0;
 		current = next;
 	}
 	current->worldDepth = mode;
@@ -868,6 +889,8 @@ void ClearSplits(void)
 	s_gpu.splits[0].projectedWorld = false;
 	memset(&s_gpu.splits[0].objectState, 0, sizeof(s_gpu.splits[0].objectState));
 	// The active object state survives mid-layer flushes; only the empty split resets.
+	s_gpu.splits[0].staticCount = 0;
+	s_gpuStaticDrawCursor = 0;
 #endif
 #if NATIVE_PGXP_SUPPORTED
 	s_gpu.splits[0].worldDepth = NATIVE_GPU_WORLD_DEPTH_NONE;
@@ -1883,6 +1906,7 @@ internal void AddSplit(bool semiTrans, bool textured, bool framebufferFeedback, 
 #if NATIVE_DRAW3D_SUPPORTED
 	split->projectedWorld = s_gpuProjectionCamera != 0;
 	split->objectState = s_gpuObjectState;
+	split->staticCount = 0;
 #endif
 #if NATIVE_PGXP_SUPPORTED
 	split->worldDepth = NATIVE_GPU_WORLD_DEPTH_NONE;
@@ -2157,7 +2181,11 @@ internal void NativeGpu_DrawSplitRangePass(const GPUDrawSplit *split, int semiTr
 #endif
 #if NATIVE_DRAW3D_SUPPORTED
 	NativeRenderer_SetObjectGeometry(NativeDraw3D_GetTransform(split->objectState.transform), split->objectState.view);
-	NativeRenderer_DrawObjectTriangles(startVertex, numVerts / 3, split->objectState.cullMode);
+	if (numVerts > 0)
+		NativeRenderer_DrawObjectTriangles(startVertex, numVerts / 3, split->objectState.cullMode);
+	if (split->staticCount)
+		NativeRenderer_DrawStaticObjectTriangles(&s_gpuStaticDrawFirst[split->staticFirst], &s_gpuStaticDrawCount[split->staticFirst], (int)split->staticCount,
+		                                         split->objectState.cullMode);
 #else
 	NativeRenderer_DrawTriangles(startVertex, numVerts / 3);
 #endif
@@ -3091,6 +3119,9 @@ internal void NativeGpu_DrawPreparedFrame(GrVertex *vertices, GPUDrawSplit *spli
 	const bool depthBatchingReady = NativeGpu_BuildDepthBatches();
 	NativeRenderer_UpdateVertexBuffer(s_gpuDrawVertices, s_gpuDrawVertexCount);
 #else
+#if NATIVE_DRAW3D_SUPPORTED
+	NativeGpu_PrepareStaticGeometry();
+#endif
 	// next code ideally should be called before EndScene
 	NativeRenderer_UpdateVertexBuffer(s_gpuDrawVertices, s_gpuDrawVertexCount);
 #endif
@@ -3963,8 +3994,7 @@ internal u32 NativeGpu_Draw3DStateKey(const NativeDraw3DMaterial *material)
 {
 	// The fields AddSplit splits on for opaque draws: texture format, textured
 	// and the super turbo shader.
-	return ((u32)(material->tpage >> 7) & 3u) | (((material->flags & NATIVE_DRAW3D_TEXTURED) != 0) ? 4u : 0u) |
-	       (((material->flags & NATIVE_DRAW3D_SUPER_TURBO_TINT) != 0) ? 8u : 0u);
+	return NativeDraw3D_StateKey(material);
 }
 
 internal void NativeGpu_GroupOpaque(const NativeDraw3DTriangle *triangles, u32 count)
@@ -4019,45 +4049,16 @@ internal int NativeGpu_DrawOrderDebug(void)
 }
 #endif
 
-internal void NativeGpu_EmitDraw3DTriangle(const NativeDraw3DView *view, const NativeDraw3DTriangle *triangle, float ofsX, float ofsY)
+// Fills three vertices for a native triangle. Object-space triangles do not
+// read the view or offsets; their projection comes from the split state.
+internal void NativeGpu_FillDraw3DVertices(GrVertex *vertex, const NativeDraw3DView *view, const NativeDraw3DTriangle *triangle, float ofsX, float ofsY,
+                                           bool drawEnvDither)
 {
 	const NativeDraw3DMaterial *material = &triangle->material;
 	const bool textured = (material->flags & NATIVE_DRAW3D_TEXTURED) != 0;
-	const bool semiTrans = (material->flags & NATIVE_DRAW3D_SEMI_TRANS) != 0;
 	const bool superTurboTint = textured && ((material->flags & NATIVE_DRAW3D_SUPER_TURBO_TINT) != 0);
 	const u16 tpage = (u16)(material->tpage | (superTurboTint ? NATIVE_GPU_TPAGE_SUPER_TURBO_TINT : 0));
 
-	// Split state follows only these fields within a layer (clut is Vita-only),
-	// so runs of identical state skip AddSplit's comparison.
-	const NativeDraw3DTriangle *previous = s_gpuDraw3DPrevious;
-	s_gpuDraw3DPrevious = triangle;
-	activeDrawEnv.tpage = tpage;
-	if ((previous != NULL) && (previous->transformIndex == triangle->transformIndex) && (previous->material.tpage == material->tpage) &&
-	    (previous->material.flags == material->flags) && (previous->material.screenOffsetX == material->screenOffsetX))
-		goto emitVertices;
-
-	memset(&s_gpuObjectState, 0, sizeof(s_gpuObjectState));
-	if (triangle->transformIndex)
-	{
-		s_gpuObjectState.layer = s_gpuDraw3DOverlayLayer;
-		s_gpuObjectState.transform = triangle->transformIndex;
-		s_gpuObjectState.cullMode = (material->flags & NATIVE_DRAW3D_DOUBLE_SIDED)                               ? 0
-		                            : ((!!(material->flags & NATIVE_DRAW3D_REVERSE_WINDING)) ^ (!!view->mirror)) ? 2
-		                                                                                                         : 1;
-		s_gpuObjectState.view[0] = view->mirror ? -view->projection : view->projection;
-		s_gpuObjectState.view[1] = view->projection;
-		s_gpuObjectState.view[2] = view->centerX + ofsX + material->screenOffsetX;
-		s_gpuObjectState.view[3] = view->centerY + ofsY;
-	}
-	AddSplit(semiTrans, textured, false, (s16)material->clut);
-	NativeGpu_SetDepthSplit((material->flags & NATIVE_DRAW3D_BACKGROUND)      ? NATIVE_GPU_WORLD_DEPTH_BACKGROUND
-	                        : (material->flags & NATIVE_DRAW3D_ORDERED_BLEND) ? NATIVE_GPU_WORLD_DEPTH_ORDERED_BLEND
-	                                                                          : NATIVE_GPU_WORLD_DEPTH_TESTED,
-	                        (material->flags & NATIVE_DRAW3D_OVERLAY) ? s_gpuDraw3DOverlayLayer : 0);
-	memset(&s_gpuObjectState, 0, sizeof(s_gpuObjectState));
-
-emitVertices:;
-	GrVertex *vertex = &s_gpu.vertexBuffer[s_gpu.vertexIndex];
 	memset(vertex, 0, sizeof(GrVertex) * 3);
 
 	// NDC depth is 1 - 2 * near / tested, the PGXP encoding of the tested depth:
@@ -4099,7 +4100,6 @@ emitVertices:;
 	}
 	for (int i = 0; i < 3; i++)
 	{
-		const float x = view->mirror ? -triangle->position[i][0] : triangle->position[i][0];
 		const float y = triangle->position[i][1];
 		const float z = triangle->position[i][2];
 
@@ -4112,6 +4112,7 @@ emitVertices:;
 			vertex[i].clipSpace = 2;
 			continue;
 		}
+		const float x = view->mirror ? -triangle->position[i][0] : triangle->position[i][0];
 		vertex[i].x = view->projection * x + (view->centerX + ofsX + material->screenOffsetX) * z;
 		vertex[i].y = view->projection * y + (view->centerY + ofsY) * z;
 		vertex[i].w = depthA * z + depthB;
@@ -4121,7 +4122,7 @@ emitVertices:;
 
 	if (textured)
 	{
-		const u8 dither = ((material->flags & NATIVE_DRAW3D_DITHER) != 0) || activeDrawEnv.dtd;
+		const u8 dither = ((material->flags & NATIVE_DRAW3D_DITHER) != 0) || drawEnvDither;
 		MakeTexcoordTriangle(vertex, (u8 *)triangle->uv[0], (u8 *)triangle->uv[1], (u8 *)triangle->uv[2], tpage, (s16)material->clut, dither);
 		if (g_cfg_bilinearFiltering)
 		{
@@ -4151,14 +4152,168 @@ emitVertices:;
 	{
 		MakeColourSuperTurboTint(vertex, 3);
 	}
+}
 
+internal void NativeGpu_SetDraw3DObjectState(const NativeDraw3DView *view, u32 transformIndex, u16 flags, s8 screenOffsetX, float ofsX, float ofsY)
+{
+	memset(&s_gpuObjectState, 0, sizeof(s_gpuObjectState));
+	if (!transformIndex)
+		return;
+	s_gpuObjectState.layer = s_gpuDraw3DOverlayLayer;
+	s_gpuObjectState.transform = transformIndex;
+	s_gpuObjectState.cullMode = (flags & NATIVE_DRAW3D_DOUBLE_SIDED) ? 0 : ((!!(flags & NATIVE_DRAW3D_REVERSE_WINDING)) ^ (!!view->mirror)) ? 2 : 1;
+	s_gpuObjectState.view[0] = view->mirror ? -view->projection : view->projection;
+	s_gpuObjectState.view[1] = view->projection;
+	s_gpuObjectState.view[2] = view->centerX + ofsX + screenOffsetX;
+	s_gpuObjectState.view[3] = view->centerY + ofsY;
+}
+
+internal void NativeGpu_EmitDraw3DTriangle(const NativeDraw3DView *view, const NativeDraw3DTriangle *triangle, float ofsX, float ofsY)
+{
+	const NativeDraw3DMaterial *material = &triangle->material;
+	const bool textured = (material->flags & NATIVE_DRAW3D_TEXTURED) != 0;
+	const bool semiTrans = (material->flags & NATIVE_DRAW3D_SEMI_TRANS) != 0;
+	const bool superTurboTint = textured && ((material->flags & NATIVE_DRAW3D_SUPER_TURBO_TINT) != 0);
+	const u16 tpage = (u16)(material->tpage | (superTurboTint ? NATIVE_GPU_TPAGE_SUPER_TURBO_TINT : 0));
+
+	// Split state follows only these fields within a layer (clut is Vita-only),
+	// so runs of identical state skip AddSplit's comparison.
+	const NativeDraw3DTriangle *previous = s_gpuDraw3DPrevious;
+	s_gpuDraw3DPrevious = triangle;
+	activeDrawEnv.tpage = tpage;
+	if ((previous == NULL) || (previous->transformIndex != triangle->transformIndex) || (previous->material.tpage != material->tpage) ||
+	    (previous->material.flags != material->flags) || (previous->material.screenOffsetX != material->screenOffsetX))
+	{
+		NativeGpu_SetDraw3DObjectState(view, triangle->transformIndex, material->flags, material->screenOffsetX, ofsX, ofsY);
+		AddSplit(semiTrans, textured, false, (s16)material->clut);
+		NativeGpu_SetDepthSplit((material->flags & NATIVE_DRAW3D_BACKGROUND)      ? NATIVE_GPU_WORLD_DEPTH_BACKGROUND
+		                        : (material->flags & NATIVE_DRAW3D_ORDERED_BLEND) ? NATIVE_GPU_WORLD_DEPTH_ORDERED_BLEND
+		                                                                          : NATIVE_GPU_WORLD_DEPTH_TESTED,
+		                        (material->flags & NATIVE_DRAW3D_OVERLAY) ? s_gpuDraw3DOverlayLayer : 0);
+		memset(&s_gpuObjectState, 0, sizeof(s_gpuObjectState));
+	}
+
+	NativeGpu_FillDraw3DVertices(&s_gpu.vertexBuffer[s_gpu.vertexIndex], view, triangle, ofsX, ofsY, activeDrawEnv.dtd);
 	s_gpu.vertexIndex += 3;
+}
+
+void NativeGpu_SetStaticGeometry(NativeDraw3DTriangle *triangles, u32 count)
+{
+	free(s_gpuStaticTriangles);
+	s_gpuStaticTriangles = triangles;
+	s_gpuStaticTriangleCount = triangles ? count : 0;
+	s_gpuStaticDirty = true;
+}
+
+u32 NativeGpu_GetStaticTriangleCount(void)
+{
+	return s_gpuStaticTriangleCount;
+}
+
+// Builds and uploads static vertices before a frame draws them.
+internal void NativeGpu_PrepareStaticGeometry(void)
+{
+	if (!s_gpuStaticDirty)
+		return;
+	s_gpuStaticDirty = false;
+	if (s_gpuStaticTriangleCount == 0)
+	{
+		NativeRenderer_UploadStaticVertices(NULL, 0);
+		return;
+	}
+	GrVertex *vertices = malloc(sizeof(GrVertex) * 3 * s_gpuStaticTriangleCount);
+	if (vertices == NULL)
+	{
+		NATIVE_GPU_ERROR("%s\n", "static geometry allocation failed");
+		s_gpuStaticTriangleCount = 0;
+		NativeRenderer_UploadStaticVertices(NULL, 0);
+		return;
+	}
+	for (u32 i = 0; i < s_gpuStaticTriangleCount; i++)
+		NativeGpu_FillDraw3DVertices(&vertices[i * 3], NULL, &s_gpuStaticTriangles[i], 0.0f, 0.0f, s_gpuStaticDither > 0);
+	NativeRenderer_UploadStaticVertices(vertices, (int)(s_gpuStaticTriangleCount * 3));
+	free(vertices);
+}
+
+// One split per bucket for the layer's static ranges, drawn before its stream
+// triangles. Opaque depth-tested draws do not depend on their order.
+internal void NativeGpu_EmitStaticRanges(const NativeDraw3DLayer *layer, const NativeDraw3DView *view, float ofsX, float ofsY)
+{
+	const NativeDraw3DStaticRange *ranges = NativeDraw3D_GetStaticRanges() + layer->firstStaticRange;
+	const u32 rangeCount = layer->staticRangeCount;
+	if (!layer->staticTransform || s_gpuStaticTriangleCount == 0 || rangeCount > NATIVE_GPU_MAX_STATIC_DRAWS - s_gpuStaticDrawCursor)
+		return;
+	if (s_gpuStaticBilinear != (int)g_cfg_bilinearFiltering || s_gpuStaticDither != (int)activeDrawEnv.dtd)
+	{
+		s_gpuStaticBilinear = (int)g_cfg_bilinearFiltering;
+		s_gpuStaticDither = (int)activeDrawEnv.dtd;
+		s_gpuStaticDirty = true;
+	}
+
+	u32 offsets[NATIVE_DRAW3D_STATIC_BUCKETS] = {0};
+	for (u32 i = 0; i < rangeCount; i++)
+		offsets[ranges[i].bucket]++;
+	u32 cursors[NATIVE_DRAW3D_STATIC_BUCKETS];
+	u32 total = s_gpuStaticDrawCursor;
+	for (u32 bucket = 0; bucket < NATIVE_DRAW3D_STATIC_BUCKETS; bucket++)
+	{
+		cursors[bucket] = total;
+		total += offsets[bucket];
+	}
+	const u32 base = s_gpuStaticDrawCursor;
+	for (u32 i = 0; i < rangeCount; i++)
+	{
+		const NativeDraw3DStaticRange *range = &ranges[i];
+		if (range->first + range->count > s_gpuStaticTriangleCount)
+			continue;
+		const u32 slot = cursors[range->bucket]++;
+		s_gpuStaticDrawFirst[slot] = (s32)(range->first * 3);
+		s_gpuStaticDrawCount[slot] = (s32)(range->count * 3);
+	}
+	s_gpuStaticDrawCursor = total;
+
+	u32 first = base;
+	for (u32 bucket = 0; bucket < NATIVE_DRAW3D_STATIC_BUCKETS; bucket++)
+	{
+		const u32 count = cursors[bucket] - first;
+		const u32 next = first + offsets[bucket];
+		if (count == 0)
+		{
+			first = next;
+			continue;
+		}
+		const u32 key = bucket / 3, cull = bucket % 3;
+		const u16 flags =
+		    (u16)(((key & 4) ? NATIVE_DRAW3D_TEXTURED : 0) | (cull == 0 ? NATIVE_DRAW3D_DOUBLE_SIDED : 0) | (cull == 2 ? NATIVE_DRAW3D_REVERSE_WINDING : 0));
+		NativeGpu_SetDraw3DObjectState(view, layer->staticTransform, flags, 0, ofsX, ofsY);
+		activeDrawEnv.tpage = (u16)(((key & 3) << 7) | ((key & 8) ? NATIVE_GPU_TPAGE_SUPER_TURBO_TINT : 0));
+		AddSplit(false, (key & 4) != 0, false, 0);
+		NativeGpu_SetDepthSplit(NATIVE_GPU_WORLD_DEPTH_TESTED, 0);
+		memset(&s_gpuObjectState, 0, sizeof(s_gpuObjectState));
+
+		// Each split owns one run of draws; start a fresh one when needed.
+		GPUDrawSplit *current = &s_gpu.splits[s_gpu.splitIndex];
+		if (s_gpu.vertexIndex != (int)current->startVertex || current->staticCount)
+		{
+			if (s_gpu.splitIndex + 1 >= MAX_DRAW_SPLITS)
+				return;
+			current->numVerts = s_gpu.vertexIndex - current->startVertex;
+			GPUDrawSplit *split = &s_gpu.splits[++s_gpu.splitIndex];
+			*split = *current;
+			split->startVertex = s_gpu.vertexIndex;
+			split->numVerts = 0;
+			current = split;
+		}
+		current->staticFirst = first;
+		current->staticCount = count;
+		first = next;
+	}
 }
 
 internal void NativeGpu_EmitDraw3DLayer(int layerIndex)
 {
 	const NativeDraw3DLayer *layer = NativeDraw3D_GetLayer(layerIndex);
-	if ((layer == NULL) || (layer->triangleCount == 0))
+	if ((layer == NULL) || ((layer->triangleCount == 0) && (layer->staticRangeCount == 0)))
 	{
 		return;
 	}
@@ -4191,6 +4346,8 @@ internal void NativeGpu_EmitDraw3DLayer(int layerIndex)
 
 	const u16 savedTpage = activeDrawEnv.tpage;
 	s_gpu.mergeSemiTransSplits = true;
+	if (layer->staticRangeCount)
+		NativeGpu_EmitStaticRanges(layer, &layer->view, ofsX, ofsY);
 	s_gpuDraw3DPrevious = NULL;
 	for (u32 i = 0; (i < count) && NativeGpu_HasPacketVertexRoom(); i++)
 	{
