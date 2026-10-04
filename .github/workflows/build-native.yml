@@ -56,6 +56,7 @@ jobs:
           -DCMAKE_BUILD_TYPE=Release
           -DBUILD_TESTING=ON
           -DCTR_NATIVE_RENDERER_TESTS=ON
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
           -DCMAKE_C_FLAGS=-m32
           -DCMAKE_EXE_LINKER_FLAGS=-m32
 
@@ -73,6 +74,24 @@ jobs:
 
       - name: Test (renderer, software GL)
         run: xvfb-run -a ctest --test-dir build --output-on-failure -L gpu
+
+      # Static analysis. Non-blocking on purpose: .clang-tidy has been in the
+      # tree since upstream but nothing has ever run it, so this is the first
+      # look at what it reports on this codebase. It runs after the test steps
+      # so it can never hide a test failure. Promote it by dropping
+      # continue-on-error and adding --strict once the findings are triaged.
+      #
+      # Runs after the build because clang-tidy needs the compile database and
+      # the generated headers. Takes about 15s for the whole fork diff.
+      - name: Static analysis (advisory)
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          # check-tidy.sh defaults its base to the merge-base with origin/vita.
+          # The checkout above is shallow and single-branch, so fetch the
+          # upstream branch it needs to compute that.
+          git fetch --no-tags origin vita
+          ./check-tidy.sh --build build
 
       - name: Package
         id: package

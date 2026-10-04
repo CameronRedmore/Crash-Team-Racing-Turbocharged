@@ -245,6 +245,23 @@ git config core.hooksPath .githooks
 This is not set automatically and is per-clone, so without it the gate is CI
 only. `SKIP_FORMAT_HOOK=1` bypasses it for a single commit.
 
+### Static analysis
+
+`./check-tidy.sh` runs the repo's `.clang-tidy` checks over the files the fork
+changed and summarises findings by check name. It is advisory in CI — the
+config has been in the tree since upstream but nothing ran it, so the first
+runs are about seeing what it reports. Pass `--strict` to make findings fail.
+
+It needs a configured and built tree with a compile database, because the game
+is a unity build: `game/game_unity.h` includes 261 `.c` files and `main.c`
+includes that, so most changed files are not translation units and cannot be
+handed to clang-tidy individually.
+
+```
+cmake --preset linux-gcc-i686-release && cmake --build build-linux-gcc-i686-release
+./check-tidy.sh --build build-linux-gcc-i686-release
+```
+
 ## vitaGL flags for compilation
 
 `HAVE_SHADER_CACHE=1 NO_DEBUG=1 READBACKS_SPEEDHACK=1 CIRCULAR_POOL_SPEEDHACK=1`
