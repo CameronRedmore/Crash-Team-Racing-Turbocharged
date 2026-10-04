@@ -1,0 +1,83 @@
+name: Check formatting
+
+# Guards the C sources a change touches, not the whole tree. The decompiled
+# upstream files are not clang-format clean and never will be, so the check is
+# scoped to the diff: your lines must conform, but you are never forced to
+# reindent code you did not write.
+#
+# The version is pinned in check-format.sh and mirrored here. clang-format's
+# output changes between releases, so an unpinned checker disagrees with
+# whatever a contributor ran locally.
+
+on:
+  pull_request:
+  push:
+    branches:
+      - turbocharged
+      - native-renderer
+  workflow_dispatch:
+    inputs:
+      base:
+        description: "Revision to compare against (defaults to the pushed range)"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-format-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  format:
+    name: clang-format (changed lines)
+    runs-on: ubuntu-latest
+    env:
+      CLANG_FORMAT_VERSION: "23.1.1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          # Needed to diff against the base revision and find merge bases.
+          fetch-depth: 0
+
+      # Installed from PyPI rather than apt so the exact version the script
+      # pins is the exact version that runs. Ubuntu's clang-format packages
+      # lag the LLVM releases.
+      - name: Install pinned clang-format
+        run: |
+          python3 -m pip install --disable-pip-version-check "clang-format==${CLANG_FORMAT_VERSION}"
+          clang-format --version
+          command -v git-clang-format
+
+      - name: Resolve base revision
+        run: |
+          set -euo pipefail
+          base="${{ github.event.inputs.base || '' }}"
+          if [[ -z "$base" && "${{ github.event_name }}" == "pull_request" ]]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          fi
+          if [[ -z "$base" && "${{ github.event_name }}" == "push" ]]; then
+            # github.event.before is all zeroes when the branch is new, and
+            # may not be reachable after a force-push. Fall back to the point
+            # where this fork diverges from upstream.
+            candidate="${{ github.event.before }}"
+            if [[ "$candidate" =~ ^0+$ ]]; then
+              candidate=""
+            fi
+            if [[ -n "$candidate" ]] && git merge-base --is-ancestor "$candidate" HEAD 2>/dev/null; then
+              base="$candidate"
+            else
+              git fetch --no-tags origin vita
+              base="$(git merge-base HEAD origin/vita)"
+            fi
+          fi
+          if [[ -z "$base" ]]; then
+            git fetch --no-tags origin vita
+            base="$(git merge-base HEAD origin/vita)"
+          fi
+          echo "base=$base" >> "$GITHUB_ENV"
+
+      - name: Check formatting
+        run: ./check-format.sh "$base"

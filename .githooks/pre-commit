@@ -1,0 +1,47 @@
+#!/bin/sh
+
+# Format the lines this commit stages. Runs the same pinned clang-format the
+# CI check uses; see check-format.sh.
+#
+# Skips itself rather than blocking a commit when the local toolchain does not
+# match, because CI is the authority on formatting. Set SKIP_FORMAT_HOOK=1 to
+# skip deliberately.
+
+if [ "${SKIP_FORMAT_HOOK:-0}" = "1" ]; then
+    echo "pre-commit: format check skipped (SKIP_FORMAT_HOOK=1)" >&2
+    exit 0
+fi
+
+if ! command -v clang-format >/dev/null 2>&1 || ! command -v git-clang-format >/dev/null 2>&1; then
+    echo "pre-commit: clang-format not found, skipping format check (CI will still catch it)" >&2
+    exit 0
+fi
+
+# Keep in sync with CLANG_FORMAT_VERSION in check-format.sh and the CI job.
+pinned=23.1.1
+found=$(clang-format --version | sed -n 's/.*version \([0-9][0-9.]*\).*/\1/p')
+if [ "$found" != "$pinned" ]; then
+    echo "pre-commit: clang-format $found found, expected $pinned; skipping local check" >&2
+    echo "  CI runs $pinned, so it may report formatting this version does not." >&2
+    exit 0
+fi
+
+# git clang-format prints status prose on stdout when it changed nothing, so
+# only treat the output as a finding if it actually contains a patch.
+diff=$(git clang-format --style=file --staged --diff 2>/dev/null)
+if printf '%s\n' "$diff" | grep -q '^diff --git '; then
+    cat >&2 <<'EOF'
+Commit rejected: staged lines are not clang-format clean.
+
+Run one of:
+    git clang-format --style=file --staged    # fix the staged lines in place
+    ./check-format.sh --fix <base>            # fix a whole branch range
+
+then stage the result and commit again. Set SKIP_FORMAT_HOOK=1 to bypass.
+
+EOF
+    printf '%s\n' "$diff" >&2
+    exit 1
+fi
+
+exit 0
