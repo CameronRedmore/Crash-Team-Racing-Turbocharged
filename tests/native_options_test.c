@@ -11,6 +11,9 @@
 // fails and the config file's compatibility is a deliberate decision rather
 // than an accident.
 
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>

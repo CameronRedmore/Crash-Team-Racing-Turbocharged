@@ -1,6 +1,9 @@
 // Standalone atlas/cache test: cc -O2 -Isrc/include this_file.c -lm -o test
 // Run with a disposable assets directory containing fonts/crash-a-like.ttf.
 // GPU upload is replaced by a byte checksum.
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
 #include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -88,7 +91,13 @@ int main(int argc, char **argv)
 		return 77;
 	}
 	fclose(probe);
-	assert(NativeAssets_BuildPath("fonts/crash-a-like.ttf.sdf-cache", path, sizeof(path)));
+	// Not wrapped in assert(): the call has a side effect, and with NDEBUG the
+	// argument is not evaluated at all, leaving path unset for remove() below.
+	if (!NativeAssets_BuildPath("fonts/crash-a-like.ttf.sdf-cache", path, sizeof(path)))
+	{
+		fprintf(stderr, "%s: asset path too long\n", argv[0]);
+		return 77;
+	}
 	remove(path);
 	gNativeFont = NATIVE_FONT_CRASH_A_LIKE;
 	clock_t start = clock();
@@ -116,6 +125,10 @@ int main(int argc, char **argv)
 	assert(key != NativeFont_CacheKey(&s_nativeFonts[gNativeFont], &bytes));
 	NativeAssets_FreeBytes(&bytes);
 	assert(!NativeFont_ReadCache("fonts/crash-a-like.ttf.sdf-cache", key ^ 1));
+	if (!NativeAssets_BuildPath("fonts/crash-a-like.ttf.sdf-cache", path, sizeof(path)))
+	{
+		return 77;
+	}
 	FILE *f = fopen(path, "r+b");
 	assert(f);
 	fseek(f, -1, SEEK_END);
