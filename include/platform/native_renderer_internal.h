@@ -156,7 +156,9 @@ struct NativeRendererPassState
 };
 
 // ---------------------------------------------------------------------------
-// Shared state, grouped by owning module. Defined in native_renderer_core.c.
+// Shared state, grouped by owning module. Everything here is defined in
+// native_renderer_core.c; state that belongs to one module is declared in that
+// module instead and does not appear in this list.
 // global_variable here means the same object the single-file renderer had; it
 // is not visible outside this translation unit.
 // ---------------------------------------------------------------------------
@@ -199,9 +201,10 @@ global_variable int s_startupAspectH;
 global_variable SDL_Rect s_presentViewport;
 global_variable int s_gamePresentationEnabled;
 
-// Desktop only: anti-aliasing state, the supersample resolve target and the
-// persistent projected-world and pause-backdrop targets. Vita keeps Classic
-// and has no MSAA/SSAA path, so none of this exists there.
+// Desktop only: the anti-aliasing mode latched for the frame, the driver's
+// MSAA limits, the presentation size SSAA resolves to, and the persistent
+// projected-world target. Vita keeps Classic and has no MSAA/SSAA path, so
+// none of this exists there.
 #ifndef __vita__
 global_variable int s_frameAntiAliasingMode; // latched at BeginScene
 global_variable GLint s_maxSamples;
@@ -213,19 +216,22 @@ global_variable b32 s_projectedWorldTargetReady;
 global_variable b32 s_projectedWorldBound;
 #endif
 
-// textures.
+// textures: the fixed textures every scene starts with.
 global_variable TextureID s_whiteTexture;
-global_variable TextureID s_lastBoundTexture;
 global_variable TextureID s_rgLutTexture;
 #ifdef __vita__
 global_variable TextureID s_presentLutTexture;
 #endif
 
+// The bound-texture half of the gpu_state cache, listed here next to the rest
+// of that cache's state; see the gpu_state note above.
+global_variable TextureID s_lastBoundTexture;
+
 // shaders: the 15-bit colour lookup table shared with the LUT texture.
 global_variable u8 rgLUT[LUT_WIDTH * LUT_HEIGHT * sizeof(u32)];
 
-// Pack native RGBA render targets into the persistent RG8 VRAM texture on the
-// GPU instead of a GPU-to-CPU-to-GPU round trip.
+// gpu_state: the full-screen blit pipelines and their uniform locations,
+// compiled by native_renderer_shaders.c and driven by whoever runs a pass.
 global_variable GLuint s_packShader;
 global_variable GLint s_packFlipYLoc;
 #ifndef __vita__
