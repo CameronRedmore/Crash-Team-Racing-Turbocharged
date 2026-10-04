@@ -39,7 +39,8 @@ jobs:
             libasound2-dev:i386 libpulse-dev:i386 libpipewire-0.3-dev:i386 \
             libjack-jackd2-dev:i386 libudev-dev:i386 libdbus-1-dev:i386 \
             libibus-1.0-dev:i386 libusb-1.0-0-dev:i386 libwayland-dev:i386 \
-            libxkbcommon-dev:i386 libdecor-0-dev:i386 libdrm-dev:i386 libgbm-dev:i386
+            libxkbcommon-dev:i386 libdecor-0-dev:i386 libdrm-dev:i386 libgbm-dev:i386 \
+            xvfb libgl1-mesa-dri:i386 libgl1:i386
 
       - name: Checkout
         uses: actions/checkout@v6
@@ -54,14 +55,24 @@ jobs:
           cmake -S . -B build -G Ninja
           -DCMAKE_BUILD_TYPE=Release
           -DBUILD_TESTING=ON
+          -DCTR_NATIVE_RENDERER_TESTS=ON
           -DCMAKE_C_FLAGS=-m32
           -DCMAKE_EXE_LINKER_FLAGS=-m32
 
       - name: Build
         run: cmake --build build
 
-      - name: Test
-        run: ctest --test-dir build --output-on-failure
+      # Split in two so the log says which is which. The unlabelled subset never
+      # creates a GL context, so it must run and must not skip anywhere; the
+      # gpu-labelled subset runs under Xvfb with Mesa's software rasteriser and
+      # reports 77 (a skip, not a failure) on a runner that cannot provide a
+      # context. Turning the renderer tests on is therefore safe by construction:
+      # the worst case is the same coverage as before, not a red build.
+      - name: Test (headless)
+        run: ctest --test-dir build --output-on-failure -LE gpu
+
+      - name: Test (renderer, software GL)
+        run: xvfb-run -a ctest --test-dir build --output-on-failure -L gpu
 
       - name: Package
         id: package
@@ -111,6 +122,11 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Configure
+        # CTR_NATIVE_RENDERER_TESTS stays off here on purpose. The Linux job
+        # proves the renderer tests out on Mesa's software GL; there is no
+        # equivalent verified path on the Windows runner, and enabling them
+        # untested would trade a known gap for a flaky one. The 12 tests that
+        # do run here are the same ones the Linux job runs under -LE gpu.
         run: >
           cmake -S . -B build -G Ninja
           -DCMAKE_BUILD_TYPE=Release
