@@ -66,9 +66,28 @@ void NativeRenderer_DestroyFontAtlasTexture(u32 texture)
 }
 int main(int argc, char **argv)
 {
-	assert(argc == 2);
+	// The fork's font lives under assets/, which .gitignore excludes because
+	// the repository ships no downloadable game data. Where that file is not
+	// present there is nothing to measure, so report a skip (ctest maps 77 to
+	// "skipped") rather than failing.
+	if (argc != 2)
+	{
+		fprintf(stderr, "%s: usage: %s <assets-dir>\n", argv[0], argv[0]);
+		return 77;
+	}
 	assetDir = argv[1];
 	char path[1024];
+	if (!NativeAssets_BuildPath("fonts/crash-a-like.ttf", path, sizeof(path)))
+	{
+		return 77;
+	}
+	FILE *probe = fopen(path, "rb");
+	if (probe == NULL)
+	{
+		fprintf(stderr, "%s: missing %s, skipping\n", argv[0], path);
+		return 77;
+	}
+	fclose(probe);
 	assert(NativeAssets_BuildPath("fonts/crash-a-like.ttf.sdf-cache", path, sizeof(path)));
 	remove(path);
 	gNativeFont = NATIVE_FONT_CRASH_A_LIKE;

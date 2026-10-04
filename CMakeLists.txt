@@ -47,15 +47,19 @@ else()
     set(CTR_NATIVE_BUILD_ID "${CTR_NATIVE_GIT_HASH}-dirty")
 endif()
 
+# Adds one test executable and registers it with ctest. Extra link sources go
+# as plain arguments; arguments to pass to the test binary itself go after
+# TEST_ARGS.
 function(ctr_native_add_test name source)
-    add_executable(ctr_native_${name}_test ${source} ${ARGN})
+    cmake_parse_arguments(ARG "" "" "TEST_ARGS" ${ARGN})
+    add_executable(ctr_native_${name}_test ${source} ${ARG_UNPARSED_ARGUMENTS})
     set_target_properties(ctr_native_${name}_test PROPERTIES C_STANDARD 17 C_STANDARD_REQUIRED ON C_EXTENSIONS OFF)
     target_include_directories(ctr_native_${name}_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
     target_compile_definitions(ctr_native_${name}_test PRIVATE CTR_NATIVE BUILD=926)
     if(NOT CTR_NATIVE_MSVC_FRONTEND)
         target_link_libraries(ctr_native_${name}_test PRIVATE m)
     endif()
-    add_test(NAME ctr_native_${name} COMMAND ctr_native_${name}_test)
+    add_test(NAME ctr_native_${name} COMMAND ctr_native_${name}_test ${ARG_TEST_ARGS})
 endfunction()
 
 function(ctr_native_add_label_warning_if_supported target warning flag_check)
@@ -230,6 +234,14 @@ if(BUILD_TESTING AND NOT EMSCRIPTEN)
     target_compile_definitions(ctr_native_framerate_test PRIVATE CTR_NATIVE BUILD=926)
     add_test(NAME ctr_native_framerate COMMAND ctr_native_framerate_test)
     ctr_native_add_test(options tests/native_options_test.c)
+    # Font atlas cache round-trip. Needs the fork's font under assets/,
+    # which .gitignore excludes, so it skips where that file is absent.
+    # Self-contained: it includes platform/native_font.c directly and stubs
+    # the asset and renderer layer itself.
+    ctr_native_add_test(font_cache tests/native_font_cache_test.c
+        TEST_ARGS ${CMAKE_SOURCE_DIR}/assets
+    )
+    set_tests_properties(ctr_native_font_cache PROPERTIES SKIP_RETURN_CODE 77)
     add_executable(ctr_native_precision_test
         tests/native_precision_test.c
         platform/native_pgxp.c
