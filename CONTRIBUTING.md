@@ -1,7 +1,7 @@
 # Contributing to Turbocharged
 
 Bug reports and focused pull requests are welcome. Development targets Windows
-and Linux; Vita, Web, and online functionality are not officially supported.
+and Linux; other platforms and online functionality are not currently supported.
 
 ## Report a problem
 

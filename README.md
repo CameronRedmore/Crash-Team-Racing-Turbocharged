@@ -2,7 +2,7 @@
 <img src="screenshots/game1.jpg"></img><br>
 Crash Team Racing: Turbocharged is a fork of [Crash Team Racing: High Octane](https://github.com/Rinnegatamante/Crash-Team-Racing-High-Octane), a sourceport for PSVita, PC (Windows) and Web Browser based on the [ctr-native](https://github.com/CTR-tools/ctr-native) project. Turbocharged extends High Octane with additional rendering, precision, and quality-of-life options.
 
-This fork is focused on PC operating systems, especially Windows and Linux. PSVita and Web Browser builds are not supported in Turbocharged, though the Web Browser build may come back later. Support for ARM-based machines is planned for the future.
+This fork is focused on PC operating systems, especially Windows and Linux. The PSVita and Web Browser builds are not supported in Turbocharged. See the [Roadmap](#roadmap) for planned platforms and features.
 
 ## Trailer
 
@@ -14,7 +14,7 @@ This fork is focused on PC operating systems, especially Windows and Linux. PSVi
 
 ### 1. Download and extract the latest release
 
-Open [GitHub Releases](https://github.com/CameronRedmore/CTR-Turbocharged/releases) and choose the newest Turbocharged release, including a beta if that is the latest available. Under **Assets**, download the archive for your operating system:
+Open [GitHub Releases](https://github.com/CameronRedmore/Crash-Team-Racing-Turbocharged/releases) and choose the newest Turbocharged release, including a beta if that is the latest available. Under **Assets**, download the archive for your operating system:
 
 - **Windows:** `ctr-turbocharged-<version>-windows-x86.zip`
 - **Linux:** `ctr-turbocharged-<version>-linux-x86.AppImage` or `ctr-turbocharged-<version>-linux-x86.tar.gz`
@@ -85,7 +85,7 @@ If startup fails, check the exact `assets/ctr-u.bin` location and image format f
 
 - True widescreen with no stretching.
 - Internal resolution of the renderer bumped to 960x544.
-- MSAA 4x (PSVita) / FXAA, MSAA or SSAA (PC) for anti-aliasing.
+- FXAA, MSAA or SSAA for anti-aliasing.
 - Penta Penguin has its stats set to its PAL/NTSC-J counterpart (6/6/6).
 - Playable Nitrous Oxide (Unlockable via the original Spyro 2 Demo cheatcode). (Credits: [Original mod](https://github.com/CTR-tools/CTR-ModSDK/tree/main/mods/Modules/OxideFix))
 - Reserves Meter (Credits: [Original mod](https://github.com/CTR-tools/CTR-ModSDK/tree/main/mods/Modules/ReservesMeter))
@@ -96,14 +96,13 @@ If startup fails, check the exact `assets/ctr-u.bin` location and image format f
 - Super turbopads are cyan to distinguish them from regular turbopads.
 - Mirror mode option: Play any track specular.
 - Boss Fight option: Challenge Adventure mode bossfights on any track.
-- [PSVITA Only] AdHoc Netplay support for two PSVitas multiplayer without the need of a router.
 - Several vanilla game bugfixes (eg: PVS related glitches and Penta-Penguin wrong mask powerup HUD icon).
 - Ghost Replay feature: Replay all your ghost datas as if you're seeing the run being played live with inputs viewer overlay.
 - Increased ghost data limits: No more 7 ghosts globally, now there are 7 ghosts data slot per track.
 - Stats viewer for characters in the character selection screen.
 - [Upstream High Octane, disabled in Turbocharged] Online leaderboard for Time Trials and Relic Race results. It is switched off in Turbocharged builds, so nothing is uploaded or downloaded.
-- Splitscreen support for up to 4 players local multiplayer for PC and PSTV users or PSVita users with MiniVitaTV.
-- [Windows Only] Discord Rich Presence support when playing with Discord opened.
+- Splitscreen support for up to 4 players local multiplayer.
+- [Upstream High Octane, temporarily disabled in Turbocharged] Discord Rich Presence on Windows.
 - Reverse tracks mode for Crash Cove, Roo's Tubes, Tiger Temple, Coco Park, Dragon Mines, Tiny Arena, Slide Coliseum and Turbo Track available in Time Trial and Relic Race mode.
 - Relic Race mode available outside of Adventure mode and accessible with any character.
 - Relic Race mode now has ghosts support.
@@ -142,38 +141,62 @@ If startup fails, check the exact `assets/ctr-u.bin` location and image format f
 
 The online leaderboard inherited from High Octane is disabled in Turbocharged. Time Trial and Relic Race results are only stored locally, and the game makes no network requests for it. It can be compiled back in by setting `CTR_NATIVE_HAS_LEADERBOARD` to 1 in `include/macros.h`, but that talks to the upstream author's server and is unsupported here.
 
+## Tested Devices
+
+These setups are confirmed working. Anything not listed has not been confirmed either way.
+
+| OS | CPU | GPU / driver | Display | Build |
+| --- | --- | --- | --- | --- |
+| Arch Linux (CachyOS, kernel 7.2), KDE Plasma on Wayland, running through XWayland | AMD Ryzen 9 9950X3D | NVIDIA GeForce RTX 5090, driver 615.71.09 (OpenGL 4.6) | 16:9 | Linux 32-bit |
+
+No Windows machine has been confirmed yet, so Windows reports are especially welcome.
+
+### Help with testing
+
+Please share what you find on your own hardware, whether it works or not. Open a [GitHub issue](https://github.com/CameronRedmore/Crash-Team-Racing-Turbocharged/issues) with your operating system and desktop/display server, CPU, GPU and driver version, which build you used (Windows zip, Linux tarball or AppImage), your renderer, aspect ratio and frame-rate settings, what worked and what didn't, and the `.log` file from the installation folder. Reports of working setups help as much as bug reports, and confirmed setups will be added to this table.
+
 ## Known Issues
 
-- [PSVita Only] The demo cutscene gets slightly de-synced during Oxide speech.
+- 32-bit libraries can cause issues with Wayland on some GPU drivers. Turbocharged therefore runs through X11 (XWayland) by default; see the Linux display server note above.
+- Hue rotate (Options > Experimental > Kart Hue) can affect incorrect parts of some characters.
+
+### Reporting bugs
+
+Please report bugs through [GitHub Issues](https://github.com/CameronRedmore/Crash-Team-Racing-Turbocharged/issues) using the bug-report form. Include the release version, operating system, GPU/driver, relevant settings, steps to reproduce, and the game's `.log` file from the installation folder. See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+
+## Roadmap
+
+Planned, in no particular order and with no promised dates:
+
+- 64-bit build
+- ARM build
+- Android build
+- macOS build (potentially)
+- Re-add online functionality
+- Re-instate the Web Browser build
 
 ## Special controls bindings
 
 - [PC] F11 is a shortcut to swap between Windowed and Fullscreen Borderless mode.
 
-## How to Install (PSVita)
-
-- Install the .vpk.
-- Dump your US copy of `Crash Team Racing` for PS1 and place the bin file in `ux0:data/ctr/assets` named as `ctr-u.bin`.
-
-## How to Install (PC)
+## How to Install
 
 Follow [First-time setup (Windows / Linux)](#first-time-setup-windows--linux) above for release downloads, disc image placement, the optional font, and launch instructions.
 
 ## How to use PAL voiceovers
 
 - Install Python 3.11 or higher ([https://www.python.org/downloads/](https://www.python.org/downloads/)).
-- Download [this script](https://github.com/Rinnegatamante/Crash-Team-Racing-High-Octane/raw/refs/heads/vita/tools/extract_pal_voices.py) by right-clicking the link and selecting "Save link as..." or, if the script opens in the browser, "Save page as...".
+- Download [this script](https://github.com/CameronRedmore/Crash-Team-Racing-Turbocharged/raw/refs/heads/turbocharged/tools/extract_pal_voices.py) by right-clicking the link and selecting "Save link as..." or, if the script opens in the browser, "Save page as...".
 - Place your PAL Crash Team Racing `.bin` dump in the same folder as the script.
 - Open a command prompt in that folder by typing `cmd` in the File Explorer address bar and pressing Enter.
 - Run `python extract_pal_voices.py YOUR_DUMP_NAME.bin`.
 - When extraction is complete, place the generated `pal-voices` folder:
-  - on PSVita: in `ux0:data/ctr/mods/`.
-  - on PC: in the `mods` folder next to the CTR: Turbocharged executable, so that the final path is `mods/pal-voices`.
+  - in the `mods` folder next to the CTR: Turbocharged executable, so that the final path is `mods/pal-voices`.
 
 ## How to add new custom characters to the game
 
 - Install Python 3.11 or higher ([https://www.python.org/downloads/](https://www.python.org/downloads/)).
-- Download [this script](https://github.com/Rinnegatamante/Crash-Team-Racing-High-Octane/raw/refs/heads/vita/tools/import_custom_racer.py) by right-clicking the link and selecting "Save link as..." or, if the script opens in the browser, "Save page as...".
+- Download [this script](https://github.com/CameronRedmore/Crash-Team-Racing-Turbocharged/raw/refs/heads/turbocharged/tools/import_custom_racer.py) by right-clicking the link and selecting "Save link as..." or, if the script opens in the browser, "Save page as...".
 - Install xdelta3 separately using your package manager or download it from the [official releases](https://github.com/jmacd/xdelta/releases). Put it on your `PATH` or place the executable in the same folder as the script (`xdelta3.exe` on Windows, `xdelta3` on Linux). It is not bundled with Turbocharged.
 Download a custom character in the form of an `.xdelta` patch and place it in the same folder as the script.
 - Place your NTSC-U Crash Team Racing `.bin` dump in the same folder as the script.
@@ -183,10 +206,11 @@ Download a custom character in the form of an `.xdelta` patch and place it in th
 - If the patch replaces multiple characters, the importer automatically generates one `.ctrr` per changed racer, adding the original character name to the requested output filename (for example `YOUR_CHARACTER_crash.ctrr`, `YOUR_CHARACTER_cortex.ctrr`, etc.).
 - *NOTE*: For static custom models, the script can automatically retarget and bake the animations of the original character being replaced onto the custom model. To enable this, run `python import_custom_racer.py YOUR_DUMP_NAME.bin YOUR_PATCH.xdelta YOUR_CHARACTER.ctrr --template-animations`. Models that already contain animations will not be overwritten.
 - When conversion is complete, place the generated `.ctrr` file or files:
-  - on PSVita: in `ux0:data/ctr/mods/customracers`.
-  - on PC: in the `mods/customracers` folder next to the CTR: Turbocharged executable, so that the final path is `mods/customracers/YOUR_CHARACTER.ctrr`.
+  - in the `mods/customracers` folder next to the CTR: Turbocharged executable, so that the final path is `mods/customracers/YOUR_CHARACTER.ctrr`.
 
 ## Changelog
+
+Entries below Turbocharged are upstream High Octane history and are kept for reference.
 
 ### Turbocharged 0.1.0-beta.7.1 (first public release)
 
@@ -199,7 +223,7 @@ Changes relative to Crash Team Racing: High Octane v1.4.1, which this fork is ba
 - **Interface:** reorganised options menu with presets, available from the pause menu; TrueType font support with Luckiest Guy bundled and optional Crash-a-Like.
 - **Setup:** first-run disc image picker that validates and copies your NTSC-U BIN, and Linux tarball and AppImage packages with checksums and third-party notices.
 - **Saves:** memory card and auto-save writes are atomic and keep a backup, with automatic recovery from a corrupt save.
-- **Removed or disabled:** the online leaderboard is disabled, and the Web Browser build is unsupported for now.
+- **Removed or disabled:** the online leaderboard and Discord Rich Presence are disabled, and the Web Browser build is unsupported for now.
 
 ### v.1.4.1
 
@@ -208,14 +232,12 @@ Changes relative to Crash Team Racing: High Octane v1.4.1, which this fork is ba
 ### v.1.4
 
 - [PC Only] Added an option to disable dithering.
-- [PSVita Only] Made so that controls scheme work as with a Dualshock controller (Aka true analogs support).
 - Added controls rebinding support in the Options menu.
 - Fixed a bug causing main menu to get stale texts after AdHoc matches.
 - Fixed a bug causing the mask grab animation to break in Hot Air Skywat under certain circumstances.
 - Added the possibility to locally save ghosts from the Online Leaderboard.
 - Added the possibility to challenge ghosts from the Ghost Replay end screen.
 - Made so that the powerslide bar changes color dynamically instead of being only two distinct sections.
-- [PSVita Only] Improved performances in Tiger Temple by optimizing the flame spit by the statues.
 - Added Tiger Temple Alternative in the map pool for Relic Race and Time Trial.
 - [PC Only] Fixed a bug causing some controllers (eg. DualSense) to be detected as two controllers.
 - Moved all the gameplay cheatcodes in a dedicated submenu in Options. Cheats will also now be saved and kept between game sessions.
@@ -241,7 +263,7 @@ Changes relative to Crash Team Racing: High Octane v1.4.1, which this fork is ba
 
 ### v.1.3
 
-- Added a Vita overlay when watching ghosts in Ghost Replay that will show the inputs the player used in realtime.
+- Added an overlay when watching ghosts in Ghost Replay that shows the inputs the player used in realtime.
 - Fixed several animations playing at doubled speed when playing at 60 FPS.
 - Fixed several sounds playing on both clients when they should be local during AdHoc netplay.
 - Fixed "Final Lap" text not showing when playing in AdHoc.
@@ -253,18 +275,18 @@ Changes relative to Crash Team Racing: High Octane v1.4.1, which this fork is ba
 - Made so that super turbopads are now cyan to distinguish them from regular turbopads.
 - Integrated Relic Mode into the Online Leaderboard system.
 - Added Reverse variants for Crash Cove, Roo's Tubes, Tiger Temple, Coco Park, Dragon Mines, Tiny Arena, Slide Coliseum and Turbo Track. These are available in Time Trial and Relic Race.
-- Created a PC port (Windows) of CTR: High Octane. It features everything available on the PSVita variant except for AdHoc mode. Has FXAA, Borderless window mode and Discord Rich Presence support.
-- Added possibility to link PSVita and PC online accounts for the Online Leaderboard.
+- Created a PC port (Windows) of CTR: High Octane. Has FXAA, Borderless window mode and Discord Rich Presence support.
+- Added possibility to link online accounts for the Online Leaderboard.
 
 ### v.1.2
 
 - Fixed N. Oxide portrait slideing in/out from the left instead of from the bottom in the Character Select screen.
 - Fixed a bug causing big black glitched textures to show on screen under certain circumstances during singleplayer races.
 - Optimized audio mixing and input handling code.
-- Rewrote the whole renderer: now it's extremely closer to PSVita GPU architecture. (Average GPU workload per frame went from 31ms to 16ms)
+- Rewrote the whole renderer: now it's much closer to a GPU-style architecture. (Average GPU workload per frame went from 31ms to 16ms)
 - Rewrote renderer pipeline so that now works in a multi-threaded fashion (backend/frontend approach). This reduces overall CPU workload per frame from 22 ms to 13ms.
 - Added 60 FPS support. (Available in the Options menu)
-- Added support for multiple controllers on PSTV and PSVita with MiniVitaTV, allowing for local splitscreen games (up to 4 players).
+- Added support for multiple controllers, allowing for local splitscreen games (up to 4 players).
 - Made so that Sewer Speedway and Blizzard Bluffs environmental hazards are now deterministic. This also fixes broken ghosts on these specific tracks.
 - Added an Online Leaderboard for Time Trial results. Your best scores will automatically be uploaded to it and you can watch ghosts of the top 5 scores worldwide.
 - Fixed two different bugs both causing some tiles to be incorrectly clipped under certain circumstances.
@@ -279,7 +301,6 @@ Changes relative to Crash Team Racing: High Octane v1.4.1, which this fork is ba
 - Added a stats viewer in the character selection screen when playing in single player.
 - Added Boss Fight mode. This mode allows you to play against the bosses from Adventure mode on any track.
 - Optimized GPU workload by optimizing all the various shader variants used by the renderer: this improves overall framerate.
-- Added AdHoc netplay: currently limited only to Arcade - Single Track mode, this allows for router-less 2 Vitas netplay.
 - Optimized the missiles powerup rendering effect. Now there won't be anymore framedrops when missiles are on screen.
 - Fixed a bug in vanilla game that was causing Penta Penguin powerup HUD to show Uka-Uka instead of Aku-Aku.
 - Fixed a bug causing the Uka-Uka/Aku-Aku powerup to occasionally enter in stale setups, resulting in audio glitches (eg: powerup music playing permanently or playing when you were recovered from an out of track).
@@ -287,10 +308,19 @@ Changes relative to Crash Team Racing: High Octane v1.4.1, which this fork is ba
 
 ## Building from source
 
-Requires a 32-bit target: the game is a PS1 decompilation and still assumes
-4-byte pointers. `CMakePresets.json` has working presets for all three
-platforms — `cmake --preset linux-gcc-i686-release && cmake --build
-build-linux-gcc-i686-release`.
+Requires CMake 3.20 or newer and a **32-bit x86 target**: the game is a PS1 decompilation and still assumes 4-byte pointers. Only Windows and Linux are supported; the version comes from the `VERSION` file.
+
+SDL and other dependencies are vendored in `externals/`. Use the presets in `CMakePresets.json`:
+
+| Platform | Configure | Build |
+| --- | --- | --- |
+| Linux (gcc-multilib) | `cmake --preset linux-gcc-i686-release` | `cmake --build build-linux-gcc-i686-release` |
+| Windows (MinGW32 / MSYS2) | `cmake --preset windows-mingw-i686-release` | `cmake --build build-mingw-i686-release` |
+| Windows (Visual Studio 2022) | `cmake --preset windows-msvc-x86` | `cmake --build --preset windows-msvc-x86-release` |
+
+Debug presets exist for Linux and MinGW (`...-debug`) and MSVC (`windows-msvc-x86-debug`). The Linux build needs 32-bit development packages for X11, OpenGL, ALSA/PulseAudio, udev and D-Bus; `build.sh` lists the Debian/Ubuntu names and the CI workflow `.github/workflows/build-native.yml` has the full list. On Windows, install the MSYS2 MinGW32 toolchain described in `build.bat`.
+
+Shortcuts: `./build.sh` (Linux), `build.bat` (MinGW) and `build-msvc.bat` configure, build and run the tests. The Linux executable is `build/ctr_native`; Windows builds produce `Crash Team Racing - Turbocharged.exe`. Run it from a folder containing `assets/ctr-u.bin`, or let the first-run popup import your disc.
 
 ### Linux packaging
 
@@ -322,7 +352,7 @@ formatting, and asset/licence requirements.
 ### Formatting
 
 The decompiled upstream tree is not clang-format clean and never will be, so
-the standard is scoped to the diff: your lines must conform, but you are never
+the standard is scoped to the diff against the `turbocharged` branch (the scripts compare with `origin/turbocharged`, so run `git fetch origin turbocharged` first): your lines must conform, but you are never
 forced to reindent code you did not write. Files this fork authored outright
 are formatted in full.
 
@@ -356,12 +386,7 @@ cmake --preset linux-gcc-i686-release && cmake --build build-linux-gcc-i686-rele
 ./check-tidy.sh --build build-linux-gcc-i686-release
 ```
 
-## vitaGL flags for compilation
-
-`HAVE_SHADER_CACHE=1 NO_DEBUG=1 READBACKS_SPEEDHACK=1 CIRCULAR_POOL_SPEEDHACK=1`
-
 ## Credits
 
-- Standard-Republic for the Livearea assets.
 - robin994 for helping testing splitscreen implementation.
 - All the folks involved in ctr-native and the decompilation efforts of CTR.

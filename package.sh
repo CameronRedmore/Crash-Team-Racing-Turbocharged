@@ -117,7 +117,7 @@ First-time setup also offers the optional Crash-a-Like menu/HUD font.
 Choose the extracted TTF to check and copy it to assets/fonts/crash-a-like.ttf.
 If you do not already have it, choose Open README and follow First-time setup
 > Add the optional Crash-a-Like font, or choose Use Luckiest Guy: it is bundled.
-README: https://github.com/CameronRedmore/CTR-Turbocharged#3-add-the-optional-crash-a-like-font
+README: https://github.com/CameronRedmore/Crash-Team-Racing-Turbocharged#3-add-the-optional-crash-a-like-font
 After import, select Options > Interface > Font > CRASH-A-LIKE to use it.
 Options > Interface > Font also offers LUCKIEST GUY and ORIGINAL.
 The Turbocharged preset uses Crash-a-Like if installed, otherwise Luckiest Guy.

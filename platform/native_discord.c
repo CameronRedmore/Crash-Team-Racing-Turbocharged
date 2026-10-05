@@ -1,6 +1,12 @@
 #include "platform/native_discord.h"
 
-#if defined(_WIN32) && !defined(__vita__)
+// Discord Rich Presence is temporarily disabled in Turbocharged. Build with
+// -DCTR_NATIVE_HAS_DISCORD=1 to compile it back in on Windows.
+#ifndef CTR_NATIVE_HAS_DISCORD
+#define CTR_NATIVE_HAS_DISCORD 0
+#endif
+
+#if CTR_NATIVE_HAS_DISCORD && defined(_WIN32)
 
 #include "platform/native_custom_racer.h"
 #include "platform/native_log.h"

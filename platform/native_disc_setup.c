@@ -362,11 +362,11 @@ internal void NativeDiscSetup_Font(SDL_Window *window, SDL_Renderer *renderer)
 	}
 	if (chosen == 1)
 	{
-		if (!SDL_OpenURL("https://github.com/CameronRedmore/CTR-Turbocharged#3-add-the-optional-crash-a-like-font"))
+		if (!SDL_OpenURL("https://github.com/CameronRedmore/Crash-Team-Racing-Turbocharged#3-add-the-optional-crash-a-like-font"))
 		{
 			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Font setup instructions",
 			                         "Open the project's README on GitHub and follow First-time setup > Add the optional Crash-a-Like font.\n\n"
-			                         "https://github.com/CameronRedmore/CTR-Turbocharged",
+			                         "https://github.com/CameronRedmore/Crash-Team-Racing-Turbocharged",
 			                         window);
 		}
 		return;
