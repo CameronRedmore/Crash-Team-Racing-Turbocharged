@@ -40,12 +40,10 @@ usage: ./check-format.sh [--fix] [--whole-files] [<base-ref>]
 
 Checks the C sources changed between <base-ref> and HEAD.
 
-  <base-ref>     defaults to the merge base with origin/vita, where this fork
-                 diverges from upstream. That audits the whole fork, including
-                 the ~150 upstream files it edits, so it is expected to report
-                 the debt accumulated before this check existed. CI should pass
-                 the pull request base instead, which checks only new lines.
-                 Pass HEAD~1 to check a single commit.
+  <base-ref>     defaults to the merge base with origin/turbocharged, so only
+                 changes not yet on that branch are checked. CI passes the
+                 pull request base instead. Pass HEAD~1 to check a single
+                 commit, or an upstream ref to audit the whole fork.
   --fix          reformats instead of reporting.
   --whole-files  additionally requires the files this fork authored to be
                  clang-format clean end to end, not just on changed lines.
@@ -102,11 +100,11 @@ if ! command -v git-clang-format >/dev/null 2>&1; then
 fi
 
 if [[ -z "$base_ref" ]]; then
-    if ! git rev-parse --verify -q origin/vita >/dev/null; then
-        echo "check-format: origin/vita not found; fetch it or pass <base-ref>" >&2
+    if ! git rev-parse --verify -q origin/turbocharged >/dev/null; then
+        echo "check-format: origin/turbocharged not found; fetch it or pass <base-ref>" >&2
         exit 2
     fi
-    base_ref="$(git merge-base HEAD origin/vita)"
+    base_ref="$(git merge-base HEAD origin/turbocharged)"
 fi
 
 if ! git rev-parse --verify -q "$base_ref" >/dev/null; then

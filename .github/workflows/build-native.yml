@@ -33,7 +33,7 @@ jobs:
           dpkg --add-architecture i386
           apt-get update
           apt-get install -y --no-install-recommends \
-            git ca-certificates curl binutils cmake ninja-build pkg-config gcc-multilib libwayland-bin \
+            git ca-certificates curl binutils cmake ninja-build clang-tidy python3 pkg-config gcc-multilib libwayland-bin \
             libx11-dev:i386 libxext-dev:i386 libxcursor-dev:i386 libxi-dev:i386 \
             libxrandr-dev:i386 libxfixes-dev:i386 libgl-dev:i386 libegl-dev:i386 \
             libasound2-dev:i386 libpulse-dev:i386 libpipewire-0.3-dev:i386 \
@@ -75,23 +75,21 @@ jobs:
       - name: Test (renderer, software GL)
         run: xvfb-run -a ctest --test-dir build --output-on-failure -L gpu
 
-      # Static analysis. Non-blocking on purpose: .clang-tidy has been in the
-      # tree since upstream but nothing has ever run it, so this is the first
-      # look at what it reports on this codebase. It runs after the test steps
-      # so it can never hide a test failure. Promote it by dropping
-      # continue-on-error and adding --strict once the findings are triaged.
-      #
-      # Runs after the build because clang-tidy needs the compile database and
-      # the generated headers. Takes about 15s for the whole fork diff.
-      - name: Static analysis (advisory)
+      # Static analysis. check-tidy.sh reports only findings on lines
+      # this branch changed, using the checks enabled in .clang-tidy. It runs
+      # after the test steps so it can never hide a test failure, and after the
+      # build because clang-tidy needs the compile database and generated
+      # headers.
+      # TODO: remove continue-on-error once this has run green in CI. The local
+      # result is clean, but it used clang-tidy 23 and this container's is older.
+      - name: Static analysis
         continue-on-error: true
         run: |
           set -euo pipefail
-          # check-tidy.sh defaults its base to the merge-base with origin/vita.
-          # The checkout above is shallow and single-branch, so fetch the
-          # upstream branch it needs to compute that.
-          git fetch --no-tags origin vita
-          ./check-tidy.sh --build build
+          # check-tidy.sh defaults its base to the merge-base with
+          # origin/turbocharged; the checkout is shallow and single-branch.
+          git fetch --no-tags origin turbocharged
+          ./check-tidy.sh --strict --build build
 
       - name: Package
         id: package

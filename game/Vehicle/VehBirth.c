@@ -626,9 +626,10 @@ void VehBirth_SetConsts(struct Driver *driver)
 
 		// Patch Penta Penguin stats to PAL version ones
 		u32 rawValue;
-		int usePentaStats = characterID == PENTA_PENGUIN;
 #if defined(CTR_NATIVE)
-		usePentaStats = engineID == NATIVE_ENGINE_PENTA;
+		int usePentaStats = engineID == NATIVE_ENGINE_PENTA;
+#else
+		int usePentaStats = characterID == PENTA_PENGUIN;
 #endif
 		if (usePentaStats) {
 			rawValue = (u32)s_pentaPalMetaPhys[i];

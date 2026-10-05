@@ -11,9 +11,17 @@ Checks: >
   bugprone-misplaced-widening-cast,
   bugprone-sizeof-expression,
   bugprone-suspicious-memset-usage,
-  readability-braces-around-statements
+  -clang-diagnostic-enum-float-conversion,
+  -clang-diagnostic-enum-enum-conversion
 
 WarningsAsErrors: ''
+
+# Deliberately not enabled, after triage against the fork's changed lines:
+#   readability-braces-around-statements: purely stylistic, and flagged ~1500
+#     braceless one-line ifs that clang-format does not enforce either.
+#   clang-diagnostic-enum-float-conversion / -enum-enum-conversion: the
+#     decompiled code uses anonymous enums as integer constants and flag masks
+#     throughout, so these report the idiom rather than defects.
 
 # TODO(aalhendi): regex... can do this better
 HeaderFilterRegex: '(^|.*/)(game|include|platform)/|(^|.*/)main\.c$'

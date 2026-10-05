@@ -596,7 +596,8 @@ static u8 *NativeMinimap_ReadLevelPixels(int levelID, int lod, struct NativeMini
 		goto done;
 	if (file)
 	{
-		if ((u32)entry->offset > 0x7fffffffu / LOAD_CD_DATA_SECTOR_SIZE || fseek(file, (long)((u32)entry->offset * LOAD_CD_DATA_SECTOR_SIZE), SEEK_SET) != 0 ||
+		const u32 byteOffset = (u32)entry->offset * LOAD_CD_DATA_SECTOR_SIZE;
+		if ((u32)entry->offset > 0x7fffffffu / LOAD_CD_DATA_SECTOR_SIZE || fseek(file, (long)byteOffset, SEEK_SET) != 0 ||
 		    fread(bytes, 1, (size_t)entry->size, file) != (size_t)entry->size)
 			goto done;
 	}

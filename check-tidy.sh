@@ -2,7 +2,7 @@
 # Static analysis over the C sources this fork changed, using the repo's
 # .clang-tidy config.
 #
-# Scoped to the diff for the same reason check-format.sh is: the decompiled
+# Scoped to the diff (files and changed lines) for the same reason check-format.sh is: the decompiled
 # upstream tree is enormous and was never written to survive analysis, so
 # running over the whole tree is slow and produces noise nobody can act on.
 #
@@ -23,7 +23,7 @@ usage: ./check-tidy.sh [--strict] [--build <dir>] [<base-ref>]
   --build <dir>   build directory holding compile_commands.json
                   (default: ./build, then the current directory)
   <base-ref>      analyse files changed since this ref
-                  (default: merge-base with origin/vita)
+                  (default: merge-base with origin/turbocharged)
 
 The build directory must come from a configured and built tree: clang-tidy
 reads the compile database for the real include paths and defines. Configure
@@ -79,11 +79,11 @@ if [[ -z "$compile_db" ]]; then
 fi
 
 if [[ -z "$base_ref" ]]; then
-    if ! git rev-parse --verify -q origin/vita >/dev/null; then
-        echo "check-tidy: origin/vita not found; fetch it or pass <base-ref>" >&2
+    if ! git rev-parse --verify -q origin/turbocharged >/dev/null; then
+        echo "check-tidy: origin/turbocharged not found; fetch it or pass <base-ref>" >&2
         exit 2
     fi
-    base_ref="$(git merge-base HEAD origin/vita)"
+    base_ref="$(git merge-base HEAD origin/turbocharged)"
 fi
 
 if ! git rev-parse --verify -q "$base_ref" >/dev/null; then
@@ -117,15 +117,20 @@ mapfile -t changed < <(
     git diff --name-only --diff-filter=AM "$base_ref" -- '*.c' |
         grep -v '^externals/' || true
 )
+# Headers are not TUs either; a changed header is analysed through main.c.
+mapfile -t changed_headers < <(
+    git diff --name-only --diff-filter=AM "$base_ref" -- '*.h' |
+        grep -v '^externals/' || true
+)
 
-if [[ ${#changed[@]} -eq 0 ]]; then
+if [[ ${#changed[@]} -eq 0 && ${#changed_headers[@]} -eq 0 ]]; then
     echo "check-tidy: no C sources changed since $(git describe --tags --always "$base_ref")"
     exit 0
 fi
 
 direct=()
 covered=()
-for file in "${changed[@]}"; do
+for file in "${changed[@]}" "${changed_headers[@]}"; do
     if is_tu "${repo_root}/${file}"; then
         direct+=("$file")
     else
@@ -151,7 +156,7 @@ for tu in "${unity_tus[@]}"; do
     [[ "$duplicate" -eq 0 ]] && analysis+=("$tu")
 done
 
-echo "check-tidy: ${#changed[@]} changed C source(s) since $(git describe --tags --always "$base_ref")"
+echo "check-tidy: $((${#changed[@]} + ${#changed_headers[@]})) changed C source/header(s) since $(git describe --tags --always "$base_ref")"
 echo "check-tidy: clang-tidy $(clang-tidy --version | sed -n 's/^[[:space:]]*LLVM version //p' | head -1), compile database in '${compile_db}'"
 echo "check-tidy: analysing ${#analysis[@]} translation unit(s): ${#direct[@]} directly, ${#unity_tus[@]} covering the other ${#covered[@]} changed file(s)"
 
@@ -163,11 +168,31 @@ fi
 findings_file="$(mktemp)"
 trap 'rm -f "$findings_file"' EXIT
 
+# Report only findings on lines this branch added or changed. The unity build
+# pulls the whole decompiled tree into the analysed TUs, so without a line
+# filter every pre-existing upstream finding would be attributed to the diff.
+line_filter="$(
+    git diff -U0 --diff-filter=AM "$base_ref" -- '*.c' '*.h' ':!externals' |
+        python3 -c '
+import json, re, sys
+files, name = {}, None
+for line in sys.stdin:
+    if line.startswith("+++ b/"):
+        name = line[6:].strip()
+    elif line.startswith("@@") and name:
+        m = re.match(r"@@ -\S+ \+(\d+)(?:,(\d+))? @@", line)
+        start, count = int(m.group(1)), int(m.group(2) or 1)
+        if count:
+            files.setdefault(name, []).append([start, start + count - 1])
+print(json.dumps([{"name": n, "lines": l} for n, l in files.items()]))
+'
+)"
+
 for file in "${analysis[@]}"; do
-    clang-tidy -p "$compile_db" --quiet "$file" >> "$findings_file" 2>&1 || true
+    clang-tidy -p "$compile_db" --quiet --line-filter="$line_filter" "$file" >> "$findings_file" 2>&1 || true
 done
 
-total="$(grep -cE 'warning:|error:' "$findings_file" || true)"
+total="$(grep -cE '(warning|error): .*\[[a-z][a-z0-9.-]*\]$' "$findings_file" || true)"
 total="${total:-0}"
 
 if [[ "$total" -eq 0 ]]; then

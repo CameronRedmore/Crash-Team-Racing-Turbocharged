@@ -271,7 +271,7 @@ void NativePhysics_Gravity(struct Driver *driver, Vec3 *output)
 		int terrainTimer = driver->terrainFrictionTimer;
 		if (terrainTimer < 0)
 		{
-			double absLocalX = localX;
+			double absLocalX;
 			if (terrainTimer == VEH_PHYS_FORCE_TERRAIN_SIDE_LOCK_TIMER)
 			{
 				absLocalX = fabs(localX);

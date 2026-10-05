@@ -74,7 +74,7 @@ jobs:
           if [[ -z "$base" && "${{ github.event_name }}" == "push" ]]; then
             # github.event.before is all zeroes when the branch is new, and
             # may not be reachable after a force-push. Fall back to the point
-            # where this fork diverges from upstream.
+            # where this fork diverges from the turbocharged branch.
             candidate="${{ github.event.before }}"
             if [[ "$candidate" =~ ^0+$ ]]; then
               candidate=""
@@ -82,13 +82,13 @@ jobs:
             if [[ -n "$candidate" ]] && git merge-base --is-ancestor "$candidate" HEAD 2>/dev/null; then
               base="$candidate"
             else
-              git fetch --no-tags origin vita
-              base="$(git merge-base HEAD origin/vita)"
+              git fetch --no-tags origin turbocharged
+              base="$(git merge-base HEAD origin/turbocharged)"
             fi
           fi
           if [[ -z "$base" ]]; then
-            git fetch --no-tags origin vita
-            base="$(git merge-base HEAD origin/vita)"
+            git fetch --no-tags origin turbocharged
+            base="$(git merge-base HEAD origin/turbocharged)"
           fi
           echo "base=$base" >> "$GITHUB_ENV"
 
