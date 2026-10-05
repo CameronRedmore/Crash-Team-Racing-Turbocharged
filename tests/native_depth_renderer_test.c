@@ -1471,10 +1471,21 @@ static void DepthTest_HudIcons(void)
 	DepthTest_ReadPixel(264, 196, pixel);
 	assert(pixel[1] > pixel[0] + 70); // Lit green lens.
 	// The housing dressing occupies space outside the circular lens.
-	DepthTest_ReadPixel(28, 122, pixel);
-	assert(pixel[2] > pixel[0] + 20); // Left blue steel bracket.
-	DepthTest_ReadPixel(68, 130, pixel);
-	assert(pixel[2] > pixel[0] + 20); // Right bracket.
+	// The brackets are only ~2px wide here, so allow the edge to land a pixel either side.
+	int bracket = 0;
+	for (int x = 27; x <= 29; x++)
+	{
+		DepthTest_ReadPixel(x, 122, pixel);
+		bracket |= pixel[2] > pixel[0] + 20;
+	}
+	assert(bracket); // Left blue steel bracket.
+	bracket = 0;
+	for (int x = 67; x <= 69; x++)
+	{
+		DepthTest_ReadPixel(x, 130, pixel);
+		bracket |= pixel[2] > pixel[0] + 20;
+	}
+	assert(bracket); // Right bracket.
 	DepthTest_ReadPixel(48, 145, pixel);
 	assert(pixel[2] > pixel[0] + 20); // Bottom mounting foot.
 	DepthTest_ReadPixel(48, 122, pixel);
