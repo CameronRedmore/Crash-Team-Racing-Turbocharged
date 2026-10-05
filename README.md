@@ -79,6 +79,8 @@ PAL voiceovers and custom characters are optional; their setup is described belo
 
 **Linux display server:** 32-bit builds do not get along with GPU drivers under native Wayland, so Turbocharged runs through X11 by default, using XWayland on Wayland desktops, and only falls back to Wayland if X11 is unavailable. A `SDL_VIDEODRIVER=wayland` setting in your environment is ignored. To really use native Wayland, also set `CTR_TURBOCHARGED_ALLOW_WAYLAND=1`. Other `SDL_VIDEODRIVER` values, such as `x11`, are respected.
 
+**Linux audio:** the game tries PulseAudio, then PipeWire, then ALSA. Because the build is 32-bit, it can only use the 32-bit client libraries you have installed (for example `lib32-libpulse` or `lib32-pipewire`). If a driver opens but you hear nothing, such as ALSA on a PipeWire system without a 32-bit ALSA bridge, force one with `SDL_AUDIO_DRIVER`, for example `SDL_AUDIO_DRIVER=pipewire ./ctr_native`. In Steam, set the launch options to `SDL_AUDIO_DRIVER=pipewire %command%`. Try `pulseaudio` if that does not help. Running from a terminal prints the driver in use as `SDL audio stream opened: driver=...`.
+
 If startup fails, check the exact `assets/ctr-u.bin` location and image format first. On Linux, run from a terminal and check `ldd ./ctr_native` for missing runtime libraries. When reporting a problem, include the release version, operating system, GPU/driver, and the game's `.log` file from the installation folder.
 
 ## Features

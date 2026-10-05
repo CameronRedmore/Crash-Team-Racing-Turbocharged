@@ -2158,9 +2158,9 @@ internal void NativeAudio_SelectDriverHint(void)
 	if (SDL_GetHint(SDL_HINT_AUDIO_DRIVER) == NULL)
 	{
 		// NOTE(aalhendi): Keep native Linux playback on the SDL3 drivers that
-		// were stable in live probes. User/env overrides still win, and
-		// PipeWire remains available as a fallback.
-		SDL_SetHint(SDL_HINT_AUDIO_DRIVER, "pulseaudio,alsa,pipewire");
+		// were stable in live probes. User/env overrides still win. PipeWire
+		// precedes ALSA: without 32-bit pulse, ALSA opens silently on PipeWire systems.
+		SDL_SetHint(SDL_HINT_AUDIO_DRIVER, "pulseaudio,pipewire,alsa");
 	}
 #endif
 	if (SDL_GetHint(SDL_HINT_AUDIO_DEVICE_SAMPLE_FRAMES) == NULL)
