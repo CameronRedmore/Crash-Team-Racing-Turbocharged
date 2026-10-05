@@ -7,7 +7,7 @@ body:
     attributes:
       label: Release version / commit
       description: Include the release filename or the output of the executable's --version command.
-      placeholder: 0.1.0-beta.7.1
+      placeholder: 2026.10.0
     validations:
       required: true
   - type: dropdown

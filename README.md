@@ -214,7 +214,7 @@ Download a custom character in the form of an `.xdelta` patch and place it in th
 
 Entries below Turbocharged are upstream High Octane history and are kept for reference.
 
-### Turbocharged 0.1.0-beta.7.1 (first public release)
+### Turbocharged 2026.10.0 (first public release)
 
 Changes relative to Crash Team Racing: High Octane v1.4.1, which this fork is based on.
 
