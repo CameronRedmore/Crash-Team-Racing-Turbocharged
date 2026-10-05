@@ -1,0 +1,52 @@
+name: Bug report
+description: Report a problem with a Windows or Linux Turbocharged build.
+title: "[Bug]: "
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Release version / commit
+      description: Include the release filename or the output of the executable's --version command.
+      placeholder: 0.1.0-beta.7.1
+    validations:
+      required: true
+  - type: dropdown
+    id: package
+    attributes:
+      label: Build format
+      options:
+        - Windows ZIP
+        - Linux AppImage
+        - Linux tar.gz
+        - Built from source
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: System and settings
+      description: Include OS/version, GPU/driver, renderer, frame rate, and any relevant settings or controller details.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Include the game mode, track, character, and whether mods are enabled.
+      placeholder: |
+        1. Start the game...
+        2. Select...
+        3. Observe...
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Logs, screenshots, and additional details
+      description: Attach the game's .log file or terminal output. For Linux launch failures, include ldd output for the tarball executable. Do not attach disc images or account keys.

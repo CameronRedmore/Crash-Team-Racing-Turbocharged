@@ -215,6 +215,7 @@ global_variable int s_gamePresentationEnabled;
 // none of this exists there.
 #ifndef __vita__
 global_variable int s_frameAntiAliasingMode; // latched at BeginScene
+global_variable b32 s_framePs1Resolution;    // latched at BeginScene
 global_variable GLint s_maxSamples;
 global_variable GLint s_maxRenderTargetSize;
 global_variable s32 s_mainResolveWidth;
@@ -263,6 +264,7 @@ global_variable GLint s_presentRgbaFlipYLoc;
 #ifndef __vita__
 global_variable GLint s_presentRgbaTexelSizeLoc;
 global_variable GLint s_presentRgbaFxaaLoc;
+global_variable GLint s_presentRgbaSharpPrescaleLoc;
 global_variable GLuint s_downsampleShader;
 global_variable GLint s_downsampleSrcSizeLoc;
 global_variable GLint s_downsampleDstSizeLoc;

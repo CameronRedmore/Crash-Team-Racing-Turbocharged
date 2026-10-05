@@ -1,0 +1,18 @@
+Luckiest Guy Regular, version 1.001
+
+Copyright (c) 2010 by Brian J. Bonislawsky DBA Astigmatic (AOETI).
+All rights reserved. Available under the Apache 2.0 licence.
+http://www.apache.org/licenses/LICENSE-2.0.html
+
+Luckiest Guy is a trademark of Astigmatic (AOETI).
+
+The bundled TTF is unmodified. This attribution reproduces the font's
+embedded copyright and trademark notices; it is not an upstream NOTICE file.
+The full licence is included beside the font as LuckiestGuy-Apache-2.0.txt.
+
+Source: Google Fonts, apache/luckiestguy, commit
+ac011ec057856b010986a55104323d63cada00f8
+https://github.com/google/fonts/tree/ac011ec057856b010986a55104323d63cada00f8/apache/luckiestguy
+
+TTF SHA-256:
+cfbdd68a039f92df51cf3721506af6242e64594c6325fe0bedbeff3fe385d980

@@ -68,31 +68,30 @@ static u32 NativeAutoSave_Checksum(const struct NativeAutoSaveFile *save)
 	return hash;
 }
 
-// Re-reads the file and caches it. Called when the Adventure Load screen opens
-// and after every write; Exists/Read only touch the cache.
-void NativeAutoSave_Refresh(void)
+// Reads and validates one generation (the file or its backup) into the cache.
+static b32 NativeAutoSave_TryRead(b32 backup)
 {
 	struct NativeAutoSaveFile save;
+	enum NativeMemcardResult (*readFn)(const char *, unsigned char *, int, int) = backup ? NativeMemcard_ReadBackupData : NativeMemcard_ReadSaveData;
 
-	s_nativeAutoSaveValid = false;
 	memset(&save, 0, sizeof(save));
 
 	// Version 1 ends at gameOptions. Read its original size and checksum so
 	// existing autosaves remain usable with the default spawn.
 	const u32 legacySize = OFFSETOF(struct NativeAutoSaveFile, exitPortalHub);
-	if (NativeMemcard_ReadSaveData(NATIVE_AUTOSAVE_NAME, (u8 *)&save, OFFSETOF(struct NativeAutoSaveFile, adv), 0) != NATIVE_MEMCARD_OK)
+	if (readFn(NATIVE_AUTOSAVE_NAME, (u8 *)&save, OFFSETOF(struct NativeAutoSaveFile, adv), 0) != NATIVE_MEMCARD_OK)
 	{
-		return;
+		return false;
 	}
 	if ((save.magic != NATIVE_AUTOSAVE_MAGIC) ||
 	    !(((save.version == 1) && (save.size == legacySize)) || ((save.version == NATIVE_AUTOSAVE_VERSION) && (save.size == sizeof(save)))))
 	{
-		return;
+		return false;
 	}
 	const u32 saveSize = save.size;
 	const u32 saveVersion = save.version;
-	if ((NativeMemcard_ReadSaveData(NATIVE_AUTOSAVE_NAME, (u8 *)&save, saveSize, 0) == NATIVE_MEMCARD_OK) && (save.magic == NATIVE_AUTOSAVE_MAGIC) &&
-	    (save.size == saveSize) && (save.version == saveVersion) && (save.checksum == NativeAutoSave_Checksum(&save)) && (save.adv.characterID >= 0))
+	if ((readFn(NATIVE_AUTOSAVE_NAME, (u8 *)&save, saveSize, 0) == NATIVE_MEMCARD_OK) && (save.magic == NATIVE_AUTOSAVE_MAGIC) && (save.size == saveSize) &&
+	    (save.version == saveVersion) && (save.checksum == NativeAutoSave_Checksum(&save)) && (save.adv.characterID >= 0))
 	{
 		if (save.version == 1)
 		{
@@ -100,6 +99,31 @@ void NativeAutoSave_Refresh(void)
 			save.exitPortalID = -1;
 		}
 		s_nativeAutoSave = save;
+		return true;
+	}
+	return false;
+}
+
+// Re-reads the file and caches it. Called when the Adventure Load screen opens
+// and after every write; Exists/Read only touch the cache. A file that fails
+// validation is quarantined and replaced by the previous valid generation.
+void NativeAutoSave_Refresh(void)
+{
+	s_nativeAutoSaveValid = false;
+
+	if (NativeAutoSave_TryRead(false))
+	{
+		s_nativeAutoSaveValid = true;
+		return;
+	}
+
+	if (!NativeMemcard_FileExists(NATIVE_AUTOSAVE_NAME))
+	{
+		return;
+	}
+
+	if (NativeAutoSave_TryRead(true) && (NativeMemcard_RecoverFromBackup(NATIVE_AUTOSAVE_NAME) == NATIVE_MEMCARD_OK))
+	{
 		s_nativeAutoSaveValid = true;
 	}
 }

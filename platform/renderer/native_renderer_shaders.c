@@ -956,6 +956,7 @@ global_variable const char *ctr_present_rgba_shader =
     "uniform float flipY;\n"
     "uniform vec2 texelSize;\n"
     "uniform int fxaaEnabled;\n"
+    "uniform vec2 sharpPrescale;\n"
     "float fxaaLuma(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }\n"
     "vec4 fxaaSample(vec2 uv) {\n"
     "    vec4 center = texture2D(s_src, uv);\n"
@@ -975,8 +976,20 @@ global_variable const char *ctr_present_rgba_shader =
     "    float lB = fxaaLuma(b);\n"
     "    return vec4((lB < lMin || lB > lMax) ? a : b, center.a);\n"
     "}\n"
+    // Sharp bilinear: nearest within each source texel's integer-scaled
+    // block, bilinear only across the leftover band between texels, so a
+    // low-resolution source upscales crisply without uneven pixel widths.
+    "vec2 sharpUv(vec2 uv) {\n"
+    "    vec2 srcSize = 1.0 / texelSize;\n"
+    "    vec2 texel = uv * srcSize;\n"
+    "    vec2 centreDist = fract(texel) - 0.5;\n"
+    "    vec2 region = 0.5 - 0.5 / sharpPrescale;\n"
+    "    vec2 f = (centreDist - clamp(centreDist, -region, region)) * sharpPrescale + 0.5;\n"
+    "    return (floor(texel) + f) * texelSize;\n"
+    "}\n"
     "void main() {\n"
     "    vec2 uv = vec2(v_uv.x, mix(v_uv.y, 1.0 - v_uv.y, flipY));\n"
+    "    if (sharpPrescale.x > 0.0) uv = sharpUv(uv);\n"
     "    gl_FragColor = (fxaaEnabled != 0) ? fxaaSample(uv) : texture2D(s_src, uv);\n"
     "}\n"
     "#endif\n";
@@ -1110,7 +1123,9 @@ internal void NativeRenderer_InitVRAMPipelines(void)
 #ifndef __vita__
 	s_presentRgbaTexelSizeLoc = glGetUniformLocation(s_presentRgbaShader, "texelSize");
 	s_presentRgbaFxaaLoc = glGetUniformLocation(s_presentRgbaShader, "fxaaEnabled");
+	s_presentRgbaSharpPrescaleLoc = glGetUniformLocation(s_presentRgbaShader, "sharpPrescale");
 	glUniform1i(s_presentRgbaFxaaLoc, 0);
+	glUniform2f(s_presentRgbaSharpPrescaleLoc, 0.0f, 0.0f);
 	glUniform2f(s_presentRgbaTexelSizeLoc, 1.0f, 1.0f);
 	s_projectedWorldShader = NativeRenderer_Shader_Compile(ctr_projected_world_shader, false, NULL);
 	s_projectedWorldSourceLoc = glGetUniformLocation(s_projectedWorldShader, "s_src");

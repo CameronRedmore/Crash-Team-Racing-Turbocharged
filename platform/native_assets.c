@@ -538,6 +538,15 @@ int NativeAssets_Init(const char *executableBasePath)
 	char grandparentDir[NATIVE_ASSETS_PATH_MAX];
 	NativeStr8 exeDir;
 
+#if defined(__linux__) && !defined(__EMSCRIPTEN__)
+	// AppImages mount the executable read-only; keep assets and saves outside.
+	const char *dataDir = getenv("CTR_TURBOCHARGED_DATA_DIR");
+	if ((dataDir != NULL) && (dataDir[0] != '\0'))
+	{
+		return NativeAssets_SetBaseDir(NativeStr8_FromCString(dataDir));
+	}
+#endif
+
 	if ((executableBasePath == NULL) || (executableBasePath[0] == '\0'))
 	{
 		executableBasePath = ".";

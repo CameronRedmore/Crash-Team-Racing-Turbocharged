@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Crash Team Racing: Turbocharged
+Comment=Enhanced native PC port of Crash Team Racing
+Exec=ctr_native
+Icon=ctr-turbocharged
+Categories=Game;ArcadeGame;
+Terminal=false

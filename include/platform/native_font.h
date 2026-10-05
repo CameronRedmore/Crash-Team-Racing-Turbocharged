@@ -24,6 +24,8 @@ enum NativeFontId
 {
 	NATIVE_FONT_ORIGINAL,
 	NATIVE_FONT_CRASH_A_LIKE,
+	// Append new ids to preserve the font values in existing config.ini files.
+	NATIVE_FONT_LUCKIEST_GUY,
 	NATIVE_FONT_COUNT,
 };
 
@@ -63,10 +65,12 @@ struct NativeFontCellBox
 };
 
 const char *NativeFont_GetName(int font);
+int NativeFont_GetDefault(void);
 
 #if NATIVE_FONT_SUPPORTED
-// Loads the selected font on first use. Returns 0 while Original is selected
-// or when the font file or atlas is unavailable, so callers keep retail text.
+// Loads the selected font on first use. Returns 0 while Original is selected,
+// while PS1 resolution is on, or when the font file or atlas is unavailable,
+// so callers keep retail text.
 int NativeFont_IsActive(void);
 // NULL when the active font has no glyph for this character.
 const struct NativeFontGlyph *NativeFont_GetGlyph(u8 character);

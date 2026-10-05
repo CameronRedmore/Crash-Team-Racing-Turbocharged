@@ -247,21 +247,24 @@ static void ProjectionTest_GamePaths(void)
 	rows[0].stringIndex = NATIVE_MENU_STRING_PROJECTION;
 	const int pausedMode = gNativeProjectionMode;
 	sdata->buttonTapPerPlayer[0] = BTN_RIGHT;
-	assert(!MM_NativeOptionsRowLockedInRace(NATIVE_MENU_STRING_PROJECTION));
+	assert(!MM_NativeOptionsRowLocked(NATIVE_MENU_STRING_PROJECTION, 1));
 	MM_NativeOptionsMenuProc(&menu);
 	assert(gNativeProjectionMode == (pausedMode + 1) % NATIVE_PROJECTION_MODE_COUNT);
 	assert((rows[0].stringIndex & MENU_ROW_LOCKED) == 0);
 	rows[0].stringIndex = NATIVE_MENU_STRING_PROJECTION_STRENGTH;
 	const int pausedStrength = gNativeProjectionStrength;
-	assert(!MM_NativeOptionsRowLockedInRace(NATIVE_MENU_STRING_PROJECTION_STRENGTH));
+	assert(!MM_NativeOptionsRowLocked(NATIVE_MENU_STRING_PROJECTION_STRENGTH, 1));
 	MM_NativeOptionsMenuProc(&menu);
 	assert(gNativeProjectionStrength == (pausedStrength > 90 ? 0 : pausedStrength + 10));
 	assert((rows[0].stringIndex & MENU_ROW_LOCKED) == 0);
 	rows[0].stringIndex = NATIVE_MENU_STRING_DEPTH_BUFFER;
 	const int depthPreference = gNativeDepthBufferEnabled;
+	// Native 3D always depth-tests, so the row is locked and the preference is kept.
+	assert(MM_NativeOptionsRowLocked(NATIVE_MENU_STRING_DEPTH_BUFFER, 1));
 	MM_NativeOptionsMenuProc(&menu);
-	assert(gNativeDepthBufferEnabled == !depthPreference);
+	assert(gNativeDepthBufferEnabled == depthPreference);
 	assert(NATIVE_DEPTH_BUFFER_ACTIVE());
+	assert(strstr(RECTMENU_GetString(NATIVE_MENU_STRING_DEPTH_BUFFER), "ALWAYS ON"));
 	rows[0].stringIndex = NATIVE_MENU_STRING_PGXP;
 	const int pausedPgxp = gNativePgxpMode;
 	MM_NativeOptionsMenuProc(&menu);
@@ -272,7 +275,7 @@ static void ProjectionTest_GamePaths(void)
 	rows[0].stringIndex = NATIVE_MENU_STRING_PROJECTION;
 	const int classicMode = gNativeProjectionMode;
 	const int classicStrength = gNativeProjectionStrength;
-	assert(!MM_NativeOptionsRowLockedInRace(NATIVE_MENU_STRING_PROJECTION));
+	assert(!MM_NativeOptionsRowLocked(NATIVE_MENU_STRING_PROJECTION, 1));
 	sdata->buttonTapPerPlayer[0] = BTN_RIGHT;
 	MM_NativeOptionsMenuProc(&menu);
 	assert(gNativeProjectionMode == (classicMode + 1) % NATIVE_PROJECTION_MODE_COUNT);

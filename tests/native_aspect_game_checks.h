@@ -216,10 +216,10 @@ static void AspectTest_GamePaths(void)
 	MM_NativeOptionsMenuProc(&menu);
 	assert(gNativeAspectRatio == NATIVE_ASPECT_4_3);
 	assert((rows[0].stringIndex & MENU_ROW_LOCKED) == 0);
-	assert(!MM_NativeOptionsRowLockedInRace(NATIVE_MENU_STRING_ASPECT_RATIO));
-	assert(!MM_NativeOptionsRowLockedInRace(NATIVE_MENU_STRING_RENDERER));
+	assert(!MM_NativeOptionsRowLocked(NATIVE_MENU_STRING_ASPECT_RATIO, 1));
+	assert(!MM_NativeOptionsRowLocked(NATIVE_MENU_STRING_RENDERER, 1));
 	rows[0].stringIndex = NATIVE_MENU_STRING_FIELD_OF_VIEW;
-	assert(!MM_NativeOptionsRowLockedInRace(NATIVE_MENU_STRING_FIELD_OF_VIEW));
+	assert(!MM_NativeOptionsRowLocked(NATIVE_MENU_STRING_FIELD_OF_VIEW, 1));
 	sdata->buttonTapPerPlayer[0] = BTN_RIGHT;
 	MM_NativeOptionsMenuProc(&menu);
 	assert(gNativeFovDegrees == 45);
@@ -262,7 +262,7 @@ static void AspectTest_GamePaths(void)
 	assert(strstr(RECTMENU_GetString(NATIVE_MENU_STRING_FIELD_OF_VIEW), "(NATIVE)"));
 	rows[0].stringIndex = NATIVE_MENU_STRING_PROJECTION;
 	const int classicProjectionBefore = gNativeProjectionMode;
-	assert(!MM_NativeOptionsRowLockedInRace(NATIVE_MENU_STRING_PROJECTION));
+	assert(!MM_NativeOptionsRowLocked(NATIVE_MENU_STRING_PROJECTION, 1));
 	MM_NativeOptionsMenuProc(&menu);
 	assert(gNativeProjectionMode == (classicProjectionBefore + 1) % NATIVE_PROJECTION_MODE_COUNT);
 	rows[0].stringIndex = NATIVE_MENU_STRING_PROJECTION_STRENGTH;
@@ -270,7 +270,7 @@ static void AspectTest_GamePaths(void)
 	MM_NativeOptionsMenuProc(&menu);
 	assert(gNativeProjectionStrength == (classicStrengthBefore > 90 ? 0 : classicStrengthBefore + 10));
 	assert((rows[0].stringIndex & MENU_ROW_LOCKED) == 0);
-	assert(!MM_NativeOptionsRowLockedInRace(NATIVE_MENU_STRING_PROJECTION_STRENGTH));
+	assert(!MM_NativeOptionsRowLocked(NATIVE_MENU_STRING_PROJECTION_STRENGTH, 1));
 	gNativeFovDegrees = 0;
 	NativeRenderer_UpdateGamePresentationAspect();
 	assert(s_presentAspectW == 16 && s_presentAspectH == 9);

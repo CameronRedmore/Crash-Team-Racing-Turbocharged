@@ -100,7 +100,9 @@ set(SDL_GPU OFF CACHE BOOL "" FORCE)
 set(SDL_RENDER OFF CACHE BOOL "" FORCE)
 set(SDL_CAMERA OFF CACHE BOOL "" FORCE)
 set(SDL_SENSOR OFF CACHE BOOL "" FORCE)
-set(SDL_DIALOG OFF CACHE BOOL "" FORCE)
+# The first-run disc setup opens a native file picker (XDG portal or Zenity on
+# Linux), so SDL must be built with dialog support.
+set(SDL_DIALOG ON CACHE BOOL "" FORCE)
 set(SDL_TRAY OFF CACHE BOOL "" FORCE)
 set(SDL_POWER OFF CACHE BOOL "" FORCE)
 set(SDL_VULKAN OFF CACHE BOOL "" FORCE)
@@ -175,6 +177,18 @@ else()
     endif()
 endif()
 target_link_libraries(ctr_native SDL3::SDL3)
+# Each redistributable font travels with its complete licence/attribution.
+# Do not copy all of assets/fonts: users may keep Crash-a-Like there locally.
+set(CTR_BUNDLED_FONT_FILES
+    FuzzyBubbles-Bold.ttf FuzzyBubbles-OFL.txt
+    LuckiestGuy-Regular.ttf LuckiestGuy-Apache-2.0.txt LuckiestGuy-NOTICE.txt
+    README.md
+)
+foreach(font_file IN LISTS CTR_BUNDLED_FONT_FILES)
+    if(NOT EXISTS "${CMAKE_SOURCE_DIR}/assets/fonts/${font_file}")
+        message(FATAL_ERROR "Required bundled font/licence file is missing: assets/fonts/${font_file}")
+    endif()
+endforeach()
 if(EMSCRIPTEN)
     set_target_properties(ctr_native PROPERTIES
         OUTPUT_NAME "ctr-native"
@@ -201,6 +215,27 @@ if(EMSCRIPTEN)
         "-sEXPORTED_RUNTIME_METHODS=['FS','callMain']"
         "-lidbfs.js"
     )
+    foreach(font_file IN LISTS CTR_BUNDLED_FONT_FILES)
+        target_link_options(ctr_native PRIVATE "SHELL:--preload-file \"${CMAKE_SOURCE_DIR}/assets/fonts/${font_file}@/assets/fonts/${font_file}\"")
+        # Standalone readable notices accompany the embedded font copies.
+        if(font_file MATCHES "\\.(txt|md)$")
+            add_custom_command(TARGET ctr_native POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:ctr_native>/assets/fonts"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${CMAKE_SOURCE_DIR}/assets/fonts/${font_file}"
+                    "$<TARGET_FILE_DIR:ctr_native>/assets/fonts/${font_file}"
+                VERBATIM
+            )
+        endif()
+    endforeach()
+    add_custom_command(TARGET ctr_native POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_SOURCE_DIR}/THIRD_PARTY_NOTICES.md" "${CMAKE_SOURCE_DIR}/LICENSE"
+            "$<TARGET_FILE_DIR:ctr_native>"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_SOURCE_DIR}/licenses" "$<TARGET_FILE_DIR:ctr_native>/licenses"
+        VERBATIM
+    )
 else()
     add_custom_command(TARGET ctr_native POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:ctr_native>/assets"
@@ -209,16 +244,15 @@ else()
             "$<TARGET_FILE_DIR:ctr_native>/assets/dualshock.png"
         VERBATIM
     )
-    # Optional TrueType fonts for Enhancements > Font; a missing font keeps
-    # the retail glyphs.
-    if(EXISTS "${CMAKE_SOURCE_DIR}/assets/fonts")
+    foreach(font_file IN LISTS CTR_BUNDLED_FONT_FILES)
         add_custom_command(TARGET ctr_native POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_directory
-                "${CMAKE_SOURCE_DIR}/assets/fonts"
-                "$<TARGET_FILE_DIR:ctr_native>/assets/fonts"
+            COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:ctr_native>/assets/fonts"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CMAKE_SOURCE_DIR}/assets/fonts/${font_file}"
+                "$<TARGET_FILE_DIR:ctr_native>/assets/fonts/${font_file}"
             VERBATIM
         )
-    endif()
+    endforeach()
 endif()
 if(WIN32)
     target_sources(ctr_native PRIVATE platform/native_http_win32.c)

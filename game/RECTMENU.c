@@ -134,6 +134,9 @@ static const char *const s_txtGameplay[6] =
 	"JUEGO",
 	"GAMEPLAY",
 };
+static const char *const s_txtGraphics[6] = {
+    "GRAPHICS", "GRAPHISMES", "GRAFIK", "GRAFICA", "GRAFICOS", "GRAFISCH",
+};
 static const char *const s_txtExperimental[6] =
 {
 	"EXPERIMENTAL",
@@ -197,14 +200,11 @@ static const char *const s_txtSkipMaskHints[6] =
 	"SALTAR CONSEJOS MASCARA",
 	"MASKERTIPS OVERSLAAN",
 };
-static const char *const s_txtClassicDepth[6] =
-{
-	"CLASSIC DEPTH",
-	"PROFONDEUR CLASSIQUE",
-	"KLASSISCHE TIEFE",
-	"PROFONDITA CLASSICA",
-	"PROFUNDIDAD CLASICA",
-	"KLASSIEKE DIEPTE",
+static const char *const s_txtClassicDepth[6] = {
+    "DEPTH BUFFER", "TAMPON DE PROFONDEUR", "TIEFENPUFFER", "BUFFER DI PROFONDITA", "BUFFER DE PROFUNDIDAD", "DIEPTEBUFFER",
+};
+static const char *const s_txtAlwaysOn[6] = {
+    "ALWAYS ON", "TOUJOURS OUI", "IMMER AN", "SEMPRE ATTIVO", "SIEMPRE SI", "ALTIJD AAN",
 };
 static const char *const s_txtClassicPgxp[6] =
 {
@@ -259,6 +259,9 @@ static const char *const s_txtColourDepth[6] =
 	"PROFONDITA COLORE",
 	"PROFUNDIDAD COLOR",
 	"KLEURDIEPTE",
+};
+static const char *const s_txtResolution[6] = {
+    "RESOLUTION", "RESOLUTION", "AUFLOSUNG", "RISOLUZIONE", "RESOLUCION", "RESOLUTIE",
 };
 static const char *const s_txtTextures[6] =
 {
@@ -511,6 +514,15 @@ static const char *maxLod[6][2] =
 	{"DETALLE: ORIGINAL", "DETALLE: MAXIMO"},
 	{"DETAILS: ORIGINEEL", "DETAILS: MAXIMAAL"},
 };
+static const char *const s_txtDetail[6] =
+{
+	"DETAIL",
+	"DETAILS",
+	"DETAILS",
+	"DETTAGLI",
+	"DETALLE",
+	"DETAILS",
+};
 #endif
 static const char *superHard[6] =
 {
@@ -736,16 +748,15 @@ static char *NativeOptionFormatAspectRatio(int languageRow)
 }
 
 #ifndef __vita__
-// Native always draws at max detail, so the stored choice is Classic's.
+// Native always draws at max detail; the stored choice only applies to Classic.
 static char *NativeOptionFormatMaxLod(int languageRow)
 {
 	const int value = gNativeMaxLodEnabled != 0;
-	if (!NATIVE_DRAW3D_ACTIVE())
+	if (NATIVE_DRAW3D_ACTIVE())
 	{
-		return (char *)maxLod[languageRow][value];
+		return NativeRow(s_txtDetail[languageRow], s_txtAlwaysOn[languageRow]);
 	}
-	snprintf(s_optionLabelRow, sizeof(s_optionLabelRow), "%s (CLASSIC)", maxLod[languageRow][value]);
-	return s_optionLabelRow;
+	return (char *)maxLod[languageRow][value];
 }
 #endif
 
@@ -784,6 +795,13 @@ static char *NativeOptionFormatColorDepth(int languageRow)
 	return NativeRow(s_txtColourDepth[languageRow], gNativeColorDepth == NATIVE_COLOR_DEPTH_15BIT ? "15-BIT PS1" : "24-BIT");
 }
 
+// PS1 keeps the original line count and horizontal pixel density; HD renders
+// at the window's resolution.
+static char *NativeOptionFormatPs1Resolution(int languageRow)
+{
+	return NativeRow(s_txtResolution[languageRow], gNativePs1ResolutionEnabled ? "PS1" : "HD");
+}
+
 static char *NativeOptionFormatHdPause(int languageRow)
 {
 	const char *value;
@@ -817,12 +835,25 @@ static char *NativeOptionFormatKartHue(int languageRow)
 	return kartHueRow;
 }
 
+// PS1 resolution forces the retail font, so a custom choice is HD's.
 static char *NativeOptionFormatFont(int languageRow)
 {
 	static char fontRow[48];
-	snprintf(fontRow, sizeof(fontRow), "%s: %s", s_txtFont[languageRow],
-	         (gNativeFont == NATIVE_FONT_ORIGINAL) ? s_txtOriginal[languageRow] : NativeFont_GetName(gNativeFont));
+	const b32 original = gNativeFont == NATIVE_FONT_ORIGINAL;
+#ifndef __vita__
+	const char *suffix = (!original && gNativePs1ResolutionEnabled) ? " (HD)" : "";
+#else
+	const char *suffix = "";
+#endif
+	snprintf(fontRow, sizeof(fontRow), "%s: %s%s", s_txtFont[languageRow], original ? s_txtOriginal[languageRow] : NativeFont_GetName(gNativeFont), suffix);
 	return fontRow;
+}
+
+// Collision is forced to Smoothed above 60 FPS; the stored choice is kept for lower rates.
+static char *NativeOptionFormatCollisions(int languageRow)
+{
+	const char *value = CTR_NATIVE_SMOOTHED_COLLISION_ACTIVE ? s_txtSmoothed[languageRow] : s_txtOriginal[languageRow];
+	return NativeRow(s_txtCollisions[languageRow], value);
 }
 
 static const struct NativeOptionRow s_nativeOptionRows[] = {
@@ -852,6 +883,8 @@ static const struct NativeOptionRow s_nativeOptionRows[] = {
     {NATIVE_MENU_STRING_RENDERER, s_txtRenderer, &gNativeRendererMode, NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0, s_txtRendererNative, s_txtRendererClassic,
 	 NULL, 1},
     {NATIVE_MENU_STRING_COLOR_DEPTH, NULL, &gNativeColorDepth, NATIVE_OPTION_VALUE_FORMATTED, NULL, 0, NULL, NULL, NativeOptionFormatColorDepth, 1},
+    {NATIVE_MENU_STRING_PS1_RESOLUTION, NULL, &gNativePs1ResolutionEnabled, NATIVE_OPTION_VALUE_FORMATTED, NULL, 0, NULL, NULL, NativeOptionFormatPs1Resolution,
+	 1},
     {NATIVE_MENU_STRING_TEXTURE_FILTER, s_txtTextures, &g_cfg_bilinearFiltering, NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0, s_txtBilinear, s_txtNearest, NULL,
 	 1},
     {NATIVE_MENU_STRING_HD_PAUSE, NULL, &gNativeHdPauseMode, NATIVE_OPTION_VALUE_FORMATTED, NULL, 0, NULL, NULL, NativeOptionFormatHdPause, 1},
@@ -867,8 +900,8 @@ static const struct NativeOptionRow s_nativeOptionRows[] = {
     {NATIVE_MENU_STRING_KART_HUE, NULL, &gNativeKartHue, NATIVE_OPTION_VALUE_FORMATTED, NULL, 0, NULL, NULL, NativeOptionFormatKartHue, 1},
     {NATIVE_MENU_STRING_FONT, NULL, &gNativeFont, NATIVE_OPTION_VALUE_FORMATTED, NULL, 0, NULL, NULL, NativeOptionFormatFont, 1},
     {NATIVE_MENU_STRING_AI_PHYSICS, s_txtAi, &gNativeSmoothedAIEnabled, NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0, s_txtSmoothed, s_txtOriginal, NULL, 1},
-    {NATIVE_MENU_STRING_COLLISION_PHYSICS, s_txtCollisions, &gNativeSmoothedCollisionEnabled, NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0, s_txtSmoothed,
-	 s_txtOriginal, NULL, 1},
+    {NATIVE_MENU_STRING_COLLISION_PHYSICS, NULL, &gNativeSmoothedCollisionEnabled, NATIVE_OPTION_VALUE_FORMATTED, NULL, 0, NULL, NULL,
+	 NativeOptionFormatCollisions, 1},
     {NATIVE_MENU_STRING_STEERING_PHYSICS, s_txtSteering, &gNativeSmoothedSteeringEnabled, NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0, s_txtSmoothed,
 	 s_txtOriginal, NULL, 1},
     {NATIVE_MENU_STRING_PHYSICS, s_txtPlayerPhysics, &gNativeSmoothedPhysicsEnabled, NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0, s_txtSmoothed, s_txtOriginal,
@@ -927,6 +960,11 @@ static char *RECTMENU_GetString(s16 stringIndex)
 	const struct NativeOptionRow *optionRow = NativeOptionRowFor(nativeStringIndex);
 	if (optionRow != NULL)
 	{
+		// Native 3D always depth-tests; the setting only applies to Classic.
+		if ((nativeStringIndex == NATIVE_MENU_STRING_DEPTH_BUFFER) && NATIVE_DRAW3D_ACTIVE())
+		{
+			return NativeRow(optionRow->label[languageRow], s_txtAlwaysOn[languageRow]);
+		}
 		return NativeOptionRowText(optionRow, languageRow);
 	}
 
@@ -1006,6 +1044,8 @@ static char *RECTMENU_GetString(s16 stringIndex)
 		return audioRow;
 	case NATIVE_MENU_STRING_DISPLAY:
 		return (char *)s_txtDisplay[languageRow];
+	case NATIVE_MENU_STRING_GRAPHICS:
+		return (char *)s_txtGraphics[languageRow];
 	case NATIVE_MENU_STRING_AUDIO:
 		return (char *)s_txtAudio[languageRow];
 	case NATIVE_MENU_STRING_UNLOCKS:

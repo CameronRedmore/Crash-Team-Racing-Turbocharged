@@ -13,6 +13,7 @@
 
 #include "platform/native_aspect.h"
 #include "platform/native_font.h"
+#include "platform/native_title_logo.h"
 #include "platform/native_gpu.h"
 #include "platform/native_log.h"
 #include "platform/native_minimap.h"
@@ -160,6 +161,7 @@ int NativeRenderer_InitialiseRender(char *windowName, int width, int height, int
 void NativeRenderer_Shutdown(void)
 {
 	NativeFont_ReleaseGpu();
+	NativeTitleLogo_ReleaseGpu();
 	NativeMinimap_ReleaseGpu();
 	glDeleteVertexArrays(MAX_NUM_VERTEX_BUFFERS, s_glVertexArray);
 	glDeleteBuffers(MAX_NUM_VERTEX_BUFFERS, s_glVertexBuffer);
@@ -249,6 +251,7 @@ void NativeRenderer_BeginScene(void)
 #ifndef __vita__
 	s_frameAntiAliasingMode =
 	    ((gNativeAntiAliasingMode >= NATIVE_AA_OFF) && (gNativeAntiAliasingMode < NATIVE_AA_MODE_COUNT)) ? gNativeAntiAliasingMode : NATIVE_AA_OFF;
+	s_framePs1Resolution = gNativePs1ResolutionEnabled != 0;
 	NativeRenderer_BeginPassFrame();
 #endif
 #ifdef __vita__

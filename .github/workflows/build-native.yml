@@ -33,7 +33,7 @@ jobs:
           dpkg --add-architecture i386
           apt-get update
           apt-get install -y --no-install-recommends \
-            git ca-certificates cmake ninja-build pkg-config gcc-multilib libwayland-bin \
+            git ca-certificates curl binutils cmake ninja-build pkg-config gcc-multilib libwayland-bin \
             libx11-dev:i386 libxext-dev:i386 libxcursor-dev:i386 libxi-dev:i386 \
             libxrandr-dev:i386 libxfixes-dev:i386 libgl-dev:i386 libegl-dev:i386 \
             libasound2-dev:i386 libpulse-dev:i386 libpipewire-0.3-dev:i386 \
@@ -100,16 +100,53 @@ jobs:
           REF_NAME: ${{ github.head_ref || github.ref_name }}
         run: |
           version="${REF_NAME//\//-}-${GITHUB_SHA::7}"
-          ./package.sh linux "$version"
+          ./package-linux.sh "$version"
           archive="dist/ctr-turbocharged-${version}-linux-x86.tar.gz"
+          appimage="dist/ctr-turbocharged-${version}-linux-x86.AppImage"
+          runtime_source="dist/ctr-turbocharged-${version}-linux-x86.AppImage-runtime-source.tar.gz"
           echo "archive=$archive" >> "$GITHUB_OUTPUT"
+          echo "appimage=$appimage" >> "$GITHUB_OUTPUT"
+          echo "runtime_source=$runtime_source" >> "$GITHUB_OUTPUT"
           echo "- \`$(cat "$archive.sha256")\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`$(cat "$appimage.sha256")\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`$(cat "$runtime_source.sha256")\`" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload
+      - name: Test AppImage launcher (without FUSE)
+        shell: bash
+        run: '"${{ steps.package.outputs.appimage }}" --appimage-extract-and-run --version'
+
+      - name: Upload Linux tarball
         uses: actions/upload-artifact@v7
         with:
+          name: linux-tarball
           path: ${{ steps.package.outputs.archive }}
           # Upload the tarball as-is: it keeps the executable bit, which zips drop.
+          archive: false
+          if-no-files-found: error
+
+      - name: Upload Linux AppImage
+        uses: actions/upload-artifact@v7
+        with:
+          name: linux-appimage
+          path: ${{ steps.package.outputs.appimage }}
+          archive: false
+          if-no-files-found: error
+
+      - name: Upload Linux checksums
+        uses: actions/upload-artifact@v7
+        with:
+          name: linux-checksums
+          path: |
+            ${{ steps.package.outputs.archive }}.sha256
+            ${{ steps.package.outputs.appimage }}.sha256
+            ${{ steps.package.outputs.runtime_source }}.sha256
+          if-no-files-found: error
+
+      - name: Upload AppImage runtime source
+        uses: actions/upload-artifact@v7
+        with:
+          name: linux-appimage-runtime-source
+          path: ${{ steps.package.outputs.runtime_source }}
           archive: false
           if-no-files-found: error
 

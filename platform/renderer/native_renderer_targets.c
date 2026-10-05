@@ -303,6 +303,17 @@ internal void NativeRenderer_BindMainRenderTarget(void)
 #endif
 
 #ifndef __vita__
+	if (s_framePs1Resolution)
+	{
+		// The PS1 drew logicalWidth pixels across a 4:3 picture. Keep that
+		// pixel density across the selected aspect and the original line count.
+		physicalHeight = logicalHeight;
+		physicalWidth = logicalWidth;
+		if ((s_presentViewport.w > 0) && (s_presentViewport.h > 0))
+		{
+			physicalWidth = (int)(((s64)logicalWidth * s_presentViewport.w * 3 + (s64)s_presentViewport.h * 2) / ((s64)s_presentViewport.h * 4));
+		}
+	}
 	s_mainResolveWidth = (physicalWidth < 1) ? 1 : physicalWidth;
 	s_mainResolveHeight = (physicalHeight < 1) ? 1 : physicalHeight;
 	float scale = NativeRenderer_SupersampleScale(s_frameAntiAliasingMode);
@@ -610,6 +621,15 @@ void NativeRenderer_PresentMainRenderTarget(void)
 	{
 		glUniform1i(s_presentRgbaFxaaLoc, s_frameAntiAliasingMode == NATIVE_AA_FXAA);
 	}
+	// Only an upscaled source needs sharp bilinear; the other present-shader
+	// users rely on it being off, so it is reset after this draw.
+	const b32 sharpUpscale = (s_presentRgbaSharpPrescaleLoc >= 0) && ((source->width < s_presentViewport.w) || (source->height < s_presentViewport.h));
+	if (sharpUpscale)
+	{
+		const int prescaleX = s_presentViewport.w / source->width;
+		const int prescaleY = s_presentViewport.h / source->height;
+		glUniform2f(s_presentRgbaSharpPrescaleLoc, (float)(prescaleX < 1 ? 1 : prescaleX), (float)(prescaleY < 1 ? 1 : prescaleY));
+	}
 #endif
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, source->texture);
@@ -623,6 +643,10 @@ void NativeRenderer_PresentMainRenderTarget(void)
 #ifndef __vita__
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	if (sharpUpscale)
+	{
+		glUniform2f(s_presentRgbaSharpPrescaleLoc, 0.0f, 0.0f);
+	}
 #endif
 
 	if (previousStencilEnabled)

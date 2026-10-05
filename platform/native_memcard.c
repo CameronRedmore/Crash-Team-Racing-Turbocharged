@@ -10,10 +10,14 @@
 #endif
 #if defined(_WIN32)
 #include "platform/native_win32.h"
+#include <io.h>
 #else
 #include <dirent.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
+// POSIX, but hidden by strict -std=c17 headers.
+int fileno(FILE *stream);
 #endif
 #include <stdio.h>
 #include <string.h>
@@ -257,13 +261,88 @@ internal const char *NativeMemcard_PathFromDeviceName(const char *save_name, int
 	return s_memcardResolvedPath;
 }
 
+// Builds "<dir>/.<name><suffix>" next to path. The leading dot keeps temp,
+// backup and quarantine files out of the BASCUS-94426* wildcard searches and
+// the CTR save-name filter used when cloning a card.
+internal int NativeMemcard_SiblingPath(char *dst, int dst_size, const char *path, const char *suffix)
+{
+	const char *slash = strrchr(path, '/');
+	const char *base;
+	int dir_len;
+	int written;
+#if defined(_WIN32)
+	const char *backslash = strrchr(path, '\\');
+	if ((slash == NULL) || ((backslash != NULL) && (backslash > slash)))
+		slash = backslash;
+#endif
+
+	base = (slash != NULL) ? slash + 1 : path;
+	dir_len = (int)(base - path);
+	written = snprintf(dst, (size_t)dst_size, "%.*s.%s%s", dir_len, path, base, suffix);
+	return (written >= 0) && (written < dst_size);
+}
+
+internal long NativeMemcard_FileSize(const char *path)
+{
+	FILE *file = fopen(path, "rb");
+	long size = -1;
+
+	if (file != NULL)
+	{
+		if (fseek(file, 0, SEEK_END) == 0)
+		{
+			size = ftell(file);
+		}
+		fclose(file);
+	}
+	return size;
+}
+
+// Atomically replaces to with from (same directory, so same filesystem).
+internal int NativeMemcard_ReplaceFile(const char *from, const char *to)
+{
+#if defined(_WIN32)
+	return MoveFileExA(from, to, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != 0;
+#else
+	return rename(from, to) == 0;
+#endif
+}
+
+// Flushes to stable storage and closes. Returns 0 if any step failed; write
+// errors such as a full disk often only surface here, not in fwrite.
+internal int NativeMemcard_FlushAndClose(FILE *file)
+{
+	int ok = (fflush(file) == 0);
+
+	if (ok)
+	{
+#if defined(_WIN32)
+		ok = (_commit(_fileno(file)) == 0);
+#elif !defined(__EMSCRIPTEN__)
+		// Filesystems without fsync support are not a failed save.
+		ok = (fsync(fileno(file)) == 0) || (errno == EINVAL) || (errno == ENOTSUP);
+#endif
+	}
+	if (fclose(file) != 0)
+	{
+		ok = 0;
+	}
+	return ok;
+}
+
 internal enum NativeMemcardResult NativeMemcard_CopyFile(const char *src_path, const char *dst_path)
 {
 	unsigned char buffer[NATIVE_MEMCARD_COPY_BUFFER];
+	char tmp_path[NATIVE_MEMCARD_MAX_PATH];
 	FILE *src;
 	FILE *dst;
 	size_t read_bytes;
 	enum NativeMemcardResult result = NATIVE_MEMCARD_OK;
+
+	if (!NativeMemcard_SiblingPath(tmp_path, sizeof(tmp_path), dst_path, ".tmp"))
+	{
+		return NATIVE_MEMCARD_IO_ERROR;
+	}
 
 	src = fopen(src_path, "rb");
 	if (src == NULL)
@@ -271,7 +350,8 @@ internal enum NativeMemcardResult NativeMemcard_CopyFile(const char *src_path, c
 		return NATIVE_MEMCARD_NOT_FOUND;
 	}
 
-	dst = fopen(dst_path, "wb");
+	// Copy to a temp file first so a failure never damages an existing dst.
+	dst = fopen(tmp_path, "wb");
 	if (dst == NULL)
 	{
 		fclose(src);
@@ -292,9 +372,76 @@ internal enum NativeMemcardResult NativeMemcard_CopyFile(const char *src_path, c
 		result = NATIVE_MEMCARD_IO_ERROR;
 	}
 
-	fclose(dst);
 	fclose(src);
+	if (!NativeMemcard_FlushAndClose(dst))
+	{
+		result = NATIVE_MEMCARD_IO_ERROR;
+	}
+
+	if ((result == NATIVE_MEMCARD_OK) && !NativeMemcard_ReplaceFile(tmp_path, dst_path))
+	{
+		result = NATIVE_MEMCARD_IO_ERROR;
+	}
+	if (result != NATIVE_MEMCARD_OK)
+	{
+		remove(tmp_path);
+	}
 	return result;
+}
+
+// Crash-safe replacement of path with part1 followed by part2: the data goes
+// to a temp file which is flushed to disk and then renamed over the target, so
+// path is always either the complete old file or the complete new one. With
+// keep_backup, the previous contents are first copied to a hidden ".bak".
+internal enum NativeMemcardResult NativeMemcard_AtomicWrite(const char *path, const void *part1, int size1, const void *part2, int size2, int keep_backup)
+{
+	char tmp_path[NATIVE_MEMCARD_MAX_PATH];
+	char bak_path[NATIVE_MEMCARD_MAX_PATH];
+	FILE *file;
+	int ok = 1;
+
+	if (!NativeMemcard_SiblingPath(tmp_path, sizeof(tmp_path), path, ".tmp") || !NativeMemcard_SiblingPath(bak_path, sizeof(bak_path), path, ".bak"))
+	{
+		return NATIVE_MEMCARD_IO_ERROR;
+	}
+
+	file = fopen(tmp_path, "wb");
+	if (file == NULL)
+	{
+		return NATIVE_MEMCARD_OPEN_FAILED;
+	}
+
+	if ((size1 > 0) && (fwrite(part1, 1, (size_t)size1, file) != (size_t)size1))
+	{
+		ok = 0;
+	}
+	if (ok && (size2 > 0) && (fwrite(part2, 1, (size_t)size2, file) != (size_t)size2))
+	{
+		ok = 0;
+	}
+	if (!NativeMemcard_FlushAndClose(file))
+	{
+		ok = 0;
+	}
+	if (!ok)
+	{
+		remove(tmp_path);
+		return NATIVE_MEMCARD_IO_ERROR;
+	}
+
+	// Best effort: a failed backup must not stop the new save. An empty
+	// existing file is never worth keeping over a previous backup.
+	if ((keep_backup != 0) && (NativeMemcard_FileSize(path) > 0))
+	{
+		(void)NativeMemcard_CopyFile(path, bak_path);
+	}
+
+	if (!NativeMemcard_ReplaceFile(tmp_path, path))
+	{
+		remove(tmp_path);
+		return NATIVE_MEMCARD_IO_ERROR;
+	}
+	return NATIVE_MEMCARD_OK;
 }
 
 internal enum NativeMemcardResult NativeMemcard_CopyOneSave(const char *src_root, const char *dst_root, const char *name, int overwrite)
@@ -802,19 +949,29 @@ int NativeMemcard_FileExists(const char *save_name)
 
 enum NativeMemcardResult NativeMemcard_RemoveFile(const char *save_name)
 {
-	const char *path = NativeMemcard_PathFromDeviceName(save_name, 0);
+	char path[NATIVE_MEMCARD_MAX_PATH];
+	char sibling[NATIVE_MEMCARD_MAX_PATH];
+
+	if (!NativeMemcard_BuildPathFromDeviceName(path, sizeof(path), save_name, 0))
+	{
+		return NATIVE_MEMCARD_NOT_FOUND;
+	}
 
 	if (remove(path) == 0)
 	{
+		// An intentional delete must not leave a backup that could resurrect it.
+		if (NativeMemcard_SiblingPath(sibling, sizeof(sibling), path, ".bak"))
+			remove(sibling);
+		if (NativeMemcard_SiblingPath(sibling, sizeof(sibling), path, ".tmp"))
+			remove(sibling);
 		NativeMemcard_RequestPersistenceSync();
 		return NATIVE_MEMCARD_OK;
 	}
 	return NATIVE_MEMCARD_NOT_FOUND;
 }
 
-enum NativeMemcardResult NativeMemcard_ReadSaveData(const char *save_name, unsigned char *dst, int byte_count, int data_offset)
+internal enum NativeMemcardResult NativeMemcard_ReadPath(const char *path, unsigned char *dst, int byte_count, int data_offset)
 {
-	const char *path = NativeMemcard_PathFromDeviceName(save_name, 0);
 	FILE *file;
 	size_t read_bytes;
 
@@ -836,30 +993,93 @@ enum NativeMemcardResult NativeMemcard_ReadSaveData(const char *save_name, unsig
 	return read_bytes == (size_t)byte_count ? NATIVE_MEMCARD_OK : NATIVE_MEMCARD_IO_ERROR;
 }
 
+enum NativeMemcardResult NativeMemcard_ReadSaveData(const char *save_name, unsigned char *dst, int byte_count, int data_offset)
+{
+	return NativeMemcard_ReadPath(NativeMemcard_PathFromDeviceName(save_name, 0), dst, byte_count, data_offset);
+}
+
+// Reads the previous generation kept by the last overwriting save.
+enum NativeMemcardResult NativeMemcard_ReadBackupData(const char *save_name, unsigned char *dst, int byte_count, int data_offset)
+{
+	char path[NATIVE_MEMCARD_MAX_PATH];
+	char bak_path[NATIVE_MEMCARD_MAX_PATH];
+
+	if (!NativeMemcard_BuildPathFromDeviceName(path, sizeof(path), save_name, 0) || !NativeMemcard_SiblingPath(bak_path, sizeof(bak_path), path, ".bak"))
+	{
+		return NATIVE_MEMCARD_NOT_FOUND;
+	}
+	return NativeMemcard_ReadPath(bak_path, dst, byte_count, data_offset);
+}
+
+// Moves a bad save aside as a hidden ".corrupt" file (never deleted) so a
+// later save cannot rotate it over the last good backup.
+enum NativeMemcardResult NativeMemcard_QuarantineFile(const char *save_name)
+{
+	char path[NATIVE_MEMCARD_MAX_PATH];
+	char corrupt_path[NATIVE_MEMCARD_MAX_PATH];
+
+	if (!NativeMemcard_BuildPathFromDeviceName(path, sizeof(path), save_name, 0) ||
+	    !NativeMemcard_SiblingPath(corrupt_path, sizeof(corrupt_path), path, ".corrupt"))
+	{
+		return NATIVE_MEMCARD_IO_ERROR;
+	}
+	if (!NativeMemcard_PathExists(path))
+	{
+		return NATIVE_MEMCARD_NOT_FOUND;
+	}
+	return NativeMemcard_ReplaceFile(path, corrupt_path) ? NATIVE_MEMCARD_OK : NATIVE_MEMCARD_IO_ERROR;
+}
+
+// Call after the backup was validated: quarantines the bad primary and
+// restores the backup in its place.
+enum NativeMemcardResult NativeMemcard_RecoverFromBackup(const char *save_name)
+{
+	char path[NATIVE_MEMCARD_MAX_PATH];
+	char bak_path[NATIVE_MEMCARD_MAX_PATH];
+	enum NativeMemcardResult result;
+
+	if (!NativeMemcard_BuildPathFromDeviceName(path, sizeof(path), save_name, 0) || !NativeMemcard_SiblingPath(bak_path, sizeof(bak_path), path, ".bak"))
+	{
+		return NATIVE_MEMCARD_IO_ERROR;
+	}
+	if (NativeMemcard_FileSize(bak_path) <= 0)
+	{
+		return NATIVE_MEMCARD_NOT_FOUND;
+	}
+
+	if (NativeMemcard_PathExists(path))
+	{
+		result = NativeMemcard_QuarantineFile(save_name);
+		if (result != NATIVE_MEMCARD_OK)
+		{
+			return result;
+		}
+	}
+
+	result = NativeMemcard_CopyFile(bak_path, path);
+	if (result == NATIVE_MEMCARD_OK)
+	{
+		NativeMemcard_RequestPersistenceSync();
+	}
+	return result;
+}
+
 enum NativeMemcardResult NativeMemcard_WriteSaveData(const char *save_name, const void *icon, int icon_byte_count, const unsigned char *src, int byte_count)
 {
 	const char *path = NativeMemcard_PathFromDeviceName(save_name, 1);
-	FILE *file;
-	size_t wrote_icon;
-	size_t wrote_data;
+	enum NativeMemcardResult result;
 
-	file = fopen(path, "wb");
-	if (file == NULL)
+	if (path[0] == '\0')
 	{
 		return NATIVE_MEMCARD_OPEN_FAILED;
 	}
 
-	wrote_icon = fwrite(icon, 1, icon_byte_count, file);
-	wrote_data = fwrite(src, 1, byte_count, file);
-	fclose(file);
-
-	if ((wrote_icon != (size_t)icon_byte_count) || (wrote_data != (size_t)byte_count))
+	result = NativeMemcard_AtomicWrite(path, icon, icon_byte_count, src, byte_count, 1);
+	if (result == NATIVE_MEMCARD_OK)
 	{
-		return NATIVE_MEMCARD_IO_ERROR;
+		NativeMemcard_RequestPersistenceSync();
 	}
-
-	NativeMemcard_RequestPersistenceSync();
-	return NATIVE_MEMCARD_OK;
+	return result;
 }
 
 
@@ -955,32 +1175,19 @@ enum NativeMemcardResult NativeMemcard_ReadReplayData(int slot, const char *ghos
 enum NativeMemcardResult NativeMemcard_WriteReplayData(int slot, const char *ghost_name, const void *header, int header_size, const void *frames, int frames_size)
 {
     char path[NATIVE_MEMCARD_MAX_PATH];
-    FILE *file;
-    size_t wrote_header;
-    size_t wrote_frames;
+	enum NativeMemcardResult result;
 
-    if (!NativeMemcard_BuildReplayPath(path, sizeof(path), slot, ghost_name, 1))
-    {
-        return NATIVE_MEMCARD_IO_ERROR;
-    }
+	if (!NativeMemcard_BuildReplayPath(path, sizeof(path), slot, ghost_name, 1))
+	{
+		return NATIVE_MEMCARD_IO_ERROR;
+	}
 
-    file = fopen(path, "wb");
-    if (file == NULL)
-    {
-        return NATIVE_MEMCARD_OPEN_FAILED;
-    }
-
-    wrote_header = fwrite(header, 1, header_size, file);
-    wrote_frames = fwrite(frames, 1, frames_size, file);
-    fclose(file);
-
-    if ((wrote_header != (size_t)header_size) || (wrote_frames != (size_t)frames_size))
-    {
-        return NATIVE_MEMCARD_IO_ERROR;
-    }
-
-    NativeMemcard_RequestPersistenceSync();
-    return NATIVE_MEMCARD_OK;
+	result = NativeMemcard_AtomicWrite(path, header, header_size, frames, frames_size, 0);
+	if (result == NATIVE_MEMCARD_OK)
+	{
+		NativeMemcard_RequestPersistenceSync();
+	}
+	return result;
 }
 
 enum NativeMemcardResult NativeMemcard_RemoveReplay(int slot, const char *ghost_name)

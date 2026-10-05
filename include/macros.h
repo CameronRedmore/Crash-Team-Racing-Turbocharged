@@ -54,7 +54,9 @@ typedef double f64;
 #define CTR_NATIVE_HAS_LEADERBOARD 1
 #elif defined(CTR_NATIVE) && (defined(_WIN32) || defined(__EMSCRIPTEN__))
 #define CTR_NATIVE_HAS_ADHOC       0
-#define CTR_NATIVE_HAS_LEADERBOARD 1
+// Inherited from High Octane; it talks to the upstream author's server, so it
+// is disabled in Turbocharged. Change this to 1 to build it back in.
+#define CTR_NATIVE_HAS_LEADERBOARD 0
 #else
 #define CTR_NATIVE_HAS_ADHOC       0
 #define CTR_NATIVE_HAS_LEADERBOARD 0
@@ -97,7 +99,8 @@ extern int gNativeGhostReplayFpsOverride;
 #if defined(CTR_NATIVE) && !defined(__vita__)
 // The four smoothed globals are declared in platform/native_options.h.
 #define CTR_NATIVE_SMOOTHED_AI_ACTIVE (gNativeSmoothedAIEnabled != 0)
-#define CTR_NATIVE_SMOOTHED_COLLISION_ACTIVE (gNativeSmoothedCollisionEnabled != 0)
+// Retail collision breaks down above 60 FPS, so smoothed collision is forced on there.
+#define CTR_NATIVE_SMOOTHED_COLLISION_ACTIVE (gNativeSmoothedCollisionEnabled != 0 || CTR_FRAMES_PER_SECOND > 60)
 #define CTR_NATIVE_SMOOTHED_STEERING_ACTIVE (gNativeSmoothedSteeringEnabled != 0)
 #define CTR_NATIVE_SMOOTHED_PHYSICS_ACTIVE (gNativeSmoothedPhysicsEnabled != 0)
 #else

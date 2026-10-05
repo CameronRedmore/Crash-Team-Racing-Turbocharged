@@ -3,6 +3,7 @@
 #include <platform/native_path.h>
 
 #include <SDL3/SDL_mutex.h>
+#include <SDL3/SDL_iostream.h>
 #if defined(__vita__)
 #include <psp2/io/fcntl.h>
 #endif
@@ -43,7 +44,7 @@ global_variable char s_nativeDiscImagePath[NATIVE_DISC_IMAGE_PATH_MAX];
 #if defined(__vita__)
 global_variable SceUID s_nativeDiscImageFd = -1;
 #else
-global_variable FILE *s_nativeDiscImageFile;
+global_variable SDL_IOStream *s_nativeDiscImageFile;
 #endif
 global_variable struct NativeDiscImageFile s_nativeDiscImageRoot;
 global_variable int s_nativeDiscImageAvailable;
@@ -141,7 +142,7 @@ internal void NativeDiscImage_CloseFile(void)
 #else
 	if (s_nativeDiscImageFile != NULL)
 	{
-		fclose(s_nativeDiscImageFile);
+		SDL_CloseIO(s_nativeDiscImageFile);
 		s_nativeDiscImageFile = NULL;
 	}
 #endif
@@ -166,15 +167,14 @@ internal int NativeDiscImage_OpenFile(const char *path, u64 *sizeOut)
 	*sizeOut = (u64)imageSize;
 	return 1;
 #else
-	long imageSize;
+	Sint64 imageSize;
 
-	s_nativeDiscImageFile = fopen(path, "rb");
+	s_nativeDiscImageFile = SDL_IOFromFile(path, "rb");
 	if (s_nativeDiscImageFile == NULL)
 	{
 		return 0;
 	}
-	if ((fseek(s_nativeDiscImageFile, 0, SEEK_END) != 0) || ((imageSize = ftell(s_nativeDiscImageFile)) <= 0) ||
-	    (fseek(s_nativeDiscImageFile, 0, SEEK_SET) != 0))
+	if ((imageSize = SDL_GetIOSize(s_nativeDiscImageFile)) <= 0)
 	{
 		NativeDiscImage_CloseFile();
 		return 0;
@@ -190,8 +190,8 @@ internal int NativeDiscImage_ReadFileAt(void *dst, u32 byteCount, u64 offset)
 	return (offset <= (u64)INT64_MAX) &&
 	       (sceIoPread(s_nativeDiscImageFd, dst, (SceSize)byteCount, (SceOff)offset) == (int)byteCount);
 #else
-	return (offset <= (u64)LONG_MAX) && (fseek(s_nativeDiscImageFile, (long)offset, SEEK_SET) == 0) &&
-	       (fread(dst, 1, byteCount, s_nativeDiscImageFile) == byteCount);
+	return (offset <= (u64)INT64_MAX) && (SDL_SeekIO(s_nativeDiscImageFile, (Sint64)offset, SDL_IO_SEEK_SET) >= 0) &&
+	       (SDL_ReadIO(s_nativeDiscImageFile, dst, byteCount) == byteCount);
 #endif
 }
 
@@ -461,7 +461,8 @@ internal int NativeDiscImage_ReadDirectoryBytes(const struct NativeDiscImageFile
 	*dataOut = NULL;
 	*sizeOut = 0;
 
-	if ((dir == NULL) || (dir->size == 0) || (dir->size > 0x7fffffff))
+	if ((dir == NULL) || (dir->size == 0) || (dir->size > 16u * 1024u * 1024u) ||
+	    ((u64)dir->lba + NativeDiscImage_DataSectorCount(dir->size) > s_nativeDiscImageSectorCount))
 	{
 		return 0;
 	}
@@ -564,9 +565,9 @@ internal int NativeDiscImage_LoadRoot(void)
 	return 1;
 }
 
-int NativeDiscImage_Init(const char *assetsDir)
+// Setup also opens a selected path before installing it into the assets folder.
+internal int NativeDiscImage_InitPath(const char *path)
 {
-	char path[NATIVE_DISC_IMAGE_PATH_MAX];
 	u64 imageSize;
 	if (s_nativeDiscImageMutex == NULL)
 	{
@@ -581,7 +582,7 @@ int NativeDiscImage_Init(const char *assetsDir)
 
 	NativeDiscImage_CloseFile();
 
-	if ((assetsDir == NULL) || !NativeDiscImage_FindHostImagePath(path, sizeof(path), NativeStr8_FromCString(assetsDir)))
+	if (path == NULL)
 	{
 		return 0;
 	}
@@ -590,7 +591,7 @@ int NativeDiscImage_Init(const char *assetsDir)
 	{
 		return 0;
 	}
-	if ((imageSize % NATIVE_DISC_IMAGE_RAW_SECTOR_SIZE) != 0)
+	if ((imageSize % NATIVE_DISC_IMAGE_RAW_SECTOR_SIZE) != 0 || imageSize / NATIVE_DISC_IMAGE_RAW_SECTOR_SIZE > UINT32_MAX)
 	{
 		NativeDiscImage_CloseFile();
 		return 0;
@@ -611,6 +612,16 @@ int NativeDiscImage_Init(const char *assetsDir)
 
 	s_nativeDiscImageAvailable = 1;
 	return 1;
+}
+
+int NativeDiscImage_Init(const char *assetsDir)
+{
+	char path[NATIVE_DISC_IMAGE_PATH_MAX];
+	if ((assetsDir == NULL) || !NativeDiscImage_FindHostImagePath(path, sizeof(path), NativeStr8_FromCString(assetsDir)))
+	{
+		return NativeDiscImage_InitPath(NULL);
+	}
+	return NativeDiscImage_InitPath(path);
 }
 
 int NativeDiscImage_FindFile(const char *path, struct NativeDiscImageFile *fileOut)

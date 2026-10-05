@@ -55,8 +55,24 @@ mkdir -p "${PACKAGE_DIR}/assets"
 cp "${BINARY_PATH}" "${PACKAGE_DIR}/"
 cp LICENSE "${PACKAGE_DIR}/"
 cp THIRD_PARTY_NOTICES.md "${PACKAGE_DIR}/"
+mkdir -p "${PACKAGE_DIR}/licenses"
+license_files=(
+    MPL-2.0.txt SDL-zlib.txt HIDAPI-BSD.txt stb-MIT.txt
+    yuv2rgb-BSD.txt SDL-EDID-MIT.txt SDL-fdlibm.txt
+)
+for license_file in "${license_files[@]}"; do
+    cp "licenses/$license_file" "${PACKAGE_DIR}/licenses/"
+done
 # Project-owned Ghost Replay overlay image, not a game asset.
 cp assets/dualshock.png "${PACKAGE_DIR}/assets/"
+# Only the redistributable fonts, paired with full licences and attribution.
+# Never copy this directory wholesale: it may contain player-supplied fonts.
+mkdir -p "${PACKAGE_DIR}/assets/fonts"
+font_files=(FuzzyBubbles-Bold.ttf FuzzyBubbles-OFL.txt LuckiestGuy-Regular.ttf
+    LuckiestGuy-Apache-2.0.txt LuckiestGuy-NOTICE.txt README.md)
+for font_file in "${font_files[@]}"; do
+    cp "assets/fonts/$font_file" "${PACKAGE_DIR}/assets/fonts/"
+done
 
 if [[ "${PLATFORM}" == "linux" ]]; then
     REQUIREMENTS="Linux requirements:
@@ -84,7 +100,11 @@ Crash Team Racing: Turbocharged ${PLATFORM} x86 ${VERSION} build
 Game assets are not included. You must provide your own copy of the game.
 
 Simple setup:
-- Put your own NTSC-U retail CTR disc image at:
+- Run the game and choose your own NTSC-U retail CTR raw BIN image in the
+  disc setup popup. It validates the image, then copies it automatically to
+  assets/ctr-u.bin. Your original file is kept. Existing images require
+  confirmation before replacement.
+- Alternatively, place the image manually at:
 
 assets/
   ctr-u.bin
@@ -92,6 +112,16 @@ assets/
 - Run:
 
 ${RUN_HINT}
+
+First-time setup also offers the optional Crash-a-Like menu/HUD font.
+Choose the extracted TTF to check and copy it to assets/fonts/crash-a-like.ttf.
+If you do not already have it, choose Open README and follow First-time setup
+> Add the optional Crash-a-Like font, or choose Use Luckiest Guy: it is bundled.
+README: https://github.com/CameronRedmore/CTR-Turbocharged#3-add-the-optional-crash-a-like-font
+After import, select Options > Interface > Font > CRASH-A-LIKE to use it.
+Options > Interface > Font also offers LUCKIEST GUY and ORIGINAL.
+The Turbocharged preset uses Crash-a-Like if installed, otherwise Luckiest Guy.
+Bundled font licences and attributions are included beside the TTF files.
 
 The disc image must be the common single-track raw PSX BIN layout:
 MODE2/2352 sectors, with the data track starting at byte 0.
@@ -130,7 +160,9 @@ expected="$(printf '%s\n' \
     ./LICENSE \
     ./README.txt \
     ./THIRD_PARTY_NOTICES.md \
-    ./assets/dualshock.png | LC_ALL=C sort)"
+    ./assets/dualshock.png \
+    "${font_files[@]/#/./assets/fonts/}" \
+    "${license_files[@]/#/./licenses/}" | LC_ALL=C sort)"
 actual="$(cd "${PACKAGE_DIR}" && find . -type f | LC_ALL=C sort)"
 if [[ "${actual}" != "${expected}" ]]; then
     echo "ERROR: package contents do not match the allowlist:" >&2

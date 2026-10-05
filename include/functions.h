@@ -154,6 +154,7 @@ extern int gNativeAlternativeTrackEnabled;
 extern int gNativeRelicRaceMode;
 extern int gNativeRelicRaceResultTier;
 extern int gNativePresetPending;
+extern int gNativeCreditsSeen;
 extern int gNativeControlsSelectedColumn;
 extern int gNativeControlsSelectedAction;
 extern int gNativeControlsCaptureActive;

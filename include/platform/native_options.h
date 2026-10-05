@@ -40,6 +40,7 @@ extern int gNativePgxpMode; // enum NativePgxpMode
 extern int gNativePgxpIntegerNclipEnabled;
 extern int gNativeRendererMode; // enum NativeRendererMode
 extern int gNativeColorDepth;   // enum NativeColorDepth
+extern int gNativePs1ResolutionEnabled;
 extern int gNativeDepthBufferEnabled;
 extern int gNativeHdPauseMode; // 0 retail VRAM copy, 1 posterised, 2 smooth
 
@@ -51,6 +52,7 @@ extern int gNativeKartHue; // 0 = retail, else 1..NATIVE_KART_HUE_STEPS - 1
 extern int gNativeDefaultCameraFar;
 extern int gNativeDefaultHudSpeedometer;
 extern int gNativeSkipMaskHints;
+extern int gNativeCreditsSeen;
 
 // Gameplay
 extern int gNative60FpsEnabled; // frame-rate index, see native_framerate.h

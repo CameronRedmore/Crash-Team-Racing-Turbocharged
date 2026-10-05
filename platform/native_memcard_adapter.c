@@ -1,5 +1,6 @@
 #include <common.h>
 #include <platform/native_memcard.h>
+#include <platform/native_log.h>
 
 static u8 s_memcardNativeInfoSeen[2];
 
@@ -127,34 +128,70 @@ int MEMCARD_HandleEvent(void)
 	return MC_RETURN_TIMEOUT;
 }
 
-u8 MEMCARD_Load(int slotIdx, char *name, u8 *ptrMemcard, int memcardFileSize, u32 loadFlags)
+static b32 MEMCARD_NativeChecksumOk(u8 *bytes, int size)
 {
-	char nativeName[64];
-	enum NativeMemcardResult nativeResult;
 	int checksumResult;
-
-	(void)loadFlags;
-
-	MEMCARD_StringSet(nativeName, slotIdx, name);
-	nativeResult = NativeMemcard_ReadSaveData(nativeName, ptrMemcard, memcardFileSize, 0x100);
-	if (nativeResult == NATIVE_MEMCARD_NOT_FOUND)
-	{
-		return MC_RETURN_NODATA;
-	}
-
-	if (nativeResult != NATIVE_MEMCARD_OK)
-	{
-		return MC_RETURN_TIMEOUT;
-	}
 
 	sdata->crc16_checkpoint_byteIndex = 0;
 	sdata->crc16_checkpoint_status = 0;
 	do
 	{
-		checksumResult = MEMCARD_ChecksumLoad(ptrMemcard, memcardFileSize);
+		checksumResult = MEMCARD_ChecksumLoad(bytes, size);
 	} while (checksumResult == MC_RETURN_PENDING);
 
-	return checksumResult == MC_RETURN_IOE ? MC_RETURN_IOE : MC_RETURN_TIMEOUT;
+	return checksumResult == MC_RETURN_IOE;
+}
+
+// Loads into a scratch buffer and only publishes it to the live buffer once
+// the checksum passes, so a corrupt file can never end up in memory that a
+// later save would write back. If the file is bad, the previous generation
+// kept by the last save is tried and, if valid, restored.
+u8 MEMCARD_Load(int slotIdx, char *name, u8 *ptrMemcard, int memcardFileSize, u32 loadFlags)
+{
+	char nativeName[64];
+	enum NativeMemcardResult nativeResult;
+	u8 *scratch;
+	u8 result = MC_RETURN_TIMEOUT;
+
+	(void)loadFlags;
+
+	MEMCARD_StringSet(nativeName, slotIdx, name);
+	if (memcardFileSize < 2)
+	{
+		return MC_RETURN_TIMEOUT;
+	}
+
+	scratch = (u8 *)malloc((size_t)memcardFileSize);
+	if (scratch == NULL)
+	{
+		return MC_RETURN_TIMEOUT;
+	}
+
+	nativeResult = NativeMemcard_ReadSaveData(nativeName, scratch, memcardFileSize, 0x100);
+	if (nativeResult == NATIVE_MEMCARD_NOT_FOUND)
+	{
+		free(scratch);
+		return MC_RETURN_NODATA;
+	}
+
+	if ((nativeResult == NATIVE_MEMCARD_OK) && MEMCARD_NativeChecksumOk(scratch, memcardFileSize))
+	{
+		memcpy(ptrMemcard, scratch, (size_t)memcardFileSize);
+		result = MC_RETURN_IOE;
+	}
+	else if ((NativeMemcard_ReadBackupData(nativeName, scratch, memcardFileSize, 0x100) == NATIVE_MEMCARD_OK) &&
+	         MEMCARD_NativeChecksumOk(scratch, memcardFileSize))
+	{
+		Platform_Log("[CTR Memcard] %s failed validation, restoring previous backup\n", nativeName);
+		if (NativeMemcard_RecoverFromBackup(nativeName) == NATIVE_MEMCARD_OK)
+		{
+			memcpy(ptrMemcard, scratch, (size_t)memcardFileSize);
+			result = MC_RETURN_IOE;
+		}
+	}
+
+	free(scratch);
+	return result;
 }
 
 u8 MEMCARD_Save(int slotIdx, char *name, char *icon, u8 *ptrMemcard, int memcardFileSize, u32 saveFlags)

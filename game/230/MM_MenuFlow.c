@@ -369,21 +369,25 @@ static struct MenuRow s_nativeTimeTrialRows[] =
 	{.stringIndex = RECTMENU_STRING_NONE},
 };
 
-static struct MenuRow s_nativeOptionsRows[] =
-{
-	{NATIVE_MENU_STRING_DISPLAY, 7, 1, 0, 0},
-	{NATIVE_MENU_STRING_AUDIO, 0, 2, 1, 1},
-	{NATIVE_MENU_STRING_GAMEPLAY, 1, 3, 2, 2},
-	{NATIVE_MENU_STRING_UI, 2, 4, 3, 3},
-	{NATIVE_MENU_STRING_CONTROLS, 3, 5, 4, 4},
-	{LNG_LANGUAGE, 4, 6, 5, 5},
-	{NATIVE_MENU_STRING_CHEATS, 5, 7, 6, 6},
-	{NATIVE_MENU_STRING_PRESET, 6, 0, 7, 7},
+// Up/down links are set by MM_NativeOptionsConfigureRows, which also appends
+// the pause-only row.
+static struct MenuRow s_nativeOptionsRows[] = {
+    {.stringIndex = NATIVE_MENU_STRING_DISPLAY},
 #ifndef __vita__
-	{NATIVE_MENU_STRING_EXPERIMENTAL, 7, 0, 8, 8},
+    {.stringIndex = NATIVE_MENU_STRING_GRAPHICS},
 #endif
-	{.stringIndex = RECTMENU_STRING_NONE},
-	{.stringIndex = RECTMENU_STRING_NONE}, // pause-only Gamepad / Vibration category
+    {.stringIndex = NATIVE_MENU_STRING_AUDIO},
+    {.stringIndex = NATIVE_MENU_STRING_GAMEPLAY},
+    {.stringIndex = NATIVE_MENU_STRING_UI},
+    {.stringIndex = NATIVE_MENU_STRING_CONTROLS},
+    {.stringIndex = LNG_LANGUAGE},
+    {.stringIndex = NATIVE_MENU_STRING_CHEATS},
+    {.stringIndex = NATIVE_MENU_STRING_PRESET},
+#ifndef __vita__
+    {.stringIndex = NATIVE_MENU_STRING_EXPERIMENTAL},
+#endif
+    {.stringIndex = RECTMENU_STRING_NONE},
+    {.stringIndex = RECTMENU_STRING_NONE}, // pause-only Gamepad / Vibration category
 };
 
 static struct MenuRow s_nativeAudioRows[] =
@@ -395,28 +399,33 @@ static struct MenuRow s_nativeAudioRows[] =
 	{.stringIndex = RECTMENU_STRING_NONE},
 };
 
-static struct MenuRow s_nativeDisplayRows[] =
-{
-	{.stringIndex = NATIVE_MENU_STRING_FRAME_RATE},
+// Display frames the picture: rate, window and camera geometry.
+static struct MenuRow s_nativeDisplayRows[] = {
+    {.stringIndex = NATIVE_MENU_STRING_FRAME_RATE},
 #ifndef __vita__
-	{.stringIndex = NATIVE_MENU_STRING_BORDERLESS},
-	{.stringIndex = NATIVE_MENU_STRING_ANTI_ALIASING},
-	{.stringIndex = NATIVE_MENU_STRING_DITHERING},
+    {.stringIndex = NATIVE_MENU_STRING_BORDERLESS},
 #if NATIVE_DRAW3D_SUPPORTED
-	{.stringIndex = NATIVE_MENU_STRING_RENDERER},
-	{.stringIndex = NATIVE_MENU_STRING_ASPECT_RATIO},
-	{.stringIndex = NATIVE_MENU_STRING_FIELD_OF_VIEW},
-	{.stringIndex = NATIVE_MENU_STRING_PROJECTION},
-	{.stringIndex = NATIVE_MENU_STRING_PROJECTION_STRENGTH},
+    {.stringIndex = NATIVE_MENU_STRING_ASPECT_RATIO},
+    {.stringIndex = NATIVE_MENU_STRING_FIELD_OF_VIEW},
+    {.stringIndex = NATIVE_MENU_STRING_PROJECTION},
+    {.stringIndex = NATIVE_MENU_STRING_PROJECTION_STRENGTH},
 #endif
-	{.stringIndex = NATIVE_MENU_STRING_DEPTH_BUFFER},
-	{.stringIndex = NATIVE_MENU_STRING_TEXTURE_FILTER},
-	{.stringIndex = NATIVE_MENU_STRING_MAX_LOD},
-	{.stringIndex = NATIVE_MENU_STRING_PGXP},
-	{.stringIndex = NATIVE_MENU_STRING_COLOR_DEPTH},
 #endif
-	{.stringIndex = RECTMENU_STRING_NONE},
+    {.stringIndex = RECTMENU_STRING_NONE},
 };
+
+#ifndef __vita__
+// Graphics sets how the image is rendered: renderer, quality and the PS1 look.
+// Classic-only rows come last.
+static struct MenuRow s_nativeGraphicsRows[] = {
+#if NATIVE_DRAW3D_SUPPORTED
+    {.stringIndex = NATIVE_MENU_STRING_RENDERER},
+#endif
+    {.stringIndex = NATIVE_MENU_STRING_PS1_RESOLUTION}, {.stringIndex = NATIVE_MENU_STRING_ANTI_ALIASING},  {.stringIndex = NATIVE_MENU_STRING_COLOR_DEPTH},
+    {.stringIndex = NATIVE_MENU_STRING_DITHERING},      {.stringIndex = NATIVE_MENU_STRING_TEXTURE_FILTER}, {.stringIndex = NATIVE_MENU_STRING_MAX_LOD},
+    {.stringIndex = NATIVE_MENU_STRING_DEPTH_BUFFER},   {.stringIndex = NATIVE_MENU_STRING_PGXP},           {.stringIndex = RECTMENU_STRING_NONE},
+};
+#endif
 
 static struct MenuRow s_nativeGameplayRows[] =
 {
@@ -628,6 +637,16 @@ static struct RectMenu s_nativeDisplayMenu =
 	.drawStyle = RECTMENU_DRAW_STYLE_NATIVE_OPTIONS,
 };
 
+#ifndef __vita__
+static struct RectMenu s_nativeGraphicsMenu = {
+    .stringIndexTitle = RECTMENU_STRING_NONE,
+    .state = CENTER_ON_X | USE_SMALL_FONT,
+    .rows = s_nativeGraphicsRows,
+    .funcPtr = MM_NativeOptionsMenuProc,
+    .drawStyle = RECTMENU_DRAW_STYLE_NATIVE_OPTIONS,
+};
+#endif
+
 static struct RectMenu s_nativeAudioMenu =
 {
 	.stringIndexTitle = RECTMENU_STRING_NONE,
@@ -741,6 +760,7 @@ static void MM_NativeApplyPreset(int preset)
 
 #ifndef __vita__
 	gNativeColorDepth = vanillaPlus ? NATIVE_COLOR_DEPTH_TRUE : NATIVE_COLOR_DEPTH_15BIT;
+	gNativePs1ResolutionEnabled = !vanillaPlus;
 	gNativeAntiAliasingMode = vanillaPlus ? NATIVE_AA_FXAA : NATIVE_AA_OFF;
 	gNativeDitheringEnabled = !vanillaPlus;
 	gNativeMaxLodEnabled = vanillaPlus;
@@ -755,7 +775,7 @@ static void MM_NativeApplyPreset(int preset)
 	// Modern Minimap controls both the map and the markers, so it covers Precise Minimap too.
 	gNativeModernMapEnabled = turbo;
 	gNativePreciseMinimapEnabled = 0;
-	gNativeFont = turbo ? NATIVE_FONT_CRASH_A_LIKE : NATIVE_FONT_ORIGINAL;
+	gNativeFont = turbo ? NativeFont_GetDefault() : NATIVE_FONT_ORIGINAL;
 	gNativeModernHudIconsEnabled = turbo;
 #if NATIVE_DRAW3D_SUPPORTED
 	gNativeRendererMode = turbo ? NATIVE_RENDERER_NATIVE : NATIVE_RENDERER_CLASSIC;
@@ -1302,8 +1322,18 @@ static b32 MM_NativeOptionsInGame(void)
 	return sdata->gGT->levelID != MAIN_MENU_LEVEL;
 }
 
-static b32 MM_NativeOptionsRowLockedInRace(s16 stringIndex)
+static b32 MM_NativeOptionsRowLocked(s16 stringIndex, b32 inGame)
 {
+	const s16 row = stringIndex & MENU_ROW_LNG_MASK;
+	if ((row == NATIVE_MENU_STRING_DEPTH_BUFFER) || (row == NATIVE_MENU_STRING_MAX_LOD))
+	{
+		// Native 3D always depth-tests and draws at max detail.
+		return NATIVE_DRAW3D_ACTIVE();
+	}
+	if (!inGame)
+	{
+		return false;
+	}
 	switch (stringIndex & MENU_ROW_LNG_MASK)
 	{
 	case LNG_LANGUAGE:
@@ -1320,7 +1350,7 @@ static void MM_NativeOptionsApplyLocks(struct MenuRow *rows, b32 inGame)
 {
 	for (struct MenuRow *row = rows; row->stringIndex != RECTMENU_STRING_NONE; row++)
 	{
-		b32 locked = inGame && MM_NativeOptionsRowLockedInRace(row->stringIndex);
+		b32 locked = MM_NativeOptionsRowLocked(row->stringIndex, inGame);
 		if (locked)
 		{
 			row->stringIndex |= MENU_ROW_LOCKED;
@@ -1346,32 +1376,25 @@ static void MM_NativeOptionsConfigureRows(b32 inGame)
 	}
 
 	struct MenuRow *rows = s_nativeOptionsRows;
-	int last = baseCount - 1;
-	rows[last - 1].rowOnPressDown = (char)last;
-
 	if (inGame)
 	{
-		rows[baseCount] = (struct MenuRow){NATIVE_MENU_STRING_GAMEPAD, (char)last, 0, (char)baseCount, (char)baseCount};
+		rows[baseCount] = (struct MenuRow){.stringIndex = NATIVE_MENU_STRING_GAMEPAD};
 		rows[baseCount + 1] = (struct MenuRow){.stringIndex = RECTMENU_STRING_NONE};
-		rows[last].rowOnPressDown = (char)baseCount;
-		rows[0].rowOnPressUp = (char)baseCount;
 	}
 	else
 	{
 		rows[baseCount] = (struct MenuRow){.stringIndex = RECTMENU_STRING_NONE};
-		rows[last].rowOnPressDown = 0;
-		rows[0].rowOnPressUp = (char)last;
 	}
 
-	struct MenuRow *categories[] = {
-		s_nativeDisplayRows, s_nativeAudioRows, s_nativeGameplayRows, s_nativeUiRows,
+	struct MenuRow *menus[] = {
+	    s_nativeOptionsRows,  s_nativeDisplayRows,      s_nativeAudioRows, s_nativeGameplayRows, s_nativeUiRows,
 #ifndef __vita__
-		s_nativeExperimentalRows,
+	    s_nativeGraphicsRows, s_nativeExperimentalRows,
 #endif
 	};
-	for (unsigned int category = 0; category < sizeof(categories) / sizeof(categories[0]); category++)
+	for (unsigned int menu = 0; menu < sizeof(menus) / sizeof(menus[0]); menu++)
 	{
-		struct MenuRow *settings = categories[category];
+		struct MenuRow *settings = menus[menu];
 		int count = 0;
 		while (settings[count].stringIndex != RECTMENU_STRING_NONE) count++;
 		for (int i = 0; i < count; i++)
@@ -1383,7 +1406,6 @@ static void MM_NativeOptionsConfigureRows(b32 inGame)
 		}
 		MM_NativeOptionsApplyLocks(settings, inGame);
 	}
-	MM_NativeOptionsApplyLocks(s_nativeOptionsRows, inGame);
 }
 
 // Opens the full options menu from the in-game pause menu.
@@ -1606,20 +1628,22 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 		save_config();
 		return;
 	}
-	if ((choose == NATIVE_MENU_STRING_DISPLAY) ||
-	    (choose == NATIVE_MENU_STRING_AUDIO) ||
-	    (choose == NATIVE_MENU_STRING_GAMEPLAY) ||
+	if ((choose == NATIVE_MENU_STRING_DISPLAY) || (choose == NATIVE_MENU_STRING_AUDIO) || (choose == NATIVE_MENU_STRING_GAMEPLAY) ||
 #ifndef __vita__
-	    (choose == NATIVE_MENU_STRING_EXPERIMENTAL) ||
+	    (choose == NATIVE_MENU_STRING_GRAPHICS) || (choose == NATIVE_MENU_STRING_EXPERIMENTAL) ||
 #endif
 	    (choose == NATIVE_MENU_STRING_UI))
 	{
-		struct RectMenu *submenu = choose == NATIVE_MENU_STRING_DISPLAY ? &s_nativeDisplayMenu :
-		                           choose == NATIVE_MENU_STRING_AUDIO ? &s_nativeAudioMenu :
+		struct RectMenu *submenu = choose == NATIVE_MENU_STRING_DISPLAY ? &s_nativeDisplayMenu
+		                           : choose == NATIVE_MENU_STRING_AUDIO ? &s_nativeAudioMenu
+		                           :
 #ifndef __vita__
-		                           choose == NATIVE_MENU_STRING_EXPERIMENTAL ? &s_nativeExperimentalMenu :
+		                           choose == NATIVE_MENU_STRING_GRAPHICS       ? &s_nativeGraphicsMenu
+		                           : choose == NATIVE_MENU_STRING_EXPERIMENTAL ? &s_nativeExperimentalMenu
+		                           :
 #endif
-		                           choose == NATIVE_MENU_STRING_GAMEPLAY ? &s_nativeGameplayMenu : &s_nativeUiMenu;
+		                           choose == NATIVE_MENU_STRING_GAMEPLAY ? &s_nativeGameplayMenu
+		                                                                 : &s_nativeUiMenu;
 		submenu->rowSelected = 0;
 		submenu->posY_curr = 0;
 		submenu->state = CENTER_ON_X | USE_SMALL_FONT;
@@ -1706,6 +1730,9 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 		return;
 	}
 
+	if (choose == NATIVE_MENU_STRING_COLLISION_PHYSICS && CTR_FRAMES_PER_SECOND > 60)
+		return; // forced on above 60 FPS
+
 	if (choose == NATIVE_MENU_STRING_AI_PHYSICS || choose == NATIVE_MENU_STRING_COLLISION_PHYSICS || choose == NATIVE_MENU_STRING_STEERING_PHYSICS)
 	{
 		enum NativePhysicsDomain domain = NATIVE_PHYSICS_AI;
@@ -1746,6 +1773,7 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 	if (choose == NATIVE_MENU_STRING_DEPTH_BUFFER)
 	{
 		// This stores the Classic preference; Native 3D keeps depth testing enabled.
+		// The row is locked (see MM_NativeOptionsRowLocked) while Native 3D is active.
 		gNativeDepthBufferEnabled ^= 1;
 		save_config();
 		return;
@@ -1846,6 +1874,17 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 	if (choose == NATIVE_MENU_STRING_COLOR_DEPTH)
 	{
 		gNativeColorDepth = (gNativeColorDepth + 1) % NATIVE_COLOR_DEPTH_COUNT;
+		if (button & (BTN_LEFT | BTN_RIGHT))
+		{
+			OtherFX_Play(0, 1);
+		}
+		save_config();
+		return;
+	}
+
+	if (choose == NATIVE_MENU_STRING_PS1_RESOLUTION)
+	{
+		gNativePs1ResolutionEnabled ^= 1;
 		if (button & (BTN_LEFT | BTN_RIGHT))
 		{
 			OtherFX_Play(0, 1);
@@ -2185,6 +2224,11 @@ void MM_MenuProc_Main(struct RectMenu *mainMenu)
 	struct GameTracker *gGT = sdata->gGT;
 
 #if defined(CTR_NATIVE)
+	if (MM_BootCredits_Update(mainMenu))
+	{
+		return;
+	}
+
 	if ((mainMenu->state & DRAW_NEXT_MENU_IN_HIERARCHY) == 0)
 	{
 		NativeCheat_ApplyConfigured();
@@ -2243,6 +2287,7 @@ void MM_MenuProc_Main(struct RectMenu *mainMenu)
 			                     &gGT->backBuffer->otMem.uiOT[MM_TITLE_TM_OT_INDEX]);
 
 #if defined(CTR_NATIVE)
+			b32 userIdShown = false;
 			if ((D230.menuMainMenu.state & DRAW_NEXT_MENU_IN_HIERARCHY) == 0)
 			{
 				const char *userId = NativeUserId_GetDisplayString();
@@ -2251,8 +2296,10 @@ void MM_MenuProc_Main(struct RectMenu *mainMenu)
 					char userIdText[32];
 					snprintf(userIdText, sizeof(userIdText), "USER ID: %s", userId);
 					DecalFont_DrawLineOT(userIdText, 8, 0xc8, FONT_SMALL, WHITE, &gGT->backBuffer->otMem.uiOT[MM_TITLE_TM_OT_INDEX]);
+					userIdShown = true;
 				}
 			}
+			MM_BootCredits_DrawTitleExtras(gGT, userIdShown);
 #endif
 		}
 

@@ -87,6 +87,7 @@ int gNativeRelicRaceResultTier = -1;
 
 #include "platform/native_disc_image.c"
 #include "platform/native_assets.c"
+#include "platform/native_disc_setup.c"
 #include "platform/native_audio.c"
 #include "platform/native_memory.c"
 #include "platform/native_checkpoint.c"
@@ -143,6 +144,7 @@ int gNativeRelicRaceResultTier = -1;
 #include "platform/renderer/native_renderer_overlays.c"
 #include "platform/renderer/native_renderer_device.c"
 #include "platform/native_font.c"
+#include "platform/native_title_logo.c"
 #include "platform/native_kart_color.c"
 #include "platform/native_minimap.c"
 #include "platform/native_hud_icons.c"
@@ -239,6 +241,7 @@ u32 gNativeCheatConfigMask = 0;
 #ifndef __vita__
 int gNativeAntiAliasingMode = NATIVE_AA_FXAA;
 int gNativeDitheringEnabled = 1;
+int gNativePs1ResolutionEnabled = 0;
 int gNativeBorderlessEnabled = 0;
 int gNativeMaxLodEnabled = 1;
 int gNativeHdPauseMode = 2;
@@ -428,6 +431,24 @@ int main(int argc, char *argv[])
 		}
 	}
 
+#if defined(__linux__) && !defined(__vita__) && !defined(__EMSCRIPTEN__)
+	// 32-bit builds do not get along with GPU drivers under native Wayland, so
+	// prefer X11 (through XWayland on Wayland desktops), keeping Wayland only as
+	// a fallback when X11 is unavailable. A SDL_VIDEODRIVER that asks for Wayland
+	// is overridden unless CTR_TURBOCHARGED_ALLOW_WAYLAND=1 confirms it. Any other
+	// SDL_VIDEODRIVER value (x11, offscreen, dummy...) is respected as given.
+	{
+		const char *requested = SDL_getenv("SDL_VIDEODRIVER");
+		const char *allowWayland = SDL_getenv("CTR_TURBOCHARGED_ALLOW_WAYLAND");
+		const int wantsWayland = (requested != NULL) && (SDL_strstr(requested, "wayland") != NULL);
+		const int confirmed = (allowWayland != NULL) && (SDL_strcmp(allowWayland, "1") == 0);
+		if (requested == NULL || requested[0] == '\0' || (wantsWayland && !confirmed))
+		{
+			SDL_SetHintWithPriority(SDL_HINT_VIDEO_DRIVER, "x11,wayland", SDL_HINT_OVERRIDE);
+		}
+	}
+#endif
+
 	printf("[CTR Native] Starting...\n");
 	fflush(stdout);
 
@@ -464,7 +485,14 @@ int main(int argc, char *argv[])
 
 	if (!NativeAssets_Validate())
 	{
-		return NativeConsole_Return(1);
+		if (!NativeDiscSetup_Run(1))
+		{
+			return NativeConsole_Return(1);
+		}
+	}
+	else if (gNativePresetPending)
+	{
+		NativeDiscSetup_Run(0);
 	}
 
 	NativeCustomRacer_Scan();

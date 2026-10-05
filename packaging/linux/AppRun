@@ -1,0 +1,29 @@
+#!/bin/sh
+set -eu
+
+app_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+binary="$app_dir/usr/bin/ctr_native"
+
+# Version checks should neither create user data nor require a disc image.
+if [ "$#" -eq 1 ]; then
+    case "$1" in
+        --version|-v) exec "$binary" "$@" ;;
+    esac
+fi
+
+data_dir=${CTR_TURBOCHARGED_DATA_DIR:-${XDG_DATA_HOME:-${HOME:?HOME must be set}/.local/share}/ctr-turbocharged}
+mkdir -p "$data_dir/assets/fonts"
+data_dir=$(CDPATH= cd -- "$data_dir" && pwd -P)
+
+# Only seed the distributable assets. Preserve user fonts and existing saves.
+for file in dualshock.png fonts/FuzzyBubbles-Bold.ttf fonts/FuzzyBubbles-OFL.txt \
+    fonts/LuckiestGuy-Regular.ttf fonts/LuckiestGuy-Apache-2.0.txt \
+    fonts/LuckiestGuy-NOTICE.txt fonts/README.md; do
+    if [ ! -e "$data_dir/assets/$file" ]; then
+        cp "$app_dir/usr/share/ctr-turbocharged/assets/$file" "$data_dir/assets/$file"
+    fi
+done
+
+export CTR_TURBOCHARGED_DATA_DIR="$data_dir"
+cd "$data_dir"
+exec "$binary" "$@"

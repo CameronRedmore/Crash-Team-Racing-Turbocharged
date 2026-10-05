@@ -14,7 +14,7 @@ int gNativeSmoothedSteeringEnabled = 0;
 
 static int NativePhysics_ModeMask(void)
 {
-	return (gNativeSmoothedPhysicsEnabled != 0) | ((gNativeSmoothedAIEnabled != 0) << 1) | ((gNativeSmoothedCollisionEnabled != 0) << 2) |
+	return (gNativeSmoothedPhysicsEnabled != 0) | ((gNativeSmoothedAIEnabled != 0) << 1) | ((CTR_NATIVE_SMOOTHED_COLLISION_ACTIVE) << 2) |
 	       ((gNativeSmoothedSteeringEnabled != 0) << 3);
 }
 struct NativePhysicsScalar

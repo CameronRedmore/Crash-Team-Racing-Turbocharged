@@ -39,6 +39,7 @@ int gNativePgxpMode;
 int gNativePgxpIntegerNclipEnabled;
 int gNativeRendererMode;
 int gNativeColorDepth;
+int gNativePs1ResolutionEnabled;
 int gNativeDepthBufferEnabled;
 int gNativeHdPauseMode;
 int gNativeModernMapEnabled;
@@ -48,6 +49,7 @@ int gNativeKartHue;
 int gNativeDefaultCameraFar;
 int gNativeDefaultHudSpeedometer;
 int gNativeSkipMaskHints;
+int gNativeCreditsSeen;
 int gNative60FpsEnabled;
 int gNativeMirrorModeEnabled;
 int gNativeAIRacersMode;
@@ -129,6 +131,7 @@ static const char *const s_expectedWriteOrder[] = {"language",
                                                    "projection_mode",
                                                    "projection_strength",
                                                    "preset_seen",
+                                                   "credits_seen",
                                                    "mirror_mode",
                                                    "60fps",
                                                    "frame_rate",
@@ -144,6 +147,7 @@ static const char *const s_expectedWriteOrder[] = {"language",
                                                    "pgxp",
                                                    "renderer",
                                                    "color_depth",
+                                                   "ps1_resolution",
                                                    "texture_filter",
                                                    "pgxp_integer_nclip",
                                                    "modern_minimap",
@@ -202,8 +206,8 @@ static void test_bool_keys_normalise_and_round_trip(void)
 {
 	ResetToDefaults();
 	const char *const boolKeys[] = {
-	    "mirror_mode", "default_camera_far", "default_hud_speedometer", "skip_mask_hints",  "engine_selection", "additional_unlocks",
-	    "dithering",   "borderless",         "pgxp_integer_nclip",      "modern_hud_icons", "max_lod",          "depth_buffer"};
+	    "mirror_mode", "default_camera_far", "default_hud_speedometer", "skip_mask_hints", "engine_selection", "additional_unlocks", "dithering",
+	    "borderless",  "pgxp_integer_nclip", "modern_hud_icons",        "max_lod",         "depth_buffer",     "ps1_resolution"};
 	for (unsigned int i = 0; i < sizeof(boolKeys) / sizeof(boolKeys[0]); i++)
 	{
 		const struct NativeOption *option = NativeOption_Find(boolKeys[i]);

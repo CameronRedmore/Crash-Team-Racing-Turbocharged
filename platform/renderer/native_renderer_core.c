@@ -55,6 +55,8 @@ global_variable s32 s_mainResolveHeight;
 
 // Latched at BeginScene so a menu change cannot resize the target mid-frame.
 global_variable int s_frameAntiAliasingMode = NATIVE_AA_OFF;
+// Latched with the AA mode: the main target keeps the PS1's line count.
+global_variable b32 s_framePs1Resolution = false;
 global_variable GLint s_maxSamples = 0;
 global_variable GLint s_maxRenderTargetSize = 4096;
 #endif
@@ -103,6 +105,7 @@ global_variable GLint s_presentRgbaFlipYLoc = -1;
 #ifndef __vita__
 global_variable GLint s_presentRgbaTexelSizeLoc = -1;
 global_variable GLint s_presentRgbaFxaaLoc = -1;
+global_variable GLint s_presentRgbaSharpPrescaleLoc = -1;
 global_variable GLuint s_downsampleShader = 0;
 global_variable GLint s_downsampleSrcSizeLoc = -1;
 global_variable GLint s_downsampleDstSizeLoc = -1;

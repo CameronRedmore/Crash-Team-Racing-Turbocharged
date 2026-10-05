@@ -1914,9 +1914,34 @@ static void EngineTest_SavePersistence(const char *root)
 		assert(NativeEngine_GetSelectedProfile(0) == NATIVE_ENGINE_DEFAULT);
 		assert(NativeAutoSave_GetExitPortal(GEM_STONE_VALLEY) == (version == 1 ? -1 : 3));
 		legacy.adv.reservedRewardFlags ^= 1;
+		// Start without a backup so the bad file has nothing valid to fall back to.
+		assert(NativeMemcard_RemoveFile(NATIVE_AUTOSAVE_NAME) == NATIVE_MEMCARD_OK);
 		assert(NativeMemcard_WriteSaveData(NATIVE_AUTOSAVE_NAME, "", 0, (const u8 *)&legacy, legacy.size) == NATIVE_MEMCARD_OK);
 		NativeAutoSave_Refresh();
 		assert(!NativeAutoSave_Exists());
+	}
+	// A damaged autosave must be quarantined and the previous generation restored.
+	{
+		char autoPath[512];
+		char corruptPath[512];
+		unsigned char probe[8];
+		snprintf(autoPath, sizeof(autoPath), "%s/slot0/%s", root, NATIVE_AUTOSAVE_NAME);
+		snprintf(corruptPath, sizeof(corruptPath), "%s/slot0/.%s.corrupt", root, NATIVE_AUTOSAVE_NAME);
+		assert(NativeAutoSave_Write());
+		assert(NativeAutoSave_Write());
+		FILE *damaged = fopen(autoPath, "wb");
+		assert(damaged != NULL);
+		fwrite("garbage", 1, 7, damaged);
+		fclose(damaged);
+		NativeAutoSave_Refresh();
+		assert(NativeAutoSave_Exists());
+		FILE *quarantined = fopen(corruptPath, "rb");
+		assert(quarantined != NULL);
+		assert(fread(probe, 1, 7, quarantined) == 7);
+		fclose(quarantined);
+		assert(memcmp(probe, "garbage", 7) == 0);
+		// Primary was restored, and no temp file is left behind.
+		assert(NativeMemcard_ReadSaveData(NATIVE_AUTOSAVE_NAME, probe, 4, 0) == NATIVE_MEMCARD_OK);
 	}
 	assert(NativeMemcard_RemoveRoot(root) == NATIVE_MEMCARD_OK);
 	NativeMemcard_ClearRoot();
@@ -2116,6 +2141,7 @@ int main(int argc, char **argv)
 		    {"pgxp", NATIVE_MENU_STRING_PGXP, &gNativePgxpMode, 0, NATIVE_PGXP_MODE_COUNT - 1},
 		    {"renderer", NATIVE_MENU_STRING_RENDERER, &gNativeRendererMode, 0, NATIVE_RENDERER_MODE_COUNT - 1},
 		    {"color_depth", NATIVE_MENU_STRING_COLOR_DEPTH, &gNativeColorDepth, 0, NATIVE_COLOR_DEPTH_COUNT - 1},
+		    {"ps1_resolution", NATIVE_MENU_STRING_PS1_RESOLUTION, &gNativePs1ResolutionEnabled, 0, 1},
 		    {"texture_filter", NATIVE_MENU_STRING_TEXTURE_FILTER, &g_cfg_bilinearFiltering, 0, 1},
 		    {"modern_minimap", NATIVE_MENU_STRING_MODERN_MAP, &gNativeModernMapEnabled, 0, 1},
 		    {"modern_hud_icons", NATIVE_MENU_STRING_MODERN_HUD_ICONS, &gNativeModernHudIconsEnabled, 0, 1},

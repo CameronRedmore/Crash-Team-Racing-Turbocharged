@@ -4,9 +4,16 @@ dist/
 assets/*
 !assets/vita.png
 !assets/dualshock.png
+!assets/fonts/
+assets/fonts/*
+!assets/fonts/FuzzyBubbles-Bold.ttf
+!assets/fonts/FuzzyBubbles-OFL.txt
+!assets/fonts/LuckiestGuy-Regular.ttf
+!assets/fonts/LuckiestGuy-Apache-2.0.txt
+!assets/fonts/LuckiestGuy-NOTICE.txt
+!assets/fonts/README.md
 debug/
 *.exe
-!xdelta3.exe
 *.o
 *.gch
 *.a
@@ -38,3 +45,55 @@ memcards/
 .build-temp/*
 website/*
 *.pyc
+
+# Local credentials and environment settings (keep example templates).
+*.key
+*.pem
+*.p12
+*.pfx
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Local game configuration, saves, mods, and generated caches.
+/config.ini
+/config.ini.*
+/mods/
+*.ctrr
+*.hosave
+*.ctrreplay
+*.ctrstates
+*.sdf-cache
+*.sdf-cache.*
+
+# Disc images and extracted retail data.
+*.iso
+*.cue
+*.img
+*.big
+*.BIG
+*.hwl
+*.HWL
+*.str
+*.STR
+*.XA
+*.XNF
+
+# Local executables and development checkouts.
+/ctr_native
+/tools/xdelta3
+/tools/xdelta_temp
+/worktrees/
+
+# Python caches and desktop metadata.
+__pycache__/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Generated Linux AppImage packages and extracted images.
+*.AppImage
+*.AppImage.sha256
+*.AppDir/
+squashfs-root/

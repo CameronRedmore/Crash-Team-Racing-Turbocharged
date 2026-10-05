@@ -1,6 +1,7 @@
 #include <common.h>
 
 #include "platform/native_memcard.h"
+#include "platform/native_log.h"
 
 #define NATIVE_REVERSE_TRACK_FIRST_LOGICAL_ID 18
 #define NATIVE_REVERSE_TRACK_COUNT 8
@@ -357,7 +358,10 @@ void NativeReverseTrack_SaveHighScores(void)
 		save.version = NATIVE_REVERSE_SCORE_VERSION;
 		memcpy(save.tracks, s_nativeReverseHighScores, sizeof(save.tracks));
 		save.checksum = NativeReverseTrack_Checksum(save.tracks, sizeof(save.tracks));
-		NativeMemcard_WriteSaveData(NATIVE_REVERSE_SCORE_SAVE_NAME, "", 0, (const u8 *)&save, sizeof(save));
+		if (NativeMemcard_WriteSaveData(NATIVE_REVERSE_SCORE_SAVE_NAME, "", 0, (const u8 *)&save, sizeof(save)) != NATIVE_MEMCARD_OK)
+		{
+			Platform_Log("[CTR Memcard] failed to save %s\n", NATIVE_REVERSE_SCORE_SAVE_NAME);
+		}
 	}
 
 	if (s_nativeAlternativeHighScoreLoaded)
@@ -368,7 +372,10 @@ void NativeReverseTrack_SaveHighScores(void)
 		save.version = NATIVE_ALTERNATIVE_SCORE_VERSION;
 		memcpy(&save.track, &s_nativeAlternativeHighScore, sizeof(save.track));
 		save.checksum = NativeReverseTrack_Checksum(&save.track, sizeof(save.track));
-		NativeMemcard_WriteSaveData(NATIVE_ALTERNATIVE_SCORE_SAVE_NAME, "", 0, (const u8 *)&save, sizeof(save));
+		if (NativeMemcard_WriteSaveData(NATIVE_ALTERNATIVE_SCORE_SAVE_NAME, "", 0, (const u8 *)&save, sizeof(save)) != NATIVE_MEMCARD_OK)
+		{
+			Platform_Log("[CTR Memcard] failed to save %s\n", NATIVE_ALTERNATIVE_SCORE_SAVE_NAME);
+		}
 	}
 }
 

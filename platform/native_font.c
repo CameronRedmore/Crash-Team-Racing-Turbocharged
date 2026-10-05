@@ -7,9 +7,10 @@
 
 #include "platform/native_assets.h"
 #include "platform/native_log.h"
+#include "platform/native_options.h"
 #include "platform/native_renderer.h"
 
-int gNativeFont = NATIVE_FONT_ORIGINAL;
+int gNativeFont = NATIVE_FONT_LUCKIEST_GUY;
 
 struct NativeFontDesc
 {
@@ -26,6 +27,7 @@ struct NativeFontDesc
 static const struct NativeFontDesc s_nativeFonts[NATIVE_FONT_COUNT] = {
     [NATIVE_FONT_ORIGINAL] = {"ORIGINAL", NULL, 0.0f, 0.0f},
     [NATIVE_FONT_CRASH_A_LIKE] = {"CRASH-A-LIKE", "fonts/crash-a-like.ttf", 0.05f, 0.25f},
+    [NATIVE_FONT_LUCKIEST_GUY] = {"LUCKIEST GUY", "fonts/LuckiestGuy-Regular.ttf", 0.02f, 0.25f},
 };
 
 const char *NativeFont_GetName(int font)
@@ -35,6 +37,17 @@ const char *NativeFont_GetName(int font)
 		font = NATIVE_FONT_ORIGINAL;
 	}
 	return s_nativeFonts[font].menuName;
+}
+
+int NativeFont_GetDefault(void)
+{
+	FILE *font = NativeAssets_OpenHost("fonts/crash-a-like.ttf", "rb");
+	if (font != NULL)
+	{
+		fclose(font);
+		return NATIVE_FONT_CRASH_A_LIKE;
+	}
+	return NATIVE_FONT_LUCKIEST_GUY;
 }
 
 #if NATIVE_FONT_SUPPORTED
@@ -325,6 +338,11 @@ done:
 int NativeFont_IsActive(void)
 {
 	const int font = gNativeFont;
+	// PS1 resolution keeps the retail font; the stored choice applies at HD.
+	if (gNativePs1ResolutionEnabled)
+	{
+		return 0;
+	}
 	if ((font <= NATIVE_FONT_ORIGINAL) || (font >= NATIVE_FONT_COUNT))
 	{
 		return 0;

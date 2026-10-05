@@ -67,6 +67,7 @@ void NativeRenderer_DestroyFontAtlasTexture(u32 texture)
 {
 	(void)texture;
 }
+int gNativePs1ResolutionEnabled;
 int main(int argc, char **argv)
 {
 	// The fork's font lives under assets/, which .gitignore excludes because
@@ -117,6 +118,11 @@ int main(int argc, char **argv)
 	gNativeFont = NATIVE_FONT_ORIGINAL;
 	assert(!NativeFont_IsActive());
 	gNativeFont = NATIVE_FONT_CRASH_A_LIKE;
+	assert(NativeFont_IsActive() && uploads == 2);
+	// PS1 resolution forces the retail font without dropping the loaded atlas.
+	gNativePs1ResolutionEnabled = 1;
+	assert(!NativeFont_IsActive());
+	gNativePs1ResolutionEnabled = 0;
 	assert(NativeFont_IsActive() && uploads == 2);
 	struct NativeAssetsByteBuffer bytes = {0};
 	assert(NativeAssets_ReadBytes("fonts/crash-a-like.ttf", 0, &bytes));

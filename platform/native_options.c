@@ -291,6 +291,15 @@ const struct NativeOption g_nativeOptions[] = {
         .persistent = 1,
     },
     {
+        // Set once the boot credits have played to the end; until then they
+        // can't be skipped.
+        .key = "credits_seen",
+        .kind = NATIVE_OPTION_BOOL,
+        .value = &gNativeCreditsSeen,
+        .defaultValue = 0,
+        .persistent = 1,
+    },
+    {
         .key = "mirror_mode",
         .kind = NATIVE_OPTION_BOOL,
         .value = &gNativeMirrorModeEnabled,
@@ -418,6 +427,13 @@ const struct NativeOption g_nativeOptions[] = {
         .persistent = 1,
     },
     {
+        .key = "ps1_resolution",
+        .kind = NATIVE_OPTION_BOOL,
+        .value = &gNativePs1ResolutionEnabled,
+        .defaultValue = 0,
+        .persistent = 1,
+    },
+    {
         .key = "texture_filter",
         .kind = NATIVE_OPTION_CUSTOM,
         .decode = NativeOption_DecodeTextureFilter,
@@ -466,7 +482,7 @@ const struct NativeOption g_nativeOptions[] = {
         .value = &gNativeFont,
         .minInclusive = NATIVE_FONT_ORIGINAL,
         .maxExclusive = NATIVE_FONT_COUNT,
-        .defaultValue = NATIVE_FONT_ORIGINAL,
+        .defaultValue = NATIVE_FONT_LUCKIEST_GUY,
         .persistent = 1,
     },
     {
