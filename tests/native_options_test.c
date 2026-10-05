@@ -167,7 +167,7 @@ static const char *const s_legacyOnlyKeys[] = {"custom_ai_racers", "modern_map",
 
 static void test_write_order_matches_previous_save_config(void)
 {
-	char path[] = "/tmp/ctr_options_order.ini";
+	char path[] = "ctr_options_order.ini";
 	FILE *file = fopen(path, "w");
 	assert(file != NULL);
 	assert(NativeOptions_WriteAll(file));
@@ -307,7 +307,7 @@ static void test_frame_rate_keys_share_one_index(void)
 	// frame_rate writes the rate back, 60fps writes the bool.
 	ResetToDefaults();
 	ApplyLine("frame_rate", 90);
-	char path[] = "/tmp/ctr_options_framerate.ini";
+	char path[] = "ctr_options_framerate.ini";
 	FILE *file = fopen(path, "w");
 	assert(file != NULL && NativeOptions_WriteAll(file));
 	fclose(file);

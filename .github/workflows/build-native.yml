@@ -33,7 +33,7 @@ jobs:
           dpkg --add-architecture i386
           apt-get update
           apt-get install -y --no-install-recommends \
-            git ca-certificates curl binutils cmake ninja-build clang-tidy python3 pkg-config gcc-multilib libwayland-bin \
+            git ca-certificates curl file binutils cmake ninja-build clang-tidy python3 pkg-config gcc-multilib libwayland-bin \
             libx11-dev:i386 libxext-dev:i386 libxcursor-dev:i386 libxi-dev:i386 \
             libxrandr-dev:i386 libxfixes-dev:i386 libgl-dev:i386 libegl-dev:i386 \
             libasound2-dev:i386 libpulse-dev:i386 libpipewire-0.3-dev:i386 \

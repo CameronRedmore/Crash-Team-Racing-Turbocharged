@@ -14,7 +14,7 @@ if [[ "$(uname -m)" != x86_64 ]]; then
     echo "AppImage packaging currently requires an x86_64 Linux build host." >&2
     exit 1
 fi
-for command in curl sha256sum readelf; do
+for command in curl sha256sum readelf file; do
     command -v "$command" >/dev/null || { echo "Missing packaging tool: $command" >&2; exit 1; }
 done
 build_dir="${BUILD_DIR:-build}"
