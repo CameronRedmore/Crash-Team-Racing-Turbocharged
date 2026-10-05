@@ -727,6 +727,13 @@ extern void save_config();
 
 int gNativePresetPending = 0;
 static int s_nativePresetOptionsActive;
+// Options menu context saved while the Options > Settings Preset popup is open.
+static struct RectMenu *s_nativePresetReturnParent;
+static u32 s_nativePresetReturnParentState;
+static u32 s_nativePresetReturnState;
+static s16 s_nativePresetReturnPosX;
+static s16 s_nativePresetReturnPosY;
+static s16 s_nativePresetReturnRow;
 static void MM_NativeOptionsOpenFromPreset(void);
 
 enum NativePreset
@@ -871,16 +878,24 @@ static void MM_NativePresetMenuProc(struct RectMenu *menu)
 	if (menu == &s_nativePresetOptionsMenu)
 	{
 		// Reopened from Options: Custom keeps the current settings, back changes nothing.
-		struct RectMenu *parent = menu->ptrPrevBox_InHierarchy;
 		if ((menu->rowSelected >= 0) && (menu->rowSelected != NATIVE_PRESET_CUSTOM))
 		{
 			MM_NativeApplyPreset(menu->rowSelected);
 			save_config();
 		}
+		struct RectMenu *parent = s_nativePresetReturnParent;
+		s_nativeOptionsMenu.state = s_nativePresetReturnState;
+		s_nativeOptionsMenu.posX_curr = s_nativePresetReturnPosX;
+		s_nativeOptionsMenu.posY_curr = s_nativePresetReturnPosY;
+		s_nativeOptionsMenu.rowSelected = s_nativePresetReturnRow;
+		s_nativeOptionsMenu.ptrNextBox_InHierarchy = NULL;
+		s_nativeOptionsMenu.ptrPrevBox_InHierarchy = parent;
 		if (parent != NULL)
 		{
-			parent->state &= ~(ONLY_DRAW_TITLE | DRAW_NEXT_MENU_IN_HIERARCHY);
+			parent->ptrNextBox_InHierarchy = &s_nativeOptionsMenu;
+			parent->state = s_nativePresetReturnParentState;
 		}
+		sdata->ptrDesiredMenu = (parent != NULL) ? parent : &s_nativeOptionsMenu;
 		return;
 	}
 
@@ -1483,9 +1498,15 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 	{
 		s_nativePresetOptionsMenu.rowSelected = 1;
 		s_nativePresetOptionsMenu.ptrNextBox_InHierarchy = NULL;
-		s_nativePresetOptionsMenu.ptrPrevBox_InHierarchy = menu;
-		menu->ptrNextBox_InHierarchy = &s_nativePresetOptionsMenu;
-		menu->state |= ONLY_DRAW_TITLE | DRAW_NEXT_MENU_IN_HIERARCHY;
+		s_nativePresetOptionsMenu.ptrPrevBox_InHierarchy = NULL;
+		s_nativePresetReturnParent = menu->ptrPrevBox_InHierarchy;
+		s_nativePresetReturnParentState = (s_nativePresetReturnParent != NULL) ? s_nativePresetReturnParent->state : 0;
+		s_nativePresetReturnState = menu->state;
+		s_nativePresetReturnPosX = menu->posX_curr;
+		s_nativePresetReturnPosY = menu->posY_curr;
+		s_nativePresetReturnRow = menu->rowSelected;
+		// opened standalone (not as a hierarchy child) so it keeps its own centered position
+		sdata->ptrDesiredMenu = &s_nativePresetOptionsMenu;
 		return;
 	}
 
