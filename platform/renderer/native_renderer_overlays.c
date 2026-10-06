@@ -458,6 +458,139 @@ void NativeRenderer_DrawDebugOverlayFrame(void)
 {
 	NativeRenderer_DrawDebugOverlay();
 }
+
+#define NATIVE_BUSY_MESSAGE_MAX_CHARS 64
+#define NATIVE_BUSY_MESSAGE_PAD       4
+
+internal void NativeRenderer_BusyMessageDrawLine(u8 *pixels, int texW, int row, const char *text, int textW, u8 r, u8 g, u8 b)
+{
+	const int originX = (texW - textW * NATIVE_DEBUG_OVERLAY_GLYPH) / 2;
+	for (int ci = 0; text[ci] != '\0' && ci < textW; ci++)
+	{
+		const int c = (unsigned char)text[ci];
+		if ((c < NATIVE_DEBUG_FONT_FIRST) || (c > NATIVE_DEBUG_FONT_LAST))
+			continue;
+		const unsigned char *glyph = &s_nativeDebugFont[(c - NATIVE_DEBUG_FONT_FIRST) * 8];
+		for (int gy = 0; gy < 8; gy++)
+		{
+			for (int gx = 0; gx < 8; gx++)
+			{
+				if (!(glyph[gy] & (1 << gx)))
+					continue;
+				u8 *dst =
+				    &pixels[(((row * NATIVE_DEBUG_OVERLAY_GLYPH) + NATIVE_BUSY_MESSAGE_PAD + gy) * texW + originX + ci * NATIVE_DEBUG_OVERLAY_GLYPH + gx) * 4];
+				dst[0] = r;
+				dst[1] = g;
+				dst[2] = b;
+				dst[3] = 255;
+			}
+		}
+	}
+}
+
+void NativeRenderer_ShowBusyMessage(const char *title, const char *detail, int percent)
+{
+	static u8 pixels[(NATIVE_BUSY_MESSAGE_MAX_CHARS * NATIVE_DEBUG_OVERLAY_GLYPH) * (5 * NATIVE_DEBUG_OVERLAY_GLYPH + 2 * NATIVE_BUSY_MESSAGE_PAD) * 4];
+	static TextureID texture = 0;
+
+	const char *lines[2] = {title != NULL ? title : "", detail != NULL ? detail : ""};
+	int chars = 32;
+	for (int i = 0; i < 2; i++)
+	{
+		int len = (int)strlen(lines[i]);
+		if (len > NATIVE_BUSY_MESSAGE_MAX_CHARS)
+			len = NATIVE_BUSY_MESSAGE_MAX_CHARS;
+		if (len > chars)
+			chars = len;
+	}
+	const int texW = chars * NATIVE_DEBUG_OVERLAY_GLYPH;
+	const int texH = 5 * NATIVE_DEBUG_OVERLAY_GLYPH + 2 * NATIVE_BUSY_MESSAGE_PAD;
+	memset(pixels, 0, (size_t)texW * (size_t)texH * 4);
+	NativeRenderer_BusyMessageDrawLine(pixels, texW, 0, lines[0], chars, 255, 220, 80);
+	NativeRenderer_BusyMessageDrawLine(pixels, texW, 2, lines[1], chars, 230, 230, 230);
+
+	// Progress bar: a 1px outline and a fill proportional to percent.
+	if (percent < 0)
+		percent = 0;
+	if (percent > 100)
+		percent = 100;
+	const int barTop = 4 * NATIVE_DEBUG_OVERLAY_GLYPH + NATIVE_BUSY_MESSAGE_PAD + 1;
+	const int barHeight = NATIVE_DEBUG_OVERLAY_GLYPH - 2;
+	const int fillWidth = ((texW - 4) * percent) / 100;
+	for (int y = 0; y < barHeight; y++)
+	{
+		for (int x = 0; x < texW; x++)
+		{
+			const int outline = (y == 0) || (y == barHeight - 1) || (x == 0) || (x == texW - 1);
+			const int fill = (x >= 2) && (x < 2 + fillWidth) && (y >= 2) && (y < barHeight - 2);
+			if (!outline && !fill)
+				continue;
+			u8 *dst = &pixels[((barTop + y) * texW + x) * 4];
+			dst[0] = outline ? 230 : 255;
+			dst[1] = outline ? 230 : 220;
+			dst[2] = outline ? 230 : 80;
+			dst[3] = 255;
+		}
+	}
+
+	const int windowW = (g_windowWidth > 0) ? g_windowWidth : 640;
+	const int windowH = (g_windowHeight > 0) ? g_windowHeight : 480;
+	int scale = windowH / 360;
+	while (scale > 1 && texW * scale > windowW)
+		scale--;
+	if (scale < 1)
+		scale = 1;
+
+	// Save everything the scene may rely on; this runs between its draws.
+	GLint previousFramebuffer = 0, previousViewport[4] = {0}, previousVertexArray = 0, previousProgram = 0;
+	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previousFramebuffer);
+	glGetIntegerv(GL_VIEWPORT, previousViewport);
+	glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &previousVertexArray);
+	glGetIntegerv(GL_CURRENT_PROGRAM, &previousProgram);
+	const int previousScissor = s_previousScissorState;
+	const int previousDepthMode = s_previousDepthMode;
+	const int previousDepthWrite = s_previousDepthWrite;
+	const GLboolean previousStencilEnabled = glIsEnabled(GL_STENCIL_TEST);
+
+	if (texture == 0)
+		glGenTextures(1, &texture);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texW, texH, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+	NativeRenderer_InvalidateTextureBinding();
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	NativeRenderer_SetScissorState(0);
+	NativeRenderer_SetBlendMode(BM_NONE);
+	NativeRenderer_EnableDepth(0);
+	glDisable(GL_STENCIL_TEST);
+	glViewport(0, 0, windowW, windowH);
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT);
+	glEnable(GL_BLEND);
+	glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
+	glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+	NativeRenderer_DrawGhostReplayQuad(texture, (windowW - texW * scale) / 2, (windowH - texH * scale) / 2, texW * scale, texH * scale);
+	glDisable(GL_BLEND);
+	glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
+	glBlendFuncSeparate(GL_ONE, GL_ZERO, GL_ONE, GL_ZERO);
+	NativeRenderer_SwapWindow();
+
+	glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)previousFramebuffer);
+	glViewport(previousViewport[0], previousViewport[1], previousViewport[2], previousViewport[3]);
+	glBindVertexArray((GLuint)previousVertexArray);
+	glUseProgram((GLuint)previousProgram);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	if (previousStencilEnabled)
+		glEnable(GL_STENCIL_TEST);
+	NativeRenderer_SetDepthState(previousDepthMode, previousDepthWrite);
+	NativeRenderer_SetScissorState(previousScissor);
+	NativeRenderer_InvalidateBindingCache();
+}
 #endif
 
 void NativeRenderer_DrawGhostReplayOverlay(void)

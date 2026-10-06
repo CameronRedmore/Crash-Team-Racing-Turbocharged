@@ -57,6 +57,13 @@ void Platform_LogError(const char *fmt, ...)
 	vfprintf(stderr, fmt, a);
 	va_end(a);
 }
+void Platform_RunBusyTask(const char *title, const char *detail, int (*task)(void *), void *arg, volatile int *progress)
+{
+	(void)title;
+	(void)detail;
+	(void)progress;
+	task(arg);
+}
 u32 NativeRenderer_CreateFontAtlasTexture(int w, int h, const u8 *pixels)
 {
 	uploadedHash = NativeFont_Hash(2166136261u, pixels, (size_t)w * h);

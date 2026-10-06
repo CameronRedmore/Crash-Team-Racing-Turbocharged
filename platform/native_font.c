@@ -1,5 +1,6 @@
 #include <macros.h>
 #include "platform/native_font.h"
+#include <platform.h>
 
 #include <math.h>
 #include <stdlib.h>
@@ -185,28 +186,26 @@ internal void NativeFont_WriteCache(const char *path, u32 key, const u8 *atlas)
 	remove(tempPath);
 }
 
-internal b32 NativeFont_Build(int font)
+// Rasterises the atlas and fills the glyph tables without touching OpenGL, so
+// it can run on a worker thread while the game thread keeps the window alive.
+struct NativeFontRasterTask
 {
-	const struct NativeFontDesc *desc = &s_nativeFonts[font];
-	struct NativeAssetsByteBuffer bytes = {0};
+	const struct NativeFontDesc *desc;
+	const struct NativeAssetsByteBuffer *bytes;
+	volatile int progress;
+	u8 *atlas;
+	float emPixels;
+	b32 ok;
+};
+
+internal int NativeFont_Rasterise(void *arg)
+{
+	struct NativeFontRasterTask *task = (struct NativeFontRasterTask *)arg;
+	const struct NativeFontDesc *desc = task->desc;
+	const struct NativeAssetsByteBuffer bytes = *task->bytes;
 	stbtt_fontinfo info;
 	u8 *atlas = NULL;
-	b32 ok = false;
 
-	if (!NativeAssets_ReadBytes(desc->path, NATIVE_ASSET_READ_DATA_FILE, &bytes))
-	{
-		Platform_LogError("[CTR Font] Failed to read assets/%s\n", desc->path);
-		return false;
-	}
-	char cachePath[256];
-	const u32 cacheKey = NativeFont_CacheKey(desc, &bytes);
-	const b32 cachePathValid = snprintf(cachePath, sizeof(cachePath), "%s.sdf-cache", desc->path) < (int)sizeof(cachePath);
-	if (cachePathValid && NativeFont_ReadCache(cachePath, cacheKey))
-	{
-		Platform_Log("[CTR Font] Loaded %s from atlas cache\n", desc->menuName);
-		ok = true;
-		goto done;
-	}
 	if (!stbtt_InitFont(&info, bytes.data, stbtt_GetFontOffsetForIndex(bytes.data, 0)))
 	{
 		Platform_LogError("[CTR Font] assets/%s is not a usable TrueType font\n", desc->path);
@@ -254,6 +253,7 @@ internal b32 NativeFont_Build(int font)
 
 	for (int c = 0; c < NATIVE_FONT_GLYPH_COUNT; c++)
 	{
+		task->progress = (c * 100) / NATIVE_FONT_GLYPH_COUNT;
 		const int cell = NativeFont_CellForCharacter(c);
 		if ((cell < 0) || (stbtt_FindGlyphIndex(&info, c) == 0))
 		{
@@ -319,6 +319,46 @@ internal b32 NativeFont_Build(int font)
 
 	int hx0, hy0, hx1, hy1;
 	s_nativeFont.capHeight = stbtt_GetCodepointBox(&info, 'H', &hx0, &hy0, &hx1, &hy1) ? (float)hy1 / emUnits : (float)ascent / emUnits;
+
+	task->atlas = atlas;
+	task->emPixels = emPixels;
+	task->ok = true;
+	return 0;
+
+done:
+	free(atlas);
+	return 0;
+}
+
+internal b32 NativeFont_Build(int font)
+{
+	const struct NativeFontDesc *desc = &s_nativeFonts[font];
+	struct NativeAssetsByteBuffer bytes = {0};
+	u8 *atlas = NULL;
+	b32 ok = false;
+
+	if (!NativeAssets_ReadBytes(desc->path, NATIVE_ASSET_READ_DATA_FILE, &bytes))
+	{
+		Platform_LogError("[CTR Font] Failed to read assets/%s\n", desc->path);
+		return false;
+	}
+	char cachePath[256];
+	const u32 cacheKey = NativeFont_CacheKey(desc, &bytes);
+	const b32 cachePathValid = snprintf(cachePath, sizeof(cachePath), "%s.sdf-cache", desc->path) < (int)sizeof(cachePath);
+	if (cachePathValid && NativeFont_ReadCache(cachePath, cacheKey))
+	{
+		Platform_Log("[CTR Font] Loaded %s from atlas cache\n", desc->menuName);
+		ok = true;
+		goto done;
+	}
+	struct NativeFontRasterTask task = {.desc = desc, .bytes = &bytes};
+	Platform_RunBusyTask("BUILDING FONT CACHE", "This only happens once. Please wait...", NativeFont_Rasterise, &task, &task.progress);
+	if (!task.ok)
+	{
+		goto done;
+	}
+	atlas = task.atlas;
+	const float emPixels = task.emPixels;
 
 	s_nativeFont.atlasTexture = NativeRenderer_CreateFontAtlasTexture(NATIVE_FONT_ATLAS_SIZE, NATIVE_FONT_ATLAS_SIZE, atlas);
 	ok = s_nativeFont.atlasTexture != 0;
