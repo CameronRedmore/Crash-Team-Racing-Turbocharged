@@ -178,9 +178,9 @@ The roadmap now lives on the website: [ctr.cmzi.uk/#roadmap](https://ctr.cmzi.uk
 
 ### Experimental testing
 
-These builds exist but are not part of the supported releases yet. Expect bugs, and see the Known Issues above about ghosts, replays and saves moving between builds.
+These builds exist but are not part of the supported releases yet. Expect bugs, and see the Known Issues above about ghosts, replays and saves moving between builds. They come from the `64bit-2026.10` branch's own workflow ([Build experimental 64-bit builds](https://github.com/CameronRedmore/Crash-Team-Racing-Turbocharged/actions/workflows/build-native-64bit.yml)), and [the website](https://ctr.cmzi.uk) lists them below the 32-bit downloads as experimental.
 
-- 64-bit build (x86-64 Linux): builds and boots; wider testing is still in progress.
+- 64-bit build (x64 Windows and Linux): x86-64 Linux plays races; Windows x64 has only been run under Wine.
 - ARM build (ARM64 Linux and Windows on ARM): Windows on ARM has been confirmed to boot and play races on one Surface Laptop 7. ARM64 Linux has only been built and run through the automated tests under emulation, not played on real hardware.
 
 ## Special controls bindings

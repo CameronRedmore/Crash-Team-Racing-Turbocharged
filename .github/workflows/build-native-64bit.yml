@@ -1,31 +1,39 @@
-name: Build native ARM64 builds
+name: Build experimental 64-bit builds
 
-# Experimental 64-bit (CTR_NATIVE_64BIT) builds for ARM64 Linux and Windows on
-# ARM, built and tested on native GitHub-hosted ARM runners. The 32-bit x86
-# builds live in build-native.yml.
+# Experimental 64-bit (CTR_NATIVE_64BIT) builds: x64 and ARM64, for Windows
+# and Linux, built and tested on native GitHub-hosted runners. Only the 64-bit
+# branch runs this, so the supported 32-bit builds in build-native.yml (which
+# the website offers first) are unaffected. The website lists these
+# artifacts as experimental.
 # Packages contain no game assets: players must supply their own ctr-u.bin.
 
 on:
   push:
     branches:
-      - turbocharged
-      - native-renderer
-      - 64bit
       - 64bit-2026.10
-  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: build-native-arm64-${{ github.ref }}
+  group: build-native-64bit-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  linux-arm64:
-    name: Linux ARM64
-    runs-on: ubuntu-24.04-arm
+  linux:
+    name: Linux ${{ matrix.label }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: x64
+            arch: x64
+            runner: ubuntu-24.04
+          - label: ARM64
+            arch: arm64
+            runner: ubuntu-24.04-arm
     # Build against Ubuntu 22.04's glibc so the binary runs on older distros too.
     container: ubuntu:22.04
     env:
@@ -41,8 +49,7 @@ jobs:
             libasound2-dev libpulse-dev libpipewire-0.3-dev \
             libjack-jackd2-dev libudev-dev libdbus-1-dev \
             libibus-1.0-dev libusb-1.0-0-dev libwayland-dev \
-            libxkbcommon-dev libdecor-0-dev libdrm-dev libgbm-dev \
-            xvfb libgl1-mesa-dri libgl1
+            libxkbcommon-dev libdecor-0-dev libdrm-dev libgbm-dev
 
       - name: Checkout
         uses: actions/checkout@v6
@@ -52,58 +59,67 @@ jobs:
       - name: Trust workspace
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
+      # CTR_NATIVE_RENDERER_TESTS stays off: those tests still store host
+      # pointers in game fields and do not build with CTR_NATIVE_64BIT yet.
       - name: Configure
         run: >
           cmake -S . -B build -G Ninja
           -DCMAKE_BUILD_TYPE=Release
           -DCTR_NATIVE_64BIT=ON
           -DBUILD_TESTING=ON
-          -DCTR_NATIVE_RENDERER_TESTS=ON
 
       - name: Build
         run: cmake --build build
 
-      # Same split as the x86 Linux job: the unlabelled subset never creates a
-      # GL context; the gpu subset runs under Mesa's software rasteriser and
-      # reports 77 (a skip) on a runner that cannot provide a context.
-      - name: Test (headless)
-        run: ctest --test-dir build --output-on-failure -LE gpu
-
-      - name: Test (renderer, software GL)
-        run: xvfb-run -a ctest --test-dir build --output-on-failure -L gpu
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
 
       - name: Package
         id: package
         shell: bash
         env:
           REF_NAME: ${{ github.head_ref || github.ref_name }}
-          CTR_ARCH: arm64
+          CTR_ARCH: ${{ matrix.arch }}
         run: |
           version="${REF_NAME//\//-}-${GITHUB_SHA::7}"
           ./package.sh linux "$version"
-          archive="dist/ctr-turbocharged-${version}-linux-arm64.tar.gz"
+          archive="dist/ctr-turbocharged-${version}-linux-${CTR_ARCH}.tar.gz"
           echo "archive=$archive" >> "$GITHUB_OUTPUT"
           echo "- \`$(cat "$archive.sha256")\`" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload Linux ARM64 tarball
+      - name: Upload Linux tarball
         uses: actions/upload-artifact@v7
         with:
-          name: linux-arm64-tarball
+          name: linux-${{ matrix.arch }}-tarball
           path: ${{ steps.package.outputs.archive }}
           # Upload the tarball as-is: it keeps the executable bit, which zips drop.
           archive: false
           if-no-files-found: error
 
-      - name: Upload Linux ARM64 checksum
+      - name: Upload Linux checksum
         uses: actions/upload-artifact@v7
         with:
-          name: linux-arm64-checksums
+          name: linux-${{ matrix.arch }}-checksums
           path: ${{ steps.package.outputs.archive }}.sha256
           if-no-files-found: error
 
-  windows-arm64:
-    name: Windows ARM64
-    runs-on: windows-11-arm
+  windows:
+    name: Windows ${{ matrix.label }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: x64
+            arch: x64
+            runner: windows-latest
+            msystem: CLANG64
+            package-prefix: mingw-w64-clang-x86_64
+          - label: ARM64
+            arch: arm64
+            runner: windows-11-arm
+            msystem: CLANGARM64
+            package-prefix: mingw-w64-clang-aarch64
     defaults:
       run:
         shell: msys2 {0}
@@ -113,17 +129,17 @@ jobs:
         shell: pwsh
         run: git config --global core.autocrlf false
 
-      - name: Install MSYS2 CLANGARM64 toolchain
+      - name: Install MSYS2 ${{ matrix.msystem }} toolchain
         uses: msys2/setup-msys2@v2
         with:
-          msystem: CLANGARM64
+          msystem: ${{ matrix.msystem }}
           update: true
           install: >-
             git
             zip
-            mingw-w64-clang-aarch64-clang
-            mingw-w64-clang-aarch64-cmake
-            mingw-w64-clang-aarch64-ninja
+            ${{ matrix.package-prefix }}-clang
+            ${{ matrix.package-prefix }}-cmake
+            ${{ matrix.package-prefix }}-ninja
 
       - name: Checkout
         uses: actions/checkout@v6
@@ -148,11 +164,11 @@ jobs:
         id: package
         env:
           REF_NAME: ${{ github.head_ref || github.ref_name }}
-          CTR_ARCH: arm64
+          CTR_ARCH: ${{ matrix.arch }}
         run: |
           version="${REF_NAME//\//-}-${GITHUB_SHA::7}"
           ./package.sh windows "$version"
-          archive="dist/ctr-turbocharged-${version}-windows-arm64.zip"
+          archive="dist/ctr-turbocharged-${version}-windows-${CTR_ARCH}.zip"
           echo "archive=$archive" >> "$GITHUB_OUTPUT"
           echo "- \`$(cat "$archive.sha256")\`" >> "$GITHUB_STEP_SUMMARY"
 
@@ -163,9 +179,6 @@ jobs:
           archive: false
           if-no-files-found: error
 
-  # Cross-compiled from x86 Linux, so the toolchain files in cmake/toolchains
-  # stay working. The Windows binary cannot run here, so this only proves it
-  # builds; the native windows-arm64 job above runs its tests.
   cross-builds:
     name: Cross-compile check (${{ matrix.name }})
     runs-on: ubuntu-24.04

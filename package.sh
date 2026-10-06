@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Package the current build for release.
 #
-# usage: [CTR_ARCH=x86|arm64] ./package.sh <linux|windows> [version]
-# CTR_ARCH only labels the package (default x86); it must match the build.
+# usage: [CTR_ARCH=x86|x64|arm64] ./package.sh <linux|windows> [version]
+# CTR_ARCH only labels the package (default x86, the 32-bit build); it must
+# match the build. x64 and arm64 are the experimental 64-bit builds.
 #
 # Game assets are never packaged. The package is built from an explicit
 # allowlist and the script fails if anything else ends up in it.
@@ -26,8 +27,8 @@ BUILD_DIR="${BUILD_DIR:-build}"
 DIST_DIR="${DIST_DIR:-dist}"
 ARCH="${CTR_ARCH:-x86}"
 case "${ARCH}" in
-    x86|arm64) ;;
-    *) echo "package.sh: CTR_ARCH must be x86 or arm64" >&2; exit 2 ;;
+    x86|x64|arm64) ;;
+    *) echo "package.sh: CTR_ARCH must be x86, x64 or arm64" >&2; exit 2 ;;
 esac
 
 case "${PLATFORM}" in
@@ -80,9 +81,16 @@ for font_file in "${font_files[@]}"; do
     cp "assets/fonts/$font_file" "${PACKAGE_DIR}/assets/fonts/"
 done
 
-if [[ "${PLATFORM}" == "linux" && "${ARCH}" == "arm64" ]]; then
-    REQUIREMENTS="Linux ARM64 requirements (experimental 64-bit build):
-- aarch64 Linux with a 64-bit glibc
+if [[ "${PLATFORM}" == "linux" && "${ARCH}" != "x86" ]]; then
+    if [[ "${ARCH}" == "arm64" ]]; then
+        LINUX_CPU="aarch64 Linux"
+        LINUX_LABEL="Linux ARM64"
+    else
+        LINUX_CPU="x86_64 Linux"
+        LINUX_LABEL="Linux x64"
+    fi
+    REQUIREMENTS="${LINUX_LABEL} requirements (experimental 64-bit build):
+- ${LINUX_CPU} with a 64-bit glibc
 - OpenGL 3.3 (or compatible) capable GPU/driver
 - X11 or Wayland runtime libraries
 - ALSA/PulseAudio/PipeWire runtime libraries
@@ -95,6 +103,10 @@ If the game does not launch, run it from a terminal and include:
 elif [[ "${PLATFORM}" == "windows" && "${ARCH}" == "arm64" ]]; then
     REQUIREMENTS="Windows ARM64 requirements (experimental 64-bit build):
 - Windows 11 on ARM
+- OpenGL 3.3 capable GPU/driver"
+elif [[ "${PLATFORM}" == "windows" && "${ARCH}" == "x64" ]]; then
+    REQUIREMENTS="Windows x64 requirements (experimental 64-bit build):
+- 64-bit Windows 10 or 11
 - OpenGL 3.3 capable GPU/driver"
 elif [[ "${PLATFORM}" == "linux" ]]; then
     REQUIREMENTS="Linux requirements:
