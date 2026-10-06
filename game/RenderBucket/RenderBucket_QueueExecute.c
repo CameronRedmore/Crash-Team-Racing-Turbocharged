@@ -2443,22 +2443,22 @@ static struct RenderBucketEntry *RenderBucket_QueueDraw(struct Instance *inst, s
 	return rbi + 1;
 }
 
-static struct Instance **RenderBucket_GetVisibleLevelInstances(const struct CameraDC *camera)
+static P32(struct Instance *) * RenderBucket_GetVisibleLevelInstances(const struct CameraDC *camera)
 {
 #if defined(CTR_NATIVE)
 	// Expanded visibility replaces the camera-cell list with every instance a
 	// PVS list can reach. QueueDraw still checks each against the camera
 	// frustum. A camera without a list draws no level instances, as in retail.
-	if (NativeAspect_UsesExpandedVisibility() && P32_GET(struct Instance * *const, camera->visInstSrc) != NULL)
+	if (NativeAspect_UsesExpandedVisibility() && P32_GET(P32(struct Instance *) *, camera->visInstSrc) != NULL)
 	{
-		struct Instance **reachable = LevInstDef_GetReachableInstances(P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1));
+		P32(struct Instance *) *reachable = LevInstDef_GetReachableInstances(P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1));
 		if (reachable != NULL)
 		{
 			return reachable;
 		}
 	}
 #endif
-	return P32_GET(struct Instance * *const, camera->visInstSrc);
+	return P32_GET(P32(struct Instance *) *, camera->visInstSrc);
 }
 
 void *RenderBucket_QueueLevInstances(struct CameraDC *cDC, struct OTMem *otState, void *rbi, u32 lodMask, u8 numPlyr, int gameMode1)
@@ -2487,13 +2487,13 @@ void *RenderBucket_QueueLevInstances(struct CameraDC *cDC, struct OTMem *otState
 	if (NativeAdhoc_IsSingleViewRenderActive())
 	{
 		int player = NativeAdhoc_GetLocalPlayerIndex();
-		struct Instance **visInstSrc = RenderBucket_GetVisibleLevelInstances(&cDC[player]);
+		P32(struct Instance *) *visInstSrc = RenderBucket_GetVisibleLevelInstances(&cDC[player]);
 
 		if (visInstSrc != 0)
 		{
-			for (; *visInstSrc != 0; visInstSrc++)
+			for (; P32_GET(struct Instance *, *visInstSrc) != 0; visInstSrc++)
 			{
-				entry = RenderBucket_QueueDraw(*visInstSrc, entry, player, lodMask, gameMode1, &queueState);
+				entry = RenderBucket_QueueDraw(P32_GET(struct Instance *, *visInstSrc), entry, player, lodMask, gameMode1, &queueState);
 			}
 		}
 	}
@@ -2501,7 +2501,7 @@ void *RenderBucket_QueueLevInstances(struct CameraDC *cDC, struct OTMem *otState
 #endif
 	for (int player = count - 1; player >= 0; player--)
 	{
-		struct Instance **visInstSrc = RenderBucket_GetVisibleLevelInstances(&cDC[player]);
+		P32(struct Instance *) *visInstSrc = RenderBucket_GetVisibleLevelInstances(&cDC[player]);
 
 		if (visInstSrc == 0)
 		{

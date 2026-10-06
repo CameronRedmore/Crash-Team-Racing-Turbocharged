@@ -13,6 +13,8 @@
 int gNativeDepthBufferEnabled;
 int gNativePgxpMode;
 int gNativePreciseMinimapEnabled;
+int gNativeModernMapEnabled;
+int gNativeModernHudIconsEnabled;
 
 void Platform_LogError(const char *fmt, ...)
 {

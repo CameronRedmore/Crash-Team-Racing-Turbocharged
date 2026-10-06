@@ -452,7 +452,7 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 	if ((FPS_HALF(sdata->frameCounter) & 4) == 0)
 		arrowColor = RED;
 	u32 *arrowColors = P32_GET(u32 *, data.ptrColor[(s32)arrowColor]);
-	struct Icon **iconPtrArray = ICONGROUP_GETICONS(gGT->iconGroup[4]);
+	P32(struct Icon *) *iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[4]));
 #ifdef CTR_NATIVE
 	if (showEngineSelector)
 	{
@@ -461,9 +461,10 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 		// Font cap center: 1.25 px top gap + half of its 5.5 px height.
 		DecalFont_DrawLine(engineLabel, classNamePosX, engineLabelY, FONT_SMALL, JUSTIFY_CENTER | ORANGE);
 		for (int side = 0; side < 2; side++)
-			DecalHUD_Arrow2D(iconPtrArray[GARAGE_CHARACTER_ARROW_ICON_INDEX], (int)classNamePosX + (side ? selectorHalfWidth + 12 : -selectorHalfWidth - 12),
-			                 selectorCenterY, primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), arrowColors[0], arrowColors[1], arrowColors[2],
-			                 arrowColors[3], 0, GARAGE_CHARACTER_ARROW_SCALE, side ? 0 : GARAGE_CHARACTER_ARROW_ROT_LEFT);
+			DecalHUD_Arrow2D(P32_GET(struct Icon *, iconPtrArray[GARAGE_CHARACTER_ARROW_ICON_INDEX]),
+			                 (int)classNamePosX + (side ? selectorHalfWidth + 12 : -selectorHalfWidth - 12), selectorCenterY, primMem,
+			                 P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), arrowColors[0], arrowColors[1], arrowColors[2], arrowColors[3], 0,
+			                 GARAGE_CHARACTER_ARROW_SCALE, side ? 0 : GARAGE_CHARACTER_ARROW_ROT_LEFT);
 	}
 #endif
 
@@ -490,7 +491,7 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 	int arrowRot[2] = {GARAGE_CHARACTER_ARROW_ROT_LEFT, 0};
 	for (int i = 0; !showEngineSelector && i < 2; i++)
 	{
-		DecalHUD_Arrow2D(iconPtrArray[GARAGE_CHARACTER_ARROW_ICON_INDEX], arrowPos[i], arrowY,
+		DecalHUD_Arrow2D(P32_GET(struct Icon *, iconPtrArray[GARAGE_CHARACTER_ARROW_ICON_INDEX]), arrowPos[i], arrowY,
 
 		                 primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT),
 

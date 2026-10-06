@@ -1243,9 +1243,9 @@ static void RenderAllLevelGeometry_Native(struct GameTracker *gGT, struct Level 
 		}
 		RenderAllLevelGeometry_ApplyNativeMaxLod(scratch);
 
-		gGT->bspLeafsDrawn += RenderLists_Init1P2P(
-		    P32_GET(struct BSP *, ptr_mesh_info->bspRoot), P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visLeafList[i]), pushBuffer,
-		    (u32)&gGT->LevRenderLists[i], P32_GET(struct VisMemBspListNode *, P32_GET(struct VisMem *, gGT->visMem1)->bspList[i]), 1);
+		gGT->bspLeafsDrawn += RenderLists_Init1P2P(P32_GET(struct BSP *, ptr_mesh_info->bspRoot),
+		                                           P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visLeafList[i]), pushBuffer, &gGT->LevRenderLists[i],
+		                                           P32_GET(struct VisMemBspListNode *, P32_GET(struct VisMem *, gGT->visMem1)->bspList[i]), 1);
 		NativeDrawLevel_Viewport(pushBuffer, &P32_GET(struct DB *, gGT->backBuffer)->primMem, ptr_mesh_info, &gGT->LevRenderLists[i],
 		                         P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visFaceList[i]),
 		                         P32_GET(struct TextureLayout *, level1->ptr_tex_waterEnvMap));

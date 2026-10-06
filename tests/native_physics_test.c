@@ -143,8 +143,10 @@ static void near(double a, double b)
 
 static void test_frame_rates(void)
 {
-	struct Driver d = {.driverID = 8};
-	struct Terrain terrain = {.turnResponseScale = 128};
+	static struct Driver d;
+	d = (struct Driver){.driverID = 8};
+	static struct Terrain terrain;
+	terrain = (struct Terrain){.turnResponseScale = 128};
 	NativePhysics_SetEnabled(1);
 	NativePhysics_SetDomain(NATIVE_PHYSICS_AI, 1);
 	for (int option = 0; option < NATIVE_FRAME_RATE_COUNT; option++)
@@ -184,7 +186,8 @@ static void test_frame_rates(void)
 		near(NativePhysics_ReadVelocity(&d).y, -90);
 		// Oxide Station's low-gravity quads retain the same 41% gravity at
 		// every simulation rate, independently of the adhesion multiplier.
-		struct QuadBlock lowGravity = {.quadFlags = QUADBLOCK_FLAG_LOW_GRAVITY};
+		static struct QuadBlock lowGravity;
+		lowGravity = (struct QuadBlock){.quadFlags = QUADBLOCK_FLAG_LOW_GRAVITY};
 		P32_SET(d.underDriver, &lowGravity);
 		NativePhysics_WriteVelocity(&d, (NativePhysicsVec){0});
 		for (int frame = 0; frame < rate; frame++)
@@ -207,8 +210,14 @@ static void test_frame_rates(void)
 		NativePhysics_Steer(&d);
 		near(NATIVE_PHYSICS_READ(&d, rotationSpinRate), 1.5 * 30 / rate);
 		NativePhysics_SetDomain(NATIVE_PHYSICS_STEERING, 0);
-		struct Driver a = {.driverID = 9, .const_CollisionWeight = 1}, b = {.driverID = 10, .const_CollisionWeight = 1};
-		struct Thread ta = {.object = &a, .driverHitRadius = 10}, tb = {.object = &b, .driverHitRadius = 10};
+		static struct Driver a, b;
+		a = (struct Driver){.driverID = 9, .const_CollisionWeight = 1};
+		b = (struct Driver){.driverID = 10, .const_CollisionWeight = 1};
+		static struct Thread ta, tb;
+		ta = (struct Thread){.driverHitRadius = 10};
+		tb = (struct Thread){.driverHitRadius = 10};
+		P32_SET(ta.object, &a);
+		P32_SET(tb.object, &b);
 		struct DriverCollisionSearch search = {0};
 		P32_SET(search.bucket.th, &tb);
 		Vec3 output;
@@ -234,7 +243,8 @@ static void test_frame_rates(void)
 static void test_mud_drag(void)
 {
 	// Isolate the speed-dependent mud rules from ordinary constant friction.
-	struct Terrain terrain = {.flags = TERRAIN_FLAG_MUD_PHYSICS, .groundFrictionScale = 512, .speedMultiplier = 256};
+	static struct Terrain terrain;
+	terrain = (struct Terrain){.flags = TERRAIN_FLAG_MUD_PHYSICS, .groundFrictionScale = 512, .speedMultiplier = 256};
 	NativePhysics_SetEnabled(1);
 	NativePhysics_SetDomain(NATIVE_PHYSICS_STEERING, 0);
 	for (int option = 0; option < NATIVE_FRAME_RATE_COUNT; option++)
@@ -243,16 +253,17 @@ static void test_mud_drag(void)
 		int rate = CTR_FRAMES_PER_SECOND;
 		for (int direction = -1; direction <= 1; direction += 2)
 		{
-			struct Driver d = {.driverID = 12,
-			                   .terrainMeta1 = &terrain,
-			                   .terrainMeta2 = &terrain,
-			                   .actionsFlagSet = ACTION_TOUCH_GROUND,
-			                   .actionsFlagSetPrevFrame = ACTION_TOUCH_GROUND,
-			                   .baseSpeed = direction * 4096,
-			                   .const_SlopeForwardSpeedBonus = 30000,
-			                   .const_SideSpeedClamp = 30000,
-			                   .const_TerminalVelocity = 30000};
+			static struct Driver d;
+			d = (struct Driver){.driverID = 12,
+			                    .actionsFlagSet = ACTION_TOUCH_GROUND,
+			                    .actionsFlagSetPrevFrame = ACTION_TOUCH_GROUND,
+			                    .baseSpeed = direction * 4096,
+			                    .const_SlopeForwardSpeedBonus = 30000,
+			                    .const_SideSpeedClamp = 30000,
+			                    .const_TerminalVelocity = 30000};
 			d.matrixMovingDir.m[0][0] = d.matrixMovingDir.m[1][1] = d.matrixMovingDir.m[2][2] = 4096;
+			P32_SET(d.terrainMeta1, &terrain);
+			P32_SET(d.terrainMeta2, &terrain);
 			// Also exercise braking against the direction of travel.
 			for (int opposing = 0; opposing <= 1; opposing++)
 			{
@@ -284,9 +295,12 @@ static void test_mud_drag(void)
 
 static void test_surface_forces(void)
 {
-	struct Driver d = {.driverID = 11, .actionsFlagSet = ACTION_TOUCH_GROUND, .baseSpeed = 4096};
-	struct Terrain terrain = {.slowUntilSpeed = 256};
-	struct QuadBlock quad = {.mulNormVecY = -127}; // Sewer Speedway's authored adhesion.
+	static struct Driver d;
+	d = (struct Driver){.driverID = 11, .actionsFlagSet = ACTION_TOUCH_GROUND, .baseSpeed = 4096};
+	static struct Terrain terrain;
+	terrain = (struct Terrain){.slowUntilSpeed = 256};
+	static struct QuadBlock quad; // Sewer Speedway's authored adhesion.
+	quad = (struct QuadBlock){.mulNormVecY = -127};
 	P32_SET(d.terrainMeta1, &terrain);
 	P32_SET(d.underDriver, &quad);
 	// A banked ramp: adhesion has both a sideways and a downward component.
@@ -366,9 +380,16 @@ static void test_surface_forces(void)
 
 static void test_collision_response(void)
 {
-	struct Driver d = {0}, other = {0};
-	struct Instance inst = {0};
-	struct Thread t = {.object = &d, .driverHitRadius = 10}, ot = {.object = &other, .driverHitRadius = 10};
+	static struct Driver d, other;
+	d = (struct Driver){0};
+	other = (struct Driver){0};
+	static struct Instance inst;
+	inst = (struct Instance){0};
+	static struct Thread t, ot;
+	t = (struct Thread){.driverHitRadius = 10};
+	ot = (struct Thread){.driverHitRadius = 10};
+	P32_SET(t.object, &d);
+	P32_SET(ot.object, &other);
 	struct ScratchpadStruct sps = {0};
 	struct Scrub scrub = {.flags = SCRUB_FLAG_APPLY_IMPACT};
 	Vec3 output;
@@ -412,7 +433,8 @@ static void test_collision_response(void)
 
 static void test_domains(void)
 {
-	struct Driver d = {0};
+	static struct Driver d;
+	d = (struct Driver){0};
 	for (int mask = 0; mask < 16; mask++)
 	{
 		for (int domain = 0; domain < 4; domain++)
@@ -447,8 +469,10 @@ static void test_domains(void)
 }
 static void test_steering(void)
 {
-	struct Driver d = {0};
-	struct Terrain terrain = {0};
+	static struct Driver d;
+	d = (struct Driver){0};
+	static struct Terrain terrain;
+	terrain = (struct Terrain){0};
 	d.driverID = 2;
 	P32_SET(d.terrainMeta1, &terrain);
 	d.AxisAngle1_normalVec.y = 4096;
@@ -512,8 +536,9 @@ static void test_collisions(void)
 
 static void test_pad_contact(void)
 {
-	struct QuadBlock pad = {.quadFlags = QUADBLOCK_FLAG_TRIGGER, .terrain_type = COLL_STEP_TRIGGER_TURBO_PAD};
-	struct BspSearchVertex a = {.pos = {.x = -10, .y = 0, .z = -10}}, b = {.pos = {.x = 10, .y = 0, .z = -10}}, c = {.pos = {.x = 0, .y = 0, .z = 10}};
+	static struct QuadBlock pad;
+	pad = (struct QuadBlock){.quadFlags = QUADBLOCK_FLAG_TRIGGER, .terrain_type = COLL_STEP_TRIGGER_TURBO_PAD};
+	static struct BspSearchVertex a = {.pos = {.x = -10, .y = 0, .z = -10}}, b = {.pos = {.x = 10, .y = 0, .z = -10}}, c = {.pos = {.x = 0, .y = 0, .z = 10}};
 	for (int option = 0; option < NATIVE_FRAME_RATE_COUNT; option++)
 	{
 		gNative60FpsEnabled = option;
@@ -549,10 +574,21 @@ static void test_pad_contact(void)
 static void test_pad_boost_counter(void)
 {
 	struct GameTracker *gt = P32_GET(struct GameTracker *, sdata->gGT);
-	struct Thread player = {.modelIndex = DYNAMIC_PLAYER}, turboThread = {0};
-	struct Instance inst = {.thread = &player}, flame1 = {0}, flame2 = {0};
-	struct Driver d = {.driverID = 12, .instSelf = &inst, .numTurbos = 3, .kartState = KS_NORMAL};
-	struct Turbo turbo = {.driver = &d, .inst = &flame2};
+	static struct Thread player, turboThread;
+	player = (struct Thread){.modelIndex = DYNAMIC_PLAYER};
+	turboThread = (struct Thread){0};
+	static struct Instance inst, flame1, flame2;
+	inst = (struct Instance){0};
+	flame1 = (struct Instance){0};
+	flame2 = (struct Instance){0};
+	P32_SET(inst.thread, &player);
+	static struct Driver d;
+	d = (struct Driver){.driverID = 12, .numTurbos = 3, .kartState = KS_NORMAL};
+	P32_SET(d.instSelf, &inst);
+	static struct Turbo turbo;
+	turbo = (struct Turbo){0};
+	P32_SET(turbo.driver, &d);
+	P32_SET(turbo.inst, &flame2);
 	P32_SET(turboThread.object, &turbo);
 	P32_SET(turboThread.inst, &flame1);
 	struct Thread *saved = P32_GET(struct Thread *, gt->threadBuckets[TURBO].thread);
@@ -596,10 +632,11 @@ static void test_pad_boost_counter(void)
 
 static void test_road_seam_normals(void)
 {
-	struct QuadBlock road = {.quadFlags = QUADBLOCK_FLAG_GROUND};
+	static struct QuadBlock road;
+	road = (struct QuadBlock){.quadFlags = QUADBLOCK_FLAG_GROUND};
 	// Road triangle beneath Roo's Tubes pad 935, from the installed 1P level.
-	struct BspSearchVertex a = {.pos = {.x = 1724, .y = -788, .z = -12493}}, b = {.pos = {.x = 1879, .y = -794, .z = -12606}},
-	                       c = {.pos = {.x = 1835, .y = -810, .z = -12338}};
+	static struct BspSearchVertex a = {.pos = {.x = 1724, .y = -788, .z = -12493}}, b = {.pos = {.x = 1879, .y = -794, .z = -12606}},
+	                              c = {.pos = {.x = 1835, .y = -810, .z = -12338}};
 	NativePhysicsVec av = NC_Vertex(&a.pos), bv = NC_Vertex(&b.pos), cv = NC_Vertex(&c.pos);
 	NativePhysicsVec n = NC_Normalize(NC_Cross(NC_Sub(bv, av), NC_Sub(cv, av)));
 	if (n.y < 0)
@@ -635,11 +672,12 @@ static void test_slope_contact_pushback(void)
 	// A kart resting on an uphill road touches it at the start of each step.
 	// Surface pushback must not read the step itself as penetration; when the
 	// contact point was exported, speed grew by a quarter per 30 FPS frame.
-	struct QuadBlock road = {.quadFlags = QUADBLOCK_FLAG_GROUND};
+	static struct QuadBlock road;
+	road = (struct QuadBlock){.quadFlags = QUADBLOCK_FLAG_GROUND};
 	NativePhysicsVec n = NC_Normalize((NativePhysicsVec){-734, 4024, 204});
 	NativePhysicsVec side = NC_Normalize(NC_Cross(n, (NativePhysicsVec){0, 0, 1})), fwd = NC_Cross(side, n);
 	NativePhysicsVec origin = {-13766, 17, -1578};
-	struct BspSearchVertex a = {0}, b = {0}, c = {0};
+	static struct BspSearchVertex a = {0}, b = {0}, c = {0};
 	a.pos = NC_Export(NC_Add(origin, NC_Scale(fwd, -2000)));
 	b.pos = NC_Export(NC_Add(origin, NC_Add(NC_Scale(fwd, 2000), NC_Scale(side, 2000))));
 	c.pos = NC_Export(NC_Add(origin, NC_Add(NC_Scale(fwd, 2000), NC_Scale(side, -2000))));
@@ -653,7 +691,8 @@ static void test_slope_contact_pushback(void)
 	{
 		gNative60FpsEnabled = option;
 		double elapsed = 32.0 * 30 / CTR_FRAMES_PER_SECOND;
-		struct Driver d = {.driverID = 7};
+		static struct Driver d;
+		d = (struct Driver){.driverID = 7};
 		NativePhysicsVec velocity = {12812, 1609, -3908};
 		NativePhysicsVec start = NC_Add(onPlane, NC_Scale(face, 25));
 		struct ScratchpadStruct s = {0};
@@ -685,7 +724,9 @@ static void test_slope_contact_pushback(void)
 
 int main(void)
 {
-	struct Driver d = {0}, other = {0};
+	static struct Driver d, other;
+	d = (struct Driver){0};
+	other = (struct Driver){0};
 	static struct GameTracker gt;
 	static struct Terrain terrain;
 	P32_SET(d.terrainMeta1, &terrain);

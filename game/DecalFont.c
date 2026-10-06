@@ -173,12 +173,12 @@ static void DecalFont_TtfDrawLine(char *str, s16 len, int posX, s16 posY, s16 fo
 	{
 		return;
 	}
-	struct Icon **icons = ICONGROUP_GETICONS(iconGroup);
-	if (icons[0] == NULL)
+	P32(struct Icon *) *icons = ICONGROUP_GETICONS(iconGroup);
+	if (P32_GET(struct Icon *, icons[0]) == NULL)
 	{
 		return;
 	}
-	const u16 tpage = icons[0]->texLayout.tpage;
+	const u16 tpage = P32_GET(struct Icon *, icons[0])->texLayout.tpage;
 
 	if (flags & (JUSTIFY_CENTER | JUSTIFY_RIGHT))
 	{
@@ -775,15 +775,15 @@ void DecalFont_DrawLineStrlen(char *str, s16 len, int posX, s16 posY, s16 fontTy
 				{
 					P32(struct Icon *) *iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[iconGroupID]));
 
-					DecalFont_DrawGlyph(*strcopy, iconPtrArray[iconID],
+					DecalFont_DrawGlyph(*strcopy, P32_GET(struct Icon *, iconPtrArray[iconID]),
 
-					                     DECAL_FONT_DRAW_X(pixWidthExtra), posY + pixHeightExtra,
+					                    DECAL_FONT_DRAW_X(pixWidthExtra), posY + pixHeightExtra,
 
-					                     &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT),
+					                    &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT),
 
-					                     ptrColor[0], ptrColor[1], ptrColor[2], ptrColor[3],
+					                    ptrColor[0], ptrColor[1], ptrColor[2], ptrColor[3],
 
-					                     0, iconScale);
+					                    0, iconScale);
 				}
 			}
 
@@ -791,7 +791,7 @@ void DecalFont_DrawLineStrlen(char *str, s16 len, int posX, s16 posY, s16 fontTy
 
 			if (iconStruct == 0)
 			{
-				P32(struct Icon *) *iconPtrArray = ICONGROUP_GETICONS(gGT->iconGroup[iconGroupID]);
+				P32(struct Icon *) *iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[iconGroupID]));
 				if (kanaID < gGT->iconGroup[iconGroupID]->numIcons)
 					iconStruct = P32_GET(struct Icon *, iconPtrArray[kanaID]);
 			}
@@ -810,7 +810,7 @@ void DecalFont_DrawLineStrlen(char *str, s16 len, int posX, s16 posY, s16 fontTy
 
 #else // i.e. european build
 
-			P32(struct Icon *) *iconPtrArray = ICONGROUP_GETICONS(gGT->iconGroup[iconGroupID]);
+			P32(struct Icon *) *iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[iconGroupID]));
 
 			for (; numCharacters > 0; numCharacters--, pixWidthExtra += data.font_EurPixWidthExtra[fontType])
 			{
@@ -828,15 +828,15 @@ void DecalFont_DrawLineStrlen(char *str, s16 len, int posX, s16 posY, s16 fontTy
 				}
 				else
 				{
-					DecalFont_DrawGlyph(*strcopy, iconPtrArray[iconID],
+					DecalFont_DrawGlyph(*strcopy, P32_GET(struct Icon *, iconPtrArray[iconID]),
 
-					                     DECAL_FONT_DRAW_X(pixWidthExtra), posY + pixHeightExtra,
+					                    DECAL_FONT_DRAW_X(pixWidthExtra), posY + pixHeightExtra,
 
-					                     &gGT->backBuffer->primMem, gGT->pushBuffer_UI.ptrOT,
+					                    &gGT->backBuffer->primMem, gGT->pushBuffer_UI.ptrOT,
 
-					                     ptrColor[0], ptrColor[1], ptrColor[2], ptrColor[3],
+					                    ptrColor[0], ptrColor[1], ptrColor[2], ptrColor[3],
 
-					                     0, iconScale);
+					                    0, iconScale);
 				}
 			}
 

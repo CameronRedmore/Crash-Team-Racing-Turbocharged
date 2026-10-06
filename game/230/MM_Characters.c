@@ -472,16 +472,16 @@ static void MM_Characters_NativeDrawStats(void)
 		DecalFont_DrawLine(engineSelectText, classX, selectorY, FONT_SMALL, JUSTIFY_CENTER | ORANGE);
 		if (P32_GET(struct IconGroup *, gGT->iconGroup[4]) != NULL)
 		{
-			struct Icon **icons = ICONGROUP_GETICONS(gGT->iconGroup[4]);
+			P32(struct Icon *) *icons = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[4]));
 			u32 *colors = P32_GET(u32 *, data.ptrColor[ORANGE]);
 			const s32 halfWidth = DecalFont_GetLineWidth(engineSelectText, FONT_SMALL) >> 1;
 			// FONT_SMALL's cap starts 1.25 px below posY and is 5.5 px
 			// tall, so its visual center is posY + 4 px.
 			const s32 selectorCenterY = selectorY + 4;
 			for (s32 side = 0; side < 2; side++)
-				DecalHUD_Arrow2D(icons[MM_CHARACTER_SELECT_PAGE_HINT_ARROW_ICON], classX + (side ? halfWidth + 12 : -halfWidth - 12), selectorCenterY,
-				                 &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), colors[0], colors[1],
-				                 colors[2], colors[3], 0, MM_CHARACTER_SELECT_PAGE_HINT_ARROW_SCALE,
+				DecalHUD_Arrow2D(P32_GET(struct Icon *, icons[MM_CHARACTER_SELECT_PAGE_HINT_ARROW_ICON]), classX + (side ? halfWidth + 12 : -halfWidth - 12),
+				                 selectorCenterY, &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), colors[0],
+				                 colors[1], colors[2], colors[3], 0, MM_CHARACTER_SELECT_PAGE_HINT_ARROW_SCALE,
 				                 side ? 0 : MM_CHARACTER_SELECT_PAGE_HINT_ARROW_LEFT_ROTATION);
 		}
 	}

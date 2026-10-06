@@ -333,7 +333,7 @@ static void LevInstDef_FindTurboVisualQuads(struct mesh_info *mesh)
 #define NATIVE_REACHABLE_INSTANCE_LIMIT 2048
 
 static const struct Level *s_nativeReachableLevel;
-static struct Instance *s_nativeReachableInstances[NATIVE_REACHABLE_INSTANCE_LIMIT + 1];
+static P32(struct Instance *) s_nativeReachableInstances[NATIVE_REACHABLE_INSTANCE_LIMIT + 1];
 static u8 s_nativeReachableMarks[NATIVE_REACHABLE_INSTANCE_LIMIT];
 
 static void LevInstDef_BuildReachableInstances(const struct mesh_info *mesh, const struct Level *level)
@@ -374,19 +374,19 @@ static void LevInstDef_BuildReachableInstances(const struct mesh_info *mesh, con
 	}
 
 	int count = 0;
-	for (struct Instance **it = (struct Instance **)P32_GET(struct InstDef * *const, level->ptrInstDefPtrArray); it[0] != NULL; it++)
+	for (P32(struct Instance *) *it = P32_GET(P32(struct Instance *) *, level->ptrInstDefPtrArray); P32_GET(struct Instance *, it[0]) != NULL; it++)
 	{
-		const struct InstDef *def = P32_GET(struct InstDef *, it[0]->instDef);
+		const struct InstDef *def = P32_GET(struct InstDef *, P32_GET(struct Instance *, it[0])->instDef);
 		if (def >= defs && def < defs + numDefs && s_nativeReachableMarks[def - defs] && count < NATIVE_REACHABLE_INSTANCE_LIMIT)
 		{
 			s_nativeReachableInstances[count++] = it[0];
 		}
 	}
-	s_nativeReachableInstances[count] = NULL;
+	P32_SET(s_nativeReachableInstances[count], NULL);
 	s_nativeReachableLevel = level;
 }
 
-struct Instance **LevInstDef_GetReachableInstances(const struct Level *level)
+P32(struct Instance *) * LevInstDef_GetReachableInstances(const struct Level *level)
 {
 	return (level != NULL && level == s_nativeReachableLevel) ? s_nativeReachableInstances : NULL;
 }

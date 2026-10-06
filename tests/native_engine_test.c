@@ -3,6 +3,7 @@
 #endif
 #include <assert.h>
 #include <common.h>
+#include "../platform/native_ptr32.c"
 #include <stdio.h>
 
 struct Data data;

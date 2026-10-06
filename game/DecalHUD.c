@@ -330,7 +330,7 @@ LAB_800232d8:
 	// diacritics and other rotated decals on their original rendering path.
 	struct IconGroup *group =
 	    sdata && P32_GET(struct GameTracker *, sdata->gGT) ? P32_GET(struct IconGroup *, P32_GET(struct GameTracker *, sdata->gGT)->iconGroup[4]) : NULL;
-	if (!transparency && group && group->numIcons > 0x38 && (ICONGROUP_GETICONS(group))[0x38] == icon)
+	if (!transparency && group && group->numIcons > 0x38 && P32_GET(struct Icon *, (ICONGROUP_GETICONS(group))[0x38]) == icon)
 	{
 		const float x[4] = {p->x0, p->x1, p->x2, p->x3};
 		const float y[4] = {p->y0, p->y1, p->y2, p->y3};

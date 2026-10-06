@@ -719,8 +719,8 @@ int NativeMinimap_DrawLive(struct PrimMem *primMem, u32 *ot, u32 colorID)
 	if ((gt->gameMode1 & (MAIN_MENU | GAME_CUTSCENE)) || gt->levelID < 0 || gt->levelID >= NATIVE_MINIMAP_LEVEL_COUNT ||
 	    !P32_GET(struct Level *const, gt->level1) || !P32_GET(struct SpawnType1 *, P32_GET(struct Level *const, gt->level1)->ptrSpawnType1))
 		return 0;
-	void **pointers = ST1_GETPOINTERS(P32_GET(struct Level *const, gt->level1)->ptrSpawnType1);
-	const struct UIMap *map = pointers[ST1_MAP];
+	P32(void *) *pointers = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *const, gt->level1)->ptrSpawnType1));
+	const struct UIMap *map = P32_GET(struct UIMap *, pointers[ST1_MAP]);
 	const struct mesh_info *mesh = P32_GET(struct mesh_info *, P32_GET(struct Level *const, gt->level1)->ptr_mesh_info);
 	if (!map || !mesh)
 		return 0;
@@ -795,8 +795,8 @@ void NativeMinimap_PrepareLive(void)
 	    !P32_GET(struct Level *const, gt->level1) || !P32_GET(struct SpawnType1 *, P32_GET(struct Level *const, gt->level1)->ptrSpawnType1) ||
 	    !P32_GET(struct mesh_info *, P32_GET(struct Level *const, gt->level1)->ptr_mesh_info))
 		return;
-	void **pointers = ST1_GETPOINTERS(P32_GET(struct Level *const, gt->level1)->ptrSpawnType1);
-	const struct UIMap *map = pointers[ST1_MAP];
+	P32(void *) *pointers = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *const, gt->level1)->ptrSpawnType1));
+	const struct UIMap *map = P32_GET(struct UIMap *, pointers[ST1_MAP]);
 	if (!map)
 		return;
 	struct NativeMinimapImage image = {0};
