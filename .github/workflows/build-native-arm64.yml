@@ -1,0 +1,227 @@
+name: Build native ARM64 builds
+
+# Experimental 64-bit (CTR_NATIVE_64BIT) builds for ARM64 Linux and Windows on
+# ARM, built and tested on native GitHub-hosted ARM runners. The 32-bit x86
+# builds live in build-native.yml.
+# Packages contain no game assets: players must supply their own ctr-u.bin.
+
+on:
+  push:
+    branches:
+      - turbocharged
+      - native-renderer
+      - 64bit
+      - 64bit-2026.10
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-native-arm64-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux-arm64:
+    name: Linux ARM64
+    runs-on: ubuntu-24.04-arm
+    # Build against Ubuntu 22.04's glibc so the binary runs on older distros too.
+    container: ubuntu:22.04
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - name: Install toolchain and SDL dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            git ca-certificates curl file binutils gcc g++ cmake ninja-build python3 pkg-config libwayland-bin \
+            libx11-dev libxext-dev libxcursor-dev libxi-dev \
+            libxrandr-dev libxfixes-dev libgl-dev libegl-dev \
+            libasound2-dev libpulse-dev libpipewire-0.3-dev \
+            libjack-jackd2-dev libudev-dev libdbus-1-dev \
+            libibus-1.0-dev libusb-1.0-0-dev libwayland-dev \
+            libxkbcommon-dev libdecor-0-dev libdrm-dev libgbm-dev \
+            xvfb libgl1-mesa-dri libgl1
+
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      # The container runs as root on a runner-owned checkout; without this the
+      # build ID that CMake reads from git becomes "unknown-dirty".
+      - name: Trust workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Configure
+        run: >
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DCTR_NATIVE_64BIT=ON
+          -DBUILD_TESTING=ON
+          -DCTR_NATIVE_RENDERER_TESTS=ON
+
+      - name: Build
+        run: cmake --build build
+
+      # Same split as the x86 Linux job: the unlabelled subset never creates a
+      # GL context; the gpu subset runs under Mesa's software rasteriser and
+      # reports 77 (a skip) on a runner that cannot provide a context.
+      - name: Test (headless)
+        run: ctest --test-dir build --output-on-failure -LE gpu
+
+      - name: Test (renderer, software GL)
+        run: xvfb-run -a ctest --test-dir build --output-on-failure -L gpu
+
+      - name: Package
+        id: package
+        shell: bash
+        env:
+          REF_NAME: ${{ github.head_ref || github.ref_name }}
+          CTR_ARCH: arm64
+        run: |
+          version="${REF_NAME//\//-}-${GITHUB_SHA::7}"
+          ./package.sh linux "$version"
+          archive="dist/ctr-turbocharged-${version}-linux-arm64.tar.gz"
+          echo "archive=$archive" >> "$GITHUB_OUTPUT"
+          echo "- \`$(cat "$archive.sha256")\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Linux ARM64 tarball
+        uses: actions/upload-artifact@v7
+        with:
+          name: linux-arm64-tarball
+          path: ${{ steps.package.outputs.archive }}
+          # Upload the tarball as-is: it keeps the executable bit, which zips drop.
+          archive: false
+          if-no-files-found: error
+
+      - name: Upload Linux ARM64 checksum
+        uses: actions/upload-artifact@v7
+        with:
+          name: linux-arm64-checksums
+          path: ${{ steps.package.outputs.archive }}.sha256
+          if-no-files-found: error
+
+  windows-arm64:
+    name: Windows ARM64
+    runs-on: windows-11-arm
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      # Keep LF endings so package.sh runs under MSYS2 bash.
+      - name: Disable CRLF conversion
+        shell: pwsh
+        run: git config --global core.autocrlf false
+
+      - name: Install MSYS2 CLANGARM64 toolchain
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: CLANGARM64
+          update: true
+          install: >-
+            git
+            zip
+            mingw-w64-clang-aarch64-clang
+            mingw-w64-clang-aarch64-cmake
+            mingw-w64-clang-aarch64-ninja
+
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Configure
+        # CTR_NATIVE_RENDERER_TESTS stays off, as in the x86 Windows job: there
+        # is no verified software-GL path on the Windows runner.
+        run: >
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_C_COMPILER=clang
+          -DCTR_NATIVE_64BIT=ON
+          -DBUILD_TESTING=ON
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Package
+        id: package
+        env:
+          REF_NAME: ${{ github.head_ref || github.ref_name }}
+          CTR_ARCH: arm64
+        run: |
+          version="${REF_NAME//\//-}-${GITHUB_SHA::7}"
+          ./package.sh windows "$version"
+          archive="dist/ctr-turbocharged-${version}-windows-arm64.zip"
+          echo "archive=$archive" >> "$GITHUB_OUTPUT"
+          echo "- \`$(cat "$archive.sha256")\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload
+        uses: actions/upload-artifact@v7
+        with:
+          path: ${{ steps.package.outputs.archive }}
+          archive: false
+          if-no-files-found: error
+
+  # Cross-compiled from x86 Linux, so the toolchain files in cmake/toolchains
+  # stay working. The Windows binary cannot run here, so this only proves it
+  # builds; the native windows-arm64 job above runs its tests.
+  cross-builds:
+    name: Cross-compile check (${{ matrix.name }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux ARM64
+            toolchain: aarch64-linux-gnu
+            packages: gcc-aarch64-linux-gnu g++-aarch64-linux-gnu qemu-user
+            tests: "ON"
+          - name: Windows ARM64 (llvm-mingw)
+            toolchain: aarch64-w64-mingw32
+            packages: ""
+            tests: "OFF"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install cross toolchain
+        if: matrix.toolchain == 'aarch64-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build ${{ matrix.packages }} \
+            libx11-dev libxext-dev libxcursor-dev libxi-dev libxrandr-dev libxfixes-dev \
+            libxkbcommon-dev libwayland-dev libegl-dev libgl-dev
+          # SDL loads its backends at run time, so the host's headers are enough to build.
+
+      - name: Install llvm-mingw
+        if: matrix.toolchain == 'aarch64-w64-mingw32'
+        shell: bash
+        env:
+          LLVM_MINGW_VERSION: "20260922"
+          LLVM_MINGW_SHA256: "bb7bb7654b33d5aa8712acb837c963b2e0c56352560c76105270a3268c665c21"
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build
+          url="https://github.com/mstorsjo/llvm-mingw/releases/download/${LLVM_MINGW_VERSION}/llvm-mingw-${LLVM_MINGW_VERSION}-ucrt-ubuntu-22.04-x86_64.tar.xz"
+          dir="$RUNNER_TEMP/llvm-mingw-download"
+          mkdir -p "$dir"
+          curl -fsSL "$url" -o "$dir/llvm-mingw.tar.xz"
+          echo "$LLVM_MINGW_SHA256  $dir/llvm-mingw.tar.xz" | sha256sum -c -
+          sudo mkdir -p /opt/llvm-mingw
+          sudo tar -xJf "$dir/llvm-mingw.tar.xz" -C /opt/llvm-mingw --strip-components=1
+
+      - name: Configure
+        run: >
+          cmake -S . -B build -G Ninja
+          -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/${{ matrix.toolchain }}.cmake
+          -DCMAKE_BUILD_TYPE=Release
+          -DCTR_NATIVE_64BIT=ON
+          -DBUILD_TESTING=${{ matrix.tests }}
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test (qemu)
+        if: matrix.tests == 'ON'
+        run: ctest --test-dir build --output-on-failure -LE gpu

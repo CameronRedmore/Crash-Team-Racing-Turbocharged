@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Package the current x86 build for release.
+# Package the current build for release.
 #
-# usage: ./package.sh <linux|windows> [version]
+# usage: [CTR_ARCH=x86|arm64] ./package.sh <linux|windows> [version]
+# CTR_ARCH only labels the package (default x86); it must match the build.
 #
 # Game assets are never packaged. The package is built from an explicit
 # allowlist and the script fails if anything else ends up in it.
@@ -23,6 +24,11 @@ DEFAULT_VERSION="$(tr -d '[:space:]' < "${VERSION_FILE}")"
 VERSION="${2:-${DEFAULT_VERSION}}"
 BUILD_DIR="${BUILD_DIR:-build}"
 DIST_DIR="${DIST_DIR:-dist}"
+ARCH="${CTR_ARCH:-x86}"
+case "${ARCH}" in
+    x86|arm64) ;;
+    *) echo "package.sh: CTR_ARCH must be x86 or arm64" >&2; exit 2 ;;
+esac
 
 case "${PLATFORM}" in
     linux)
@@ -39,7 +45,7 @@ case "${PLATFORM}" in
         ;;
 esac
 
-PACKAGE_NAME="ctr-turbocharged-${VERSION}-${PLATFORM}-x86"
+PACKAGE_NAME="ctr-turbocharged-${VERSION}-${PLATFORM}-${ARCH}"
 PACKAGE_DIR="${DIST_DIR}/${PACKAGE_NAME}"
 BINARY_PATH="${BUILD_DIR}/${BINARY_NAME}"
 
@@ -74,7 +80,23 @@ for font_file in "${font_files[@]}"; do
     cp "assets/fonts/$font_file" "${PACKAGE_DIR}/assets/fonts/"
 done
 
-if [[ "${PLATFORM}" == "linux" ]]; then
+if [[ "${PLATFORM}" == "linux" && "${ARCH}" == "arm64" ]]; then
+    REQUIREMENTS="Linux ARM64 requirements (experimental 64-bit build):
+- aarch64 Linux with a 64-bit glibc
+- OpenGL 3.3 (or compatible) capable GPU/driver
+- X11 or Wayland runtime libraries
+- ALSA/PulseAudio/PipeWire runtime libraries
+
+If the game does not launch, run it from a terminal and include:
+- distro/version
+- GPU/driver
+- terminal output
+- output of: ldd ./ctr_native"
+elif [[ "${PLATFORM}" == "windows" && "${ARCH}" == "arm64" ]]; then
+    REQUIREMENTS="Windows ARM64 requirements (experimental 64-bit build):
+- Windows 11 on ARM
+- OpenGL 3.3 capable GPU/driver"
+elif [[ "${PLATFORM}" == "linux" ]]; then
     REQUIREMENTS="Linux requirements:
 - x86_64 Linux capable of running 32-bit/i386 binaries
 - 32-bit glibc runtime
@@ -95,7 +117,7 @@ else
 fi
 
 cat >"${PACKAGE_DIR}/README.txt" <<EOF
-Crash Team Racing: Turbocharged ${PLATFORM} x86 ${VERSION} build
+Crash Team Racing: Turbocharged ${PLATFORM} ${ARCH} ${VERSION} build
 
 Game assets are not included. You must provide your own copy of the game.
 
