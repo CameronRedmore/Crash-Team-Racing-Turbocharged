@@ -373,12 +373,10 @@ if(BUILD_TESTING AND NOT EMSCRIPTEN)
     endif()
     add_test(NAME ctr_native_projection COMMAND ctr_native_projection_test)
     add_test(NAME ctr_native_precision COMMAND ctr_native_precision_test)
-    add_test(NAME ctr_native_version COMMAND $<TARGET_FILE:ctr_native> --version)
+    # Naming the target (not its file) runs it through CMAKE_CROSSCOMPILING_EMULATOR
+    # when cross-compiling, like the other tests.
+    add_test(NAME ctr_native_version COMMAND ctr_native --version)
     set_tests_properties(ctr_native_version PROPERTIES PASS_REGULAR_EXPRESSION "^Crash Team Racing: Turbocharged ")
-    if(CMAKE_CROSSCOMPILING AND CMAKE_SYSROOT)
-        # This test runs the binary directly (via binfmt/qemu), so give qemu the target sysroot.
-        set_property(TEST ctr_native_version APPEND PROPERTY ENVIRONMENT "QEMU_LD_PREFIX=${CMAKE_SYSROOT}")
-    endif()
     if(CTR_NATIVE_RENDERER_TESTS)
         add_executable(ctr_native_depth_renderer_test tests/native_depth_renderer_test.c)
         set_target_properties(ctr_native_depth_renderer_test PROPERTIES C_STANDARD 17 C_STANDARD_REQUIRED ON C_EXTENSIONS OFF)
