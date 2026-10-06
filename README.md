@@ -342,10 +342,12 @@ For the tarball alone, use `./package.sh linux`. Linux CI builds and uploads bot
 
 Tests run under `ctest --test-dir <build>`. The renderer integration tests are
 off by default; configure with `-DCTR_NATIVE_RENDERER_TESTS=ON` to build them.
-With that option enabled, there are currently 32 tests: 25 without the `gpu`
-label and 7 that need an OpenGL context. The headless font cache test skips
-unless `assets/fonts/crash-a-like.ttf` is available; set
-`CTR_NATIVE_FONT_ASSET_DIR` to use another assets directory.
+With that option enabled, there are currently 31 tests: 25 without the `gpu`
+label and 6 that need an OpenGL context (the HUD icons test is disabled for
+now). The headless font cache test skips unless `assets/fonts/crash-a-like.ttf`
+is available in the source tree. To use another assets directory, configure
+with `-DCTR_NATIVE_FONT_ASSET_DIR=/path/to/assets` (a CMake option, not an
+environment variable).
 
 ```
 ctest --test-dir build -LE gpu     # display-independent subset
