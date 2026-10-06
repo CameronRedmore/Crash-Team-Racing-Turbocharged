@@ -4,6 +4,8 @@ Crash Team Racing: Turbocharged is a fork of [Crash Team Racing: High Octane](ht
 
 This fork is focused on PC operating systems, especially Windows and Linux. The PSVita and Web Browser builds are not supported in Turbocharged. See the [Roadmap](#roadmap) for planned platforms and features.
 
+**Website:** [ctr.cmzi.uk](https://ctr.cmzi.uk) has an overview of the features, a PS1-vs-Turbocharged comparison, the trailer and downloads.
+
 ## Trailer
 
 [![Watch the Crash Team Racing: Turbocharged trailer](screenshots/trailer.png)](https://youtu.be/e2bI3uvGHlI)
@@ -18,6 +20,8 @@ Open [GitHub Releases](https://github.com/CameronRedmore/Crash-Team-Racing-Turbo
 
 - **Windows:** `ctr-turbocharged-<version>-windows-x86.zip`
 - **Linux:** `ctr-turbocharged-<version>-linux-x86.AppImage` or `ctr-turbocharged-<version>-linux-x86.tar.gz`
+
+You can also download from [the website](https://ctr.cmzi.uk), which offers the newest build from the `turbocharged` branch for your platform.
 
 Choose a game download rather than GitHub's **Source code** downloads. For ZIP/tar.gz archives, extract the entire archive into a folder you can write to, keeping the executable and its `assets` folder together. Settings, saves, and caches are stored in this folder.
 
