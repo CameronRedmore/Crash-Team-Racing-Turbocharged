@@ -3243,7 +3243,7 @@ static struct TextureLayout *RenderBucket_GetCommandTexture(struct RenderBucketD
 	// NOTE(aalhendi): Retail only uses texture index zero as the explicit G3
 	// path, but a null texture-table entry also reaches DrawInstPrim_Normal as
 	// `a2 == 0` and emits G3. Do not reject that case here.
-	struct TextureLayout *layout = P32_GET(struct TextureLayout **, ctx->idpp->ptrTexLayout)[texIndex - 1];
+	struct TextureLayout *layout = P32_GET(struct TextureLayout *, P32_GET(P32(struct TextureLayout *) *, ctx->idpp->ptrTexLayout)[texIndex - 1]);
 #if defined(CTR_NATIVE) && NATIVE_KART_COLOR_SUPPORTED
 	if (layout != NULL)
 	{

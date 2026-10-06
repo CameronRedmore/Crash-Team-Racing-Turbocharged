@@ -1,5 +1,16 @@
 # 64-bit / ARM64 port: handoff
 
+> **2026-10-06: this branch (`64bit-2026.10`, worktree `src/worktrees/64bit-2026.10`) supersedes `64bit`.**
+> It is `turbocharged` @ e15b395bd (44 commits past the old base) with `64bit` merged in. Conflicts were resolved
+> to the turbocharged side, then `tools/ctr64/rewrite2.py --apply` (paths pointed at this worktree and `/tmp/b64n`)
+> re-applied P32 accesses to the new code, and the rest was fixed by hand. State: 64-bit Debug (clang) builds, `ctest`
+> 13/13; 32-bit gcc builds with no warnings, `ctest` 13/13; the 64-bit game boots headless to the title, main menu,
+> adventure hub (modern minimap, HUD icons, title logo all draw) and the warp-pad race menu. **A/B against 32-bit SSE has not been re-run on this branch.**
+> Bugs the compiler could not catch, found by booting: `P32_GET(T **, slotArray)[i]` (wrong stride, 4 sites: `lngStrings` x3, `ptrTexLayout`),
+> `visInstSrc` walks in `LevInstDef.c`, `(uintptr_t)` on an int that holds a handle (`ptrPushBufferUI`). Grep for `P32_GET\([^,]*\*\*` after every merge.
+> Tests that store addresses in game fields need `static` objects (stack is outside +-2 GiB). The old `64bit` branch has uncommitted unrelated edits; leave it alone.
+> Merge recipe for future turbocharged updates: merge, resolve to turbocharged, build 64-bit, run rewrite2, fix the leftovers, boot-test.
+
 Branch `64bit`, worktree `src/worktrees/64bit`, based on `turbocharged` @ 8cbfb7797.
 First written 2026-10-03, updated twice later the same day. Nothing is pushed.
 

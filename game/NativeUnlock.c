@@ -100,7 +100,7 @@ void NativeUnlock_Draw(void)
 	if ((sdata == NULL) || (P32_GET(struct GameTracker *, sdata->gGT) == NULL) || (s_nativeUnlockCount == 0))
 		return;
 	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
-	if ((sdata->Loading.stage != LOAD_IDLE) || (P32_GET(char **, sdata->lngStrings) == NULL) || (P32_GET(struct DB *, gGT->backBuffer) == NULL) ||
+	if ((sdata->Loading.stage != LOAD_IDLE) || (P32_GET(P32(char *) *, sdata->lngStrings) == NULL) || (P32_GET(struct DB *, gGT->backBuffer) == NULL) ||
 	    (gGT->boolDemoMode != 0) || (sdata->boolPlayVideoSTR != 0) || (sdata->AkuAkuHintState != 0) || ((gGT->gameMode1 & GAME_CUTSCENE) != 0) ||
 	    ((gGT->gameMode1 & (MAIN_MENU | ADVENTURE_ARENA | END_OF_RACE)) == 0))
 		return;
@@ -113,7 +113,7 @@ void NativeUnlock_Draw(void)
 	const struct NativeUnlockReward *reward = &s_nativeUnlockRewards[s_nativeUnlockQueue[s_nativeUnlockHead]];
 	// Match the native menus: configured language files 2..7 are EN, FR, DE, IT, ES, NL.
 	int language = (cfg_language >= 2 && cfg_language <= 7) ? cfg_language - 2 : 0;
-	char *name = P32_GET(char **, sdata->lngStrings)[reward->name];
+	char *name = P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[reward->name]);
 	int nameFont = DecalFont_GetLineWidth(name, FONT_BIG) <= 440 ? FONT_BIG : FONT_SMALL;
 	int width = DecalFont_GetLineWidth(name, nameFont) + 32;
 	if (width < 280)

@@ -358,13 +358,13 @@ static void LevInstDef_BuildReachableInstances(const struct mesh_info *mesh, con
 			continue;
 		}
 		prevPvs = pvs;
-		for (struct Instance **entry = P32_GET(struct Instance * *const, pvs->visInstSrc); entry[0] != NULL; entry++)
+		for (P32(struct Instance *) *entry = P32_GET(P32(struct Instance *) *, pvs->visInstSrc); P32_GET(struct Instance *, entry[0]) != NULL; entry++)
 		{
 			// Shared lists can be left as InstDef pointers; see the ND BUG note in UnPack.
-			const struct InstDef *def = (const struct InstDef *)entry[0];
+			const struct InstDef *def = (const struct InstDef *)P32_GET(struct Instance *, entry[0]);
 			if (def < defs || def >= defs + numDefs)
 			{
-				def = P32_GET(struct InstDef *, entry[0]->instDef);
+				def = P32_GET(struct InstDef *, P32_GET(struct Instance *, entry[0])->instDef);
 			}
 			if (def >= defs && def < defs + numDefs)
 			{

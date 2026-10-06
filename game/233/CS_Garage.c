@@ -477,7 +477,7 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 	// Draw 2D Menu rectangle background
 	RECTMENU_DrawInnerRect(&r, 4, P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT));
 
-	char *name = P32_GET(char **, sdata->lngStrings)[nameIndex];
+	char *name = P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[nameIndex]);
 #ifdef CTR_NATIVE
 	(void)engineLabel;
 #endif
