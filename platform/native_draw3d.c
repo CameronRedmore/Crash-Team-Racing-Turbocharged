@@ -43,6 +43,7 @@ global_variable NativeDraw3DLayer s_draw3dLayers[NATIVE_DRAW3D_MAX_LAYERS];
 global_variable int s_draw3dLayerCount;
 
 int gNativeGpuTransformEnabled = 0;
+int gNativeShaderCullEnabled = 0;
 #define NATIVE_DRAW3D_MAX_TRANSFORMS 16384
 static NativeDraw3DTransform s_draw3dTransforms[NATIVE_DRAW3D_MAX_TRANSFORMS];
 static u32 s_draw3dTransformCount;

@@ -393,6 +393,8 @@ int NativeRenderer_InitialisePSX(void)
 	// renderer enables the GPU path, with an explicit A/B switch for profiling.
 	const char *gpuTransform = getenv("CTR_GPU_TRANSFORM");
 	gNativeGpuTransformEnabled = !gpuTransform || strcmp(gpuTransform, "0") != 0;
+	const char *shaderCull = getenv("CTR_SHADER_CULL");
+	gNativeShaderCullEnabled = !shaderCull || strcmp(shaderCull, "0") != 0;
 #endif
 	NativeRenderer_InitVRAMPipelines();
 

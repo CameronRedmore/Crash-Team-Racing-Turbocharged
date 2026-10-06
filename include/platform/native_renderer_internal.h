@@ -143,7 +143,40 @@ typedef struct
 #endif
 	GLint psxDrawMaskSetLoc;
 	GLint psxTextureOutputStpLoc;
+
+	// Last value written to each uniform of this program, so per-split setters
+	// skip unchanged values. A field is valid when its NATIVE_UNIFORM_CACHED_*
+	// bit is set; compiling the shader clears them all.
+	u32 cachedUniforms;
+	int bilinearFilter;
+#ifndef __vita__
+	int psxSemiTransPass;
+	int psxDitherEnabled;
+	int psxColorDepth15;
+#endif
+	float texelSize[2];
+	float psxDrawMaskSet;
+	float psxTextureOutputStp;
+	float projection[16];
+#if NATIVE_DRAW3D_SUPPORTED
+	float objectToCamera[16];
+	float nativeView[4];
+#endif
 } GTEShader;
+
+enum
+{
+	NATIVE_UNIFORM_CACHED_BILINEAR_FILTER = 1 << 0,
+	NATIVE_UNIFORM_CACHED_SEMI_TRANS_PASS = 1 << 1,
+	NATIVE_UNIFORM_CACHED_DITHER_ENABLED = 1 << 2,
+	NATIVE_UNIFORM_CACHED_COLOR_DEPTH_15 = 1 << 3,
+	NATIVE_UNIFORM_CACHED_TEXEL_SIZE = 1 << 4,
+	NATIVE_UNIFORM_CACHED_DRAW_MASK_SET = 1 << 5,
+	NATIVE_UNIFORM_CACHED_TEXTURE_OUTPUT_STP = 1 << 6,
+	NATIVE_UNIFORM_CACHED_PROJECTION = 1 << 7,
+	NATIVE_UNIFORM_CACHED_OBJECT_TO_CAMERA = 1 << 8,
+	NATIVE_UNIFORM_CACHED_NATIVE_VIEW = 1 << 9,
+};
 
 // Render state cached across the PSX submit run. Native full-screen passes
 // (VRAM pack, pause backdrop, SSAA resolve) save it before drawing and restore

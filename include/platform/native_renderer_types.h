@@ -52,7 +52,9 @@ typedef struct
 
 	// clipSpace marks homogeneous native geometry. Screen geometry uses W=1,
 	// Z=0 with depth disabled; native 3D uses camera depth (native_draw3d.h).
-	s8 tcx, tcy, clipSpace, _p1;
+	// cullMode is read only when clipSpace is 2: 0 draws both faces, 1 keeps
+	// clockwise and 2 counter-clockwise front faces (gNativeShaderCullEnabled).
+	s8 tcx, tcy, clipSpace, cullMode;
 	u16 orderDepth;
 #if NATIVE_PGXP_SUPPORTED
 	// Keeps the float attributes 4-byte aligned in the vertex buffer.

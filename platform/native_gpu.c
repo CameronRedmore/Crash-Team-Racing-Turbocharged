@@ -4154,6 +4154,12 @@ internal void NativeGpu_FillDraw3DVertices(GrVertex *vertex, const NativeDraw3DV
 	}
 }
 
+// 0 = both faces, 1 = clockwise, 2 = anticlockwise front faces in GL.
+internal u32 NativeGpu_Draw3DCullMode(const NativeDraw3DView *view, u16 flags)
+{
+	return (flags & NATIVE_DRAW3D_DOUBLE_SIDED) ? 0 : ((!!(flags & NATIVE_DRAW3D_REVERSE_WINDING)) ^ (!!view->mirror)) ? 2 : 1;
+}
+
 internal void NativeGpu_SetDraw3DObjectState(const NativeDraw3DView *view, u32 transformIndex, u16 flags, s8 screenOffsetX, float ofsX, float ofsY)
 {
 	memset(&s_gpuObjectState, 0, sizeof(s_gpuObjectState));
@@ -4161,7 +4167,7 @@ internal void NativeGpu_SetDraw3DObjectState(const NativeDraw3DView *view, u32 t
 		return;
 	s_gpuObjectState.layer = s_gpuDraw3DOverlayLayer;
 	s_gpuObjectState.transform = transformIndex;
-	s_gpuObjectState.cullMode = (flags & NATIVE_DRAW3D_DOUBLE_SIDED) ? 0 : ((!!(flags & NATIVE_DRAW3D_REVERSE_WINDING)) ^ (!!view->mirror)) ? 2 : 1;
+	s_gpuObjectState.cullMode = NativeGpu_Draw3DCullMode(view, flags);
 	s_gpuObjectState.view[0] = view->mirror ? -view->projection : view->projection;
 	s_gpuObjectState.view[1] = view->projection;
 	s_gpuObjectState.view[2] = view->centerX + ofsX + screenOffsetX;
@@ -4176,6 +4182,11 @@ internal void NativeGpu_EmitDraw3DTriangle(const NativeDraw3DView *view, const N
 	const bool superTurboTint = textured && ((material->flags & NATIVE_DRAW3D_SUPER_TURBO_TINT) != 0);
 	const u16 tpage = (u16)(material->tpage | (superTurboTint ? NATIVE_GPU_TPAGE_SUPER_TURBO_TINT : 0));
 
+	// GPU-transformed triangles carry their cull mode per vertex and the
+	// fragment shader discards back faces, so a model mixing single- and
+	// double-sided triangles stays one draw instead of one per run of faces.
+	const bool shaderCull = gNativeShaderCullEnabled && triangle->transformIndex;
+
 	// Split state follows only these fields within a layer (clut is Vita-only),
 	// so runs of identical state skip AddSplit's comparison.
 	const NativeDraw3DTriangle *previous = s_gpuDraw3DPrevious;
@@ -4185,6 +4196,8 @@ internal void NativeGpu_EmitDraw3DTriangle(const NativeDraw3DView *view, const N
 	    (previous->material.flags != material->flags) || (previous->material.screenOffsetX != material->screenOffsetX))
 	{
 		NativeGpu_SetDraw3DObjectState(view, triangle->transformIndex, material->flags, material->screenOffsetX, ofsX, ofsY);
+		if (shaderCull)
+			s_gpuObjectState.cullMode = 0;
 		AddSplit(semiTrans, textured, false, (s16)material->clut);
 		NativeGpu_SetDepthSplit((material->flags & NATIVE_DRAW3D_BACKGROUND)      ? NATIVE_GPU_WORLD_DEPTH_BACKGROUND
 		                        : (material->flags & NATIVE_DRAW3D_ORDERED_BLEND) ? NATIVE_GPU_WORLD_DEPTH_ORDERED_BLEND
@@ -4193,7 +4206,13 @@ internal void NativeGpu_EmitDraw3DTriangle(const NativeDraw3DView *view, const N
 		memset(&s_gpuObjectState, 0, sizeof(s_gpuObjectState));
 	}
 
-	NativeGpu_FillDraw3DVertices(&s_gpu.vertexBuffer[s_gpu.vertexIndex], view, triangle, ofsX, ofsY, activeDrawEnv.dtd);
+	GrVertex *vertex = &s_gpu.vertexBuffer[s_gpu.vertexIndex];
+	NativeGpu_FillDraw3DVertices(vertex, view, triangle, ofsX, ofsY, activeDrawEnv.dtd);
+	if (shaderCull)
+	{
+		const s8 cullMode = (s8)NativeGpu_Draw3DCullMode(view, material->flags);
+		vertex[0].cullMode = vertex[1].cullMode = vertex[2].cullMode = cullMode;
+	}
 	s_gpu.vertexIndex += 3;
 }
 

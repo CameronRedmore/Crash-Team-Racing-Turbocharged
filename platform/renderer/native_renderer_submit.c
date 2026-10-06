@@ -62,8 +62,17 @@ void NativeRenderer_UpdateVertexBuffer(const GrVertex *vertices, int num_vertice
 #else
 	// Replace storage before writing the next batch: queued GL draws can keep
 	// the previous allocation rather than stalling this upload on its reuse.
-	glBufferData(GL_ARRAY_BUFFER, sizeof(GrVertex) * MAX_VERTEX_BUFFER_SIZE, NULL, GL_STREAM_DRAW);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, num_vertices * sizeof(GrVertex), vertices);
+	// Size it to the batch, not MAX_VERTEX_BUFFER_SIZE (18 MB): GL on D3D12
+	// allocates a new resource per orphan, and a frame rarely needs 1 MB.
+	// Rounding to a power of two keeps the sizes few, so allocations recycle.
+	GLsizeiptr capacity = 64 * 1024;
+	const GLsizeiptr batchBytes = (GLsizeiptr)num_vertices * (GLsizeiptr)sizeof(GrVertex);
+	while (capacity < batchBytes)
+	{
+		capacity *= 2;
+	}
+	glBufferData(GL_ARRAY_BUFFER, capacity, NULL, GL_STREAM_DRAW);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, batchBytes, vertices);
 	s_frameUploadVertices += (u32)num_vertices;
 	s_frameUploads++;
 #endif
@@ -85,11 +94,53 @@ GrVertex *NativeRenderer_AllocateVertexBuffer(int count)
 #endif
 }
 
-void NativeRenderer_DrawTriangles(int start_vertex, int triangles)
+#if NATIVE_DRAW3D_SUPPORTED
+// Face culling last pushed to GL: 0 off, 1 clockwise front faces, 2
+// counter-clockwise. Cached because toggling it around every object draw is a
+// pipeline-state change per draw on GL-on-D3D12. Only this module draws.
+// The front face stays GL's default counter-clockwise and the culled side
+// changes instead, so gl_FrontFacing means the same thing in every draw (the
+// shader culls GPU-transformed triangles with it, see gNativeShaderCullEnabled).
+global_variable u32 s_cullMode = 0;
+
+internal void NativeRenderer_SetCullMode(u32 cullMode)
+{
+	if (s_cullMode == cullMode)
+	{
+		return;
+	}
+	if (cullMode)
+	{
+		if (!s_cullMode)
+		{
+			glEnable(GL_CULL_FACE);
+		}
+		// Projection flips screen Y, so retail front faces are clockwise in GL:
+		// clockwise fronts cull the counter-clockwise (GL front) side.
+		glCullFace(cullMode == 1 ? GL_FRONT : GL_BACK);
+	}
+	else
+	{
+		glDisable(GL_CULL_FACE);
+	}
+	s_cullMode = cullMode;
+}
+#endif
+
+internal void NativeRenderer_IssueTriangles(int start_vertex, int triangles)
 {
 	NativePerf_BeginScope(NATIVE_PERF_BUCKET_RENDERER_DRAW_TRIANGLES);
 	glDrawArrays(GL_TRIANGLES, start_vertex, triangles * 3);
 	NativePerf_EndScope(NATIVE_PERF_BUCKET_RENDERER_DRAW_TRIANGLES);
+}
+
+void NativeRenderer_DrawTriangles(int start_vertex, int triangles)
+{
+#if NATIVE_DRAW3D_SUPPORTED
+	// Legacy and utility passes never inherit an object's culling.
+	NativeRenderer_SetCullMode(0);
+#endif
+	NativeRenderer_IssueTriangles(start_vertex, triangles);
 }
 
 #if NATIVE_DRAW3D_SUPPORTED
@@ -131,32 +182,18 @@ void NativeRenderer_DrawStaticObjectTriangles(const s32 *firstVertex, const s32 
 		return;
 	NativePerf_BeginScope(NATIVE_PERF_BUCKET_RENDERER_DRAW_TRIANGLES);
 	glBindVertexArray(s_glStaticVertexArray);
-	if (cullMode)
-	{
-		glEnable(GL_CULL_FACE);
-		glCullFace(GL_BACK);
-		glFrontFace(cullMode == 1 ? GL_CW : GL_CCW);
-	}
+	NativeRenderer_SetCullMode(cullMode);
 	glMultiDrawArrays(GL_TRIANGLES, (const GLint *)firstVertex, (const GLsizei *)vertexCount, draws);
-	if (cullMode)
-		glDisable(GL_CULL_FACE);
 	NativeRenderer_RestoreVertexArray();
 	NativePerf_EndScope(NATIVE_PERF_BUCKET_RENDERER_DRAW_TRIANGLES);
 }
 
 void NativeRenderer_DrawObjectTriangles(int startVertex, int triangles, u32 cullMode)
 {
-	// Scope culling to one draw: legacy and utility passes never inherit it.
-	// Projection flips screen Y, so retail front faces are clockwise in GL.
-	if (cullMode)
-	{
-		glEnable(GL_CULL_FACE);
-		glCullFace(GL_BACK);
-		glFrontFace(cullMode == 1 ? GL_CW : GL_CCW);
-	}
-	NativeRenderer_DrawTriangles(startVertex, triangles);
-	if (cullMode)
-		glDisable(GL_CULL_FACE);
+	// Culling stays set for the next object draw; NativeRenderer_DrawTriangles
+	// turns it off before any legacy or utility draw.
+	NativeRenderer_SetCullMode(cullMode);
+	NativeRenderer_IssueTriangles(startVertex, triangles);
 }
 #endif
 

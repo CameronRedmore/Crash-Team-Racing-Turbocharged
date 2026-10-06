@@ -268,6 +268,17 @@ internal void NativeRenderer_DestroyPSXShaders(void)
 #define GPU_PSX_BLEND_APPLY
 #endif
 
+// GPU-transformed triangles arrive with v_clipSpace 2 when double-sided, 3 to
+// keep clockwise and 4 to keep counter-clockwise front faces (GrVertex
+// cullMode). The GL front face is always counter-clockwise; see
+// NativeRenderer_SetCullMode. Discarding here matches fixed-function culling
+// pixel for pixel, and lets one draw mix single- and double-sided faces.
+#if NATIVE_DRAW3D_SUPPORTED
+#define GPU_NATIVE_FACE_CULL "\t\tif ((v_clipSpace > 2.5) && (gl_FrontFacing == (v_clipSpace < 3.5))) { discard; }\n"
+#else
+#define GPU_NATIVE_FACE_CULL
+#endif
+
 #ifdef __vita__
 #define GPU_TEXTURE_SAMPLE_MAIN "		vec4 color = nearestTextureSample(v_texcoord.xy);\n"
 #else
@@ -328,7 +339,7 @@ internal void NativeRenderer_DestroyPSXShaders(void)
 	    "		vec4 t = decodePSX(rg);\n"                                                                                                               \
 	    "		return t;\n"                                                                                                                             \
 	    "	}\n"                                                                                                                                      \
-	    "	void main() {\n" GPU_TEXTURE_SAMPLE_MAIN GPU_PSX_FRAGMENT_OUTPUT GPU_PSX_BLEND_APPLY "	}\n"
+	    "	void main() {\n" GPU_NATIVE_FACE_CULL GPU_TEXTURE_SAMPLE_MAIN GPU_PSX_FRAGMENT_OUTPUT GPU_PSX_BLEND_APPLY "	}\n"
 
 #ifdef __vita__
 global_variable const char *gte_shader_cached_p4 =
@@ -398,8 +409,7 @@ global_variable const char *gte_shader_untextured = "\tuniform float psxDrawMask
 
 global_variable const char *gte_shader_32_rgba = "	uniform sampler2D s_texture;\n" GPU_SEMI_TRANS_UNIFORM "	uniform float psxDrawMaskSet;\n"
                                                  "	uniform vec2 texelSize;\n"
-                                                 "	void main() {\n"
-                                                 "		vec2 tc = v_texcoord.xy * texelSize + texelSize * 0.5;\n"
+                                                 "	void main() {\n" GPU_NATIVE_FACE_CULL "		vec2 tc = v_texcoord.xy * texelSize + texelSize * 0.5;\n"
                                                  "		vec4 color = texture2D(s_texture, tc);\n"
 #ifndef __vita__
                                                  // Pass 4 resolves native HUD coverage with edge UVs.
@@ -488,7 +498,7 @@ global_variable const char *gte_shader_text_sdf = "	uniform sampler2D s_texture;
 	"\t\tv_ditherCoord = vec3(a_position.xy, 1.0) * gl_Position.w;\n"                 \
 	"\t}\n"                                                                           \
 	"\tv_colorPerspective = vec4(a_color.xyz * a_texcoord.z, a_color.w);\n"           \
-	"\tv_clipSpace = a_extra.z;\n"
+	"\tv_clipSpace = (a_extra.z > 1.5) ? 2.0 + a_extra.w : a_extra.z;\n"
 #endif
 
 #if NATIVE_PGXP_SUPPORTED
@@ -715,6 +725,7 @@ internal ShaderID NativeRenderer_Shader_Compile(const char *source, bool isPsxSh
 internal void NativeRenderer_CompilePSXShader(GTEShader *sh, const char *source, const char *fragmentDefines)
 {
 	sh->shader = NativeRenderer_Shader_Compile(source, true, fragmentDefines);
+	sh->cachedUniforms = 0;
 
 	sh->bilinearFilterLoc = glGetUniformLocation(sh->shader, "bilinearFilter");
 	sh->projectionLoc = glGetUniformLocation(sh->shader, "Projection");

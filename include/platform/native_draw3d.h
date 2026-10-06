@@ -226,6 +226,10 @@ typedef struct
 
 // Set by desktop renderer startup; CPU-only callers keep the established path.
 extern int gNativeGpuTransformEnabled;
+// Set by desktop renderer startup: GPU-transformed triangles carry their cull
+// mode per vertex and the fragment shader discards back faces, so models that
+// mix single- and double-sided triangles draw in one call per object.
+extern int gNativeShaderCullEnabled;
 const NativeDraw3DTransform *NativeDraw3D_GetTransform(u32 index);
 void NativeDraw3D_GetGeometryCounts(u32 *gpuTriangles, u32 *cpuTriangles);
 

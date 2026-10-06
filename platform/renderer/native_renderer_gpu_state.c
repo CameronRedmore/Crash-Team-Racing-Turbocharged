@@ -21,6 +21,7 @@
 #include <macros.h>
 #include <SDL3/SDL.h>
 #include <math.h>
+#include <stddef.h>
 
 #include "platform/native_draw3d.h"
 #include "platform/native_gpu.h"
@@ -37,6 +38,34 @@ global_variable int s_previousScissorY = 0;
 global_variable int s_previousScissorW = 0;
 global_variable int s_previousScissorH = 0;
 
+// The PSX shader SetTexture last selected. Its uniform cache is only trusted
+// while that program is the bound one, since glUniform writes the bound one.
+static GTEShader *s_uniformCacheShader;
+
+// Whether a uniform of the bound PSX shader needs writing: false when the
+// cache shows it already holds value. Records value as written otherwise.
+// Every split re-sets about ten uniforms, mostly unchanged; each call costs
+// driver time on GL-on-D3D12 even when the value is the same.
+internal b32 NativeRenderer_UniformChanged(u32 cachedBit, size_t cachedOffset, const void *value, size_t size)
+{
+	GTEShader *shader = s_uniformCacheShader;
+	if ((shader == NULL) || (shader->shader != s_previousShader))
+	{
+		return true;
+	}
+	u8 *cached = (u8 *)shader + cachedOffset;
+	if ((shader->cachedUniforms & cachedBit) && (SDL_memcmp(cached, value, size) == 0))
+	{
+		return false;
+	}
+	SDL_memcpy(cached, value, size);
+	shader->cachedUniforms |= cachedBit;
+	return true;
+}
+
+#define NATIVE_UNIFORM_CHANGED(bit, field, valuePtr) \
+	NativeRenderer_UniformChanged((bit), offsetof(GTEShader, field), (valuePtr), sizeof(((GTEShader *)NULL)->field))
+
 // Uniform locations of the currently bound PSX shader. SetShader writes them
 // when a shader binds and the setters below read them; no other module does
 // either. They were plain globals in the single-file renderer, and are static
@@ -50,8 +79,14 @@ void NativeRenderer_SetObjectGeometry(const NativeDraw3DTransform *transform, co
 		return; // Legacy vertices select their branch per vertex.
 	const double *r = transform->rotation, *t = transform->translation;
 	const float matrix[16] = {r[0], r[3], r[6], 0, r[1], r[4], r[7], 0, r[2], r[5], r[8], 0, t[0], t[1], t[2], 1};
-	glUniformMatrix4fv(u_objectToCameraLoc, 1, GL_FALSE, matrix);
-	glUniform4fv(u_nativeViewLoc, 1, view);
+	if (NATIVE_UNIFORM_CHANGED(NATIVE_UNIFORM_CACHED_OBJECT_TO_CAMERA, objectToCamera, matrix))
+	{
+		glUniformMatrix4fv(u_objectToCameraLoc, 1, GL_FALSE, matrix);
+	}
+	if (NATIVE_UNIFORM_CHANGED(NATIVE_UNIFORM_CACHED_NATIVE_VIEW, nativeView, view))
+	{
+		glUniform4fv(u_nativeViewLoc, 1, view);
+	}
 }
 #endif
 
@@ -100,7 +135,10 @@ internal void NativeRenderer_Ortho2D(float left, float right, float bottom, floa
 
 	float ortho[16] = {a, 0, 0, 0, 0, b, 0, 0, 0, 0, c, 0, x, y, z, 1};
 
-	glUniformMatrix4fv(u_projectionLoc, 1, GL_FALSE, ortho);
+	if (NATIVE_UNIFORM_CHANGED(NATIVE_UNIFORM_CACHED_PROJECTION, projection, ortho))
+	{
+		glUniformMatrix4fv(u_projectionLoc, 1, GL_FALSE, ortho);
+	}
 }
 
 void NativeRenderer_SetupClipMode(const RECT16 *rect, const DISPENV *displayEnv, int enable)
@@ -298,6 +336,7 @@ void NativeRenderer_SetTexture(TextureID texture, TexFormat texFormat, int semiT
 #endif
 
 	NativeRenderer_SetShader(shader->shader);
+	s_uniformCacheShader = shader;
 	u_bilinearFilterLoc = shader->bilinearFilterLoc;
 	u_projectionLoc = shader->projectionLoc;
 #if NATIVE_DRAW3D_SUPPORTED
@@ -322,22 +361,25 @@ void NativeRenderer_SetTexture(TextureID texture, TexFormat texFormat, int semiT
 	// into each program at compile time (NativeRenderer_Shader_Compile) and uniform
 	// values persist per-program, so re-setting them on every split was redundant GL
 	// churn. bilinearFilter stays here because it toggles at runtime (debug key).
-	if (u_bilinearFilterLoc >= 0)
+	const int bilinearFilter = g_cfg_bilinearFiltering;
+	if ((u_bilinearFilterLoc >= 0) && NATIVE_UNIFORM_CHANGED(NATIVE_UNIFORM_CACHED_BILINEAR_FILTER, bilinearFilter, &bilinearFilter))
 	{
-		glUniform1i(u_bilinearFilterLoc, g_cfg_bilinearFiltering);
+		glUniform1i(u_bilinearFilterLoc, bilinearFilter);
 	}
 #ifndef __vita__
-	if (u_psxSemiTransPassLoc >= 0)
+	if ((u_psxSemiTransPassLoc >= 0) && NATIVE_UNIFORM_CHANGED(NATIVE_UNIFORM_CACHED_SEMI_TRANS_PASS, psxSemiTransPass, &semiTransPass))
 	{
 		glUniform1i(u_psxSemiTransPassLoc, semiTransPass);
 	}
-	if (u_psxDitherEnabledLoc >= 0)
+	const int ditherEnabled = gNativeDitheringEnabled != 0;
+	if ((u_psxDitherEnabledLoc >= 0) && NATIVE_UNIFORM_CHANGED(NATIVE_UNIFORM_CACHED_DITHER_ENABLED, psxDitherEnabled, &ditherEnabled))
 	{
-		glUniform1i(u_psxDitherEnabledLoc, gNativeDitheringEnabled != 0);
+		glUniform1i(u_psxDitherEnabledLoc, ditherEnabled);
 	}
-	if (u_psxColorDepth15Loc >= 0)
+	const int colorDepth15 = gNativeColorDepth == NATIVE_COLOR_DEPTH_15BIT;
+	if ((u_psxColorDepth15Loc >= 0) && NATIVE_UNIFORM_CHANGED(NATIVE_UNIFORM_CACHED_COLOR_DEPTH_15, psxColorDepth15, &colorDepth15))
 	{
-		glUniform1i(u_psxColorDepth15Loc, gNativeColorDepth == NATIVE_COLOR_DEPTH_15BIT);
+		glUniform1i(u_psxColorDepth15Loc, colorDepth15);
 	}
 #endif
 
@@ -360,22 +402,27 @@ void NativeRenderer_SetOverrideTextureSize(int width, int height)
 	}
 
 	float vec[] = {1.0f / (float)width, 1.0f / (float)height};
-	glUniform2fv(u_texelSizeLoc, 1, vec);
+	if (NATIVE_UNIFORM_CHANGED(NATIVE_UNIFORM_CACHED_TEXEL_SIZE, texelSize, vec))
+	{
+		glUniform2fv(u_texelSizeLoc, 1, vec);
+	}
 }
 
 void NativeRenderer_SetPSXTextureOutputSTP(int enabled)
 {
-	if (u_psxTextureOutputStpLoc >= 0)
+	const float value = enabled ? 1.0f : 0.0f;
+	if ((u_psxTextureOutputStpLoc >= 0) && NATIVE_UNIFORM_CHANGED(NATIVE_UNIFORM_CACHED_TEXTURE_OUTPUT_STP, psxTextureOutputStp, &value))
 	{
-		glUniform1f(u_psxTextureOutputStpLoc, enabled ? 1.0f : 0.0f);
+		glUniform1f(u_psxTextureOutputStpLoc, value);
 	}
 }
 
 void NativeRenderer_SetPSXDrawMaskSet(int maskSet)
 {
-	if (u_psxDrawMaskSetLoc >= 0)
+	const float value = maskSet ? 1.0f : 0.0f;
+	if ((u_psxDrawMaskSetLoc >= 0) && NATIVE_UNIFORM_CHANGED(NATIVE_UNIFORM_CACHED_DRAW_MASK_SET, psxDrawMaskSet, &value))
 	{
-		glUniform1f(u_psxDrawMaskSetLoc, maskSet ? 1.0f : 0.0f);
+		glUniform1f(u_psxDrawMaskSetLoc, value);
 	}
 }
 
