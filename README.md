@@ -169,10 +169,17 @@ Please report bugs through [GitHub Issues](https://github.com/CameronRedmore/Cra
 
 ## Roadmap
 
-Planned, in no particular order and with no promised dates:
+### Experimental testing
 
-- 64-bit build
-- ARM build
+These builds exist but are not part of the supported releases yet. Expect bugs, and see the Known Issues above about ghosts, replays and saves moving between builds.
+
+- 64-bit build (x86-64 Linux): builds and boots; wider testing is still in progress.
+- ARM build (ARM64 Linux and Windows on ARM): Windows on ARM has been confirmed to boot and play races on one Surface Laptop 7. ARM64 Linux has only been built and run through the automated tests under emulation, not played on real hardware.
+
+### Planned
+
+In no particular order and with no promised dates:
+
 - Android build
 - macOS build (potentially)
 - Re-add online functionality
