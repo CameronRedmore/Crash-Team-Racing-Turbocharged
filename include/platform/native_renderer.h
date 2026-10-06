@@ -38,6 +38,9 @@ void NativeRenderer_DrawGhostReplayOverlay(void);
 // F6 debug overlay (settings and resolution readout).
 extern int gNativeDebugOverlayEnabled;
 void NativeRenderer_DrawDebugOverlayFrame(void);
+// Black screen with a centred title, detail line and 0-100 progress bar, presented immediately.
+// Safe mid-frame: restores the GL state the scene was using.
+void NativeRenderer_ShowBusyMessage(const char *title, const char *detail, int percent);
 #endif
 void NativeRenderer_PresentVRAMDisplay(void);
 void NativeRenderer_PresentVRAMRect(int x, int y, int w, int h);

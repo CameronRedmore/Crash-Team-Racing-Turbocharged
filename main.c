@@ -1,6 +1,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define SDL_MAIN_HANDLED
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -431,7 +432,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
-#if defined(__linux__) && !defined(__vita__) && !defined(__EMSCRIPTEN__)
+#if defined(__linux__) && !defined(__vita__) && !defined(__EMSCRIPTEN__) && (UINTPTR_MAX == 0xFFFFFFFFu)
+	// 32-bit Linux builds only; 64-bit builds keep SDL's default driver order.
 	// 32-bit builds do not get along with GPU drivers under native Wayland, so
 	// prefer X11 (through XWayland on Wayland desktops), keeping Wayland only as
 	// a fallback when X11 is unavailable. A SDL_VIDEODRIVER that asks for Wayland

@@ -624,6 +624,42 @@ void Platform_PresentVRAMDisplay(void)
 #endif
 }
 
+void Platform_ShowBusyMessage(const char *title, const char *detail, int percent)
+{
+#ifndef __vita__
+	NativeRenderer_ShowBusyMessage(title, detail, percent);
+#else
+	(void)title;
+	(void)detail;
+	(void)percent;
+#endif
+}
+
+void Platform_RunBusyTask(const char *title, const char *detail, int (*task)(void *), void *arg, volatile int *progress)
+{
+#ifndef __vita__
+	SDL_Thread *thread = SDL_CreateThread(task, "ctr-busy", arg);
+	if (thread != NULL)
+	{
+		// SDL_PumpEvents leaves events queued for the next Platform_PollHostEvents,
+		// so input and resizes are not lost; it only keeps the window responsive.
+		while (SDL_GetThreadState(thread) != SDL_THREAD_COMPLETE)
+		{
+			SDL_PumpEvents();
+			NativeRenderer_ShowBusyMessage(title, detail, progress != NULL ? *progress : 0);
+			SDL_Delay(16);
+		}
+		SDL_WaitThread(thread, NULL);
+		return;
+	}
+#else
+	(void)title;
+	(void)detail;
+	(void)progress;
+#endif
+	task(arg);
+}
+
 void Platform_PinVRAMDisplayFrames(int frameCount)
 {
 #ifdef __vita__

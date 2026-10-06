@@ -755,6 +755,9 @@ static b32 NativeDrawLevel_BlockCacheable(const struct QuadBlock *block, const u
 	return 1;
 }
 
+// Written by the build worker, read by the thread showing the progress bar.
+static volatile int sNativeDrawLevelBuildProgress;
+
 static void NativeDrawLevel_BuildStaticCache(const struct mesh_info *mesh)
 {
 	const u64 started = SDL_GetPerformanceCounter();
@@ -818,6 +821,8 @@ static void NativeDrawLevel_BuildStaticCache(const struct mesh_info *mesh)
 	int cachedBlocks = 0;
 	for (int i = 0; i < numBlocks; i++)
 	{
+		if ((i & 63) == 0)
+			sNativeDrawLevelBuildProgress = (i * 90) / numBlocks;
 		blockFirst[i] = capture.count;
 		const struct QuadBlock *block = &P32_GET(struct QuadBlock *const, mesh->ptrQuadBlockArray)[i];
 		const u8 slot = blockSlot[i];
@@ -843,6 +848,7 @@ static void NativeDrawLevel_BuildStaticCache(const struct mesh_info *mesh)
 		cachedBlocks++;
 	}
 	blockFirst[numBlocks] = capture.count;
+	sNativeDrawLevelBuildProgress = 90;
 
 	// Order triangles by bucket, then block, so each block's triangles of one
 	// bucket are contiguous and neighbouring visible blocks merge into one draw.
@@ -913,6 +919,12 @@ fail:
 // Static geometry applies when Max LOD fixes every texture and subdivision
 // decision and the GPU transforms object-space triangles. CTR_STATIC_LEVEL=0
 // keeps every block dynamic.
+static int NativeDrawLevel_BuildStaticCacheThread(void *mesh)
+{
+	NativeDrawLevel_BuildStaticCache((const struct mesh_info *)mesh);
+	return 0;
+}
+
 static b32 NativeDrawLevel_StaticActive(const struct mesh_info *mesh, const struct MainRenderLevelGeometryScratch *lod)
 {
 	static int enabled = -1;
@@ -929,7 +941,8 @@ static b32 NativeDrawLevel_StaticActive(const struct mesh_info *mesh, const stru
 	    sNativeDrawLevelStatic.vertices != P32_GET(struct LevVertex *const, mesh->ptrVertexArray) || sNativeDrawLevelStatic.numQuadBlock != mesh->numQuadBlock)
 	{
 		NativeDrawLevel_InvalidateStaticCache();
-		NativeDrawLevel_BuildStaticCache(mesh);
+		sNativeDrawLevelBuildProgress = 0;
+		Platform_RunBusyTask("BUILDING 3D LEVEL", "Please wait...", NativeDrawLevel_BuildStaticCacheThread, (void *)mesh, &sNativeDrawLevelBuildProgress);
 	}
 	return sNativeDrawLevelStatic.blockSlot != NULL;
 }

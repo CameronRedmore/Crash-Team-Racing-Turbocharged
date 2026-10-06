@@ -4,6 +4,8 @@ Crash Team Racing: Turbocharged is a fork of [Crash Team Racing: High Octane](ht
 
 This fork is focused on PC operating systems, especially Windows and Linux. The PSVita and Web Browser builds are not supported in Turbocharged. See the [Roadmap](#roadmap) for planned platforms and features.
 
+**Website:** [ctr.cmzi.uk](https://ctr.cmzi.uk) has an overview of the features, a PS1-vs-Turbocharged comparison, the trailer and downloads.
+
 ## Trailer
 
 [![Watch the Crash Team Racing: Turbocharged trailer](screenshots/trailer.png)](https://youtu.be/e2bI3uvGHlI)
@@ -18,6 +20,8 @@ Open [GitHub Releases](https://github.com/CameronRedmore/Crash-Team-Racing-Turbo
 
 - **Windows:** `ctr-turbocharged-<version>-windows-x86.zip`
 - **Linux:** `ctr-turbocharged-<version>-linux-x86.AppImage` or `ctr-turbocharged-<version>-linux-x86.tar.gz`
+
+You can also download from [the website](https://ctr.cmzi.uk), which offers the newest build from the `turbocharged` branch for your platform.
 
 Choose a game download rather than GitHub's **Source code** downloads. For ZIP/tar.gz archives, extract the entire archive into a folder you can write to, keeping the executable and its `assets` folder together. Settings, saves, and caches are stored in this folder.
 
@@ -77,7 +81,7 @@ Use **Options** to configure controls, graphics, and your preferred frame rate. 
 
 PAL voiceovers and custom characters are optional; their setup is described below. Python and xdelta3 are only needed for the optional conversion tools.
 
-**Linux display server:** 32-bit builds do not get along with GPU drivers under native Wayland, so Turbocharged runs through X11 by default, using XWayland on Wayland desktops, and only falls back to Wayland if X11 is unavailable. A `SDL_VIDEODRIVER=wayland` setting in your environment is ignored. To really use native Wayland, also set `CTR_TURBOCHARGED_ALLOW_WAYLAND=1`. Other `SDL_VIDEODRIVER` values, such as `x11`, are respected.
+**Linux display server:** 64-bit builds use SDL's default driver selection (native Wayland on Wayland desktops). 32-bit builds do not get along with GPU drivers under native Wayland, so the 32-bit build runs through X11 by default, using XWayland on Wayland desktops, and only falls back to Wayland if X11 is unavailable. A `SDL_VIDEODRIVER=wayland` setting in your environment is ignored. To really use native Wayland, also set `CTR_TURBOCHARGED_ALLOW_WAYLAND=1`. Other `SDL_VIDEODRIVER` values, such as `x11`, are respected.
 
 **Linux audio:** the game tries PulseAudio, then PipeWire, then ALSA. Because the build is 32-bit, it can only use the 32-bit client libraries you have installed (for example `lib32-libpulse` or `lib32-pipewire`). If a driver opens but you hear nothing, such as ALSA on a PipeWire system without a 32-bit ALSA bridge, force one with `SDL_AUDIO_DRIVER`, for example `SDL_AUDIO_DRIVER=pipewire ./ctr_native`. In Steam, set the launch options to `SDL_AUDIO_DRIVER=pipewire %command%`. Try `pulseaudio` if that does not help. Running from a terminal prints the driver in use as `SDL audio stream opened: driver=...`.
 
@@ -170,21 +174,14 @@ Please report bugs through [GitHub Issues](https://github.com/CameronRedmore/Cra
 
 ## Roadmap
 
+The roadmap now lives on the website: [ctr.cmzi.uk/#roadmap](https://ctr.cmzi.uk/#roadmap).
+
 ### Experimental testing
 
 These builds exist but are not part of the supported releases yet. Expect bugs, and see the Known Issues above about ghosts, replays and saves moving between builds.
 
 - 64-bit build (x86-64 Linux): builds and boots; wider testing is still in progress.
 - ARM build (ARM64 Linux and Windows on ARM): Windows on ARM has been confirmed to boot and play races on one Surface Laptop 7. ARM64 Linux has only been built and run through the automated tests under emulation, not played on real hardware.
-
-### Planned
-
-In no particular order and with no promised dates:
-
-- Android build
-- macOS build (potentially)
-- Re-add online functionality
-- Re-instate the Web Browser build
 
 ## Special controls bindings
 
@@ -347,10 +344,12 @@ For the tarball alone, use `./package.sh linux`. Linux CI builds and uploads bot
 
 Tests run under `ctest --test-dir <build>`. The renderer integration tests are
 off by default; configure with `-DCTR_NATIVE_RENDERER_TESTS=ON` to build them.
-With that option enabled, there are currently 32 tests: 25 without the `gpu`
-label and 7 that need an OpenGL context. The headless font cache test skips
-unless `assets/fonts/crash-a-like.ttf` is available; set
-`CTR_NATIVE_FONT_ASSET_DIR` to use another assets directory.
+With that option enabled, there are currently 31 tests: 25 without the `gpu`
+label and 6 that need an OpenGL context (the HUD icons test is disabled for
+now). The headless font cache test skips unless `assets/fonts/crash-a-like.ttf`
+is available in the source tree. To use another assets directory, configure
+with `-DCTR_NATIVE_FONT_ASSET_DIR=/path/to/assets` (a CMake option, not an
+environment variable).
 
 ```
 ctest --test-dir build -LE gpu     # display-independent subset
