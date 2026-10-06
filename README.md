@@ -149,7 +149,7 @@ These setups are confirmed working. Anything not listed has not been confirmed e
 
 | OS | CPU | GPU / driver | Display | Build |
 | --- | --- | --- | --- | --- |
-| Arch Linux (CachyOS, kernel 7.2), KDE Plasma on Wayland, running through XWayland | AMD Ryzen 9 9950X3D | NVIDIA GeForce RTX 5090, driver 615.71.09 (OpenGL 4.6) | 16:9 | Linux 32-bit |
+| Arch Linux (CachyOS, kernel 7.2), KDE Plasma on Wayland, running through XWayland | AMD Ryzen 9 9950X3D | NVIDIA GeForce RTX 5090, driver 615.71.09 (OpenGL 4.6) | 16:9 (3840x2160) | Linux 32-bit |
 | SteamOS (Steam Deck LCD) | AMD Custom APU 0405 (Zen 2) | AMD RDNA 2 integrated GPU (Mesa) | 16:10 (1280x800 built-in screen) | Linux 32-bit |
 
 No Windows machine has been confirmed yet, so Windows reports are especially welcome.
