@@ -84,6 +84,7 @@ jobs:
       # result is clean, but it used clang-tidy 23 and this container's is older.
       - name: Static analysis
         continue-on-error: true
+        shell: bash
         run: |
           set -euo pipefail
           # check-tidy.sh defaults its base to the merge-base with
