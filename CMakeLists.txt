@@ -42,6 +42,21 @@ if(CMAKE_C_COMPILER_ID STREQUAL "MSVC" OR CMAKE_C_SIMULATE_ID STREQUAL "MSVC")
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
 
+# SSE flags only exist on x86. CMAKE_C_COMPILER_ARCHITECTURE_ID is set for
+# MSVC-style compilers; otherwise fall back to the target processor name.
+set(CTR_NATIVE_X86 OFF)
+if(CMAKE_C_COMPILER_ARCHITECTURE_ID MATCHES "^(x86|X86|x64|X64|AMD64)$" OR
+   (NOT CMAKE_C_COMPILER_ARCHITECTURE_ID AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86|X86|i[3-6]86|AMD64|amd64|x86_64)$"))
+    set(CTR_NATIVE_X86 ON)
+endif()
+
+# The retail data and game code assume signed char (x86's default, not ARM's on
+# Linux/Android/macOS-iOS-free targets), and replays/ghosts assume unfused
+# floating point (ARM64 compilers contract a*b+c into FMA by default).
+if(NOT CTR_NATIVE_MSVC_FRONTEND AND NOT EMSCRIPTEN)
+    add_compile_options(-fsigned-char -ffp-contract=off)
+endif()
+
 if(NOT EMSCRIPTEN)
     set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE NEVER)
     set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY NEVER)
@@ -156,7 +171,7 @@ if(CTR_NATIVE_MSVC_FRONTEND)
     target_compile_options(ctr_native PRIVATE
         /W4 #TODO(aalhendi): fix warnings
         /bigobj
-        /arch:SSE2
+        $<$<BOOL:${CTR_NATIVE_X86}>:/arch:SSE2>
         /wd4152
         /wd4244
         /wd4245
@@ -174,7 +189,7 @@ else()
         $<$<CONFIG:Release>:-g>
     )
 
-    if(NOT EMSCRIPTEN)
+    if(NOT EMSCRIPTEN AND CTR_NATIVE_X86)
         # i386 GCC defaults to x87 maths even with -msse; the native renderer is
         # float-heavy, so keep floats and doubles in SSE registers.
         target_compile_options(ctr_native PRIVATE -msse2 -mfpmath=sse)
