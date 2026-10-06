@@ -66,6 +66,16 @@ extern int gNativeSmoothedCollisionEnabled;
 extern int gNativeSmoothedSteeringEnabled;
 extern int gNativeMaxLodEnabled;
 
+// Online. -1 until the boot prompt is answered (NATIVE_UPDATE_CHECK_UNASKED in
+// platform/native_update.h), then 0 or 1. The check itself, and its menu row,
+// exist on Windows and Linux only.
+extern int gNativeUpdateCheck;
+#if (defined(_WIN32) || defined(__linux__)) && !defined(__EMSCRIPTEN__) && !defined(__vita__)
+#define NATIVE_UPDATE_CHECK_SUPPORTED 1
+#else
+#define NATIVE_UPDATE_CHECK_SUPPORTED 0
+#endif
+
 // Texture filtering is stored in the shared bilinear flag rather than a
 // gNative-prefixed global, so it is declared here too.
 extern int g_cfg_bilinearFiltering;

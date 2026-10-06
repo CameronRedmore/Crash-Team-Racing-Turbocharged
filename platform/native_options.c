@@ -198,6 +198,14 @@ static int NativeOption_EncodePresetSeen(const struct NativeOption *option)
 	return 1;
 }
 
+// update_check stays out of config.ini until the boot prompt has been answered,
+// so its absence is what makes the prompt appear.
+static int NativeOption_EncodeUpdateCheck(const struct NativeOption *option)
+{
+	(void)option;
+	return (gNativeUpdateCheck < 0) ? NATIVE_OPTION_SKIP : (gNativeUpdateCheck != 0);
+}
+
 static int NativeOption_EncodeFrameRateIndex(const struct NativeOption *option)
 {
 	(void)option;
@@ -551,6 +559,15 @@ const struct NativeOption g_nativeOptions[] = {
         .persistent = 1,
     },
 #endif
+    {
+        // Asked at boot; see platform/native_update.c.
+        .key = "update_check",
+        .kind = NATIVE_OPTION_BOOL,
+        .value = &gNativeUpdateCheck,
+        .encode = NativeOption_EncodeUpdateCheck,
+        .defaultValue = 0,
+        .persistent = 1,
+    },
 };
 
 const unsigned int g_nativeOptionCount = sizeof(g_nativeOptions) / sizeof(g_nativeOptions[0]);

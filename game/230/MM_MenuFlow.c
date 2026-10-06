@@ -450,19 +450,21 @@ static struct MenuRow s_nativeExperimentalRows[] =
 };
 #endif
 
-static struct MenuRow s_nativeUiRows[] =
-{
-	{.stringIndex = NATIVE_MENU_STRING_DEFAULT_CAMERA},
-	{.stringIndex = NATIVE_MENU_STRING_DEFAULT_HUD},
-	{.stringIndex = NATIVE_MENU_STRING_SKIP_MASK_HINTS},
+static struct MenuRow s_nativeUiRows[] = {
+    {.stringIndex = NATIVE_MENU_STRING_DEFAULT_CAMERA},
+    {.stringIndex = NATIVE_MENU_STRING_DEFAULT_HUD},
+    {.stringIndex = NATIVE_MENU_STRING_SKIP_MASK_HINTS},
 #ifndef __vita__
-	{.stringIndex = NATIVE_MENU_STRING_HD_PAUSE},
-	{.stringIndex = NATIVE_MENU_STRING_MODERN_MAP},
-	{.stringIndex = NATIVE_MENU_STRING_FONT},
-	{.stringIndex = NATIVE_MENU_STRING_MODERN_HUD_ICONS},
+    {.stringIndex = NATIVE_MENU_STRING_HD_PAUSE},
+    {.stringIndex = NATIVE_MENU_STRING_MODERN_MAP},
+    {.stringIndex = NATIVE_MENU_STRING_FONT},
+    {.stringIndex = NATIVE_MENU_STRING_MODERN_HUD_ICONS},
 #endif
-	{.stringIndex = NATIVE_MENU_STRING_BOOST_COUNTER},
-	{.stringIndex = RECTMENU_STRING_NONE},
+    {.stringIndex = NATIVE_MENU_STRING_BOOST_COUNTER},
+#if NATIVE_UPDATE_CHECK_SUPPORTED
+    {.stringIndex = NATIVE_MENU_STRING_UPDATE_CHECK},
+#endif
+    {.stringIndex = RECTMENU_STRING_NONE},
 };
 
 static struct MenuRow s_nativeCheatsRows[] =
@@ -1633,6 +1635,16 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 		save_config();
 		return;
 	}
+
+#if NATIVE_UPDATE_CHECK_SUPPORTED
+	// Takes effect at the next boot, which is when the check runs.
+	if (choose == NATIVE_MENU_STRING_UPDATE_CHECK)
+	{
+		gNativeUpdateCheck = (gNativeUpdateCheck != 1);
+		save_config();
+		return;
+	}
+#endif
 
 	if (choose == NATIVE_MENU_STRING_AI_RACERS)
 	{

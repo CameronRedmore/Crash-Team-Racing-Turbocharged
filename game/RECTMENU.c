@@ -200,6 +200,9 @@ static const char *const s_txtSkipMaskHints[6] =
 	"SALTAR CONSEJOS MASCARA",
 	"MASKERTIPS OVERSLAAN",
 };
+static const char *const s_txtUpdateCheck[6] = {
+    "CHECK FOR UPDATES", "RECHERCHER MISES A JOUR", "NACH UPDATES SUCHEN", "CERCA AGGIORNAMENTI", "BUSCAR ACTUALIZACIONES", "ZOEKEN NAAR UPDATES",
+};
 static const char *const s_txtClassicDepth[6] = {
     "DEPTH BUFFER", "TAMPON DE PROFONDEUR", "TIEFENPUFFER", "BUFFER DI PROFONDITA", "BUFFER DE PROFUNDIDAD", "DIEPTEBUFFER",
 };
@@ -856,6 +859,14 @@ static char *NativeOptionFormatCollisions(int languageRow)
 	return NativeRow(s_txtCollisions[languageRow], value);
 }
 
+#if NATIVE_UPDATE_CHECK_SUPPORTED
+// Off until the boot prompt is answered, which a failed dialog can leave pending.
+static char *NativeOptionFormatUpdateCheck(int languageRow)
+{
+	return NativeRow(s_txtUpdateCheck[languageRow], gNativeUpdateCheck == 1 ? s_txtOn[languageRow] : s_txtOff[languageRow]);
+}
+#endif
+
 static const struct NativeOptionRow s_nativeOptionRows[] = {
     {NATIVE_MENU_STRING_MIRROR_MODE, NULL, &gNativeMirrorModeEnabled, NATIVE_OPTION_VALUE_LOCALIZED_ENUM, (const char *const *)mirrorMode, 2, NULL, NULL, NULL,
 	 1},
@@ -907,6 +918,9 @@ static const struct NativeOptionRow s_nativeOptionRows[] = {
     {NATIVE_MENU_STRING_PHYSICS, s_txtPlayerPhysics, &gNativeSmoothedPhysicsEnabled, NATIVE_OPTION_VALUE_LABELLED_PAIR, NULL, 0, s_txtSmoothed, s_txtOriginal,
 	 NULL, 1},
     {NATIVE_MENU_STRING_MAX_LOD, NULL, &gNativeMaxLodEnabled, NATIVE_OPTION_VALUE_FORMATTED, NULL, 0, NULL, NULL, NativeOptionFormatMaxLod, 1},
+#endif
+#if NATIVE_UPDATE_CHECK_SUPPORTED
+    {NATIVE_MENU_STRING_UPDATE_CHECK, NULL, &gNativeUpdateCheck, NATIVE_OPTION_VALUE_FORMATTED, NULL, 0, NULL, NULL, NativeOptionFormatUpdateCheck, 1},
 #endif
 };
 

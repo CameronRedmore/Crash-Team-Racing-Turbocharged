@@ -33,6 +33,7 @@
 #include "platform/native_leaderboard.h"
 #include "platform/native_network.h"
 #include "platform/native_user_id.h"
+#include "platform/native_update.h"
 
 #ifdef __vita__
 #include <vitasdk.h>
@@ -153,6 +154,7 @@ int gNativeRelicRaceResultTier = -1;
 #include "platform/native_state.c"
 #include "platform/native_str.c"
 #include "platform/native_options.c"
+#include "platform/native_update.c"
 
 #ifndef CC
 #if defined(__GNUC__)
@@ -497,6 +499,8 @@ int main(int argc, char *argv[])
 		NativeDiscSetup_Run(0);
 	}
 
+	NativeUpdate_Boot();
+
 	NativeCustomRacer_Scan();
 
 #if defined(CTR_INTERNAL)
@@ -528,6 +532,8 @@ int main(int argc, char *argv[])
 		return NativeConsole_Return(1);
 	}
 #endif
+
+	NativeUpdate_SavePromptAnswer();
 
 #if NATIVE_DRAW3D_SUPPORTED
 	NativeRenderer_EnableGamePresentation(1);

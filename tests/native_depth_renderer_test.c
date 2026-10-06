@@ -2188,6 +2188,8 @@ int main(int argc, char **argv)
 		    {"smoothed_ai", NATIVE_MENU_STRING_AI_PHYSICS, &gNativeSmoothedAIEnabled, 0, 1},
 		    {"smoothed_collisions", NATIVE_MENU_STRING_COLLISION_PHYSICS, &gNativeSmoothedCollisionEnabled, 0, 1},
 		    {"smoothed_steering", NATIVE_MENU_STRING_STEERING_PHYSICS, &gNativeSmoothedSteeringEnabled, 0, 1},
+		    // -1 is "boot prompt not answered yet", shown as off.
+		    {"update_check", NATIVE_MENU_STRING_UPDATE_CHECK, &gNativeUpdateCheck, -1, 1},
 		};
 
 		for (unsigned int sweep = 0; sweep < sizeof(sweeps) / sizeof(sweeps[0]); sweep++)

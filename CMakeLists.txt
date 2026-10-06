@@ -48,6 +48,23 @@ if(NOT CTR_NATIVE_GIT_HASH)
     set(CTR_NATIVE_GIT_HASH "unknown")
 endif()
 
+# The commit's time, sent with the commit by the optional update check: the
+# website compares times so a build newer than its downloads isn't offered an
+# older one. 0 (unknown) skips the check.
+execute_process(
+    COMMAND git log -1 --format=%ct
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE CTR_NATIVE_BUILD_TIME
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+)
+if(NOT CTR_NATIVE_BUILD_TIME MATCHES "^[0-9]+$")
+    set(CTR_NATIVE_BUILD_TIME "0")
+endif()
+# Which of the website's build lists the update check compares against.
+set(CTR_NATIVE_UPDATE_CHANNEL "stable" CACHE STRING "Update check channel: stable or experimental")
+set_property(CACHE CTR_NATIVE_UPDATE_CHANNEL PROPERTY STRINGS stable experimental)
+
 execute_process(
     COMMAND git diff --quiet --exit-code
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -142,6 +159,8 @@ target_compile_definitions(ctr_native PRIVATE
     BUILD=926
     CTR_NATIVE_VERSION=\"${CTR_NATIVE_VERSION}\"
     CTR_NATIVE_BUILD_ID=\"${CTR_NATIVE_BUILD_ID}\"
+    CTR_NATIVE_BUILD_TIME=\"${CTR_NATIVE_BUILD_TIME}\"
+    CTR_NATIVE_UPDATE_CHANNEL=\"${CTR_NATIVE_UPDATE_CHANNEL}\"
     CTR_PRODUCT_NAME=\"${CTR_PRODUCT_NAME}\"
 )
 if(NOT EMSCRIPTEN)

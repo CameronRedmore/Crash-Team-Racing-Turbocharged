@@ -65,6 +65,7 @@ u32 gNativeCheatConfigMask;
 int gNativePresetPending;
 int cfg_language;
 s32 s_nativeLanguageChosen;
+int gNativeUpdateCheck;
 
 // Faithful to NativePhysics_SetDomain's value semantics: store the flag and
 // drop cached per-driver state. The real reset touches the physics arena, which
@@ -125,42 +126,13 @@ static void ResetToDefaults(void)
 
 // save_config's key order at the point the registry replaced it. Cheat and
 // binding keys follow these and are emitted by main.c, not the registry.
-static const char *const s_expectedWriteOrder[] = {"language",
-                                                   "aspect_ratio",
-                                                   "fov_degrees",
-                                                   "projection_mode",
-                                                   "projection_strength",
-                                                   "preset_seen",
-                                                   "credits_seen",
-                                                   "mirror_mode",
-                                                   "60fps",
-                                                   "frame_rate",
-                                                   "default_camera_far",
-                                                   "default_hud_speedometer",
-                                                   "ai_racers",
-                                                   "skip_mask_hints",
-                                                   "engine_selection",
-                                                   "additional_unlocks",
-                                                   "anti_aliasing",
-                                                   "dithering",
-                                                   "borderless",
-                                                   "pgxp",
-                                                   "renderer",
-                                                   "color_depth",
-                                                   "ps1_resolution",
-                                                   "texture_filter",
-                                                   "pgxp_integer_nclip",
-                                                   "modern_minimap",
-                                                   "modern_hud_icons",
-                                                   "font",
-                                                   "kart_hue",
-                                                   "max_lod",
-                                                   "depth_buffer",
-                                                   "hd_pause_screen",
-                                                   "smoothed_physics",
-                                                   "smoothed_ai",
-                                                   "smoothed_collisions",
-                                                   "smoothed_steering"};
+static const char *const s_expectedWriteOrder[] = {
+    "language", "aspect_ratio", "fov_degrees", "projection_mode", "projection_strength", "preset_seen", "credits_seen", "mirror_mode", "60fps", "frame_rate",
+    "default_camera_far", "default_hud_speedometer", "ai_racers", "skip_mask_hints", "engine_selection", "additional_unlocks", "anti_aliasing", "dithering",
+    "borderless", "pgxp", "renderer", "color_depth", "ps1_resolution", "texture_filter", "pgxp_integer_nclip", "modern_minimap", "modern_hud_icons", "font",
+    "kart_hue", "max_lod", "depth_buffer", "hd_pause_screen", "smoothed_physics", "smoothed_ai", "smoothed_collisions", "smoothed_steering",
+    // Added after the refactor, for the optional update check.
+    "update_check"};
 
 // Keys load_config accepted before the refactor that are not written back.
 static const char *const s_legacyOnlyKeys[] = {"custom_ai_racers", "modern_map", "precise_minimap"};
@@ -411,6 +383,26 @@ static void test_language_and_preset_seen(void)
 	assert(gNativePresetPending == 0);
 	assert(ApplyLine("preset_seen", 0));
 	assert(gNativePresetPending == 1);
+}
+
+static void test_update_check_is_left_out_until_answered(void)
+{
+	ResetToDefaults();
+	const struct NativeOption *option = NativeOption_Find("update_check");
+	int written = 0;
+	assert(option != NULL);
+
+	// A missing key is what brings up the boot prompt, so "not asked" must never be written.
+	gNativeUpdateCheck = -1;
+	assert(!NativeOption_WriteValue(option, &written));
+
+	assert(ApplyLine("update_check", 0));
+	assert(gNativeUpdateCheck == 0);
+	assert(NativeOption_WriteValue(option, &written) && written == 0);
+	assert(ApplyLine("update_check", 5));
+	assert(gNativeUpdateCheck == 1);
+	assert(NativeOption_WriteValue(option, &written) && written == 1);
+	ResetToDefaults();
 }
 
 static void test_unknown_key_is_not_consumed(void)
@@ -759,6 +751,7 @@ int main(void)
 	test_smoothed_domains_apply_through_physics();
 	test_legacy_custom_ai_racers_maps_to_mode();
 	test_language_and_preset_seen();
+	test_update_check_is_left_out_until_answered();
 	test_unknown_key_is_not_consumed();
 	test_every_persistent_row_can_be_written();
 	test_parse_reads_a_normal_file();

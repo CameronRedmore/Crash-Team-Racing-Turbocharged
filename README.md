@@ -79,6 +79,8 @@ Crash-a-Like is optional and is not redistributed by this project. **ORIGINAL** 
 
 Use **Options** to configure controls, graphics, and your preferred frame rate. F11 switches between windowed and borderless fullscreen. The game creates `config.ini` for settings and `memcards/` for saves; keep the installation folder writable and back up your saves before replacing an older installation.
 
+**Update checks:** on first launch the game asks whether to check for new builds. If you agree, each launch asks [ctr.cmzi.uk](https://ctr.cmzi.uk) whether a newer build exists and, if so, offers to open the download page. Nothing is downloaded or installed automatically, and only the build's commit, platform and release channel are sent. Change it any time in Options > Interface > Check for updates (saved as `update_check=0/1` in `config.ini`). On Linux the check uses the system's `curl` command.
+
 PAL voiceovers and custom characters are optional; their setup is described below. Python and xdelta3 are only needed for the optional conversion tools.
 
 **Linux display server:** 64-bit builds use SDL's default driver selection (native Wayland on Wayland desktops). 32-bit builds do not get along with GPU drivers under native Wayland, so the 32-bit build runs through X11 by default, using XWayland on Wayland desktops, and only falls back to Wayland if X11 is unavailable. A `SDL_VIDEODRIVER=wayland` setting in your environment is ignored. To really use native Wayland, also set `CTR_TURBOCHARGED_ALLOW_WAYLAND=1`. Other `SDL_VIDEODRIVER` values, such as `x11`, are respected.
@@ -308,6 +310,8 @@ Changes relative to Crash Team Racing: High Octane v1.4.1, which this fork is ba
 ## Building from source
 
 Requires CMake 3.20 or newer and a **32-bit x86 target**: the game is a PS1 decompilation and still assumes 4-byte pointers. Only Windows and Linux are supported; the version comes from the `VERSION` file.
+
+The optional update check identifies a build by its git commit and commit time, read at configure time, so build from a git checkout for it to work; without git it is skipped. `-DCTR_NATIVE_UPDATE_CHANNEL=experimental` compares against the website's experimental builds instead of the supported ones. Set `CTR_TURBOCHARGED_UPDATE_URL` when running to point the check at another server, for example `http://127.0.0.1:3000/api/update` for a local copy of the website.
 
 SDL and other dependencies are vendored in `externals/`. Use the presets in `CMakePresets.json`:
 
