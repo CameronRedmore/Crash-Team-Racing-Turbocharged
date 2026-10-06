@@ -572,6 +572,13 @@ void AH_Door_ThTick(struct Thread *t)
 
 	cDC->flags |= CAMERA_FLAG_TRANSITION_BACK;
 
+#if defined(CTR_NATIVE)
+	// The first boss key freezes input when spawning beside this door.
+	// Release that lock when the door opens: the greeting hint may be skipped
+	// or already unlocked, so its cleanup cannot own the door's input lock.
+	gGT->gameMode2 &= ~VEH_FREEZE_DOOR;
+#endif
+
 	driver->funcPtrs[DRIVER_FUNC_INIT] = VehPhysProc_Driving_Init;
 
 	// cutscene over

@@ -1605,6 +1605,17 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 	if (choose == NATIVE_MENU_STRING_DEFAULT_CAMERA)
 	{
 		gNativeDefaultCameraFar ^= 1;
+		if (MM_NativeOptionsInGame())
+		{
+			struct GameTracker *gGT = sdata->gGT;
+			for (int player = 0; player < gGT->numPlyrCurrGame && player < (int)len(gGT->cameraDC); player++)
+			{
+				// Apply the choice to this race too. Keep the L2 toggle in sync
+				// so its next press switches away from the selected distance.
+				gGT->cameraDC[player].nearOrFar = gNativeDefaultCameraFar;
+				gGT->cameraDC[player].zoomToggleState = gNativeDefaultCameraFar;
+			}
+		}
 		save_config();
 		return;
 	}

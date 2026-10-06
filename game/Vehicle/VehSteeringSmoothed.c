@@ -911,24 +911,8 @@ void NativePhysics_LerpRotation(struct Driver *driver, double targetRotW)
 		remainingRot = (-remainingRot);
 	}
 
-	double lerpStep;
-#if CTR_NATIVE_60FPS
-	if (CTR_NATIVE_60FPS_ACTIVE)
-	{
-		if (CTR_FRAMES_PER_SECOND > 60)
-			lerpStep = remainingRot * (1.0 - pow(0.875, NativePhysics_FrameScale()));
-		else if ((sdata->gGT->timer & 1) != 0)
-			lerpStep = ldexp(remainingRot, -(4));
-		else
-			lerpStep = ldexp((remainingRot * 16) / 15, -(3));
-	}
-	else
-	{
-		lerpStep = ldexp(remainingRot, -(3));
-	}
-#else
-	lerpStep = ldexp(remainingRot, -(3));
-#endif
+	// The integration below scales this retail-frame velocity by elapsed time.
+	double lerpStep = ldexp(remainingRot, -(3));
 
 	if (lerpStep == 0)
 	{

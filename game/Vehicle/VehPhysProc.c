@@ -1919,24 +1919,9 @@ void PhysLerpRot(struct Driver *driver, int targetRotW)
 		remainingRot = CTR_MipsNegLo(remainingRot);
 	}
 
-	int lerpStep;
-#if CTR_NATIVE_60FPS
-	if (CTR_NATIVE_60FPS_ACTIVE)
-	{
-		if (CTR_FRAMES_PER_SECOND > 60)
-			lerpStep = CTR_FRAME_STEP(CTR_MipsSra(remainingRot, 3), sdata->gGT->timer);
-		else if ((sdata->gGT->timer & 1) != 0)
-			lerpStep = CTR_MipsSra(remainingRot, 4);
-		else
-			lerpStep = CTR_MipsSra((remainingRot * 16) / 15, 3);
-	}
-	else
-	{
-		lerpStep = CTR_MipsSra(remainingRot, 3);
-	}
-#else
-	lerpStep = CTR_MipsSra(remainingRot, 3);
-#endif
+	// Keep this velocity in retail-frame units. The integration below applies
+	// elapsed time; scaling the velocity too makes recentering slower at high FPS.
+	int lerpStep = CTR_MipsSra(remainingRot, 3);
 
 	if (lerpStep == 0)
 	{
@@ -1950,10 +1935,18 @@ void PhysLerpRot(struct Driver *driver, int targetRotW)
 	}
 
 	// Interpolate rotation by speed
-	driver->rotPrev.w = VehCalc_InterpBySpeed((int)driver->rotPrev.w, 8, maxLerpStep);
+	driver->rotPrev.w = VehCalc_InterpBySpeed((int)driver->rotPrev.w, CTR_FRAME_STEP(8, sdata->gGT->timer), maxLerpStep);
 
-	// Interpolate rotation by speed
-	driver->rotCurr.w = VehCalc_InterpBySpeed((int)driver->rotCurr.w, CTR_MipsSra(CTR_MipsMulLo(driver->rotPrev.w, sdata->gGT->elapsedTimeMS), 5), targetRotW);
+	int rotationStep = CTR_MipsSra(CTR_MipsMulLo(driver->rotPrev.w, sdata->gGT->elapsedTimeMS), 5);
+#if CTR_NATIVE_60FPS
+	if (sdata->gGT->elapsedTimeMS == CTR_FRAME_STEP(32, sdata->gGT->timer))
+	{
+		// Distribute sub-integer steps across frames so a low return velocity
+		// still reaches its target instead of rounding to zero forever.
+		rotationStep = CTR_FRAME_STEP(driver->rotPrev.w, sdata->gGT->timer);
+	}
+#endif
+	driver->rotCurr.w = VehCalc_InterpBySpeed((int)driver->rotCurr.w, rotationStep, targetRotW);
 }
 
 void PhysTerrainSlope(struct Driver *driver)
