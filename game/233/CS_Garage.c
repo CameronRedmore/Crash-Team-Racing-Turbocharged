@@ -379,7 +379,7 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 	{
 		RECT track = {(s16)statBarPosX, GARAGE_STAT_BAR_START_Y + i * GARAGE_STAT_BAR_ROW_STEP,
 		              CTR_WIDESCREEN_SCALE_X(0x50), GARAGE_STAT_BAR_HEIGHT};
-		CTR_Box_DrawSolidBox(&track, MakeColor(32, 32, 32), gGT->pushBuffer_UI.ptrOT);
+		CTR_Box_DrawSolidBox(&track, MakeColor(32, 32, 32), P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT));
 	}
 #endif
 	char engineLabel[48];
@@ -451,7 +451,7 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 	int arrowColor = ORANGE;
 	if ((FPS_HALF(sdata->frameCounter) & 4) == 0)
 		arrowColor = RED;
-	u32 *arrowColors = data.ptrColor[(s32)arrowColor];
+	u32 *arrowColors = P32_GET(u32 *, data.ptrColor[(s32)arrowColor]);
 	struct Icon **iconPtrArray = ICONGROUP_GETICONS(gGT->iconGroup[4]);
 #ifdef CTR_NATIVE
 	if (showEngineSelector)
@@ -461,11 +461,9 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 		// Font cap center: 1.25 px top gap + half of its 5.5 px height.
 		DecalFont_DrawLine(engineLabel, classNamePosX, engineLabelY, FONT_SMALL, JUSTIFY_CENTER | ORANGE);
 		for (int side = 0; side < 2; side++)
-			DecalHUD_Arrow2D(iconPtrArray[GARAGE_CHARACTER_ARROW_ICON_INDEX],
-			                 (int)classNamePosX + (side ? selectorHalfWidth + 12 : -selectorHalfWidth - 12),
-			                 selectorCenterY, primMem, gGT->pushBuffer_UI.ptrOT,
-			                 arrowColors[0], arrowColors[1], arrowColors[2], arrowColors[3],
-			                 0, GARAGE_CHARACTER_ARROW_SCALE, side ? 0 : GARAGE_CHARACTER_ARROW_ROT_LEFT);
+			DecalHUD_Arrow2D(iconPtrArray[GARAGE_CHARACTER_ARROW_ICON_INDEX], (int)classNamePosX + (side ? selectorHalfWidth + 12 : -selectorHalfWidth - 12),
+			                 selectorCenterY, primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), arrowColors[0], arrowColors[1], arrowColors[2],
+			                 arrowColors[3], 0, GARAGE_CHARACTER_ARROW_SCALE, side ? 0 : GARAGE_CHARACTER_ARROW_ROT_LEFT);
 	}
 #endif
 
@@ -478,7 +476,7 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 	// Draw 2D Menu rectangle background
 	RECTMENU_DrawInnerRect(&r, 4, P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT));
 
-	char *name = sdata->lngStrings[nameIndex];
+	char *name = P32_GET(char **, sdata->lngStrings)[nameIndex];
 #ifdef CTR_NATIVE
 	(void)engineLabel;
 #endif

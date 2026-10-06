@@ -84,7 +84,8 @@ void NativeCheat_ApplyConfigured(void)
 	{
 		return;
 	}
-	sdata->gGT->gameMode2 = (sdata->gGT->gameMode2 & ~(CHEAT_ALL | CHEAT_TURBOCOUNT)) | (gNativeCheatConfigMask & (CHEAT_ALL | CHEAT_TURBOCOUNT));
+	P32_GET(struct GameTracker *, sdata->gGT)->gameMode2 =
+	    (P32_GET(struct GameTracker *, sdata->gGT)->gameMode2 & ~(CHEAT_ALL | CHEAT_TURBOCOUNT)) | (gNativeCheatConfigMask & (CHEAT_ALL | CHEAT_TURBOCOUNT));
 #endif
 }
 

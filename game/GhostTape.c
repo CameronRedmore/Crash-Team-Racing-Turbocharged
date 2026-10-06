@@ -394,7 +394,7 @@ void GhostTape_Destroy()
 #if defined(CTR_NATIVE)
 	NativeEngine_ClearReplayOverrides();
 #endif
-	if (sdata->ptrGhostTapePlaying != 0)
+	if (P32_GET(struct GhostHeader *, sdata->ptrGhostTapePlaying) != 0)
 	{
 		MEMPACK_ClearHighMem();
 		P32_SET(sdata->ptrGhostTapePlaying, 0);

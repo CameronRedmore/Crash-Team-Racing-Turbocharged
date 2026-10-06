@@ -328,7 +328,8 @@ LAB_800232d8:
 #if defined(CTR_NATIVE) && !defined(__vita__)
 	// Group 4, icon 0x38 is the shared menu navigation arrow. Keep font
 	// diacritics and other rotated decals on their original rendering path.
-	struct IconGroup *group = sdata && sdata->gGT ? sdata->gGT->iconGroup[4] : NULL;
+	struct IconGroup *group =
+	    sdata && P32_GET(struct GameTracker *, sdata->gGT) ? P32_GET(struct IconGroup *, P32_GET(struct GameTracker *, sdata->gGT)->iconGroup[4]) : NULL;
 	if (!transparency && group && group->numIcons > 0x38 && (ICONGROUP_GETICONS(group))[0x38] == icon)
 	{
 		const float x[4] = {p->x0, p->x1, p->x2, p->x3};

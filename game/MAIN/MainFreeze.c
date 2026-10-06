@@ -15,7 +15,7 @@ static struct MenuRow s_adventureHubRowsWithCharacter[] =
 void MainFreeze_BeginAdventureCharacterChange(void)
 {
 	s_returnToAdventureHubAfterCharacterSelect = true;
-	s_adventureCharacterReturnLevel = sdata->gGT->levelID;
+	s_adventureCharacterReturnLevel = P32_GET(struct GameTracker *, sdata->gGT)->levelID;
 #if defined(CTR_NATIVE)
 	int portalHub = NativeAutoSave_GetExitPortalHub();
 	if (portalHub >= 0)

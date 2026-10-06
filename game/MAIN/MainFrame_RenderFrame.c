@@ -9,11 +9,10 @@
 #if defined(CTR_NATIVE)
 int NativeProjection_IsGameplayActive(void)
 {
-	return NATIVE_DRAW3D_ACTIVE() && sdata->gGT != NULL &&
-	       (sdata->gGT->gameMode1 & (MAIN_MENU | LOADING | GAME_CUTSCENE | PAUSE_ALL)) == 0 &&
-	       gNativeProjectionMode > NATIVE_PROJECTION_PERSPECTIVE &&
-	       gNativeProjectionMode < NATIVE_PROJECTION_MODE_COUNT &&
-	       gNativeProjectionStrength > 0 && gNativeProjectionStrength <= 100;
+	return NATIVE_DRAW3D_ACTIVE() && P32_GET(struct GameTracker *, sdata->gGT) != NULL &&
+	       (P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 & (MAIN_MENU | LOADING | GAME_CUTSCENE | PAUSE_ALL)) == 0 &&
+	       gNativeProjectionMode > NATIVE_PROJECTION_PERSPECTIVE && gNativeProjectionMode < NATIVE_PROJECTION_MODE_COUNT && gNativeProjectionStrength > 0 &&
+	       gNativeProjectionStrength <= 100;
 }
 
 double NativeProjection_GetWorldOverscan(void)
@@ -47,9 +46,10 @@ static void MainFrame_AppendProjectionMarkers(struct GameTracker *gt)
 			const double h = pb->distanceToScreen_PREV > 0 ? pb->distanceToScreen_PREV : 256;
 			const double tanHalf = pb->rect.w / (2.0 * h * NativeAspect_GetScaleX() * NativeAspect_GetFocalScale());
 			NativeProjection_BuildParams(gNativeProjectionMode, gNativeProjectionStrength, tanHalf, &marker->params);
-			AddPrim(&pb->ptrOT[0x3ff], marker);
+			AddPrim(&P32_GET(uint32_t *, pb->ptrOT)[0x3ff], marker);
 		}
-		else AddPrim(&gt->pushBuffer_UI.ptrOT[4], marker);
+		else
+			AddPrim(&P32_GET(uint32_t *, gt->pushBuffer_UI.ptrOT)[4], marker);
 	}
 }
 #endif
@@ -1243,10 +1243,12 @@ static void RenderAllLevelGeometry_Native(struct GameTracker *gGT, struct Level 
 		}
 		RenderAllLevelGeometry_ApplyNativeMaxLod(scratch);
 
-		gGT->bspLeafsDrawn += RenderLists_Init1P2P(ptr_mesh_info->bspRoot, gGT->visMem1->visLeafList[i], pushBuffer, (u32)&gGT->LevRenderLists[i],
-		                                           gGT->visMem1->bspList[i], 1);
-		NativeDrawLevel_Viewport(pushBuffer, &gGT->backBuffer->primMem, ptr_mesh_info, &gGT->LevRenderLists[i], gGT->visMem1->visFaceList[i],
-		                         level1->ptr_tex_waterEnvMap);
+		gGT->bspLeafsDrawn += RenderLists_Init1P2P(
+		    P32_GET(struct BSP *, ptr_mesh_info->bspRoot), P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visLeafList[i]), pushBuffer,
+		    (u32)&gGT->LevRenderLists[i], P32_GET(struct VisMemBspListNode *, P32_GET(struct VisMem *, gGT->visMem1)->bspList[i]), 1);
+		NativeDrawLevel_Viewport(pushBuffer, &P32_GET(struct DB *, gGT->backBuffer)->primMem, ptr_mesh_info, &gGT->LevRenderLists[i],
+		                         P32_GET(int *, P32_GET(struct VisMem *, gGT->visMem1)->visFaceList[i]),
+		                         P32_GET(struct TextureLayout *, level1->ptr_tex_waterEnvMap));
 	}
 
 	// Retail draws the skybox in single player only.

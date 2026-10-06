@@ -221,7 +221,7 @@ void SelectProfile_DrawAdvProfile(struct AdvProgress *adv, int posX, int posY, s
 #if defined(CTR_NATIVE)
 		if (sdata->memcardAction == SELECT_PROFILE_ACTION_LOAD)
 		{
-			struct Icon *portrait = gGT->ptrIcons[iconID];
+			struct Icon *portrait = P32_GET(struct Icon *, gGT->ptrIcons[iconID]);
 			int width = portrait ? portrait->texLayout.u1 - portrait->texLayout.u0 : 32;
 			int height = portrait ? portrait->texLayout.v2 - portrait->texLayout.v0 : 32;
 			DecalFont_DrawLine(SelectProfile_AdventureEngineMarker(adv), posX + 10 + width + 6, posY + 6 + (height - 8) / 2,

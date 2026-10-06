@@ -1004,7 +1004,7 @@ static s8 *DrawLevelOvr1P_GetNativeClipDrawOrder(const u8 *record)
 
 	for (int buffer = 0; buffer < 4; buffer++)
 	{
-		if ((start == data.PtrClipBuffer[buffer]) && (index < DRAW_LEVEL_OVR1P_NATIVE_CLIP_DRAW_ORDER_COUNT))
+		if ((start == P32_GET(void *, data.PtrClipBuffer[buffer])) && (index < DRAW_LEVEL_OVR1P_NATIVE_CLIP_DRAW_ORDER_COUNT))
 		{
 			return &sDrawLevelOvr1P_NativeClipDrawOrder[buffer][index];
 		}

@@ -1140,10 +1140,11 @@ b32 NativeGhostInput_BeginPlayback(void)
             profile = NativeEngine_GetDefaultProfile(s_nativeGhostInputCharacterID);
         }
         NativeEngine_SetReplayOverride(0, profile);
-        if ((sdata != NULL) && (sdata->gGT != NULL) && (sdata->gGT->drivers[0] != NULL))
-        {
-            VehBirth_SetConsts(sdata->gGT->drivers[0]);
-        }
+		if ((sdata != NULL) && (P32_GET(struct GameTracker *, sdata->gGT) != NULL) &&
+		    (P32_GET(struct Driver *, P32_GET(struct GameTracker *, sdata->gGT)->drivers[0]) != NULL))
+		{
+			VehBirth_SetConsts(P32_GET(struct Driver *, P32_GET(struct GameTracker *, sdata->gGT)->drivers[0]));
+		}
 #endif
         gNativeGhostReplayFpsOverride = NativeGhostInput_FlagsRateIndex(s_nativeGhostInputRecordingFlags);
         s_nativeGhostInputPlaybackTimerPhase = s_nativeGhostInputStartTimerPhase & NativeGhostInput_TimerPhaseMask(s_nativeGhostInputRecordingFlags);
@@ -1195,11 +1196,12 @@ b32 NativeGhostInput_BeginPlayback(void)
             profile = NativeEngine_GetDefaultProfile(header.characterID);
         }
         NativeEngine_SetReplayOverride(0, profile);
-        if ((sdata != NULL) && (sdata->gGT != NULL) && (sdata->gGT->drivers[0] != NULL))
-        {
-            VehBirth_SetConsts(sdata->gGT->drivers[0]);
-        }
-    }
+		if ((sdata != NULL) && (P32_GET(struct GameTracker *, sdata->gGT) != NULL) &&
+		    (P32_GET(struct Driver *, P32_GET(struct GameTracker *, sdata->gGT)->drivers[0]) != NULL))
+		{
+			VehBirth_SetConsts(P32_GET(struct Driver *, P32_GET(struct GameTracker *, sdata->gGT)->drivers[0]));
+		}
+	}
 #endif
     b32 use60Fps = NativeGhostInput_HeaderUses60Fps(&header);
     gNativeGhostReplayFpsOverride = NativeGhostInput_FlagsRateIndex(s_nativeGhostInputRecordingFlags);

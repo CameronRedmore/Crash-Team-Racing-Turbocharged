@@ -2449,16 +2449,16 @@ static struct Instance **RenderBucket_GetVisibleLevelInstances(const struct Came
 	// Expanded visibility replaces the camera-cell list with every instance a
 	// PVS list can reach. QueueDraw still checks each against the camera
 	// frustum. A camera without a list draws no level instances, as in retail.
-	if (NativeAspect_UsesExpandedVisibility() && camera->visInstSrc != NULL)
+	if (NativeAspect_UsesExpandedVisibility() && P32_GET(struct Instance * *const, camera->visInstSrc) != NULL)
 	{
-		struct Instance **reachable = LevInstDef_GetReachableInstances(sdata->gGT->level1);
+		struct Instance **reachable = LevInstDef_GetReachableInstances(P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1));
 		if (reachable != NULL)
 		{
 			return reachable;
 		}
 	}
 #endif
-	return camera->visInstSrc;
+	return P32_GET(struct Instance * *const, camera->visInstSrc);
 }
 
 void *RenderBucket_QueueLevInstances(struct CameraDC *cDC, struct OTMem *otState, void *rbi, u32 lodMask, u8 numPlyr, int gameMode1)
@@ -2527,7 +2527,7 @@ void *RenderBucket_QueueLevInstances(struct CameraDC *cDC, struct OTMem *otState
 #if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
 static void RenderBucket_RefreshUiProjection(void)
 {
-	struct GameTracker *gt = sdata->gGT;
+	struct GameTracker *gt = P32_GET(struct GameTracker *, sdata->gGT);
 	if (gt == NULL || gt->pushBuffer_UI.rect.w <= 0 || gt->pushBuffer_UI.rect.h <= 0)
 		return;
 	// Unlike the world cameras, retail only builds the UI camera when the
@@ -3243,7 +3243,7 @@ static struct TextureLayout *RenderBucket_GetCommandTexture(struct RenderBucketD
 	// NOTE(aalhendi): Retail only uses texture index zero as the explicit G3
 	// path, but a null texture-table entry also reaches DrawInstPrim_Normal as
 	// `a2 == 0` and emits G3. Do not reject that case here.
-	struct TextureLayout *layout = ctx->idpp->ptrTexLayout[texIndex - 1];
+	struct TextureLayout *layout = P32_GET(struct TextureLayout **, ctx->idpp->ptrTexLayout)[texIndex - 1];
 #if defined(CTR_NATIVE) && NATIVE_KART_COLOR_SUPPORTED
 	if (layout != NULL)
 	{

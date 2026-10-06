@@ -340,7 +340,7 @@ void GhostReplay_ThTick(struct Thread *t)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80027838-0x80027b88.
 void GhostReplay_Init1(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 #if defined(CTR_NATIVE)
 	NativeEngine_ClearReplayOverrides();
 #endif
@@ -443,7 +443,8 @@ void GhostReplay_Init1(void)
 		P32_SET(ghostDriver->instSelf, inst);
 		VehBirth_TireSprites(t);
 #if defined(CTR_NATIVE)
-		NativeEngine_SetReplayOverride(ghostDriver->driverID, GhostReplay_GetEngineProfile(ghostDriver->ghostTape->gh));
+		NativeEngine_SetReplayOverride(ghostDriver->driverID,
+		                               GhostReplay_GetEngineProfile(P32_GET(struct GhostHeader *, P32_GET(struct GhostTape *, ghostDriver->ghostTape)->gh)));
 #endif
 		VehBirth_SetConsts(ghostDriver);
 

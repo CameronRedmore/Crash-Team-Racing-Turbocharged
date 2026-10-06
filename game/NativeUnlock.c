@@ -97,11 +97,11 @@ void NativeUnlock_Draw(void)
 	    {"CHARAKTER", "STRECKE", "KAMPFARENA", "ALBUM", "ABENTEUERSTRECKE"},         {"PERSONAGGIO", "PISTA", "ARENA BATTAGLIA", "ALBUM", "PISTA AVVENTURA"},
 	    {"PERSONAJE", "CIRCUITO", "ARENA DE BATALLA", "ALBUM", "CIRCUITO AVENTURA"}, {"PERSONAGE", "CIRCUIT", "GEVECHTSARENA", "ALBUM", "AVONTURENCIRCUIT"},
 	};
-	if ((sdata == NULL) || (sdata->gGT == NULL) || (s_nativeUnlockCount == 0))
+	if ((sdata == NULL) || (P32_GET(struct GameTracker *, sdata->gGT) == NULL) || (s_nativeUnlockCount == 0))
 		return;
-	struct GameTracker *gGT = sdata->gGT;
-	if ((sdata->Loading.stage != LOAD_IDLE) || (sdata->lngStrings == NULL) || (gGT->backBuffer == NULL) || (gGT->boolDemoMode != 0) ||
-	    (sdata->boolPlayVideoSTR != 0) || (sdata->AkuAkuHintState != 0) || ((gGT->gameMode1 & GAME_CUTSCENE) != 0) ||
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	if ((sdata->Loading.stage != LOAD_IDLE) || (P32_GET(char **, sdata->lngStrings) == NULL) || (P32_GET(struct DB *, gGT->backBuffer) == NULL) ||
+	    (gGT->boolDemoMode != 0) || (sdata->boolPlayVideoSTR != 0) || (sdata->AkuAkuHintState != 0) || ((gGT->gameMode1 & GAME_CUTSCENE) != 0) ||
 	    ((gGT->gameMode1 & (MAIN_MENU | ADVENTURE_ARENA | END_OF_RACE)) == 0))
 		return;
 
@@ -113,7 +113,7 @@ void NativeUnlock_Draw(void)
 	const struct NativeUnlockReward *reward = &s_nativeUnlockRewards[s_nativeUnlockQueue[s_nativeUnlockHead]];
 	// Match the native menus: configured language files 2..7 are EN, FR, DE, IT, ES, NL.
 	int language = (cfg_language >= 2 && cfg_language <= 7) ? cfg_language - 2 : 0;
-	char *name = sdata->lngStrings[reward->name];
+	char *name = P32_GET(char **, sdata->lngStrings)[reward->name];
 	int nameFont = DecalFont_GetLineWidth(name, FONT_BIG) <= 440 ? FONT_BIG : FONT_SMALL;
 	int width = DecalFont_GetLineWidth(name, nameFont) + 32;
 	if (width < 280)
@@ -127,8 +127,8 @@ void NativeUnlock_Draw(void)
 	DecalFont_DrawLine(name, 256, 28, nameFont, JUSTIFY_CENTER | WHITE);
 	DecalFont_DrawLine((char *)kinds[language][reward->kind], 256, 50, FONT_SMALL, JUSTIFY_CENTER | PERIWINKLE);
 	// OT insertion prepends: background renders first, behind the border and text.
-	CTR_Box_DrawWireBox(&box, &border, gGT->backBuffer->otMem.uiOT, &gGT->backBuffer->primMem);
-	CTR_Box_DrawSolidBox(&box, background, gGT->backBuffer->otMem.uiOT);
+	CTR_Box_DrawWireBox(&box, &border, P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT), &P32_GET(struct DB *, gGT->backBuffer)->primMem);
+	CTR_Box_DrawSolidBox(&box, background, P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT));
 
 	// Frame-rate independent, including changes to the rate while a toast is visible.
 	s_nativeUnlockSeconds += 1.0 / CTR_FRAMES_PER_SECOND;

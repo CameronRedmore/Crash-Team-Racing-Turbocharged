@@ -306,8 +306,8 @@ static void MM_NativeUnlocksInput(struct RectMenu *menu, u32 tap)
 
 static void MM_NativeUnlocksPanel(RECT box)
 {
-	struct GameTracker *gGT = sdata->gGT;
-	RECTMENU_DrawInnerRect(&box, 0, gGT->backBuffer->otMem.uiOT);
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	RECTMENU_DrawInnerRect(&box, 0, P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT));
 }
 
 static void MM_NativeUnlocksMenuProc(struct RectMenu *menu)
@@ -315,7 +315,8 @@ static void MM_NativeUnlocksMenuProc(struct RectMenu *menu)
 	if (menu->funcState != RECTMENU_FUNC_STATE_UPDATE) return;
 	MM_NativeUnlocksInput(menu, sdata->buttonTapPerPlayer[0]);
 	RECTMENU_ClearInput();
-	if (sdata->ptrDesiredMenu == &D230.menuMainMenu) return;
+	if (P32_GET(struct RectMenu *, sdata->ptrDesiredMenu) == &D230.menuMainMenu)
+		return;
 
 	int count = MM_NativeUnlockCount();
 	DecalFont_DrawLine(RECTMENU_GetString(NATIVE_MENU_STRING_UNLOCKS), 256, 12, FONT_BIG, JUSTIFY_CENTER | ORANGE);
@@ -333,7 +334,8 @@ static void MM_NativeUnlocksMenuProc(struct RectMenu *menu)
 		if (selected)
 		{
 			RECT highlight = {24, (s16)(y - 3), 198, 14};
-			CTR_Box_DrawClearBox(&highlight, &sdata->menuRowHighlight_Normal, 1, sdata->gGT->backBuffer->otMem.uiOT);
+			CTR_Box_DrawClearBox(&highlight, &sdata->menuRowHighlight_Normal, 1,
+			                     P32_GET(uint32_t *, P32_GET(struct DB *, P32_GET(struct GameTracker *, sdata->gGT)->backBuffer)->otMem.uiOT));
 		}
 	}
 	DecalFont_DrawLine(s_nativeUnlockFirst > 0 ? "ABOVE" : "", 28, 170, FONT_SMALL, PERIWINKLE);
@@ -951,7 +953,7 @@ static void MM_NativePresetMenuProc(struct RectMenu *menu)
 		s_nativeOptionsMenu.posX_curr = s_nativePresetReturnPosX;
 		s_nativeOptionsMenu.posY_curr = s_nativePresetReturnPosY;
 		s_nativeOptionsMenu.rowSelected = s_nativePresetReturnRow;
-		s_nativeOptionsMenu.ptrNextBox_InHierarchy = NULL;
+		P32_GET(struct RectMenu *, s_nativeOptionsMenu.ptrNextBox_InHierarchy) = NULL;
 		s_nativeOptionsMenu.ptrPrevBox_InHierarchy = parent;
 		if (parent != NULL)
 		{
@@ -1507,8 +1509,8 @@ static void MM_NativeOptionsOpenFromPreset(void)
 	s_nativeOptionsMenu.posX_curr = 256;
 	s_nativeOptionsMenu.posY_curr = 120;
 	s_nativeOptionsMenu.state = CENTER_ON_COORDS | USE_SMALL_FONT | BIG_TEXT_IN_TITLE;
-	s_nativeOptionsMenu.ptrNextBox_InHierarchy = NULL;
-	s_nativeOptionsMenu.ptrPrevBox_InHierarchy = NULL;
+	P32_GET(struct RectMenu *, s_nativeOptionsMenu.ptrNextBox_InHierarchy) = NULL;
+	P32_GET(struct RectMenu *, s_nativeOptionsMenu.ptrPrevBox_InHierarchy) = NULL;
 	sdata->ptrDesiredMenu = &s_nativeOptionsMenu;
 }
 
@@ -1516,7 +1518,7 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 {
 	if (menu->funcState == RECTMENU_FUNC_STATE_UPDATE)
 	{
-		MM_NativeOptionsApplyLocks(menu->rows, MM_NativeOptionsInGame());
+		MM_NativeOptionsApplyLocks(P32_GET(struct MenuRow *, menu->rows), MM_NativeOptionsInGame());
 		return;
 	}
 
@@ -1546,7 +1548,7 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 		return;
 	}
 
-	MM_NativeOptionsApplyLocks(menu->rows, MM_NativeOptionsInGame());
+	MM_NativeOptionsApplyLocks(P32_GET(struct MenuRow *, menu->rows), MM_NativeOptionsInGame());
 
 	// left/right bypass the row lock check done for confirm
 	if ((P32_GET(struct MenuRow *, menu->rows)[menu->rowSelected].stringIndex & MENU_ROW_LOCKED) != 0)
@@ -1560,9 +1562,9 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 	if (choose == NATIVE_MENU_STRING_PRESET)
 	{
 		s_nativePresetOptionsMenu.rowSelected = 1;
-		s_nativePresetOptionsMenu.ptrNextBox_InHierarchy = NULL;
-		s_nativePresetOptionsMenu.ptrPrevBox_InHierarchy = NULL;
-		s_nativePresetReturnParent = menu->ptrPrevBox_InHierarchy;
+		P32_GET(struct RectMenu *, s_nativePresetOptionsMenu.ptrNextBox_InHierarchy) = NULL;
+		P32_GET(struct RectMenu *, s_nativePresetOptionsMenu.ptrPrevBox_InHierarchy) = NULL;
+		s_nativePresetReturnParent = P32_GET(struct RectMenu *, menu->ptrPrevBox_InHierarchy);
 		s_nativePresetReturnParentState = (s_nativePresetReturnParent != NULL) ? s_nativePresetReturnParent->state : 0;
 		s_nativePresetReturnState = menu->state;
 		s_nativePresetReturnPosX = menu->posX_curr;
@@ -1644,7 +1646,7 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 	{
 		s_nativeCheatsMenu.rowSelected = 0;
 		s_nativeCheatsMenu.state = CENTER_ON_X | USE_SMALL_FONT;
-		s_nativeCheatsMenu.ptrNextBox_InHierarchy = NULL;
+		P32_GET(struct RectMenu *, s_nativeCheatsMenu.ptrNextBox_InHierarchy) = NULL;
 		s_nativeCheatsMenu.ptrPrevBox_InHierarchy = menu;
 		menu->ptrNextBox_InHierarchy = &s_nativeCheatsMenu;
 		menu->state |= ONLY_DRAW_TITLE | DRAW_NEXT_MENU_IN_HIERARCHY;
@@ -1731,7 +1733,7 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 		submenu->rowSelected = 0;
 		submenu->posY_curr = 0;
 		submenu->state = CENTER_ON_X | USE_SMALL_FONT;
-		submenu->ptrNextBox_InHierarchy = NULL;
+		P32_GET(struct RectMenu *, submenu->ptrNextBox_InHierarchy) = NULL;
 		submenu->ptrPrevBox_InHierarchy = menu;
 		menu->ptrNextBox_InHierarchy = submenu;
 		menu->state |= ONLY_DRAW_TITLE | DRAW_NEXT_MENU_IN_HIERARCHY;
@@ -1867,7 +1869,7 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 	{
 #if NATIVE_DRAW3D_SUPPORTED
 		gNativeRendererMode = (gNativeRendererMode + 1) % NATIVE_RENDERER_MODE_COUNT;
-		MM_NativeOptionsApplyLocks(menu->rows, MM_NativeOptionsInGame());
+		MM_NativeOptionsApplyLocks(P32_GET(struct MenuRow *, menu->rows), MM_NativeOptionsInGame());
 		if (button & (BTN_LEFT | BTN_RIGHT))
 		{
 			OtherFX_Play(0, 1);
@@ -2078,7 +2080,7 @@ static void MM_NativeCreditsMenuProc(struct RectMenu *menu)
 	if (menu->funcState != RECTMENU_FUNC_STATE_INPUT) return;
 
 	// text only: any confirm or back returns to the main menu
-	struct RectMenu *parent = menu->ptrPrevBox_InHierarchy;
+	struct RectMenu *parent = P32_GET(struct RectMenu *, menu->ptrPrevBox_InHierarchy);
 	if (parent != NULL) parent->state &= ~(ONLY_DRAW_TITLE | DRAW_NEXT_MENU_IN_HIERARCHY);
 }
 
@@ -2379,7 +2381,8 @@ void MM_MenuProc_Main(struct RectMenu *mainMenu)
 				{
 					char userIdText[32];
 					snprintf(userIdText, sizeof(userIdText), "USER ID: %s", userId);
-					DecalFont_DrawLineOT(userIdText, 8, 0xc8, FONT_SMALL, WHITE, &gGT->backBuffer->otMem.uiOT[MM_TITLE_TM_OT_INDEX]);
+					DecalFont_DrawLineOT(userIdText, 8, 0xc8, FONT_SMALL, WHITE,
+					                     &P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT)[MM_TITLE_TM_OT_INDEX]);
 					userIdShown = true;
 				}
 			}
@@ -2639,7 +2642,7 @@ void MM_MenuProc_Main(struct RectMenu *mainMenu)
 	if (choose == NATIVE_MENU_STRING_CREDITS)
 	{
 		s_nativeCreditsMenu.rowSelected = 0;
-		s_nativeCreditsMenu.ptrNextBox_InHierarchy = NULL;
+		P32_GET(struct RectMenu *, s_nativeCreditsMenu.ptrNextBox_InHierarchy) = NULL;
 		s_nativeCreditsMenu.ptrPrevBox_InHierarchy = mainMenu;
 
 		mainMenu->ptrNextBox_InHierarchy = &s_nativeCreditsMenu;

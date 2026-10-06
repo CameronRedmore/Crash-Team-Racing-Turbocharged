@@ -613,7 +613,8 @@ int NativeTitleLogo_Draw(struct PrimMem *primMem, u32 *ot, const struct NativeTi
 	}
 
 	const size_t packetSize = sizeof(DR_PSYX_TEX) * 2 + sizeof(POLY_FT4);
-	if (((uintptr_t)primMem->cursor > (uintptr_t)primMem->end) || ((uintptr_t)primMem->end - (uintptr_t)primMem->cursor < packetSize))
+	if (((uintptr_t)P32_GET(void *, primMem->cursor) > (uintptr_t)P32_GET(void *, primMem->end)) ||
+	    ((uintptr_t)P32_GET(void *, primMem->end) - (uintptr_t)P32_GET(void *, primMem->cursor) < packetSize))
 	{
 		return 0;
 	}
@@ -654,7 +655,7 @@ int NativeTitleLogo_Draw(struct PrimMem *primMem, u32 *ot, const struct NativeTi
 	const float top = pose->centerY - quadHalfY;
 	const float bottom = pose->centerY + quadHalfY;
 
-	DR_PSYX_TEX *set = primMem->cursor;
+	DR_PSYX_TEX *set = P32_GET(void *, primMem->cursor);
 	POLY_FT4 *p = (POLY_FT4 *)(set + 1);
 	DR_PSYX_TEX *reset = (DR_PSYX_TEX *)(p + 1);
 	memset(p, 0, sizeof(*p));

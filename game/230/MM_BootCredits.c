@@ -104,8 +104,8 @@ static float MM_BootCredits_Ramp(float t, float start, float duration)
 // every line of the frame.
 static void MM_BootCredits_SetFadeColor(int fromSlot, int toSlot, float mix, float level)
 {
-	const u8 *from = (const u8 *)data.ptrColor[fromSlot];
-	const u8 *to = (const u8 *)data.ptrColor[toSlot];
+	const u8 *from = (const u8 *)P32_GET(u32 *, data.ptrColor[fromSlot]);
+	const u8 *to = (const u8 *)P32_GET(u32 *, data.ptrColor[toSlot]);
 	u8 *dst = (u8 *)&data.colors[CREDITS_FADE][0];
 
 	for (int i = 0; i < 16; i++)
@@ -197,7 +197,7 @@ static void MM_BootCredits_Draw(struct GameTracker *gGT)
 	// The loading flag draws in the slot in front of the UI, so it still
 	// lifts over the black.
 	RECT backdrop = {0, 0, gGT->pushBuffer_UI.rect.w, gGT->pushBuffer_UI.rect.h};
-	CTR_Box_DrawSolidBox(&backdrop, MakeColor(0, 0, 0), gGT->backBuffer->otMem.uiOT);
+	CTR_Box_DrawSolidBox(&backdrop, MakeColor(0, 0, 0), P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT));
 }
 
 static void MM_BootCredits_Finish(struct GameTracker *gGT)
@@ -222,7 +222,7 @@ static void MM_TitleLogo_Prepare(void);
 // skips the title. Runs once per frame on the menu's update call.
 static b32 MM_BootCredits_Update(struct RectMenu *mainMenu)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// Built once, behind the credits or the logo's fade in.
 	MM_TitleLogo_Prepare();
@@ -235,8 +235,8 @@ static b32 MM_BootCredits_Update(struct RectMenu *mainMenu)
 	if (s_mmBootCreditsState == MM_BOOT_CREDITS_PENDING)
 	{
 		// Only in front of the session's first title intro.
-		if ((D230.titleMenuState != TITLE_MENU_STATE_INTRO) || (D230.titleIntroFrame != 0) || (D230.titleObj != NULL) || ((gGT->gameMode1 & MAIN_MENU) == 0) ||
-		    (gGT->boolDemoMode != 0))
+		if ((D230.titleMenuState != TITLE_MENU_STATE_INTRO) || (D230.titleIntroFrame != 0) || (P32_GET(struct Title *, D230.titleObj) != NULL) ||
+		    ((gGT->gameMode1 & MAIN_MENU) == 0) || (gGT->boolDemoMode != 0))
 		{
 			s_mmBootCreditsState = MM_BOOT_CREDITS_DONE;
 			return false;
@@ -266,7 +266,7 @@ static b32 MM_BootCredits_Update(struct RectMenu *mainMenu)
 	u32 tap = 0;
 	for (int i = 0; i < 4; i++)
 	{
-		tap |= sdata->gGamepads->gamepad[i].buttonsTapped;
+		tap |= P32_GET(struct GamepadSystem *, sdata->gGamepads)->gamepad[i].buttonsTapped;
 	}
 
 	if (s_mmBootCreditsSeconds >= MM_BOOT_CREDITS_END)
@@ -342,18 +342,18 @@ static u32 s_mmTitleScreechHandle;
 // followed by those samples back to back.
 static void MM_TitleScreech_LoadSample(void)
 {
-	if (s_mmTitleScreechSampleTried || (sdata->boolAudioEnabled == 0) || (sdata->ptrHowlHeader == NULL))
+	if (s_mmTitleScreechSampleTried || (sdata->boolAudioEnabled == 0) || (P32_GET(struct HowlHeader *, sdata->ptrHowlHeader) == NULL))
 	{
 		return;
 	}
 	s_mmTitleScreechSampleTried = true;
 
-	const struct HowlHeader *header = sdata->ptrHowlHeader;
+	const struct HowlHeader *header = P32_GET(struct HowlHeader *, sdata->ptrHowlHeader);
 	if (header->numOtherFX <= MM_TITLE_SCREECH_SFX)
 	{
 		return;
 	}
-	const int spuIndex = sdata->howl_metaOtherFX[MM_TITLE_SCREECH_SFX].spuIndex;
+	const int spuIndex = P32_GET(struct OtherFX *, sdata->howl_metaOtherFX)[MM_TITLE_SCREECH_SFX].spuIndex;
 
 	struct NativeAssetsByteBuffer hwl = {0};
 	if (!NativeAssets_ReadBytes(MM_TITLE_SCREECH_HWL, NATIVE_ASSET_READ_DATA_FILE, &hwl))
@@ -363,7 +363,7 @@ static void MM_TitleScreech_LoadSample(void)
 
 	for (int bank = 0; bank < header->numBanks; bank++)
 	{
-		const size_t bankOffset = (size_t)sdata->howl_bankOffsets[bank] * 0x800;
+		const size_t bankOffset = (size_t)P32_GET(u16 *, sdata->howl_bankOffsets)[bank] * 0x800;
 		if ((hwl.size < 0) || (bankOffset + 0x800 > (size_t)hwl.size))
 		{
 			continue;
@@ -373,7 +373,7 @@ static void MM_TitleScreech_LoadSample(void)
 		size_t sampleOffset = bankOffset + 0x800;
 		for (int i = 0; (i < numSamples) && (i < (0x800 - 2) / 2); i++)
 		{
-			const size_t size = (size_t)sdata->howl_spuAddrs[spuIndices[i]].spuSize * 8;
+			const size_t size = (size_t)P32_GET(struct SpuAddrEntry *, sdata->howl_spuAddrs)[spuIndices[i]].spuSize * 8;
 			if ((spuIndices[i] == spuIndex) && (sampleOffset + size <= (size_t)hwl.size))
 			{
 				s_mmTitleScreechSample = (u8 *)malloc(size);
@@ -402,12 +402,14 @@ static u32 MM_TitleScreech_Flags(float t)
 
 static void MM_TitleScreech_Play(void)
 {
-	if ((sdata->boolAudioEnabled == 0) || (sdata->ptrHowlHeader == NULL) || (sdata->ptrHowlHeader->numOtherFX <= MM_TITLE_SCREECH_SFX))
+	if ((sdata->boolAudioEnabled == 0) || (P32_GET(struct HowlHeader *, sdata->ptrHowlHeader) == NULL) ||
+	    (P32_GET(struct HowlHeader *, sdata->ptrHowlHeader)->numOtherFX <= MM_TITLE_SCREECH_SFX))
 	{
 		return;
 	}
 
-	struct SpuAddrEntry *entry = &sdata->howl_spuAddrs[sdata->howl_metaOtherFX[MM_TITLE_SCREECH_SFX].spuIndex];
+	struct SpuAddrEntry *entry =
+	    &P32_GET(struct SpuAddrEntry *, sdata->howl_spuAddrs)[P32_GET(struct OtherFX *, sdata->howl_metaOtherFX)[MM_TITLE_SCREECH_SFX].spuIndex];
 	if (entry->spuAddr != 0)
 	{
 		// Already resident.
@@ -423,9 +425,9 @@ static void MM_TitleScreech_Play(void)
 	// that is free by this measure too, so the next bank load may overwrite
 	// the copy, which is why the table entry is cleared again below.
 	u32 top = sdata->audioAllocPtr;
-	for (int i = 0; i < sdata->ptrHowlHeader->numSpuAddrs; i++)
+	for (int i = 0; i < P32_GET(struct HowlHeader *, sdata->ptrHowlHeader)->numSpuAddrs; i++)
 	{
-		const struct SpuAddrEntry *other = &sdata->howl_spuAddrs[i];
+		const struct SpuAddrEntry *other = &P32_GET(struct SpuAddrEntry *, sdata->howl_spuAddrs)[i];
 		if ((other->spuAddr != 0) && ((u32)other->spuAddr + other->spuSize > top))
 		{
 			top = (u32)other->spuAddr + other->spuSize;
@@ -522,7 +524,8 @@ static void MM_BootCredits_DrawTitleExtras(struct GameTracker *gGT, b32 userIdSh
 	MM_TitleScreech_Update(s_mmTitleLogoSeconds);
 	s_mmTitleLogoSeconds += 1.0f / (float)CTR_FRAMES_PER_SECOND;
 
-	if (!NativeTitleLogo_Draw(&gGT->backBuffer->primMem, &gGT->backBuffer->otMem.uiOT[MM_TITLE_TM_OT_INDEX], &pose))
+	if (!NativeTitleLogo_Draw(&P32_GET(struct DB *, gGT->backBuffer)->primMem,
+	                          &P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT)[MM_TITLE_TM_OT_INDEX], &pose))
 	{
 		RECTMENU_DrawQuip((char *)"TURBOCHARGED", (s16)pose.centerX, MM_BOOT_CREDITS_PLAQUE_Y, 0, FONT_BIG, JUSTIFY_CENTER | ORANGE, 0);
 	}

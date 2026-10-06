@@ -225,7 +225,7 @@ static int NC_OverlapsTriangle(NativePhysicsVec point, double radius, NativePhys
 }
 void NativeCollision_MovedTriangle(struct ScratchpadStruct *sps, struct BspSearchVertex *a, struct BspSearchVertex *b, struct BspSearchVertex *c)
 {
-	struct QuadBlock *quad = sps->candidate.ptrQuadblock;
+	struct QuadBlock *quad = P32_GET(struct QuadBlock *, sps->candidate.ptrQuadblock);
 	u16 flags = quad->quadFlags;
 	if ((flags & QUADBLOCK_FLAG_DOOR) && ((s8)quad->terrain_type & sdata->doorAccessFlags))
 		return;
@@ -276,9 +276,9 @@ void NativeCollision_MovedTriangle(struct ScratchpadStruct *sps, struct BspSearc
 	sps->hitFraction = (s32)round(hit.fraction * 4096);
 	if (s_collisionSweep.sps == sps)
 		s_collisionSweep.fraction = hit.fraction;
-	sps->hitLevelTriangle.v0 = a->pLevelVertex;
-	sps->hitLevelTriangle.v1 = b->pLevelVertex;
-	sps->hitLevelTriangle.v2 = c->pLevelVertex;
+	sps->hitLevelTriangle.v0 = P32_GET(struct LevVertex *, a->pLevelVertex);
+	sps->hitLevelTriangle.v1 = P32_GET(struct LevVertex *, b->pLevelVertex);
+	sps->hitLevelTriangle.v2 = P32_GET(struct LevVertex *, c->pLevelVertex);
 	sps->hitBspSearchTriangle.v0 = a;
 	sps->hitBspSearchTriangle.v1 = b;
 	sps->hitBspSearchTriangle.v2 = c;
@@ -314,7 +314,7 @@ void NativeCollision_FixedTriangle(struct ScratchpadStruct *sps, struct BspSearc
 	double u, v;
 	if (!NativeCollision_RayTriangle(start, end, NC_Vertex(&a->pos), NC_Vertex(&b->pos), NC_Vertex(&c->pos), &hit, &u, &v))
 		return;
-	struct QuadBlock *quad = sps->candidate.ptrQuadblock;
+	struct QuadBlock *quad = P32_GET(struct QuadBlock *, sps->candidate.ptrQuadblock);
 	if (quad->quadFlags & QUADBLOCK_FLAG_TRIGGER)
 	{
 		sps->collision.stepFlags |= (u8)quad->terrain_type;
@@ -323,9 +323,9 @@ void NativeCollision_FixedTriangle(struct ScratchpadStruct *sps, struct BspSearc
 	sps->hit.ptrQuadblock = quad;
 	sps->hitBarycentrics.v1 = (s16)round(u * 4096);
 	sps->hitBarycentrics.v2 = (s16)round(v * 4096);
-	sps->hitLevelTriangle.v0 = a->pLevelVertex;
-	sps->hitLevelTriangle.v1 = b->pLevelVertex;
-	sps->hitLevelTriangle.v2 = c->pLevelVertex;
+	sps->hitLevelTriangle.v0 = P32_GET(struct LevVertex *, a->pLevelVertex);
+	sps->hitLevelTriangle.v1 = P32_GET(struct LevVertex *, b->pLevelVertex);
+	sps->hitLevelTriangle.v2 = P32_GET(struct LevVertex *, c->pLevelVertex);
 	sps->hit.hitPos = NC_Export(hit.point);
 	sps->Union.QuadBlockColl.hitPos = sps->hit.hitPos;
 	sps->hit.plane = sps->candidate.plane;

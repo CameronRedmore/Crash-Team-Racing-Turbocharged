@@ -89,7 +89,7 @@ s16 *AH_WarpPad_GetSpawnPosRot(s16 *posData)
 		}
 
 		// if warppad found that matches level exited
-		if (((struct WarpPad *)t->object)->levelID == exitLevelID)
+		if (((struct WarpPad *)P32_GET(void *, t->object))->levelID == exitLevelID)
 		{
 			// end loop
 			break;

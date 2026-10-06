@@ -71,7 +71,7 @@ static const struct NativeKartPaintBand *NativeKartColor_FindBand(const char *na
 // Menu previews have no thread; in the hub and in races human players sit in thread bucket 0.
 static int NativeKartColor_IsPlayerKart(const struct Instance *inst)
 {
-	return (inst->thread == NULL) || ((inst->thread->flags & 0xff) == 0);
+	return (P32_GET(struct Thread *const, inst->thread) == NULL) || ((P32_GET(struct Thread *const, inst->thread)->flags & 0xff) == 0);
 }
 
 static u16 NativeKartColor_RotateEntry(u16 color, const struct NativeKartPaintBand *band, int degrees)
@@ -146,8 +146,8 @@ static void NativeKartColor_DumpLayout(const struct Instance *inst, const struct
 	static int seenCount;
 	u64 key =
 	    ((u64)layout->clut << 48) ^ ((u64)layout->tpage << 32) ^ ((u64)layout->u0 << 24) ^ ((u64)layout->v0 << 16) ^ ((u64)layout->u3 << 8) ^ (u64)layout->v3;
-	for (int i = 0; i < 16 && inst->model->name[i]; i++)
-		key = key * 1099511628211ull + (u8)inst->model->name[i];
+	for (int i = 0; i < 16 && P32_GET(struct Model *const, inst->model)->name[i]; i++)
+		key = key * 1099511628211ull + (u8)P32_GET(struct Model *const, inst->model)->name[i];
 	for (int i = 0; i < seenCount; i++)
 		if (seen[i] == key)
 			return;
@@ -156,8 +156,8 @@ static void NativeKartColor_DumpLayout(const struct Instance *inst, const struct
 	seen[seenCount++] = key;
 	u16 pal[KART_CLUT_ENTRIES];
 	NativeRenderer_ReadVRAM(pal, (layout->clut & 0x3f) << 4, layout->clut >> 6, KART_CLUT_ENTRIES, 1);
-	fprintf(stderr, "KARTLAYOUT model=%.16s clut=%04x tpage=%04x uv=%d,%d %d,%d %d,%d %d,%d pal:", inst->model->name, layout->clut, layout->tpage, layout->u0,
-	        layout->v0, layout->u1, layout->v1, layout->u2, layout->v2, layout->u3, layout->v3);
+	fprintf(stderr, "KARTLAYOUT model=%.16s clut=%04x tpage=%04x uv=%d,%d %d,%d %d,%d %d,%d pal:", P32_GET(struct Model *const, inst->model)->name,
+	        layout->clut, layout->tpage, layout->u0, layout->v0, layout->u1, layout->v1, layout->u2, layout->v2, layout->u3, layout->v3);
 	for (int i = 0; i < KART_CLUT_ENTRIES; i++)
 		fprintf(stderr, " %04x", pal[i]);
 	fprintf(stderr, "\n");
@@ -169,7 +169,7 @@ static void NativeKartColor_PaintLayout(const struct Instance *inst, const struc
 {
 	static u16 painted[1024];
 	static int paintedCount;
-	if (NativeKartColor_FindBand(inst->model->name) == NULL)
+	if (NativeKartColor_FindBand(P32_GET(struct Model *const, inst->model)->name) == NULL)
 		return;
 	for (int i = 0; i < paintedCount; i++)
 		if (painted[i] == layout->clut)
@@ -229,7 +229,7 @@ static void NativeKartColor_PaintLayout(const struct Instance *inst, const struc
 		pal[i] = (u16)((pal[i] & 0x8000) | (int)(nr * 31.0f + 0.5f) | ((int)(ng * 31.0f + 0.5f) << 5) | ((int)(nb * 31.0f + 0.5f) << 10));
 	}
 	NativeRenderer_CopyVRAM(pal, 0, 0, KART_CLUT_ENTRIES, 1, x, y);
-	fprintf(stderr, "KARTPAINT model=%.16s clut=%04x hue=%d\n", inst->model->name, layout->clut, (int)(hue * 60.0f));
+	fprintf(stderr, "KARTPAINT model=%.16s clut=%04x hue=%d\n", P32_GET(struct Model *const, inst->model)->name, layout->clut, (int)(hue * 60.0f));
 }
 
 void NativeKartColor_OnLayout(const struct Instance *inst, const struct TextureLayout *layout)
@@ -271,7 +271,7 @@ void NativeKartColor_OnLayout(const struct Instance *inst, const struct TextureL
 		}
 	}
 
-	const struct NativeKartPaintBand *band = NativeKartColor_FindBand(inst->model->name);
+	const struct NativeKartPaintBand *band = NativeKartColor_FindBand(P32_GET(struct Model *const, inst->model)->name);
 	if (band == NULL || !NativeKartColor_IsPlayerKart(inst))
 	{
 		return;

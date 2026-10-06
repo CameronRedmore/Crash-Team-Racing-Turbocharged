@@ -97,11 +97,14 @@ void DotLights_Video(struct GameTracker *gGT, s32 red1, s32 red2, s32 red3, s32 
 			s32 iconIndex = iconState[lightIndex] + (DOT_LIGHT_GREEN_ICON_OFFSET * (lightIndex == DOT_LIGHT_GREEN_INDEX));
 
 #if defined(CTR_NATIVE)
-			if (NativeHudIcons_DrawLight(gGT->trafficLightIcon[iconIndex], newPosX + (sizeX * lightIndex), newPosY, scale,
-			                            lightIndex == DOT_LIGHT_GREEN_INDEX, iconState[lightIndex], &gGT->backBuffer->primMem, pb->ptrOT)) continue;
+			if (NativeHudIcons_DrawLight(P32_GET(struct Icon *, gGT->trafficLightIcon[iconIndex]), newPosX + (sizeX * lightIndex), newPosY, scale,
+			                             lightIndex == DOT_LIGHT_GREEN_INDEX, iconState[lightIndex], &P32_GET(struct DB *, gGT->backBuffer)->primMem,
+			                             P32_GET(uint32_t *, pb->ptrOT)))
+				continue;
 
 #endif
-			DecalHUD_DrawPolyFT4(gGT->trafficLightIcon[iconIndex], newPosX + (sizeX * lightIndex), newPosY, &gGT->backBuffer->primMem, pb->ptrOT, 0, scale);
+			DecalHUD_DrawPolyFT4(P32_GET(struct Icon *, gGT->trafficLightIcon[iconIndex]), newPosX + (sizeX * lightIndex), newPosY,
+			                     &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, pb->ptrOT), 0, scale);
 		}
 	}
 }

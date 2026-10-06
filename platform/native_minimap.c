@@ -113,7 +113,7 @@ static u64 NativeMinimap_GeometryKey(const struct mesh_info *mesh, const struct 
 	u64 hash = NativeMinimap_Hash(UINT64_C(14695981039346656037), &projection, sizeof(projection));
 	for (int q = 0; q < mesh->numQuadBlock; q++)
 	{
-		const struct QuadBlock *block = &mesh->ptrQuadBlockArray[q];
+		const struct QuadBlock *block = &P32_GET(struct QuadBlock *const, mesh->ptrQuadBlockArray)[q];
 		if (!(block->quadFlags & QUADBLOCK_FLAG_GROUND) ||
 		    (block->quadFlags & (QUADBLOCK_FLAG_NO_COLLISION_RESPONSE | QUADBLOCK_FLAG_KILL_PLANE | QUADBLOCK_FLAG_TRIGGER)))
 			continue;
@@ -123,7 +123,7 @@ static u64 NativeMinimap_GeometryKey(const struct mesh_info *mesh, const struct 
 		{
 			if (block->index[v] >= mesh->numVertex)
 				return 0;
-			hash = NativeMinimap_Hash(hash, &mesh->ptrVertexArray[block->index[v]].pos, sizeof(SVec3));
+			hash = NativeMinimap_Hash(hash, &P32_GET(struct LevVertex *const, mesh->ptrVertexArray)[block->index[v]].pos, sizeof(SVec3));
 		}
 	}
 	return hash;
@@ -408,20 +408,21 @@ static void NativeMinimap_RasterTriangle(const struct LevVertex *a, const struct
 // tunnel roads because they are not eligible collision ground.
 static u8 *NativeMinimap_BuildPixels(const struct mesh_info *mesh, const struct UIMap *map, struct NativeMinimapImage *image)
 {
-	if (!mesh || !mesh->ptrQuadBlockArray || !mesh->ptrVertexArray || mesh->numQuadBlock <= 0 || mesh->numQuadBlock > 65536 || mesh->numVertex <= 0 ||
-	    mesh->numVertex > 65536 || map->worldEndX == map->worldStartX || map->worldEndY == map->worldStartY || map->iconSizeX <= 0 || map->iconSizeY <= 0)
+	if (!mesh || !P32_GET(struct QuadBlock *const, mesh->ptrQuadBlockArray) || !P32_GET(struct LevVertex *const, mesh->ptrVertexArray) ||
+	    mesh->numQuadBlock <= 0 || mesh->numQuadBlock > 65536 || mesh->numVertex <= 0 || mesh->numVertex > 65536 || map->worldEndX == map->worldStartX ||
+	    map->worldEndY == map->worldStartY || map->iconSizeX <= 0 || map->iconSizeY <= 0)
 		return NULL;
 	float left = FLT_MAX, top = FLT_MAX, right = -FLT_MAX, bottom = -FLT_MAX;
 	for (int q = 0; q < mesh->numQuadBlock; q++)
 	{
-		const struct QuadBlock *block = &mesh->ptrQuadBlockArray[q];
+		const struct QuadBlock *block = &P32_GET(struct QuadBlock *const, mesh->ptrQuadBlockArray)[q];
 		if (!NativeMinimap_IsGround(block))
 			continue;
 		for (int i = 0; i < 9; i++)
 		{
 			if (block->index[i] >= mesh->numVertex)
 				return NULL;
-			const struct LevVertex *vertex = &mesh->ptrVertexArray[block->index[i]];
+			const struct LevVertex *vertex = &P32_GET(struct LevVertex *const, mesh->ptrVertexArray)[block->index[i]];
 			double x, y;
 			NativeMinimap_Project(map, vertex->pos.x, vertex->pos.z, &x, &y);
 			left = fminf(left, x);
@@ -452,15 +453,16 @@ static u8 *NativeMinimap_BuildPixels(const struct mesh_info *mesh, const struct 
 		heights[i].height = heights[i].lower = -FLT_MAX;
 	for (int q = 0; q < mesh->numQuadBlock; q++)
 	{
-		const struct QuadBlock *block = &mesh->ptrQuadBlockArray[q];
+		const struct QuadBlock *block = &P32_GET(struct QuadBlock *const, mesh->ptrQuadBlockArray)[q];
 		if (!NativeMinimap_IsGround(block))
 			continue;
 		const int triangles = block->index[2] == block->index[3] ? 4 : 8;
 		for (int t = 0; t < triangles; t++)
 		{
 			const u8 *indices = s_nativeMinimapTriangles[t];
-			NativeMinimap_RasterTriangle(&mesh->ptrVertexArray[block->index[indices[0]]], &mesh->ptrVertexArray[block->index[indices[1]]],
-			                             &mesh->ptrVertexArray[block->index[indices[2]]], map, image, heights);
+			NativeMinimap_RasterTriangle(&P32_GET(struct LevVertex *const, mesh->ptrVertexArray)[block->index[indices[0]]],
+			                             &P32_GET(struct LevVertex *const, mesh->ptrVertexArray)[block->index[indices[1]]],
+			                             &P32_GET(struct LevVertex *const, mesh->ptrVertexArray)[block->index[indices[2]]], map, image, heights);
 		}
 	}
 	float minHeight = FLT_MAX, maxHeight = -FLT_MAX;
@@ -668,9 +670,10 @@ static int NativeMinimap_Draw(const struct NativeMinimapImage *image, float left
 	if (!image->texture || !primMem || !ot)
 		return 0;
 	const size_t packetSize = sizeof(DR_PSYX_TEX) * 2 + sizeof(POLY_FT4);
-	if ((uintptr_t)primMem->cursor > (uintptr_t)primMem->end || (uintptr_t)primMem->end - (uintptr_t)primMem->cursor < packetSize)
+	if ((uintptr_t)P32_GET(void *, primMem->cursor) > (uintptr_t)P32_GET(void *, primMem->end) ||
+	    (uintptr_t)P32_GET(void *, primMem->end) - (uintptr_t)P32_GET(void *, primMem->cursor) < packetSize)
 		return 0;
-	DR_PSYX_TEX *set = primMem->cursor;
+	DR_PSYX_TEX *set = P32_GET(void *, primMem->cursor);
 	POLY_FT4 *p = (POLY_FT4 *)(set + 1);
 	DR_PSYX_TEX *reset = (DR_PSYX_TEX *)(p + 1);
 	memset(p, 0, sizeof(*p));
@@ -701,23 +704,24 @@ static int NativeMinimap_Draw(const struct NativeMinimapImage *image, float left
 
 float NativeMinimap_GetAnchorOffsetX(const struct UIMap *map)
 {
-	if (!map || !NativeAspect_IsActive() || !sdata || !sdata->gGT || (sdata->gGT->gameMode1 & MAIN_MENU))
+	if (!map || !NativeAspect_IsActive() || !sdata || !P32_GET(struct GameTracker *, sdata->gGT) ||
+	    (P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 & MAIN_MENU))
 		return 0.0f;
-	const double origin = map->iconStartX - (sdata->gGT->numPlyrCurrGame == 3 ? 60 : 0);
+	const double origin = map->iconStartX - (P32_GET(struct GameTracker *, sdata->gGT)->numPlyrCurrGame == 3 ? 60 : 0);
 	return (float)((SCREEN_WIDTH - origin) * (1.0 - NativeAspect_GetScaleX()));
 }
 
 int NativeMinimap_DrawLive(struct PrimMem *primMem, u32 *ot, u32 colorID)
 {
-	if (!gNativeModernMapEnabled || !sdata || !sdata->gGT)
+	if (!gNativeModernMapEnabled || !sdata || !P32_GET(struct GameTracker *, sdata->gGT))
 		return 0;
-	const struct GameTracker *gt = sdata->gGT;
-	if ((gt->gameMode1 & (MAIN_MENU | GAME_CUTSCENE)) || gt->levelID < 0 || gt->levelID >= NATIVE_MINIMAP_LEVEL_COUNT || !gt->level1 ||
-	    !gt->level1->ptrSpawnType1)
+	const struct GameTracker *gt = P32_GET(struct GameTracker *, sdata->gGT);
+	if ((gt->gameMode1 & (MAIN_MENU | GAME_CUTSCENE)) || gt->levelID < 0 || gt->levelID >= NATIVE_MINIMAP_LEVEL_COUNT ||
+	    !P32_GET(struct Level *const, gt->level1) || !P32_GET(struct SpawnType1 *, P32_GET(struct Level *const, gt->level1)->ptrSpawnType1))
 		return 0;
-	void **pointers = ST1_GETPOINTERS(gt->level1->ptrSpawnType1);
+	void **pointers = ST1_GETPOINTERS(P32_GET(struct Level *const, gt->level1)->ptrSpawnType1);
 	const struct UIMap *map = pointers[ST1_MAP];
-	const struct mesh_info *mesh = gt->level1->ptr_mesh_info;
+	const struct mesh_info *mesh = P32_GET(struct mesh_info *, P32_GET(struct Level *const, gt->level1)->ptr_mesh_info);
 	if (!map || !mesh)
 		return 0;
 	// Translation changes (including 3P) do not require regenerating the mask.
@@ -767,8 +771,8 @@ int NativeMinimap_DrawPreview(int levelID, int right, int bottom, int width, int
 #endif
 	const float w = image->width * scale * aspect, h = image->height * scale;
 	const float left = right - width * 0.5f - w * 0.5f, top = bottom - height * 0.5f - h * 0.5f;
-	if (!primMem || !ot || (uintptr_t)primMem->end < (uintptr_t)primMem->cursor ||
-	    (uintptr_t)primMem->end - (uintptr_t)primMem->cursor < 3 * (sizeof(DR_PSYX_TEX) * 2 + sizeof(POLY_FT4)))
+	if (!primMem || !ot || (uintptr_t)P32_GET(void *, primMem->end) < (uintptr_t)P32_GET(void *, primMem->cursor) ||
+	    (uintptr_t)P32_GET(void *, primMem->end) - (uintptr_t)P32_GET(void *, primMem->cursor) < 3 * (sizeof(DR_PSYX_TEX) * 2 + sizeof(POLY_FT4)))
 		return 0;
 	// OT insertion reverses submission: shadow, blue silhouette, then body.
 	const int drawn = NativeMinimap_Draw(image, left, top, w, h, primMem, ot, colorID);
@@ -784,18 +788,19 @@ int NativeMinimap_DrawPreview(int levelID, int right, int bottom, int width, int
 
 void NativeMinimap_PrepareLive(void)
 {
-	if (!gNativeModernMapEnabled || !sdata || !sdata->gGT)
+	if (!gNativeModernMapEnabled || !sdata || !P32_GET(struct GameTracker *, sdata->gGT))
 		return;
-	const struct GameTracker *gt = sdata->gGT;
-	if ((gt->gameMode1 & (MAIN_MENU | GAME_CUTSCENE)) || gt->levelID < 0 || gt->levelID >= NATIVE_MINIMAP_LEVEL_COUNT || !gt->level1 ||
-	    !gt->level1->ptrSpawnType1 || !gt->level1->ptr_mesh_info)
+	const struct GameTracker *gt = P32_GET(struct GameTracker *, sdata->gGT);
+	if ((gt->gameMode1 & (MAIN_MENU | GAME_CUTSCENE)) || gt->levelID < 0 || gt->levelID >= NATIVE_MINIMAP_LEVEL_COUNT ||
+	    !P32_GET(struct Level *const, gt->level1) || !P32_GET(struct SpawnType1 *, P32_GET(struct Level *const, gt->level1)->ptrSpawnType1) ||
+	    !P32_GET(struct mesh_info *, P32_GET(struct Level *const, gt->level1)->ptr_mesh_info))
 		return;
-	void **pointers = ST1_GETPOINTERS(gt->level1->ptrSpawnType1);
+	void **pointers = ST1_GETPOINTERS(P32_GET(struct Level *const, gt->level1)->ptrSpawnType1);
 	const struct UIMap *map = pointers[ST1_MAP];
 	if (!map)
 		return;
 	struct NativeMinimapImage image = {0};
-	u8 *pixels = NativeMinimap_GetPixels(gt->level1->ptr_mesh_info, map, &image, 1);
+	u8 *pixels = NativeMinimap_GetPixels(P32_GET(struct mesh_info *, P32_GET(struct Level *const, gt->level1)->ptr_mesh_info), map, &image, 1);
 	free(pixels);
 }
 

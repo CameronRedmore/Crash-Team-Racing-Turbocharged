@@ -1160,8 +1160,8 @@ void MM_TrackSelect_MenuProc(struct RectMenu *menu)
 				const int mapBottom = previewRect.y + D230.trackSelect_lapMenuTransition.currY -
 				    D230.trackSelect_previewTransition.currY + MM_TRACK_SELECT_MAP_CENTER_Y_OFFSET +
 				    (MM_TRACK_SELECT_MAP_BOX_H >> 1) + (mapHeight >> 1);
-				nativeMapDrawn = NativeMinimap_DrawPreview(selectMenu[menu->rowSelected].levID, mapRight, mapBottom,
-				    mapWidth, mapHeight, &gGT->backBuffer->primMem, gGT->pushBuffer_UI.ptrOT, 1);
+				nativeMapDrawn = NativeMinimap_DrawPreview(selectMenu[menu->rowSelected].levID, mapRight, mapBottom, mapWidth, mapHeight,
+				                                           &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), 1);
 #endif
 				// draw six track minimaps on menu
 				// map 1 is the regular color, which is white

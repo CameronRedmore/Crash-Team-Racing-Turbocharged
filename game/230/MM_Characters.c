@@ -460,7 +460,7 @@ static void MM_Characters_NativeDrawStats(void)
 		track.y = statTrackY;
 		track.w = CTR_WIDESCREEN_SCALE_X(0x50);
 		track.h = MM_CHARACTER_SELECT_STATS_BAR_HEIGHT;
-		CTR_Box_DrawSolidBox(&track, MakeColor(32, 32, 32), gGT->pushBuffer_UI.ptrOT);
+		CTR_Box_DrawSolidBox(&track, MakeColor(32, 32, 32), P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT));
 		statTrackY += MM_CHARACTER_SELECT_STATS_BAR_ROW_STEP;
 	}
 #endif
@@ -470,21 +470,19 @@ static void MM_Characters_NativeDrawStats(void)
 	{
 		const s32 selectorY = MM_CHARACTER_SELECT_STATS_BOX_Y + MM_CHARACTER_SELECT_STATS_BOX_H + 3;
 		DecalFont_DrawLine(engineSelectText, classX, selectorY, FONT_SMALL, JUSTIFY_CENTER | ORANGE);
-		if (gGT->iconGroup[4] != NULL)
+		if (P32_GET(struct IconGroup *, gGT->iconGroup[4]) != NULL)
 		{
 			struct Icon **icons = ICONGROUP_GETICONS(gGT->iconGroup[4]);
-			u32 *colors = data.ptrColor[ORANGE];
+			u32 *colors = P32_GET(u32 *, data.ptrColor[ORANGE]);
 			const s32 halfWidth = DecalFont_GetLineWidth(engineSelectText, FONT_SMALL) >> 1;
 			// FONT_SMALL's cap starts 1.25 px below posY and is 5.5 px
 			// tall, so its visual center is posY + 4 px.
 			const s32 selectorCenterY = selectorY + 4;
 			for (s32 side = 0; side < 2; side++)
-				DecalHUD_Arrow2D(icons[MM_CHARACTER_SELECT_PAGE_HINT_ARROW_ICON],
-					classX + (side ? halfWidth + 12 : -halfWidth - 12), selectorCenterY,
-					&gGT->backBuffer->primMem, gGT->pushBuffer_UI.ptrOT,
-					colors[0], colors[1], colors[2], colors[3], 0,
-					MM_CHARACTER_SELECT_PAGE_HINT_ARROW_SCALE,
-					side ? 0 : MM_CHARACTER_SELECT_PAGE_HINT_ARROW_LEFT_ROTATION);
+				DecalHUD_Arrow2D(icons[MM_CHARACTER_SELECT_PAGE_HINT_ARROW_ICON], classX + (side ? halfWidth + 12 : -halfWidth - 12), selectorCenterY,
+				                 &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), colors[0], colors[1],
+				                 colors[2], colors[3], 0, MM_CHARACTER_SELECT_PAGE_HINT_ARROW_SCALE,
+				                 side ? 0 : MM_CHARACTER_SELECT_PAGE_HINT_ARROW_LEFT_ROTATION);
 		}
 	}
 	#endif
@@ -494,7 +492,7 @@ static void MM_Characters_NativeDrawStats(void)
 	box.y = MM_CHARACTER_SELECT_STATS_BOX_Y;
 	box.w = (contentRight - contentLeft) + 12;
 	box.h = MM_CHARACTER_SELECT_STATS_BOX_H + (showEngineSelector ? 18 : 0);
-	RECTMENU_DrawInnerRect(&box, 0, gGT->backBuffer->otMem.uiOT);
+	RECTMENU_DrawInnerRect(&box, 0, P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT));
 }
 
 #if defined(CTR_NATIVE)
@@ -830,7 +828,7 @@ static void MM_Characters_NativeCommitEngineProfiles(s32 numPlayers)
 
 static void MM_Characters_NativeEngineInput(s32 playerIndex, u32 button)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	const u16 playerSelectFlag = (u16)(1 << playerIndex);
 	const s8 stage = s_nativeEngineSelectStage[playerIndex];
 	if (stage == NATIVE_ENGINE_SELECT_ENGINE)

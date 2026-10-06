@@ -296,9 +296,9 @@ static void AH_Map_HubArrowPreciseTriangle(struct GameTracker *gGT, const float 
 		drawPos[i].y = (s16)y[i];
 	}
 
-	POLY_G4 *p = gGT->backBuffer->primMem.cursor;
-	RECTMENU_DrawRwdTriangle(drawPos[0].v, vertCol, gGT->pushBuffer_UI.ptrOT, &gGT->backBuffer->primMem);
-	if (gGT->backBuffer->primMem.cursor == p + 1)
+	POLY_G4 *p = P32_GET(void *, P32_GET(struct DB *, gGT->backBuffer)->primMem.cursor);
+	RECTMENU_DrawRwdTriangle(drawPos[0].v, vertCol, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), &P32_GET(struct DB *, gGT->backBuffer)->primMem);
+	if (P32_GET(void *, P32_GET(struct DB *, gGT->backBuffer)->primMem.cursor) == p + 1)
 	{
 		// Use the same first point twice so the precise triangle has no pixel-sized split.
 		NativePgxp_SetScreenXY(&p->x0, x[0], y[0]);
@@ -311,7 +311,7 @@ static void AH_Map_HubArrowPreciseTriangle(struct GameTracker *gGT, const float 
 // sizeScale shrinks the shape about its pivot; 1.0 keeps the retail size.
 void AH_Map_HubArrowPrecise(float posX, float posY, const SVec2 *vertPos, char *vertCol, int scale, int angle, float sizeScale)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	float x[3], y[3];
 	AH_Map_PreciseShape(posX, posY, vertPos, 3, scale, sizeScale, angle, x, y);
 
@@ -334,9 +334,9 @@ static void AH_Map_LoadSavePreciseQuad(struct GameTracker *gGT, const float x[4]
 		drawPos[s_cornerOrder[i]].y = (s16)y[i];
 	}
 
-	POLY_G4 *p = gGT->backBuffer->primMem.cursor;
-	AH_Map_LoadSave_Prim(&drawPos[0], vertCol, gGT->pushBuffer_UI.ptrOT, &gGT->backBuffer->primMem);
-	if (gGT->backBuffer->primMem.cursor == p + 1)
+	POLY_G4 *p = P32_GET(void *, P32_GET(struct DB *, gGT->backBuffer)->primMem.cursor);
+	AH_Map_LoadSave_Prim(&drawPos[0], vertCol, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), &P32_GET(struct DB *, gGT->backBuffer)->primMem);
+	if (P32_GET(void *, P32_GET(struct DB *, gGT->backBuffer)->primMem.cursor) == p + 1)
 	{
 		s16 *corners[4] = {&p->x0, &p->x1, &p->x2, &p->x3};
 		for (int i = 0; i < 4; i++)
@@ -348,7 +348,7 @@ static void AH_Map_LoadSavePreciseQuad(struct GameTracker *gGT, const float x[4]
 
 void AH_Map_LoadSavePrecise(float posX, float posY, const SVec2 *vertPos, char *vertCol, int scale, int angle)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	const SVec2 perimeter[4] = {vertPos[0], vertPos[1], vertPos[3], vertPos[2]};
 	float x[4], y[4];
 	AH_Map_PreciseShape(posX, posY, perimeter, 4, scale, gNativeModernMapEnabled ? 1.1f : 1.0f, angle, x, y);
@@ -371,9 +371,9 @@ static void AH_Map_PreciseLine(struct GameTracker *gGT, float x0, float y0, floa
 		return;
 	}
 
-	struct PrimMem *primMem = &gGT->backBuffer->primMem;
-	POLY_F4 *p = primMem->cursor;
-	if ((void *)p > primMem->guardEnd)
+	struct PrimMem *primMem = &P32_GET(struct DB *, gGT->backBuffer)->primMem;
+	POLY_F4 *p = P32_GET(void *, primMem->cursor);
+	if ((void *)p > P32_GET(void *, primMem->guardEnd))
 	{
 		return;
 	}
@@ -393,7 +393,7 @@ static void AH_Map_PreciseLine(struct GameTracker *gGT, float x0, float y0, floa
 	AH_Map_PreciseSetXY(&p->x1, x0 - alongX + alongY, y0 - alongY - alongX);
 	AH_Map_PreciseSetXY(&p->x2, x1 + alongX - alongY, y1 + alongY + alongX);
 	AH_Map_PreciseSetXY(&p->x3, x1 + alongX + alongY, y1 + alongY - alongX);
-	AddPrim(gGT->pushBuffer_UI.ptrOT, p);
+	AddPrim(P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), p);
 }
 
 // Fractional map position for the vector markers, drawn with Precise Minimap
@@ -607,7 +607,7 @@ void AH_Map_HubArrowOuter(struct UIMap *map, int arrowIndex, int posX, int posY,
 // AH_Map_HubArrowOuter with a fractional centre and lines that keep their fractions.
 static void AH_Map_HubArrowOuterPrecise(int arrowIndex, float posX, float posY, int inputAngle, int type, float sizeScale)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	posX += D232.hubArrowInnerOffset[type].x;
 	posY += D232.hubArrowInnerOffset[type].y;
@@ -696,7 +696,7 @@ static float AH_Map_MarkerAspectX(void)
 // 30 FPS retail frames, fractional at higher frame rates for smooth animation.
 static double AH_Map_MarkerFrames(void)
 {
-	const struct GameTracker *gGT = sdata->gGT;
+	const struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	return CTR_NATIVE_60FPS_ACTIVE ? (double)gGT->timer * FPS / CTR_FRAMES_PER_SECOND : (double)gGT->timer;
 }
 
@@ -715,9 +715,9 @@ static u32 AH_Map_MixColor(u32 a, u32 b, float t)
 
 static void AH_Map_PreciseTriangleG3(struct GameTracker *gGT, float x0, float y0, float x1, float y1, float x2, float y2, u32 c0, u32 c1, u32 c2)
 {
-	struct PrimMem *primMem = &gGT->backBuffer->primMem;
-	POLY_G3 *p = primMem->cursor;
-	if ((void *)p > primMem->guardEnd)
+	struct PrimMem *primMem = &P32_GET(struct DB *, gGT->backBuffer)->primMem;
+	POLY_G3 *p = P32_GET(void *, primMem->cursor);
+	if ((void *)p > P32_GET(void *, primMem->guardEnd))
 	{
 		return;
 	}
@@ -730,7 +730,7 @@ static void AH_Map_PreciseTriangleG3(struct GameTracker *gGT, float x0, float y0
 	AH_Map_PreciseSetXY(&p->x0, x0, y0);
 	AH_Map_PreciseSetXY(&p->x1, x1, y1);
 	AH_Map_PreciseSetXY(&p->x2, x2, y2);
-	AddPrim(gGT->pushBuffer_UI.ptrOT, p);
+	AddPrim(P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), p);
 }
 
 // Fill a star-shaped outline as a fan from its centre. The rim takes a
@@ -778,7 +778,7 @@ static int AH_Map_MarkerRim(float centreX, float centreY, float radius, float in
 // outline, in place of a retail map sprite. Shared with the race map.
 void AH_Map_MarkerShape(float centreX, float centreY, float radius, b32 star, const u32 colors[4])
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	const float innerRadius = star ? radius * 0.43f : radius;
 	const u32 topColor = colors[0];
 	const u32 bottomColor = colors[2];
@@ -797,7 +797,7 @@ void AH_Map_MarkerShape(float centreX, float centreY, float radius, b32 star, co
 // Circle or star outline of a given radius and half width, in one colour.
 void AH_Map_MarkerOutline(float centreX, float centreY, float radius, float halfWidth, b32 star, u32 color)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	float innerX[AH_MAP_MARKER_MAX_RIM], innerY[AH_MAP_MARKER_MAX_RIM];
 	float outerX[AH_MAP_MARKER_MAX_RIM], outerY[AH_MAP_MARKER_MAX_RIM];
 	const float innerRatio = star ? 0.45f : 1.0f;
@@ -839,18 +839,19 @@ static struct Instance *AH_Map_FindStaticInstance(ThreadFunc tick, int nearX, in
 {
 	struct Instance *nearest = NULL;
 	s64 nearestDistance = 0;
-	for (struct Thread *t = sdata->gGT->threadBuckets[STATIC].thread; t != NULL; t = t->siblingThread)
+	for (struct Thread *t = P32_GET(struct Thread *, P32_GET(struct GameTracker *, sdata->gGT)->threadBuckets[STATIC].thread); t != NULL;
+	     t = P32_GET(struct Thread *, t->siblingThread))
 	{
-		if ((t->funcThTick != tick) || (t->inst == NULL))
+		if ((P32_GET(ThreadFunc, t->funcThTick) != tick) || (P32_GET(struct Instance *, t->inst) == NULL))
 		{
 			continue;
 		}
-		const s64 dx = t->inst->matrix.t[0] - nearX;
-		const s64 dz = t->inst->matrix.t[2] - nearZ;
+		const s64 dx = P32_GET(struct Instance *, t->inst)->matrix.t[0] - nearX;
+		const s64 dz = P32_GET(struct Instance *, t->inst)->matrix.t[2] - nearZ;
 		const s64 distance = dx * dx + dz * dz;
 		if ((nearest == NULL) || (distance < nearestDistance))
 		{
-			nearest = t->inst;
+			nearest = P32_GET(struct Instance *, t->inst);
 			nearestDistance = distance;
 		}
 	}
@@ -887,7 +888,7 @@ void AH_Map_MarkerFlash(u32 colors[4], int colorA, int colorB, float periodFrame
 	const float t = 0.5f - 0.5f * cosf((float)(AH_Map_MarkerFrames() * 6.2831853 / periodFrames));
 	for (int i = 0; i < 4; i++)
 	{
-		colors[i] = AH_Map_MixColor(data.ptrColor[colorA][i], data.ptrColor[colorB][i], t);
+		colors[i] = AH_Map_MixColor(P32_GET(u32 *, data.ptrColor[colorA])[i], P32_GET(u32 *, data.ptrColor[colorB])[i], t);
 	}
 }
 
@@ -906,7 +907,8 @@ static void AH_Map_MarkerCycleColors(u32 colors[4])
 	const float t = (float)(step - floor(step));
 	for (int i = 0; i < 4; i++)
 	{
-		colors[i] = AH_Map_MixColor(data.ptrColor[AH_MAP_COLOR_FLASH_PRIMARY + index][i], data.ptrColor[AH_MAP_COLOR_FLASH_PRIMARY + ((index + 1) & 7)][i], t);
+		colors[i] = AH_Map_MixColor(P32_GET(u32 *, data.ptrColor[AH_MAP_COLOR_FLASH_PRIMARY + index])[i],
+		                            P32_GET(u32 *, data.ptrColor[AH_MAP_COLOR_FLASH_PRIMARY + ((index + 1) & 7)])[i], t);
 	}
 }
 
@@ -1200,7 +1202,7 @@ void AH_Map_HubItems(struct UIMap *map, s16 *arrowCounter)
 				// draw star icon for boss
 #if defined(CTR_NATIVE)
 				u32 bossColors[4];
-				memcpy(bossColors, data.ptrColor[bossIconColor], sizeof(bossColors));
+				memcpy(bossColors, P32_GET(u32 *, data.ptrColor[bossIconColor]), sizeof(bossColors));
 				if (gNativeModernMapEnabled && (bossState == AH_MAP_BOSS_ITEM_OPEN))
 				{
 					AH_Map_MarkerFlashColors(bossColors);
@@ -1288,7 +1290,7 @@ void AH_Map_Warppads(struct UIMap *map, struct Thread *warppadThread, s16 *arrow
 
 #if defined(CTR_NATIVE)
 		u32 markerColors[4];
-		memcpy(markerColors, data.ptrColor[color], sizeof(markerColors));
+		memcpy(markerColors, P32_GET(u32 *, data.ptrColor[color]), sizeof(markerColors));
 		if (gNativeModernMapEnabled)
 		{
 			if (visualState == AH_WP_VISUAL_TROPHY_OPEN)

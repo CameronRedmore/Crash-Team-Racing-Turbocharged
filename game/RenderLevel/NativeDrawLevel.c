@@ -734,7 +734,7 @@ static u8 NativeDrawLevel_StaticSlot(const struct BSP *leaf)
 
 static void NativeDrawLevel_MarkAnimatedVertex(u8 *animated, const struct mesh_info *mesh, const struct LevVertex *vertex)
 {
-	const intptr_t index = vertex - mesh->ptrVertexArray;
+	const intptr_t index = vertex - P32_GET(struct LevVertex *const, mesh->ptrVertexArray);
 	if (index >= 0 && index < mesh->numVertex)
 		animated[index] = 1;
 }
@@ -749,7 +749,7 @@ static b32 NativeDrawLevel_BlockCacheable(const struct QuadBlock *block, const u
 	// Odd pointers select a texture through an animated slot.
 	for (int face = 0; face < 4; face++)
 	{
-		if (((uintptr_t)block->ptr_texture_mid[face] & 1) != 0)
+		if (((uintptr_t)P32_GET(void *const, block->ptr_texture_mid[face]) & 1) != 0)
 			return 0;
 	}
 	return 1;
@@ -759,12 +759,12 @@ static void NativeDrawLevel_BuildStaticCache(const struct mesh_info *mesh)
 {
 	const u64 started = SDL_GetPerformanceCounter();
 	const int numBlocks = mesh->numQuadBlock;
-	const struct Level *level = sdata->gGT ? sdata->gGT->level1 : NULL;
+	const struct Level *level = P32_GET(struct GameTracker *, sdata->gGT) ? P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1) : NULL;
 	sNativeDrawLevelStatic.mesh = mesh;
-	sNativeDrawLevelStatic.blocks = mesh->ptrQuadBlockArray;
-	sNativeDrawLevelStatic.vertices = mesh->ptrVertexArray;
+	sNativeDrawLevelStatic.blocks = P32_GET(struct QuadBlock *const, mesh->ptrQuadBlockArray);
+	sNativeDrawLevelStatic.vertices = P32_GET(struct LevVertex *const, mesh->ptrVertexArray);
 	sNativeDrawLevelStatic.numQuadBlock = numBlocks;
-	if (numBlocks <= 0 || mesh->numVertex <= 0 || mesh->bspRoot == NULL || level == NULL)
+	if (numBlocks <= 0 || mesh->numVertex <= 0 || P32_GET(struct BSP *const, mesh->bspRoot) == NULL || level == NULL)
 		return;
 
 	struct NativeDrawLevelCapture capture = {0};
@@ -779,18 +779,18 @@ static void NativeDrawLevel_BuildStaticCache(const struct mesh_info *mesh)
 		goto fail;
 	memset(blockSlot, NATIVE_DRAW_LEVEL_STATIC_NO_SLOT, (size_t)numBlocks);
 
-	for (int i = 0; level->ptr_water != NULL && i < level->numWaterVertices; i++)
-		NativeDrawLevel_MarkAnimatedVertex(animated, mesh, level->ptr_water[i].v);
-	for (int i = 0; level->ptrSCVert != NULL && i < level->numSCVert; i++)
-		NativeDrawLevel_MarkAnimatedVertex(animated, mesh, level->ptrSCVert[i].v);
+	for (int i = 0; P32_GET(struct WaterVert *const, level->ptr_water) != NULL && i < level->numWaterVertices; i++)
+		NativeDrawLevel_MarkAnimatedVertex(animated, mesh, P32_GET(struct LevVertex *, P32_GET(struct WaterVert *const, level->ptr_water)[i].v));
+	for (int i = 0; P32_GET(struct SCVert *const, level->ptrSCVert) != NULL && i < level->numSCVert; i++)
+		NativeDrawLevel_MarkAnimatedVertex(animated, mesh, P32_GET(struct LevVertex *, P32_GET(struct SCVert *const, level->ptrSCVert)[i].v));
 
 	// Each block takes its leaf's slot first; uncached blocks reset it below.
 	for (int i = 0; i < mesh->numBspNodes; i++)
 	{
-		const struct BSP *leaf = &mesh->bspRoot[i];
-		if ((leaf->flag & BSP_NODE_FLAG_LEAF) == 0 || leaf->data.leaf.ptrQuadBlockArray == NULL)
+		const struct BSP *leaf = &P32_GET(struct BSP *const, mesh->bspRoot)[i];
+		if ((leaf->flag & BSP_NODE_FLAG_LEAF) == 0 || P32_GET(struct QuadBlock *const, leaf->data.leaf.ptrQuadBlockArray) == NULL)
 			continue;
-		const intptr_t first = leaf->data.leaf.ptrQuadBlockArray - mesh->ptrQuadBlockArray;
+		const intptr_t first = P32_GET(struct QuadBlock *const, leaf->data.leaf.ptrQuadBlockArray) - P32_GET(struct QuadBlock *const, mesh->ptrQuadBlockArray);
 		const u8 slot = NativeDrawLevel_StaticSlot(leaf);
 		for (int k = 0; k < leaf->data.leaf.numQuads; k++)
 		{
@@ -811,7 +811,7 @@ static void NativeDrawLevel_BuildStaticCache(const struct mesh_info *mesh)
 	ctx.layer = -1;
 	ctx.capture = &capture;
 	ctx.staticSlot = -1;
-	ctx.vertices = mesh->ptrVertexArray;
+	ctx.vertices = P32_GET(struct LevVertex *const, mesh->ptrVertexArray);
 	ctx.lod = &lod;
 	ctx.view = &view;
 
@@ -819,7 +819,7 @@ static void NativeDrawLevel_BuildStaticCache(const struct mesh_info *mesh)
 	for (int i = 0; i < numBlocks; i++)
 	{
 		blockFirst[i] = capture.count;
-		const struct QuadBlock *block = &mesh->ptrQuadBlockArray[i];
+		const struct QuadBlock *block = &P32_GET(struct QuadBlock *const, mesh->ptrQuadBlockArray)[i];
 		const u8 slot = blockSlot[i];
 		if (slot >= RENDER_LIST_SLOT_WATER || !NativeDrawLevel_BlockCacheable(block, animated, mesh))
 		{
@@ -925,8 +925,8 @@ static b32 NativeDrawLevel_StaticActive(const struct mesh_info *mesh, const stru
 	    lod->textureLodDepthThreshold1 < NATIVE_DRAW_LEVEL_STATIC_MAX_LOD_DEPTH || lod->topLevelNearDepthThreshold < NATIVE_DRAW_LEVEL_STATIC_MAX_LOD_DEPTH ||
 	    lod->recursiveNearDepthThreshold < NATIVE_DRAW_LEVEL_STATIC_MAX_LOD_DEPTH)
 		return 0;
-	if (sNativeDrawLevelStatic.mesh != mesh || sNativeDrawLevelStatic.blocks != mesh->ptrQuadBlockArray ||
-	    sNativeDrawLevelStatic.vertices != mesh->ptrVertexArray || sNativeDrawLevelStatic.numQuadBlock != mesh->numQuadBlock)
+	if (sNativeDrawLevelStatic.mesh != mesh || sNativeDrawLevelStatic.blocks != P32_GET(struct QuadBlock *const, mesh->ptrQuadBlockArray) ||
+	    sNativeDrawLevelStatic.vertices != P32_GET(struct LevVertex *const, mesh->ptrVertexArray) || sNativeDrawLevelStatic.numQuadBlock != mesh->numQuadBlock)
 	{
 		NativeDrawLevel_InvalidateStaticCache();
 		NativeDrawLevel_BuildStaticCache(mesh);
@@ -955,7 +955,7 @@ static void NativeDrawLevel_BspList(const struct NativeDrawLevelContext *ctx, co
                                     enum NativeDrawLevelKind kind)
 {
 	const int expandedVisibility = NativeAspect_UsesExpandedVisibility();
-	for (; node != NULL; node = node->next)
+	for (; node != NULL; node = P32_GET(struct VisMemBspListNode *const, node->next))
 	{
 		const struct BSP *bsp = P32_GET(struct BSP *const, node->bsp);
 		const struct QuadBlock *block = P32_GET(struct QuadBlock *const, bsp->data.leaf.ptrQuadBlockArray);
@@ -1071,7 +1071,7 @@ static void NativeDrawLevel_Viewport(struct PushBuffer *pb, struct PrimMem *prim
 	struct NativeDrawLevelContext ctx;
 	ctx.layer = layer;
 	ctx.capture = NULL;
-	ctx.vertices = mesh->ptrVertexArray;
+	ctx.vertices = P32_GET(struct LevVertex *const, mesh->ptrVertexArray);
 	ctx.lod = CTR_SCRATCHPAD_PTR(struct MainRenderLevelGeometryScratch, 0);
 	ctx.waterEnvMap = waterEnvMap;
 	ctx.view = &view;
@@ -1087,11 +1087,11 @@ static void NativeDrawLevel_Viewport(struct PushBuffer *pb, struct PrimMem *prim
 		const enum NativeDrawLevelKind kind = (slot == RENDER_LIST_SLOT_WATER) ? NATIVE_DRAW_LEVEL_WATER : NATIVE_DRAW_LEVEL_HIGH;
 		ctx.mosaic = (slot < RENDER_LIST_SLOT_WATER) ? &sNativeDrawLevelMosaicShapes[slot] : NULL;
 		ctx.staticSlot = (useStatic && slot < RENDER_LIST_SLOT_WATER) ? slot : -1;
-		NativeDrawLevel_BspList(&ctx, renderList->list[slot].bspListStart, visFaceList, kind);
+		NativeDrawLevel_BspList(&ctx, P32_GET(struct VisMemBspListNode *const, renderList->list[slot].bspListStart), visFaceList, kind);
 	}
 	ctx.mosaic = NULL;
 	ctx.staticSlot = -1;
-	NativeDrawLevel_BspList(&ctx, renderList->bspListStart_FullDynamic, visFaceList, NATIVE_DRAW_LEVEL_LOW);
+	NativeDrawLevel_BspList(&ctx, P32_GET(struct VisMemBspListNode *const, renderList->bspListStart_FullDynamic), visFaceList, NATIVE_DRAW_LEVEL_LOW);
 
 	NativeDraw3D_EndLayer(layer);
 	NativeDrawLevel_LinkLayer(pb, primMem, layer, NATIVE_DRAW_LEVEL_MARKER_OT_INDEX);

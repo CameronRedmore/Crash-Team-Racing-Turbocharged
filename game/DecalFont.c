@@ -19,7 +19,7 @@ static void DecalFont_DrawGlyph(u8 character, struct Icon *icon, s16 posX, s16 p
 	(void)character;
 
 #endif
-	POLY_GT4 *p = primMem->cursor;
+	POLY_GT4 *p = P32_GET(void *, primMem->cursor);
 	DecalHUD_DrawPolyGT4(icon, posX, posY, primMem, ot, color0, color1, color2, color3, transparency, scale);
 
 #if CTR_NATIVE_WIDESCREEN
@@ -163,9 +163,9 @@ static void DecalFont_TtfChainAppend(struct DecalFontTtfChain *chain, void *pack
 
 static void DecalFont_TtfDrawLine(char *str, s16 len, int posX, s16 posY, s16 fontType, int flags)
 {
-	struct GameTracker *gGT = sdata->gGT;
-	struct PrimMem *primMem = &gGT->backBuffer->primMem;
-	struct IconGroup *iconGroup = gGT->iconGroup[data.font_IconGroupID[fontType]];
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct PrimMem *primMem = &P32_GET(struct DB *, gGT->backBuffer)->primMem;
+	struct IconGroup *iconGroup = P32_GET(struct IconGroup *, gGT->iconGroup[data.font_IconGroupID[fontType]]);
 
 	// Glyph quads borrow the retail font page for their draw mode, so a
 	// line drawn before the font icons load stays empty, as in retail.
@@ -242,14 +242,14 @@ static void DecalFont_TtfDrawLine(char *str, s16 len, int posX, s16 posY, s16 fo
 
 		// Room for this glyph, plus the atlas packet and the closing reset.
 		const size_t needed = sizeof(POLY_GT4) + 2 * sizeof(DR_PSYX_TEX);
-		if ((size_t)((u8 *)primMem->end - (u8 *)primMem->cursor) < needed)
+		if ((size_t)((u8 *)P32_GET(void *, primMem->end) - (u8 *)P32_GET(void *, primMem->cursor)) < needed)
 		{
 			break;
 		}
 
 		if (chain.head == NULL)
 		{
-			chain.head = (DR_PSYX_TEX *)primMem->cursor;
+			chain.head = (DR_PSYX_TEX *)P32_GET(void *, primMem->cursor);
 			SetPsyXTexture(chain.head, NativeFont_GetAtlasTexture(), NATIVE_FONT_ATLAS_UNITS, NATIVE_FONT_ATLAS_UNITS);
 			chain.head->code[1] |= PSYX_TEX_FLAG_TEXT_SDF;
 			chain.tailTag = &chain.head->tag;
@@ -264,9 +264,9 @@ static void DecalFont_TtfDrawLine(char *str, s16 len, int posX, s16 posY, s16 fo
 		const float boxWidth = advance > 0.0f ? advance : 1.0f;
 		const float fx0 = (quadLeft - penX) / boxWidth;
 		const float fx1 = (quadRight - penX) / boxWidth;
-		const u32 *color = data.ptrColor[flags];
+		const u32 *color = P32_GET(u32 *, data.ptrColor[flags]);
 
-		POLY_GT4 *p = (POLY_GT4 *)primMem->cursor;
+		POLY_GT4 *p = (POLY_GT4 *)P32_GET(void *, primMem->cursor);
 		setInt32RGB4(p, DecalFont_TtfCornerColor(color, fx0, fy0), DecalFont_TtfCornerColor(color, fx1, fy0),
 		             DecalFont_TtfCornerColor(color, fx0, fy1), DecalFont_TtfCornerColor(color, fx1, fy1));
 		setPolyGT4(p);
@@ -287,8 +287,8 @@ static void DecalFont_TtfDrawLine(char *str, s16 len, int posX, s16 posY, s16 fo
 
 	if (chain.head != NULL)
 	{
-		u32 *ot = gGT->pushBuffer_UI.ptrOT;
-		DR_PSYX_TEX *resetTexture = (DR_PSYX_TEX *)primMem->cursor;
+		u32 *ot = P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT);
+		DR_PSYX_TEX *resetTexture = (DR_PSYX_TEX *)P32_GET(void *, primMem->cursor);
 		SetPsyXTexture(resetTexture, 0, 0, 0);
 		DecalFont_TtfChainAppend(&chain, resetTexture, &resetTexture->tag, 2);
 		resetTexture->tag = CtrGpu_PackOTTag(*ot, 2 << 24);

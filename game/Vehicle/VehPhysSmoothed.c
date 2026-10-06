@@ -172,7 +172,8 @@ void NativePhysics_Gravity(struct Driver *driver, Vec3 *output)
 		localZ = 0;
 	}
 	else if (((driver->actionsFlagSetPrevFrame & ACTION_TOUCH_GROUND) != 0) || (driver->kartState == KS_BLASTED) ||
-	         ((driver->terrainScaledBaseSpeed < driver->speedApprox) && (driver->terrainMeta2->speedMultiplier < VEH_PHYS_FORCE_TERRAIN_SCALE_NEUTRAL)))
+	         ((driver->terrainScaledBaseSpeed < driver->speedApprox) &&
+	          (P32_GET(struct Terrain *, driver->terrainMeta2)->speedMultiplier < VEH_PHYS_FORCE_TERRAIN_SCALE_NEUTRAL)))
 	{
 		double perpendicularFriction;
 		double forwardFriction;
@@ -530,7 +531,7 @@ void NativePhysics_JumpAndFriction(struct Driver *d)
 
 PROCESS_ACCEL:
 	{
-		double forwardImpulse = Smoothed_Down((acceleration * NativePhysics_ElapsedMS(sdata->gGT->elapsedTimeMS)), 5);
+		double forwardImpulse = Smoothed_Down((acceleration * NativePhysics_ElapsedMS(P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS)), 5);
 		NativePhysicsVec rotated = NativePhysics_RotateDriver(d, (NativePhysicsVec){0, 0, forwardImpulse}, 0);
 
 		if (d->baseSpeed < 0)
@@ -753,7 +754,8 @@ NOT_JUMPING:
 		{
 			d->speedometerNeedleValue =
 			    (s16)((u32)CTR_MipsAddLo(CTR_MipsMulLo(d->speedometerNeedleValue, VEH_PHYS_JUMP_SPEEDOMETER_BLEND_OLD),
-				                         CTR_MipsMulLo(sdata->gGT->timer & VEH_PHYS_JUMP_SPEEDOMETER_TIMER_MASK, VEH_PHYS_JUMP_SPEEDOMETER_TIMER_SCALE)) >>
+				                         CTR_MipsMulLo(P32_GET(struct GameTracker *, sdata->gGT)->timer & VEH_PHYS_JUMP_SPEEDOMETER_TIMER_MASK,
+				                                       VEH_PHYS_JUMP_SPEEDOMETER_TIMER_SCALE)) >>
 				      VEH_PHYS_JUMP_SPEEDOMETER_BLEND_SHIFT);
 		}
 	}

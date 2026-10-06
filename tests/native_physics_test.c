@@ -158,9 +158,9 @@ static void test_frame_rates(void)
 		double acceleration = 0, damping = 1024;
 		for (int frame = 0; frame < rate; frame++)
 		{
-			sdata->gGT->timer = frame;
-			sdata->gGT->elapsedTimeMS = CTR_FRAME_STEP(32, frame);
-			NativePhysics_Move(&d, NativePhysics_Step(&d, sdata->gGT->elapsedTimeMS, 4096), 1);
+			P32_GET(struct GameTracker *, sdata->gGT)->timer = frame;
+			P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS = CTR_FRAME_STEP(32, frame);
+			NativePhysics_Move(&d, NativePhysics_Step(&d, P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS, 4096), 1);
 			acceleration += NativeAI_FrameStep(3.25, frame);
 			damping = NativeAI_HalfDecay(damping, frame);
 		}
@@ -177,8 +177,8 @@ static void test_frame_rates(void)
 		NativePhysics_WriteVelocity(&d, (NativePhysicsVec){0});
 		for (int frame = 0; frame < rate; frame++)
 		{
-			sdata->gGT->timer = frame;
-			sdata->gGT->elapsedTimeMS = CTR_FRAME_STEP(32, frame);
+			P32_GET(struct GameTracker *, sdata->gGT)->timer = frame;
+			P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS = CTR_FRAME_STEP(32, frame);
 			NativePhysics_Gravity(&d, &d.velocity);
 		}
 		near(NativePhysics_ReadVelocity(&d).y, -90);
@@ -189,8 +189,8 @@ static void test_frame_rates(void)
 		NativePhysics_WriteVelocity(&d, (NativePhysicsVec){0});
 		for (int frame = 0; frame < rate; frame++)
 		{
-			sdata->gGT->timer = frame;
-			sdata->gGT->elapsedTimeMS = CTR_FRAME_STEP(32, frame);
+			P32_GET(struct GameTracker *, sdata->gGT)->timer = frame;
+			P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS = CTR_FRAME_STEP(32, frame);
 			NativePhysics_Gravity(&d, &d.velocity);
 		}
 		near(NativePhysics_ReadVelocity(&d).y, -36.9);
@@ -202,8 +202,8 @@ static void test_frame_rates(void)
 		d.simpTurnState = 1;
 		d.const_TurnInputDelay = 3;
 		NativePhysics_SetDomain(NATIVE_PHYSICS_STEERING, 1);
-		sdata->gGT->timer = 0;
-		sdata->gGT->elapsedTimeMS = CTR_FRAME_STEP(32, 0);
+		P32_GET(struct GameTracker *, sdata->gGT)->timer = 0;
+		P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS = CTR_FRAME_STEP(32, 0);
 		NativePhysics_Steer(&d);
 		near(NATIVE_PHYSICS_READ(&d, rotationSpinRate), 1.5 * 30 / rate);
 		NativePhysics_SetDomain(NATIVE_PHYSICS_STEERING, 0);
@@ -261,8 +261,8 @@ static void test_mud_drag(void)
 				NativePhysics_WriteVelocity(&d, (NativePhysicsVec){direction * 8192, 0, direction * 8192});
 				for (int frame = 0; frame < rate; frame++)
 				{
-					sdata->gGT->timer = frame;
-					sdata->gGT->elapsedTimeMS = CTR_FRAME_STEP(32, frame);
+					P32_GET(struct GameTracker *, sdata->gGT)->timer = frame;
+					P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS = CTR_FRAME_STEP(32, frame);
 					d.speedApprox = d.velocity.z;
 					NativePhysics_Gravity(&d, &d.velocity);
 				}
@@ -305,8 +305,8 @@ static void test_surface_forces(void)
 			NativePhysicsVec total = {0};
 			for (int frame = 0; frame < rate; frame++)
 			{
-				sdata->gGT->timer = frame;
-				sdata->gGT->elapsedTimeMS = CTR_FRAME_STEP(32, frame);
+				P32_GET(struct GameTracker *, sdata->gGT)->timer = frame;
+				P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS = CTR_FRAME_STEP(32, frame);
 				// Hold approach speed constant to measure the authored force,
 				// independently of acceleration and subsequent contact responses.
 				d.speedApprox = direction * 4096;
@@ -337,8 +337,8 @@ static void test_surface_forces(void)
 		NativePhysics_WriteVelocity(&d, (NativePhysicsVec){0.25, -0.5, 0.75});
 		for (int frame = 0; frame < rate; frame++)
 		{
-			sdata->gGT->timer = frame;
-			sdata->gGT->elapsedTimeMS = CTR_FRAME_STEP(32, frame);
+			P32_GET(struct GameTracker *, sdata->gGT)->timer = frame;
+			P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS = CTR_FRAME_STEP(32, frame);
 			NativePhysics_SurfacePushback(&d);
 		}
 		NativePhysicsVec v = NativePhysics_ReadVelocity(&d);
@@ -455,7 +455,7 @@ static void test_steering(void)
 	d.simpTurnState = 1;
 	d.const_TurnInputDelay = 3;
 	terrain.turnResponseScale = 128;
-	sdata->gGT->elapsedTimeMS = 16;
+	P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS = 16;
 	NativePhysics_SetDomain(NATIVE_PHYSICS_STEERING, 1);
 	NativePhysics_Steer(&d);
 	near(NATIVE_PHYSICS_READ(&d, rotationSpinRate), 1.5);
@@ -548,14 +548,14 @@ static void test_pad_contact(void)
 
 static void test_pad_boost_counter(void)
 {
-	struct GameTracker *gt = sdata->gGT;
+	struct GameTracker *gt = P32_GET(struct GameTracker *, sdata->gGT);
 	struct Thread player = {.modelIndex = DYNAMIC_PLAYER}, turboThread = {0};
 	struct Instance inst = {.thread = &player}, flame1 = {0}, flame2 = {0};
 	struct Driver d = {.driverID = 12, .instSelf = &inst, .numTurbos = 3, .kartState = KS_NORMAL};
 	struct Turbo turbo = {.driver = &d, .inst = &flame2};
 	turboThread.object = &turbo;
 	turboThread.inst = &flame1;
-	struct Thread *saved = gt->threadBuckets[TURBO].thread;
+	struct Thread *saved = P32_GET(struct Thread *, gt->threadBuckets[TURBO].thread);
 	gt->threadBuckets[TURBO].thread = &turboThread;
 	for (int option = 0; option < NATIVE_FRAME_RATE_COUNT; option++)
 	{
@@ -673,8 +673,8 @@ static void test_slope_contact_pushback(void)
 		d.spsHitPos = s.hit.hitPos;
 		d.spsNormalVec = s.hit.plane.normal;
 		d.quadBlockHeight = (s32)(onPlane.y * 256);
-		sdata->gGT->timer = 0;
-		sdata->gGT->elapsedTimeMS = (s32)elapsed;
+		P32_GET(struct GameTracker *, sdata->gGT)->timer = 0;
+		P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS = (s32)elapsed;
 		NativePhysics_SurfacePushback(&d);
 		NativePhysicsVec after = NativePhysics_ReadVelocity(&d);
 		// Only integer hit position rounding may remain, as in retail.

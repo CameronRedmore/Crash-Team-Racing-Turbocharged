@@ -124,7 +124,8 @@ static int NativeHudIcon_Begin(struct NativeHudIconMesh *mesh, const struct Icon
 	if (!gNativeModernHudIconsEnabled || !icon || !primMem || !ot || scale <= 0)
 		return 0;
 	const size_t needed = (button ? HUD_BUTTON_MAX_QUADS : HUD_LIGHT_MAX_QUADS) * sizeof(POLY_G4);
-	if ((uintptr_t)primMem->cursor > (uintptr_t)primMem->end || (uintptr_t)primMem->end - (uintptr_t)primMem->cursor < needed)
+	if ((uintptr_t)P32_GET(void *, primMem->cursor) > (uintptr_t)P32_GET(void *, primMem->end) ||
+	    (uintptr_t)P32_GET(void *, primMem->end) - (uintptr_t)P32_GET(void *, primMem->cursor) < needed)
 		return 0;
 	float width = (float)FP_Mult(icon->texLayout.u1 - icon->texLayout.u0, scale);
 	const float height = (float)FP_Mult(icon->texLayout.v2 - icon->texLayout.v0, scale);
@@ -138,7 +139,7 @@ static int NativeHudIcon_Begin(struct NativeHudIconMesh *mesh, const struct Icon
 #endif
 	if (width <= 0 || height <= 0)
 		return 0;
-	*mesh = (struct NativeHudIconMesh){primMem->cursor, 0, x + width * 0.5f, y + height * 0.5f, width * 0.5f, height * 0.5f, 0, 0};
+	*mesh = (struct NativeHudIconMesh){P32_GET(void *, primMem->cursor), 0, x + width * 0.5f, y + height * 0.5f, width * 0.5f, height * 0.5f, 0, 0};
 	return 1;
 }
 
@@ -244,10 +245,17 @@ int NativeHudIcons_DrawMenuArrow(const float x[4], const float y[4], const u32 c
 	static const float px[7] = {-0.55f, -0.55f, -0.95f, -0.95f, -0.55f, -0.55f, 0.95f};
 	static const float py[7] = {-0.95f, -0.36f, -0.36f, 0.36f, 0.36f, 0.95f, 0.0f};
 	const size_t needed = 14 * sizeof(POLY_G4);
-	if ((uintptr_t)primMem->cursor > (uintptr_t)primMem->end || (uintptr_t)primMem->end - (uintptr_t)primMem->cursor < needed)
+	if ((uintptr_t)P32_GET(void *, primMem->cursor) > (uintptr_t)P32_GET(void *, primMem->end) ||
+	    (uintptr_t)P32_GET(void *, primMem->end) - (uintptr_t)P32_GET(void *, primMem->cursor) < needed)
 		return 0;
-	struct NativeHudIconMesh mesh = {
-	    primMem->cursor, 0, (x[0] + x[3]) * 0.5f, (y[0] + y[3]) * 0.5f, (x[1] - x[0]) * 0.5f, (y[2] - y[0]) * 0.5f, (y[1] - y[0]) * 0.5f, (x[2] - x[0]) * 0.5f};
+	struct NativeHudIconMesh mesh = {P32_GET(void *, primMem->cursor),
+	                                 0,
+	                                 (x[0] + x[3]) * 0.5f,
+	                                 (y[0] + y[3]) * 0.5f,
+	                                 (x[1] - x[0]) * 0.5f,
+	                                 (y[2] - y[0]) * 0.5f,
+	                                 (y[1] - y[0]) * 0.5f,
+	                                 (x[2] - x[0]) * 0.5f};
 	for (int layer = 0; layer < 2; layer++)
 	{
 		const float inset = layer ? 0.78f : 1.0f;

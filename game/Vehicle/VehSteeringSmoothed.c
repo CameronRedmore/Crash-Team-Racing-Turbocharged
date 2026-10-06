@@ -477,7 +477,7 @@ static double NativeSteering_LerpForwards(struct Driver *d, double currentAngle,
 
 void NativePhysics_DriftSteer(struct Driver *driver)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	double axisAngleDelta = (NativePhysics_WrapAngle(((NATIVE_PHYSICS_READ(driver, axisRotationX) - NATIVE_PHYSICS_READ(driver, angle)) + ANG_PI)) - ANG_PI);
 	if (axisAngleDelta != 0)
@@ -945,9 +945,11 @@ void NativePhysics_LerpRotation(struct Driver *driver, double targetRotW)
 	NATIVE_PHYSICS_WRITE(driver, rotPrev.w, NativeSteering_Approach(NATIVE_PHYSICS_READ(driver, rotPrev.w), 8 * NativePhysics_FrameScale(), maxLerpStep));
 
 	// Interpolate rotation by speed
-	NATIVE_PHYSICS_WRITE(driver, rotCurr.w,
-	                     NativeSteering_Approach(NATIVE_PHYSICS_READ(driver, rotCurr.w),
-	                                             ldexp((NATIVE_PHYSICS_READ(driver, rotPrev.w) * NativePhysics_ElapsedMS(sdata->gGT->elapsedTimeMS)), -(5)),
-	                                             targetRotW));
+	NATIVE_PHYSICS_WRITE(
+	    driver, rotCurr.w,
+	    NativeSteering_Approach(
+	        NATIVE_PHYSICS_READ(driver, rotCurr.w),
+	        ldexp((NATIVE_PHYSICS_READ(driver, rotPrev.w) * NativePhysics_ElapsedMS(P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS)), -(5)),
+	        targetRotW));
 }
 #endif

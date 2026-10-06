@@ -74,7 +74,7 @@ void UI_Map_DrawMap(struct Icon *mapTop, struct Icon *mapBottom, s16 posX, s16 p
 #if defined(CTR_NATIVE)
 	if (NativeMinimap_DrawLive(primMem, otMem, colorID)) return;
 #endif
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	mapMetadata = NULL;
 
@@ -362,7 +362,8 @@ void UI_Map_DrawRawIcon(struct UIMap *map, const s32 worldPos[3], int iconID, in
 	DecalHUD_DrawPolyGT4(P32_GET(struct Icon *, iconPtrArray[iconID]), posX, posY, &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), ptrColor[0], ptrColor[1], ptrColor[2],
 	                     ptrColor[3], 0, (int)scale);
 #if defined(CTR_NATIVE)
-	if ((NativeAspect_IsActive() || (gNativePreciseMinimapEnabled && NATIVE_PGXP_SUPPORTED)) && gGT->backBuffer->primMem.cursor == p + 1)
+	if ((NativeAspect_IsActive() || (gNativePreciseMinimapEnabled && NATIVE_PGXP_SUPPORTED)) &&
+	    P32_GET(void *, P32_GET(struct DB *, gGT->backBuffer)->primMem.cursor) == p + 1)
 	{
 		float preciseX, preciseY;
 		UI_Map_GetIconPosPrecise(map, worldPos, &preciseX, &preciseY);
@@ -467,14 +468,14 @@ void UI_Map_DrawDrivers(struct UIMap *map, struct Thread *bucket, s16 *driverIco
 			}
 			else
 			{
-				memcpy(colors, data.ptrColor[kartColor], sizeof(colors));
+				memcpy(colors, P32_GET(u32 *, data.ptrColor[kartColor]), sizeof(colors));
 			}
-			UI_Map_DrawMarker(map, &bucket->inst->matrix.t[0], (iconID == UI_MAP_PLAYER_ICON_HUMAN) ? UI_MAP_MARKER_PLAYER_RADIUS : UI_MAP_MARKER_RACER_RADIUS,
-			                  colors);
+			UI_Map_DrawMarker(map, &P32_GET(struct Instance *, bucket->inst)->matrix.t[0],
+			                  (iconID == UI_MAP_PLAYER_ICON_HUMAN) ? UI_MAP_MARKER_PLAYER_RADIUS : UI_MAP_MARKER_RACER_RADIUS, colors);
 			continue;
 		}
 #endif
-		UI_Map_DrawRawIcon(map, &bucket->inst->matrix.t[0], iconID, (s16)kartColor, 0, UI_MAP_ICON_SCALE);
+		UI_Map_DrawRawIcon(map, &P32_GET(struct Instance *, bucket->inst)->matrix.t[0], iconID, (s16)kartColor, 0, UI_MAP_ICON_SCALE);
 	}
 	return;
 }
@@ -537,17 +538,17 @@ void UI_Map_DrawGhosts(struct UIMap *map, struct Thread *bucket)
 			}
 			else if (color == TROPY_LIGHT_BLUE)
 			{
-				memcpy(colors, data.ptrColor[color], sizeof(colors));
+				memcpy(colors, P32_GET(u32 *, data.ptrColor[color]), sizeof(colors));
 			}
 			else
 			{
 				AH_Map_MarkerFlash(colors, RED, WHITE, 2.0f);
 			}
-			UI_Map_DrawMarker(map, &bucket->inst->matrix.t[0], UI_MAP_MARKER_RACER_RADIUS, colors);
+			UI_Map_DrawMarker(map, &P32_GET(struct Instance *, bucket->inst)->matrix.t[0], UI_MAP_MARKER_RACER_RADIUS, colors);
 			continue;
 		}
 #endif
-		UI_Map_DrawRawIcon(map, &bucket->inst->matrix.t[0], UI_MAP_PLAYER_ICON_AI, color, 0, UI_MAP_ICON_SCALE);
+		UI_Map_DrawRawIcon(map, &P32_GET(struct Instance *, bucket->inst)->matrix.t[0], UI_MAP_PLAYER_ICON_AI, color, 0, UI_MAP_ICON_SCALE);
 	}
 	return;
 }
@@ -577,7 +578,7 @@ void UI_Map_DrawTracking(struct UIMap *map, struct Thread *bucket)
 #if defined(CTR_NATIVE)
 		if (gNativeModernMapEnabled)
 		{
-			UI_Map_DrawMarker(map, &inst->matrix.t[0], UI_MAP_MARKER_WARPBALL_RADIUS, data.ptrColor[0]);
+			UI_Map_DrawMarker(map, &inst->matrix.t[0], UI_MAP_MARKER_WARPBALL_RADIUS, P32_GET(u32 *, data.ptrColor[0]));
 		}
 		else
 #endif
@@ -611,13 +612,13 @@ void UI_Map_DrawTracking(struct UIMap *map, struct Thread *bucket)
 			u32 colors[4];
 			AH_Map_MarkerFlash(colors, CRASH_BLUE, CORTEX_RED, 2.0f);
 			float posX, posY;
-			UI_Map_GetIconPosPrecise(map, &d->instSelf->matrix.t[0], &posX, &posY);
+			UI_Map_GetIconPosPrecise(map, &P32_GET(struct Instance *, d->instSelf)->matrix.t[0], &posX, &posY);
 			AH_Map_MarkerOutline(posX, posY, UI_MAP_MARKER_TARGET_RADIUS, 0.5f, false, colors[0]);
 			AH_Map_MarkerOutline(posX, posY, UI_MAP_MARKER_TARGET_RADIUS, 1.0f, false, 0);
 			continue;
 		}
 #endif
-		UI_Map_DrawRawIcon(map, &d->instSelf->matrix.t[0], UI_MAP_WARPBALL_TARGET_ICON, targetColor, 0, UI_MAP_ICON_SCALE);
+		UI_Map_DrawRawIcon(map, &P32_GET(struct Instance *, d->instSelf)->matrix.t[0], UI_MAP_WARPBALL_TARGET_ICON, targetColor, 0, UI_MAP_ICON_SCALE);
 	}
 	return;
 }

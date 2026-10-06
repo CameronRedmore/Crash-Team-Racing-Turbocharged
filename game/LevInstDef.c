@@ -339,31 +339,32 @@ static u8 s_nativeReachableMarks[NATIVE_REACHABLE_INSTANCE_LIMIT];
 static void LevInstDef_BuildReachableInstances(const struct mesh_info *mesh, const struct Level *level)
 {
 	s_nativeReachableLevel = NULL;
-	if (level == NULL || level->ptrInstDefPtrArray == NULL || level->ptrInstDefs == NULL || level->numInstances > NATIVE_REACHABLE_INSTANCE_LIMIT)
+	if (level == NULL || P32_GET(struct InstDef * *const, level->ptrInstDefPtrArray) == NULL || P32_GET(struct InstDef *const, level->ptrInstDefs) == NULL ||
+	    level->numInstances > NATIVE_REACHABLE_INSTANCE_LIMIT)
 	{
 		return;
 	}
 
-	const struct InstDef *defs = level->ptrInstDefs;
+	const struct InstDef *defs = P32_GET(struct InstDef *const, level->ptrInstDefs);
 	const u32 numDefs = level->numInstances;
 	memset(s_nativeReachableMarks, 0, numDefs);
 
 	const struct PVS *prevPvs = NULL;
 	for (int i = 0; mesh != NULL && i < mesh->numQuadBlock; i++)
 	{
-		const struct PVS *pvs = mesh->ptrQuadBlockArray[i].pvs;
-		if (pvs == NULL || pvs == prevPvs || pvs->visInstSrc == NULL)
+		const struct PVS *pvs = P32_GET(struct PVS *, P32_GET(struct QuadBlock *const, mesh->ptrQuadBlockArray)[i].pvs);
+		if (pvs == NULL || pvs == prevPvs || P32_GET(struct Instance * *const, pvs->visInstSrc) == NULL)
 		{
 			continue;
 		}
 		prevPvs = pvs;
-		for (struct Instance **entry = pvs->visInstSrc; entry[0] != NULL; entry++)
+		for (struct Instance **entry = P32_GET(struct Instance * *const, pvs->visInstSrc); entry[0] != NULL; entry++)
 		{
 			// Shared lists can be left as InstDef pointers; see the ND BUG note in UnPack.
 			const struct InstDef *def = (const struct InstDef *)entry[0];
 			if (def < defs || def >= defs + numDefs)
 			{
-				def = entry[0]->instDef;
+				def = P32_GET(struct InstDef *, entry[0]->instDef);
 			}
 			if (def >= defs && def < defs + numDefs)
 			{
@@ -373,9 +374,9 @@ static void LevInstDef_BuildReachableInstances(const struct mesh_info *mesh, con
 	}
 
 	int count = 0;
-	for (struct Instance **it = (struct Instance **)level->ptrInstDefPtrArray; it[0] != NULL; it++)
+	for (struct Instance **it = (struct Instance **)P32_GET(struct InstDef * *const, level->ptrInstDefPtrArray); it[0] != NULL; it++)
 	{
-		const struct InstDef *def = it[0]->instDef;
+		const struct InstDef *def = P32_GET(struct InstDef *, it[0]->instDef);
 		if (def >= defs && def < defs + numDefs && s_nativeReachableMarks[def - defs] && count < NATIVE_REACHABLE_INSTANCE_LIMIT)
 		{
 			s_nativeReachableInstances[count++] = it[0];

@@ -1499,7 +1499,7 @@ enum RectMenuNativeOptionsLayout
 
 static b32 RECTMENU_NativeOptionsSeparatorBeforeRow(struct RectMenu *menu, struct MenuRow *row)
 {
-	if ((menu->drawStyle & RECTMENU_DRAW_STYLE_NATIVE_OPTIONS) == 0 || row == menu->rows)
+	if ((menu->drawStyle & RECTMENU_DRAW_STYLE_NATIVE_OPTIONS) == 0 || row == P32_GET(struct MenuRow *, menu->rows))
 	{
 		return false;
 	}
@@ -1517,7 +1517,7 @@ static b32 RECTMENU_NativeOptionsHorizontalInput(struct RectMenu *menu)
 		return false;
 	}
 
-	s16 stringIndex = menu->rows[menu->rowSelected].stringIndex & MENU_ROW_LNG_MASK;
+	s16 stringIndex = P32_GET(struct MenuRow *, menu->rows)[menu->rowSelected].stringIndex & MENU_ROW_LNG_MASK;
 
 	// Every settings row adjusts with left/right; the table is the single
 	// place that decides this, so adding a setting needs no edit here.
@@ -2073,10 +2073,9 @@ int RECTMENU_ProcessInput(struct RectMenu *m)
 		}
 
 #if defined(CTR_NATIVE)
-		if (((button & (BTN_LEFT | BTN_RIGHT)) != 0) &&
-		    RECTMENU_NativeOptionsHorizontalInput(m) &&
-		    ((m->rows[m->rowSelected].stringIndex & MENU_ROW_LOCKED) == 0) &&
-		    (m->funcPtr != 0))
+		if (((button & (BTN_LEFT | BTN_RIGHT)) != 0) && RECTMENU_NativeOptionsHorizontalInput(m) &&
+		    ((P32_GET(struct MenuRow *, m->rows)[m->rowSelected].stringIndex & MENU_ROW_LOCKED) == 0) &&
+		    (P32_GET(void (*)(struct RectMenu *), m->funcPtr) != 0))
 		{
 			m->funcState = RECTMENU_FUNC_STATE_INPUT;
 			P32_GET(void (*)(struct RectMenu *), m->funcPtr)(m);

@@ -9,10 +9,12 @@
 #if defined(CTR_NATIVE)
 static int PushBuffer_IsWorldCamera(const struct PushBuffer *pb)
 {
-	if (sdata->gGT == NULL || pb == NULL) return 0;
+	if (P32_GET(struct GameTracker *, sdata->gGT) == NULL || pb == NULL)
+		return 0;
 	for (int i = 0; i < 4; ++i)
 	{
-		if (pb == &sdata->gGT->pushBuffer[i]) return 1;
+		if (pb == &P32_GET(struct GameTracker *, sdata->gGT)->pushBuffer[i])
+			return 1;
 	}
 	return 0;
 }

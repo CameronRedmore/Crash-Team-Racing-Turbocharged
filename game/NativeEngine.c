@@ -116,7 +116,7 @@ int NativeEngine_GetEffectiveProfile(int driverID)
 		return replayProfile;
 	}
 
-	struct GameTracker *gGT = (sdata != NULL) ? sdata->gGT : NULL;
+	struct GameTracker *gGT = (sdata != NULL) ? P32_GET(struct GameTracker *, sdata->gGT) : NULL;
 	if ((gNativeEngineSelectionEnabled == 0) || (gGT == NULL) || (driverID >= gGT->numPlyrCurrGame) || (driverID >= NATIVE_ENGINE_PLAYER_COUNT))
 	{
 		return defaultProfile;
