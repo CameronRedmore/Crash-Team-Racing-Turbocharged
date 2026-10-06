@@ -172,14 +172,7 @@ Please report bugs through [GitHub Issues](https://github.com/CameronRedmore/Cra
 
 ## Roadmap
 
-Planned, in no particular order and with no promised dates:
-
-- 64-bit build
-- ARM build
-- Android build
-- macOS build (potentially)
-- Re-add online functionality
-- Re-instate the Web Browser build
+The roadmap now lives on the website: [ctr.cmzi.uk/#roadmap](https://ctr.cmzi.uk/#roadmap).
 
 ## Special controls bindings
 
