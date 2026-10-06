@@ -161,6 +161,7 @@ Please share what you find on your own hardware, whether it works or not. Open a
 
 - 32-bit libraries can cause issues with Wayland on some GPU drivers. Turbocharged therefore runs through X11 (XWayland) by default; see the Linux display server note above.
 - Hue rotate (Options > Experimental > Kart Hue) can affect incorrect parts of some characters.
+- Cross-platform ghosts, replays and saves are currently untested and may not work. Sharing them between different builds (for example 32-bit and 64-bit, x86 and ARM, or Windows and Linux) has not been tested. A ghost or replay may desync, and a save may fail to load. Floating-point behaviour can differ between platforms, which is a known risk for ghosts and replays. Keep backups of your saves and ghosts before moving them to another build.
 
 ### Reporting bugs
 
