@@ -254,7 +254,7 @@ static void DecalFont_TtfDrawLine(char *str, s16 len, int posX, s16 posY, s16 fo
 			chain.head->code[1] |= PSYX_TEX_FLAG_TEXT_SDF;
 			chain.tailTag = &chain.head->tag;
 			chain.tailLength = 2;
-			primMem->cursor = chain.head + 1;
+			P32_SET(primMem->cursor, chain.head + 1);
 		}
 
 		// Tabular digits sit centred in the shared digit advance.
@@ -280,7 +280,7 @@ static void DecalFont_TtfDrawLine(char *str, s16 len, int posX, s16 posY, s16 fo
 		p->tpage = tpage;
 		p->clut = 0;
 		DecalFont_TtfChainAppend(&chain, p, &p->tag, 12);
-		primMem->cursor = p + 1;
+		P32_SET(primMem->cursor, p + 1);
 
 		penX += advance;
 	}
@@ -293,7 +293,7 @@ static void DecalFont_TtfDrawLine(char *str, s16 len, int posX, s16 posY, s16 fo
 		DecalFont_TtfChainAppend(&chain, resetTexture, &resetTexture->tag, 2);
 		resetTexture->tag = CtrGpu_PackOTTag(*ot, 2 << 24);
 		*ot = CtrGpu_PrimToOTLink24(chain.head);
-		primMem->cursor = resetTexture + 1;
+		P32_SET(primMem->cursor, resetTexture + 1);
 	}
 }
 #endif

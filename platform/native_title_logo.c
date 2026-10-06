@@ -679,7 +679,7 @@ int NativeTitleLogo_Draw(struct PrimMem *primMem, u32 *ot, const struct NativeTi
 	p->tag = CtrGpu_PackOTTag(CtrGpu_PrimToOTLink24(reset), 9u << 24);
 	reset->tag = CtrGpu_PackOTTag(oldTag, 2u << 24);
 	*ot = CtrGpu_PrimToOTLink24(set);
-	primMem->cursor = reset + 1;
+	P32_SET(primMem->cursor, reset + 1);
 	return 1;
 }
 

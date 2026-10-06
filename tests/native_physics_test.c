@@ -152,7 +152,7 @@ static void test_frame_rates(void)
 		gNative60FpsEnabled = option;
 		int rate = CTR_FRAMES_PER_SECOND;
 		NativePhysics_ResetDriver(&d);
-		d.terrainMeta1 = &terrain;
+		P32_SET(d.terrainMeta1, &terrain);
 		d.posCurr = (Vec3){0};
 		NativePhysics_WriteVelocity(&d, (NativePhysicsVec){1, -1.25, 2.5});
 		double acceleration = 0, damping = 1024;
@@ -185,7 +185,7 @@ static void test_frame_rates(void)
 		// Oxide Station's low-gravity quads retain the same 41% gravity at
 		// every simulation rate, independently of the adhesion multiplier.
 		struct QuadBlock lowGravity = {.quadFlags = QUADBLOCK_FLAG_LOW_GRAVITY};
-		d.underDriver = &lowGravity;
+		P32_SET(d.underDriver, &lowGravity);
 		NativePhysics_WriteVelocity(&d, (NativePhysicsVec){0});
 		for (int frame = 0; frame < rate; frame++)
 		{
@@ -197,7 +197,7 @@ static void test_frame_rates(void)
 		// A single steering impulse uses the same retail time scale at every rate.
 		memset(&d, 0, sizeof(d));
 		d.driverID = 8;
-		d.terrainMeta1 = &terrain;
+		P32_SET(d.terrainMeta1, &terrain);
 		d.AxisAngle1_normalVec.y = 4096;
 		d.simpTurnState = 1;
 		d.const_TurnInputDelay = 3;
@@ -210,7 +210,7 @@ static void test_frame_rates(void)
 		struct Driver a = {.driverID = 9, .const_CollisionWeight = 1}, b = {.driverID = 10, .const_CollisionWeight = 1};
 		struct Thread ta = {.object = &a, .driverHitRadius = 10}, tb = {.object = &b, .driverHitRadius = 10};
 		struct DriverCollisionSearch search = {0};
-		search.bucket.th = &tb;
+		P32_SET(search.bucket.th, &tb);
 		Vec3 output;
 		NativePhysics_SetDomain(NATIVE_PHYSICS_COLLISION, 1);
 		NativePhysics_WritePosition(&b, (NativePhysicsVec){19.25 * 256, 0, 0});
@@ -287,8 +287,8 @@ static void test_surface_forces(void)
 	struct Driver d = {.driverID = 11, .actionsFlagSet = ACTION_TOUCH_GROUND, .baseSpeed = 4096};
 	struct Terrain terrain = {.slowUntilSpeed = 256};
 	struct QuadBlock quad = {.mulNormVecY = -127}; // Sewer Speedway's authored adhesion.
-	d.terrainMeta1 = &terrain;
-	d.underDriver = &quad;
+	P32_SET(d.terrainMeta1, &terrain);
+	P32_SET(d.underDriver, &quad);
 	// A banked ramp: adhesion has both a sideways and a downward component.
 	d.matrixMovingDir.m[0][0] = d.matrixMovingDir.m[1][1] = 3276;
 	d.matrixMovingDir.m[0][1] = 2457;
@@ -374,7 +374,7 @@ static void test_collision_response(void)
 	Vec3 output;
 	d.driverID = 4;
 	other.driverID = 5;
-	d.instSelf = &inst;
+	P32_SET(d.instSelf, &inst);
 	d.matrixMovingDir.m[0][0] = d.matrixMovingDir.m[1][1] = d.matrixMovingDir.m[2][2] = 4096;
 	NativePhysics_SetDomain(NATIVE_PHYSICS_STEERING, 0);
 	NativePhysics_SetDomain(NATIVE_PHYSICS_COLLISION, 1);
@@ -398,7 +398,7 @@ static void test_collision_response(void)
 	NativePhysics_WriteVelocity(&d, (NativePhysicsVec){100.25, 0, 0});
 	NativePhysics_WriteVelocity(&other, (NativePhysicsVec){-100.25, 0, 0});
 	struct DriverCollisionSearch search = {0};
-	search.bucket.th = &ot;
+	P32_SET(search.bucket.th, &ot);
 	NativeCollision_Cars(&t, &search, &output);
 	near(NativePhysics_ReadVelocity(&d).x, -100.25 / 3 - 12);
 	near(NativePhysics_ReadVelocity(&other).x, 100.25 / 3 + 12);
@@ -450,7 +450,7 @@ static void test_steering(void)
 	struct Driver d = {0};
 	struct Terrain terrain = {0};
 	d.driverID = 2;
-	d.terrainMeta1 = &terrain;
+	P32_SET(d.terrainMeta1, &terrain);
 	d.AxisAngle1_normalVec.y = 4096;
 	d.simpTurnState = 1;
 	d.const_TurnInputDelay = 3;
@@ -522,7 +522,7 @@ static void test_pad_contact(void)
 		for (int frame = 0; frame < rate; frame++)
 		{
 			struct ScratchpadStruct sps = {0};
-			sps.candidate.ptrQuadblock = &pad;
+			P32_SET(sps.candidate.ptrQuadblock, &pad);
 			sps.Input1.hitRadius = 1;
 			sps.hitFraction = 4096;
 			NativeCollision_BeginSweep(&sps, (NativePhysicsVec){-1 + 2.0 * frame / rate, 1, 0}, (NativePhysicsVec){2.0 / rate, 0, 0});
@@ -533,7 +533,7 @@ static void test_pad_contact(void)
 		}
 	}
 	struct ScratchpadStruct sps = {0};
-	sps.candidate.ptrQuadblock = &pad;
+	P32_SET(sps.candidate.ptrQuadblock, &pad);
 	sps.Input1.hitRadius = 1;
 	NativeCollision_BeginSweep(&sps, (NativePhysicsVec){0, 1, 0}, (NativePhysicsVec){0});
 	NativeCollision_MovedTriangle(&sps, &a, &b, &c);
@@ -553,10 +553,10 @@ static void test_pad_boost_counter(void)
 	struct Instance inst = {.thread = &player}, flame1 = {0}, flame2 = {0};
 	struct Driver d = {.driverID = 12, .instSelf = &inst, .numTurbos = 3, .kartState = KS_NORMAL};
 	struct Turbo turbo = {.driver = &d, .inst = &flame2};
-	turboThread.object = &turbo;
-	turboThread.inst = &flame1;
+	P32_SET(turboThread.object, &turbo);
+	P32_SET(turboThread.inst, &flame1);
 	struct Thread *saved = P32_GET(struct Thread *, gt->threadBuckets[TURBO].thread);
-	gt->threadBuckets[TURBO].thread = &turboThread;
+	P32_SET(gt->threadBuckets[TURBO].thread, &turboThread);
 	for (int option = 0; option < NATIVE_FRAME_RATE_COUNT; option++)
 	{
 		gNative60FpsEnabled = option;
@@ -591,7 +591,7 @@ static void test_pad_boost_counter(void)
 		VehFire_Increment(&d, 960, TURBO_PAD | FREEZE_RESERVES_ON_TURBO_PAD, 256);
 		assert(d.numTurbos == 5);
 	}
-	gt->threadBuckets[TURBO].thread = saved;
+	P32_SET(gt->threadBuckets[TURBO].thread, saved);
 }
 
 static void test_road_seam_normals(void)
@@ -612,7 +612,7 @@ static void test_road_seam_normals(void)
 	for (int inward = 0; inward < 2; inward++)
 	{
 		struct ScratchpadStruct s = {0};
-		s.candidate.ptrQuadblock = &road;
+		P32_SET(s.candidate.ptrQuadblock, &road);
 		s.Input1.hitRadius = 25;
 		s.hitFraction = 4096;
 		NativePhysicsVec start = NC_Add(NC_Sub(middle, NC_Scale(across, 40)), NC_Scale(n, 24));
@@ -657,7 +657,7 @@ static void test_slope_contact_pushback(void)
 		NativePhysicsVec velocity = {12812, 1609, -3908};
 		NativePhysicsVec start = NC_Add(onPlane, NC_Scale(face, 25));
 		struct ScratchpadStruct s = {0};
-		s.candidate.ptrQuadblock = &road;
+		P32_SET(s.candidate.ptrQuadblock, &road);
 		s.Input1.hitRadius = 25;
 		s.hitFraction = 4096;
 		NativeCollision_BeginSweep(&s, start, NC_Scale(velocity, elapsed / 32 / 256));

@@ -27,7 +27,7 @@ void NativeCollision_CarSearch(struct Driver *d, struct Thread *first, struct Bu
 		if (distance >= best)
 			continue;
 		best = distance;
-		search->th = th;
+		P32_SET(search->th, th);
 		search->bestDistSq = (s32)fmin(2147483647.0, ceil(distance));
 		search->dist = (SVec3){.x = (s16)round(position.x - other.x), .y = (s16)round(position.y - other.y), .z = (s16)round(position.z - other.z)};
 	}

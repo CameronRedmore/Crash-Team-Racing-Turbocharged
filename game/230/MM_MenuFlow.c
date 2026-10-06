@@ -144,29 +144,47 @@ static struct MenuRow s_nativeAdhocWaitRows[] =
 	{.stringIndex = RECTMENU_STRING_NONE},
 };
 
-static struct RectMenu s_nativeAdhocModeMenu =
-{
-	.stringIndexTitle = NATIVE_MENU_STRING_ADHOC,
-	.state = CENTER_ON_X | USE_SMALL_FONT | BIG_TEXT_IN_TITLE,
-	.rows = s_nativeAdhocModeRows,
-	.funcPtr = MM_NativeAdhocModeProc,
+static struct RectMenu s_nativeAdhocModeMenu = {
+    .stringIndexTitle = NATIVE_MENU_STRING_ADHOC,
+    .state = CENTER_ON_X | USE_SMALL_FONT | BIG_TEXT_IN_TITLE,
+    .rows = P32_DEFER(s_nativeAdhocModeRows),
+    .funcPtr = P32_DEFER(MM_NativeAdhocModeProc),
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(s_nativeAdhocModeMenu)
+{
+	P32_SET(s_nativeAdhocModeMenu.rows, s_nativeAdhocModeRows);
+	P32_SET(s_nativeAdhocModeMenu.funcPtr, MM_NativeAdhocModeProc);
+}
+#endif
 
-static struct RectMenu s_nativeAdhocRoleMenu =
-{
-	.stringIndexTitle = NATIVE_MENU_STRING_ADHOC,
-	.state = CENTER_ON_X | USE_SMALL_FONT | BIG_TEXT_IN_TITLE,
-	.rows = s_nativeAdhocRoleRows,
-	.funcPtr = MM_NativeAdhocRoleProc,
+static struct RectMenu s_nativeAdhocRoleMenu = {
+    .stringIndexTitle = NATIVE_MENU_STRING_ADHOC,
+    .state = CENTER_ON_X | USE_SMALL_FONT | BIG_TEXT_IN_TITLE,
+    .rows = P32_DEFER(s_nativeAdhocRoleRows),
+    .funcPtr = P32_DEFER(MM_NativeAdhocRoleProc),
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(s_nativeAdhocRoleMenu)
+{
+	P32_SET(s_nativeAdhocRoleMenu.rows, s_nativeAdhocRoleRows);
+	P32_SET(s_nativeAdhocRoleMenu.funcPtr, MM_NativeAdhocRoleProc);
+}
+#endif
 
-static struct RectMenu s_nativeAdhocWaitMenu =
-{
-	.stringIndexTitle = LNG_NA_241,
-	.state = CENTER_ON_X | BIG_TEXT_IN_TITLE,
-	.rows = s_nativeAdhocWaitRows,
-	.funcPtr = MM_NativeAdhocWaitProc,
+static struct RectMenu s_nativeAdhocWaitMenu = {
+    .stringIndexTitle = LNG_NA_241,
+    .state = CENTER_ON_X | BIG_TEXT_IN_TITLE,
+    .rows = P32_DEFER(s_nativeAdhocWaitRows),
+    .funcPtr = P32_DEFER(MM_NativeAdhocWaitProc),
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(s_nativeAdhocWaitMenu)
+{
+	P32_SET(s_nativeAdhocWaitMenu.rows, s_nativeAdhocWaitRows);
+	P32_SET(s_nativeAdhocWaitMenu.funcPtr, MM_NativeAdhocWaitProc);
+}
+#endif
 #endif
 
 static struct MenuRow s_nativeMainMenuBasic[] =
@@ -247,12 +265,17 @@ static const struct MMNativeUnlockEntry s_nativeUnlockEntries[] =
 enum { MM_NATIVE_UNLOCK_VISIBLE_ROWS = 7, MM_NATIVE_BASE_UNLOCK_COUNT = 13 };
 static int s_nativeUnlockFirst;
 static void MM_NativeUnlocksMenuProc(struct RectMenu *menu);
-static struct RectMenu s_nativeUnlocksMenu =
-{
-	.stringIndexTitle = NATIVE_MENU_STRING_UNLOCKS,
-	.state = RECTMENU_STATE_INVISIBLE_CALLBACK,
-	.funcPtr = MM_NativeUnlocksMenuProc,
+static struct RectMenu s_nativeUnlocksMenu = {
+    .stringIndexTitle = NATIVE_MENU_STRING_UNLOCKS,
+    .state = RECTMENU_STATE_INVISIBLE_CALLBACK,
+    .funcPtr = P32_DEFER(MM_NativeUnlocksMenuProc),
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(s_nativeUnlocksMenu)
+{
+	P32_SET(s_nativeUnlocksMenu.funcPtr, MM_NativeUnlocksMenuProc);
+}
+#endif
 
 static int MM_NativeUnlockCount(void)
 {
@@ -286,7 +309,7 @@ static void MM_NativeUnlocksInput(struct RectMenu *menu, u32 tap)
 	if (menu->rowSelected >= count) menu->rowSelected = count - 1;
 	if (tap & (BTN_TRIANGLE | BTN_SQUARE_one))
 	{
-		sdata->ptrDesiredMenu = &D230.menuMainMenu;
+		P32_SET(sdata->ptrDesiredMenu, &D230.menuMainMenu);
 		OtherFX_Play(2, 1);
 		return;
 	}
@@ -542,13 +565,19 @@ static void MM_NativeControlsMenuProc(struct RectMenu *menu);
 static void MM_NativeBossFightMenuProc(struct RectMenu *menu);
 static void MM_NativeCreditsMenuProc(struct RectMenu *menu);
 
-static struct RectMenu s_nativeCreditsMenu =
-{
-	.stringIndexTitle = RECTMENU_STRING_NONE,
-	.state = CENTER_ON_X | USE_SMALL_FONT,
-	.rows = s_nativeCreditsRows,
-	.funcPtr = MM_NativeCreditsMenuProc,
+static struct RectMenu s_nativeCreditsMenu = {
+    .stringIndexTitle = RECTMENU_STRING_NONE,
+    .state = CENTER_ON_X | USE_SMALL_FONT,
+    .rows = P32_DEFER(s_nativeCreditsRows),
+    .funcPtr = P32_DEFER(MM_NativeCreditsMenuProc),
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(s_nativeCreditsMenu)
+{
+	P32_SET(s_nativeCreditsMenu.rows, s_nativeCreditsRows);
+	P32_SET(s_nativeCreditsMenu.funcPtr, MM_NativeCreditsMenuProc);
+}
+#endif
 
 static struct RectMenu s_nativeLanguageBootMenu =
 {
@@ -596,32 +625,44 @@ static struct MenuRow s_nativePresetRows[] =
 	{.stringIndex = RECTMENU_STRING_NONE},
 };
 
-static struct RectMenu s_nativePresetMenu =
-{
-	.stringIndexTitle = RECTMENU_STRING_NONE,
-	.posX_curr = 256,
-	.posY_curr = 100,
-	.state = RECTMENU_STATE_EXEC_CENTERED | RECTMENU_NATIVE_DRAW_CALLBACK,
-	.rows = s_nativePresetRows,
-	.funcPtr = MM_NativePresetMenuProc,
+static struct RectMenu s_nativePresetMenu = {
+    .stringIndexTitle = RECTMENU_STRING_NONE,
+    .posX_curr = 256,
+    .posY_curr = 100,
+    .state = RECTMENU_STATE_EXEC_CENTERED | RECTMENU_NATIVE_DRAW_CALLBACK,
+    .rows = P32_DEFER(s_nativePresetRows),
+    .funcPtr = P32_DEFER(MM_NativePresetMenuProc),
 #if CTR_NATIVE_WIDESCREEN
-	.drawStyle = MM_NATIVE_LANGUAGE_DRAWSTYLE_WIDESCREEN,
+    .drawStyle = MM_NATIVE_LANGUAGE_DRAWSTYLE_WIDESCREEN,
 #endif
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(s_nativePresetMenu)
+{
+	P32_SET(s_nativePresetMenu.rows, s_nativePresetRows);
+	P32_SET(s_nativePresetMenu.funcPtr, MM_NativePresetMenuProc);
+}
+#endif
 
 // Same popup, reopened from Options > Settings Preset.
-static struct RectMenu s_nativePresetOptionsMenu =
-{
-	.stringIndexTitle = RECTMENU_STRING_NONE,
-	.posX_curr = 256,
-	.posY_curr = 100,
-	.state = RECTMENU_STATE_EXEC_CENTERED | RECTMENU_NATIVE_DRAW_CALLBACK,
-	.rows = s_nativePresetRows,
-	.funcPtr = MM_NativePresetMenuProc,
+static struct RectMenu s_nativePresetOptionsMenu = {
+    .stringIndexTitle = RECTMENU_STRING_NONE,
+    .posX_curr = 256,
+    .posY_curr = 100,
+    .state = RECTMENU_STATE_EXEC_CENTERED | RECTMENU_NATIVE_DRAW_CALLBACK,
+    .rows = P32_DEFER(s_nativePresetRows),
+    .funcPtr = P32_DEFER(MM_NativePresetMenuProc),
 #if CTR_NATIVE_WIDESCREEN
-	.drawStyle = MM_NATIVE_LANGUAGE_DRAWSTYLE_WIDESCREEN,
+    .drawStyle = MM_NATIVE_LANGUAGE_DRAWSTYLE_WIDESCREEN,
 #endif
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(s_nativePresetOptionsMenu)
+{
+	P32_SET(s_nativePresetOptionsMenu.rows, s_nativePresetRows);
+	P32_SET(s_nativePresetOptionsMenu.funcPtr, MM_NativePresetMenuProc);
+}
+#endif
 
 static void MM_NativeTimeTrialRefreshOnlineRow(void)
 {
@@ -665,76 +706,105 @@ CTR_P32_STATIC_FIXUP(s_nativeOptionsMenu)
 }
 #endif
 
-static struct RectMenu s_nativeDisplayMenu =
-{
-	.stringIndexTitle = RECTMENU_STRING_NONE,
-	.state = CENTER_ON_X | USE_SMALL_FONT,
-	.rows = s_nativeDisplayRows,
-	.funcPtr = MM_NativeOptionsMenuProc,
-	.drawStyle = RECTMENU_DRAW_STYLE_NATIVE_OPTIONS,
+static struct RectMenu s_nativeDisplayMenu = {
+    .stringIndexTitle = RECTMENU_STRING_NONE,
+    .state = CENTER_ON_X | USE_SMALL_FONT,
+    .rows = P32_DEFER(s_nativeDisplayRows),
+    .funcPtr = P32_DEFER(MM_NativeOptionsMenuProc),
+    .drawStyle = RECTMENU_DRAW_STYLE_NATIVE_OPTIONS,
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(s_nativeDisplayMenu)
+{
+	P32_SET(s_nativeDisplayMenu.rows, s_nativeDisplayRows);
+	P32_SET(s_nativeDisplayMenu.funcPtr, MM_NativeOptionsMenuProc);
+}
+#endif
 
 #ifndef __vita__
 static struct RectMenu s_nativeGraphicsMenu = {
     .stringIndexTitle = RECTMENU_STRING_NONE,
     .state = CENTER_ON_X | USE_SMALL_FONT,
-    .rows = s_nativeGraphicsRows,
-    .funcPtr = MM_NativeOptionsMenuProc,
+    .rows = P32_DEFER(s_nativeGraphicsRows),
+    .funcPtr = P32_DEFER(MM_NativeOptionsMenuProc),
     .drawStyle = RECTMENU_DRAW_STYLE_NATIVE_OPTIONS,
 };
-#endif
-
-static struct RectMenu s_nativeAudioMenu =
-{
-	.stringIndexTitle = RECTMENU_STRING_NONE,
-	.state = CENTER_ON_X | USE_SMALL_FONT,
-	.rows = s_nativeAudioRows,
-	.funcPtr = MM_NativeOptionsMenuProc,
-	.drawStyle = RECTMENU_DRAW_STYLE_NATIVE_OPTIONS,
-};
-
-static struct RectMenu s_nativeGameplayMenu =
-{
-	.stringIndexTitle = RECTMENU_STRING_NONE,
-	.state = CENTER_ON_X | USE_SMALL_FONT,
-	.rows = s_nativeGameplayRows,
-	.funcPtr = MM_NativeOptionsMenuProc,
-	.drawStyle = RECTMENU_DRAW_STYLE_NATIVE_OPTIONS,
-};
-
-#ifndef __vita__
-static struct RectMenu s_nativeExperimentalMenu =
-{
-	.stringIndexTitle = RECTMENU_STRING_NONE,
-	.state = CENTER_ON_X | USE_SMALL_FONT,
-	.rows = s_nativeExperimentalRows,
-	.funcPtr = MM_NativeOptionsMenuProc,
-	.drawStyle = RECTMENU_DRAW_STYLE_NATIVE_OPTIONS,
-};
 #if defined(CTR_NATIVE_64BIT)
-CTR_P32_STATIC_FIXUP(s_nativeEnhancementsMenu)
+CTR_P32_STATIC_FIXUP(s_nativeGraphicsMenu)
 {
-	P32_SET(s_nativeEnhancementsMenu.rows, s_nativeEnhancementsRows);
-	P32_SET(s_nativeEnhancementsMenu.funcPtr, MM_NativeOptionsMenuProc);
+	P32_SET(s_nativeGraphicsMenu.rows, s_nativeGraphicsRows);
+	P32_SET(s_nativeGraphicsMenu.funcPtr, MM_NativeOptionsMenuProc);
 }
 #endif
 #endif
 
-static struct RectMenu s_nativeUiMenu =
-{
-	.stringIndexTitle = RECTMENU_STRING_NONE,
-	.state = CENTER_ON_X | USE_SMALL_FONT,
-	.rows = s_nativeUiRows,
-	.funcPtr = MM_NativeOptionsMenuProc,
-	.drawStyle = RECTMENU_DRAW_STYLE_NATIVE_OPTIONS,
+static struct RectMenu s_nativeAudioMenu = {
+    .stringIndexTitle = RECTMENU_STRING_NONE,
+    .state = CENTER_ON_X | USE_SMALL_FONT,
+    .rows = P32_DEFER(s_nativeAudioRows),
+    .funcPtr = P32_DEFER(MM_NativeOptionsMenuProc),
+    .drawStyle = RECTMENU_DRAW_STYLE_NATIVE_OPTIONS,
 };
-
-static struct RectMenu s_nativeCheatsMenu =
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(s_nativeAudioMenu)
 {
-	.stringIndexTitle = RECTMENU_STRING_NONE,
-	.state = CENTER_ON_X | USE_SMALL_FONT,
-	.rows = s_nativeCheatsRows,
-	.funcPtr = MM_NativeCheatsMenuProc,
+	P32_SET(s_nativeAudioMenu.rows, s_nativeAudioRows);
+	P32_SET(s_nativeAudioMenu.funcPtr, MM_NativeOptionsMenuProc);
+}
+#endif
+
+static struct RectMenu s_nativeGameplayMenu = {
+    .stringIndexTitle = RECTMENU_STRING_NONE,
+    .state = CENTER_ON_X | USE_SMALL_FONT,
+    .rows = P32_DEFER(s_nativeGameplayRows),
+    .funcPtr = P32_DEFER(MM_NativeOptionsMenuProc),
+    .drawStyle = RECTMENU_DRAW_STYLE_NATIVE_OPTIONS,
+};
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(s_nativeGameplayMenu)
+{
+	P32_SET(s_nativeGameplayMenu.rows, s_nativeGameplayRows);
+	P32_SET(s_nativeGameplayMenu.funcPtr, MM_NativeOptionsMenuProc);
+}
+#endif
+
+#ifndef __vita__
+static struct RectMenu s_nativeExperimentalMenu = {
+    .stringIndexTitle = RECTMENU_STRING_NONE,
+    .state = CENTER_ON_X | USE_SMALL_FONT,
+    .rows = P32_DEFER(s_nativeExperimentalRows),
+    .funcPtr = P32_DEFER(MM_NativeOptionsMenuProc),
+    .drawStyle = RECTMENU_DRAW_STYLE_NATIVE_OPTIONS,
+};
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(s_nativeExperimentalMenu)
+{
+	P32_SET(s_nativeExperimentalMenu.rows, s_nativeExperimentalRows);
+	P32_SET(s_nativeExperimentalMenu.funcPtr, MM_NativeOptionsMenuProc);
+}
+#endif
+#endif
+
+static struct RectMenu s_nativeUiMenu = {
+    .stringIndexTitle = RECTMENU_STRING_NONE,
+    .state = CENTER_ON_X | USE_SMALL_FONT,
+    .rows = P32_DEFER(s_nativeUiRows),
+    .funcPtr = P32_DEFER(MM_NativeOptionsMenuProc),
+    .drawStyle = RECTMENU_DRAW_STYLE_NATIVE_OPTIONS,
+};
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(s_nativeUiMenu)
+{
+	P32_SET(s_nativeUiMenu.rows, s_nativeUiRows);
+	P32_SET(s_nativeUiMenu.funcPtr, MM_NativeOptionsMenuProc);
+}
+#endif
+
+static struct RectMenu s_nativeCheatsMenu = {
+    .stringIndexTitle = RECTMENU_STRING_NONE,
+    .state = CENTER_ON_X | USE_SMALL_FONT,
+    .rows = P32_DEFER(s_nativeCheatsRows),
+    .funcPtr = P32_DEFER(MM_NativeCheatsMenuProc),
 };
 #if defined(CTR_NATIVE_64BIT)
 CTR_P32_STATIC_FIXUP(s_nativeCheatsMenu)
@@ -953,14 +1023,14 @@ static void MM_NativePresetMenuProc(struct RectMenu *menu)
 		s_nativeOptionsMenu.posX_curr = s_nativePresetReturnPosX;
 		s_nativeOptionsMenu.posY_curr = s_nativePresetReturnPosY;
 		s_nativeOptionsMenu.rowSelected = s_nativePresetReturnRow;
-		P32_GET(struct RectMenu *, s_nativeOptionsMenu.ptrNextBox_InHierarchy) = NULL;
-		s_nativeOptionsMenu.ptrPrevBox_InHierarchy = parent;
+		P32_SET(s_nativeOptionsMenu.ptrNextBox_InHierarchy, NULL);
+		P32_SET(s_nativeOptionsMenu.ptrPrevBox_InHierarchy, parent);
 		if (parent != NULL)
 		{
-			parent->ptrNextBox_InHierarchy = &s_nativeOptionsMenu;
+			P32_SET(parent->ptrNextBox_InHierarchy, &s_nativeOptionsMenu);
 			parent->state = s_nativePresetReturnParentState;
 		}
-		sdata->ptrDesiredMenu = (parent != NULL) ? parent : &s_nativeOptionsMenu;
+		P32_SET(sdata->ptrDesiredMenu, (parent != NULL) ? parent : &s_nativeOptionsMenu);
 		return;
 	}
 
@@ -980,7 +1050,7 @@ static void MM_NativePresetMenuProc(struct RectMenu *menu)
 		MM_NativeOptionsOpenFromPreset();
 		return;
 	}
-	sdata->ptrDesiredMenu = &D230.menuMainMenu;
+	P32_SET(sdata->ptrDesiredMenu, &D230.menuMainMenu);
 }
 
 static void MM_NativeExtraDifficultyPrepare(void)
@@ -1016,13 +1086,13 @@ static void MM_NativeLanguageBootDone(void)
 	{
 		s_nativePresetMenu.state = RECTMENU_STATE_EXEC_CENTERED | RECTMENU_NATIVE_DRAW_CALLBACK;
 		s_nativePresetMenu.rowSelected = 1;
-		s_nativePresetMenu.ptrNextBox_InHierarchy = 0;
-		s_nativePresetMenu.ptrPrevBox_InHierarchy = 0;
-		sdata->ptrDesiredMenu = &s_nativePresetMenu;
+		P32_SET(s_nativePresetMenu.ptrNextBox_InHierarchy, 0);
+		P32_SET(s_nativePresetMenu.ptrPrevBox_InHierarchy, 0);
+		P32_SET(sdata->ptrDesiredMenu, &s_nativePresetMenu);
 	}
 	else
 	{
-		sdata->ptrDesiredMenu = &D230.menuMainMenu;
+		P32_SET(sdata->ptrDesiredMenu, &D230.menuMainMenu);
 	}
 }
 
@@ -1509,9 +1579,9 @@ static void MM_NativeOptionsOpenFromPreset(void)
 	s_nativeOptionsMenu.posX_curr = 256;
 	s_nativeOptionsMenu.posY_curr = 120;
 	s_nativeOptionsMenu.state = CENTER_ON_COORDS | USE_SMALL_FONT | BIG_TEXT_IN_TITLE;
-	P32_GET(struct RectMenu *, s_nativeOptionsMenu.ptrNextBox_InHierarchy) = NULL;
-	P32_GET(struct RectMenu *, s_nativeOptionsMenu.ptrPrevBox_InHierarchy) = NULL;
-	sdata->ptrDesiredMenu = &s_nativeOptionsMenu;
+	P32_SET(s_nativeOptionsMenu.ptrNextBox_InHierarchy, NULL);
+	P32_SET(s_nativeOptionsMenu.ptrPrevBox_InHierarchy, NULL);
+	P32_SET(sdata->ptrDesiredMenu, &s_nativeOptionsMenu);
 }
 
 static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
@@ -1538,7 +1608,7 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 		{
 			// opened from the first-launch preset menu, continue to the main menu
 			s_nativePresetOptionsActive = 0;
-			sdata->ptrDesiredMenu = &D230.menuMainMenu;
+			P32_SET(sdata->ptrDesiredMenu, &D230.menuMainMenu);
 		}
 		else if (MM_NativeOptionsInGame())
 		{
@@ -1562,8 +1632,8 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 	if (choose == NATIVE_MENU_STRING_PRESET)
 	{
 		s_nativePresetOptionsMenu.rowSelected = 1;
-		P32_GET(struct RectMenu *, s_nativePresetOptionsMenu.ptrNextBox_InHierarchy) = NULL;
-		P32_GET(struct RectMenu *, s_nativePresetOptionsMenu.ptrPrevBox_InHierarchy) = NULL;
+		P32_SET(s_nativePresetOptionsMenu.ptrNextBox_InHierarchy, NULL);
+		P32_SET(s_nativePresetOptionsMenu.ptrPrevBox_InHierarchy, NULL);
 		s_nativePresetReturnParent = P32_GET(struct RectMenu *, menu->ptrPrevBox_InHierarchy);
 		s_nativePresetReturnParentState = (s_nativePresetReturnParent != NULL) ? s_nativePresetReturnParent->state : 0;
 		s_nativePresetReturnState = menu->state;
@@ -1571,7 +1641,7 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 		s_nativePresetReturnPosY = menu->posY_curr;
 		s_nativePresetReturnRow = menu->rowSelected;
 		// opened standalone (not as a hierarchy child) so it keeps its own centered position
-		sdata->ptrDesiredMenu = &s_nativePresetOptionsMenu;
+		P32_SET(sdata->ptrDesiredMenu, &s_nativePresetOptionsMenu);
 		return;
 	}
 
@@ -1646,9 +1716,9 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 	{
 		s_nativeCheatsMenu.rowSelected = 0;
 		s_nativeCheatsMenu.state = CENTER_ON_X | USE_SMALL_FONT;
-		P32_GET(struct RectMenu *, s_nativeCheatsMenu.ptrNextBox_InHierarchy) = NULL;
-		s_nativeCheatsMenu.ptrPrevBox_InHierarchy = menu;
-		menu->ptrNextBox_InHierarchy = &s_nativeCheatsMenu;
+		P32_SET(s_nativeCheatsMenu.ptrNextBox_InHierarchy, NULL);
+		P32_SET(s_nativeCheatsMenu.ptrPrevBox_InHierarchy, menu);
+		P32_SET(menu->ptrNextBox_InHierarchy, &s_nativeCheatsMenu);
 		menu->state |= ONLY_DRAW_TITLE | DRAW_NEXT_MENU_IN_HIERARCHY;
 		return;
 	}
@@ -1733,9 +1803,9 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 		submenu->rowSelected = 0;
 		submenu->posY_curr = 0;
 		submenu->state = CENTER_ON_X | USE_SMALL_FONT;
-		P32_GET(struct RectMenu *, submenu->ptrNextBox_InHierarchy) = NULL;
-		submenu->ptrPrevBox_InHierarchy = menu;
-		menu->ptrNextBox_InHierarchy = submenu;
+		P32_SET(submenu->ptrNextBox_InHierarchy, NULL);
+		P32_SET(submenu->ptrPrevBox_InHierarchy, menu);
+		P32_SET(menu->ptrNextBox_InHierarchy, submenu);
 		menu->state |= ONLY_DRAW_TITLE | DRAW_NEXT_MENU_IN_HIERARCHY;
 		return;
 	}
@@ -2634,7 +2704,7 @@ void MM_MenuProc_Main(struct RectMenu *mainMenu)
 		s_nativeUnlockFirst = 0;
 		s_nativeUnlocksMenu.rowSelected = 0;
 		mainMenu->state &= ~(ONLY_DRAW_TITLE | DRAW_NEXT_MENU_IN_HIERARCHY);
-		sdata->ptrDesiredMenu = &s_nativeUnlocksMenu;
+		P32_SET(sdata->ptrDesiredMenu, &s_nativeUnlocksMenu);
 		RECTMENU_ClearInput();
 		return;
 	}
@@ -2642,10 +2712,10 @@ void MM_MenuProc_Main(struct RectMenu *mainMenu)
 	if (choose == NATIVE_MENU_STRING_CREDITS)
 	{
 		s_nativeCreditsMenu.rowSelected = 0;
-		P32_GET(struct RectMenu *, s_nativeCreditsMenu.ptrNextBox_InHierarchy) = NULL;
-		s_nativeCreditsMenu.ptrPrevBox_InHierarchy = mainMenu;
+		P32_SET(s_nativeCreditsMenu.ptrNextBox_InHierarchy, NULL);
+		P32_SET(s_nativeCreditsMenu.ptrPrevBox_InHierarchy, mainMenu);
 
-		mainMenu->ptrNextBox_InHierarchy = &s_nativeCreditsMenu;
+		P32_SET(mainMenu->ptrNextBox_InHierarchy, &s_nativeCreditsMenu);
 		mainMenu->state |= DRAW_NEXT_MENU_IN_HIERARCHY;
 		return;
 	}
@@ -3074,9 +3144,9 @@ void MM_JumpTo_Title_FirstTime(void)
 	{
 		s_nativePresetMenu.state = RECTMENU_STATE_EXEC_CENTERED | RECTMENU_NATIVE_DRAW_CALLBACK;
 		s_nativePresetMenu.rowSelected = 1;
-		s_nativePresetMenu.ptrNextBox_InHierarchy = 0;
-		s_nativePresetMenu.ptrPrevBox_InHierarchy = 0;
-		sdata->ptrActiveMenu = &s_nativePresetMenu;
+		P32_SET(s_nativePresetMenu.ptrNextBox_InHierarchy, 0);
+		P32_SET(s_nativePresetMenu.ptrPrevBox_InHierarchy, 0);
+		P32_SET(sdata->ptrActiveMenu, &s_nativePresetMenu);
 	}
 	else
 	{

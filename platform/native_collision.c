@@ -276,12 +276,12 @@ void NativeCollision_MovedTriangle(struct ScratchpadStruct *sps, struct BspSearc
 	sps->hitFraction = (s32)round(hit.fraction * 4096);
 	if (s_collisionSweep.sps == sps)
 		s_collisionSweep.fraction = hit.fraction;
-	sps->hitLevelTriangle.v0 = P32_GET(struct LevVertex *, a->pLevelVertex);
-	sps->hitLevelTriangle.v1 = P32_GET(struct LevVertex *, b->pLevelVertex);
-	sps->hitLevelTriangle.v2 = P32_GET(struct LevVertex *, c->pLevelVertex);
-	sps->hitBspSearchTriangle.v0 = a;
-	sps->hitBspSearchTriangle.v1 = b;
-	sps->hitBspSearchTriangle.v2 = c;
+	P32_SET(sps->hitLevelTriangle.v0, P32_GET(struct LevVertex *, a->pLevelVertex));
+	P32_SET(sps->hitLevelTriangle.v1, P32_GET(struct LevVertex *, b->pLevelVertex));
+	P32_SET(sps->hitLevelTriangle.v2, P32_GET(struct LevVertex *, c->pLevelVertex));
+	P32_SET(sps->hitBspSearchTriangle.v0, a);
+	P32_SET(sps->hitBspSearchTriangle.v1, b);
+	P32_SET(sps->hitBspSearchTriangle.v2, c);
 	// Like retail, the exported hit position is the triangle point nearest the
 	// requested end of the sweep, not the contact point. Surface pushback and
 	// rollback normals compare it with the driver's position after movement;
@@ -299,7 +299,7 @@ void NativeCollision_MovedTriangle(struct ScratchpadStruct *sps, struct BspSearc
 		s_collisionSweep.normal = NC_Scale(hit.normal, 4096);
 		s_collisionSweep.exportedNormal = sps->hit.plane.normal;
 	}
-	sps->hit.ptrQuadblock = quad;
+	P32_SET(sps->hit.ptrQuadblock, quad);
 	sps->hit.triangleID = sps->candidate.triangleID;
 	sps->hit.reorderResult = hit.feature == 0 ? COLL_TRIANGLE_CLIP_FACE : COLL_TRIANGLE_CLIP_EDGE_V1_V2;
 	sps->Union.QuadBlockColl.hitPos = NC_Export(NC_Add(start, NC_Scale(NC_Sub(end, start), hit.fraction)));
@@ -320,12 +320,12 @@ void NativeCollision_FixedTriangle(struct ScratchpadStruct *sps, struct BspSearc
 		sps->collision.stepFlags |= (u8)quad->terrain_type;
 		return;
 	}
-	sps->hit.ptrQuadblock = quad;
+	P32_SET(sps->hit.ptrQuadblock, quad);
 	sps->hitBarycentrics.v1 = (s16)round(u * 4096);
 	sps->hitBarycentrics.v2 = (s16)round(v * 4096);
-	sps->hitLevelTriangle.v0 = P32_GET(struct LevVertex *, a->pLevelVertex);
-	sps->hitLevelTriangle.v1 = P32_GET(struct LevVertex *, b->pLevelVertex);
-	sps->hitLevelTriangle.v2 = P32_GET(struct LevVertex *, c->pLevelVertex);
+	P32_SET(sps->hitLevelTriangle.v0, P32_GET(struct LevVertex *, a->pLevelVertex));
+	P32_SET(sps->hitLevelTriangle.v1, P32_GET(struct LevVertex *, b->pLevelVertex));
+	P32_SET(sps->hitLevelTriangle.v2, P32_GET(struct LevVertex *, c->pLevelVertex));
 	sps->hit.hitPos = NC_Export(hit.point);
 	sps->Union.QuadBlockColl.hitPos = sps->hit.hitPos;
 	sps->hit.plane = sps->candidate.plane;

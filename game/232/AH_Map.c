@@ -377,7 +377,7 @@ static void AH_Map_PreciseLine(struct GameTracker *gGT, float x0, float y0, floa
 	{
 		return;
 	}
-	primMem->cursor = p + 1;
+	P32_SET(primMem->cursor, p + 1);
 
 	// Retail lines fill the pixel to the right of and below each point.
 	x0 += 0.5f;
@@ -721,7 +721,7 @@ static void AH_Map_PreciseTriangleG3(struct GameTracker *gGT, float x0, float y0
 	{
 		return;
 	}
-	primMem->cursor = p + 1;
+	P32_SET(primMem->cursor, p + 1);
 
 	setPolyG3(p);
 	setRGB0(p, c0 & 0xff, (c0 >> 8) & 0xff, (c0 >> 16) & 0xff);

@@ -60,7 +60,7 @@ void LOAD_Callback_LEV(struct LoadQueueSlot *lqs)
 		sdata->load_inProgress = 0;
 	}
 
-	sdata->ptrLevelFile = (struct Level *)P32_GET(void *, lqs->ptrDestination);
+	P32_SET(sdata->ptrLevelFile, (struct Level *)P32_GET(void *, lqs->ptrDestination));
 #if defined(CTR_NATIVE)
 	NativeMinimap_InvalidateLive();
 #endif

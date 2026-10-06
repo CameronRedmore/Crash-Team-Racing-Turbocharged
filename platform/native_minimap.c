@@ -622,8 +622,8 @@ static u8 *NativeMinimap_ReadLevelPixels(int levelID, int lod, struct NativeMini
 	    vertexOffset > size || (size_t)mesh.numVertex > (size - vertexOffset) / sizeof(struct LevVertex) || mapOffset == 0 || mapOffset > size ||
 	    sizeof(struct UIMap) > size - mapOffset)
 		goto done;
-	mesh.ptrQuadBlockArray = (struct QuadBlock *)(body + quadOffset);
-	mesh.ptrVertexArray = (struct LevVertex *)(body + vertexOffset);
+	P32_SET(mesh.ptrQuadBlockArray, (struct QuadBlock *)(body + quadOffset));
+	P32_SET(mesh.ptrVertexArray, (struct LevVertex *)(body + vertexOffset));
 	struct UIMap map;
 	memcpy(&map, body + mapOffset, sizeof(map));
 	const u64 key = NativeMinimap_GeometryKey(&mesh, &map);
@@ -698,7 +698,7 @@ static int NativeMinimap_Draw(const struct NativeMinimapImage *image, float left
 	p->tag = CtrGpu_PackOTTag(CtrGpu_PrimToOTLink24(reset), 9u << 24);
 	reset->tag = CtrGpu_PackOTTag(oldTag, 2u << 24);
 	*ot = CtrGpu_PrimToOTLink24(set);
-	primMem->cursor = reset + 1;
+	P32_SET(primMem->cursor, reset + 1);
 	return 1;
 }
 

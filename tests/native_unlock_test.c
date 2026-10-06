@@ -56,9 +56,9 @@ static void reset(void)
 {
 	memset(&sdata_static, 0, sizeof(sdata_static));
 	memset(&tracker, 0, sizeof(tracker));
-	sdata->gGT = &tracker;
-	sdata->lngStrings = strings;
-	tracker.backBuffer = &db;
+	P32_SET(sdata->gGT, &tracker);
+	P32_SET(sdata->lngStrings, strings);
+	P32_SET(tracker.backBuffer, &db);
 	tracker.gameMode1 = MAIN_MENU;
 	sdata->Loading.stage = LOAD_IDLE;
 	s_nativeUnlockHead = s_nativeUnlockCount = 0;

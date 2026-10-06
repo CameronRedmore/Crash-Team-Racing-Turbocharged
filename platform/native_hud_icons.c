@@ -147,7 +147,7 @@ static void NativeHudIcon_End(struct NativeHudIconMesh *mesh, struct PrimMem *pr
 {
 	for (int i = mesh->count - 1; i >= 0; i--)
 		AddPrim(ot, &mesh->first[i]);
-	primMem->cursor = mesh->first + mesh->count;
+	P32_SET(primMem->cursor, mesh->first + mesh->count);
 }
 #endif
 

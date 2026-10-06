@@ -14,7 +14,7 @@ static struct GameTracker s_tracker;
 static void test_default_and_selected_profiles(void)
 {
 	memset(&s_tracker, 0, sizeof(s_tracker));
-	sdata->gGT = &s_tracker;
+	P32_SET(sdata->gGT, &s_tracker);
 	s_tracker.numPlyrCurrGame = 1;
 	data.characterIDs[0] = CRASH_BANDICOOT;
 	data.characterIDs[1] = TINY_TIGER;
@@ -63,10 +63,10 @@ static void test_default_and_selected_profiles(void)
 	NativeEngine_SetSelectedProfile(-1, NATIVE_ENGINE_TURN);
 	NativeEngine_SetSelectedProfile(3, NATIVE_ENGINE_COUNT);
 	assert(NativeEngine_GetSelectedProfile(3) == NATIVE_ENGINE_SPEED);
-	sdata->gGT = NULL;
+	P32_SET(sdata->gGT, NULL);
 	assert(NativeEngine_GetEffectiveProfile(0) == NATIVE_ENGINE_BALANCED);
 	assert(NativeEngine_GetEffectiveProfile(8) == NATIVE_ENGINE_BALANCED);
-	sdata->gGT = &s_tracker;
+	P32_SET(sdata->gGT, &s_tracker);
 	s_tracker.numPlyrCurrGame = 1;
 
 	NativeEngine_SetSelectedProfile(0, NATIVE_ENGINE_PENTA);
