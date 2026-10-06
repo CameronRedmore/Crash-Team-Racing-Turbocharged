@@ -1,0 +1,3 @@
+// MinGW only: embeds the application manifest (RT_MANIFEST, ID 1). MSVC merges
+// ctr_native.manifest through the linker instead; see CMakeLists.txt.
+1 24 "ctr_native.manifest"

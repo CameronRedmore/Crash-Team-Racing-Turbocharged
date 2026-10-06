@@ -148,6 +148,12 @@ add_subdirectory(externals/SDL)
 add_executable(ctr_native main.c)
 if(WIN32)
     target_sources(ctr_native PRIVATE platform/windows/ctr_native.rc)
+    # Application manifest (Common-Controls 6, so SDL message boxes fit their buttons).
+    if(MSVC)
+        target_sources(ctr_native PRIVATE platform/windows/ctr_native.manifest)
+    else()
+        target_sources(ctr_native PRIVATE platform/windows/ctr_native_manifest.rc)
+    endif()
     set_target_properties(ctr_native PROPERTIES OUTPUT_NAME "Crash Team Racing - Turbocharged")
 endif()
 set_target_properties(ctr_native PROPERTIES
