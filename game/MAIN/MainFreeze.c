@@ -111,7 +111,7 @@ void MainFreeze_ConfigDrawArrows(s16 offsetX, s16 offsetY, char *str)
 	int lineWidth;
 	int color;
 	u32 *colorPtr;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// orange color
 	color = 0;
@@ -125,22 +125,22 @@ void MainFreeze_ConfigDrawArrows(s16 offsetX, s16 offsetY, char *str)
 	lineWidth = DecalFont_GetLineWidth(str, 1) >> 1;
 
 	// get color data
-	colorPtr = data.ptrColor[color];
+	colorPtr = P32_GET(u32 *, data.ptrColor[color]);
 
-	struct Icon **iconPtrArray = ICONGROUP_GETICONS(gGT->iconGroup[4]);
+	P32(struct Icon *) *iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[4]));
 
 	// Draw left arrow
 	DecalHUD_Arrow2D(
 	    // largeFont
-	    iconPtrArray[0x38],
+	    P32_GET(struct Icon *, iconPtrArray[0x38]),
 
 	    (offsetX - lineWidth) - 0x14, (int)offsetY + 7,
 
 	    // pointer to PrimMem struct
-	    &gGT->backBuffer->primMem,
+	    &P32_GET(struct DB *, gGT->backBuffer)->primMem,
 
 	    // pointer to OT memory
-	    gGT->pushBuffer_UI.ptrOT,
+	    P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT),
 
 	    // color data
 	    colorPtr[0], colorPtr[1], colorPtr[2], colorPtr[3],
@@ -150,15 +150,15 @@ void MainFreeze_ConfigDrawArrows(s16 offsetX, s16 offsetY, char *str)
 	// Draw right arrow
 	DecalHUD_Arrow2D(
 	    // largeFont
-	    iconPtrArray[0x38],
+	    P32_GET(struct Icon *, iconPtrArray[0x38]),
 
 	    (offsetX + lineWidth) + 0x12, (int)offsetY + 7,
 
 	    // pointer to PrimMem struct
-	    &gGT->backBuffer->primMem,
+	    &P32_GET(struct DB *, gGT->backBuffer)->primMem,
 
 	    // pointer to OT memory
-	    gGT->pushBuffer_UI.ptrOT,
+	    P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT),
 
 	    // color data
 	    colorPtr[0], colorPtr[1], colorPtr[2], colorPtr[3],
@@ -182,7 +182,7 @@ static inline void MainFreeze_ConfigDrawRaceWheel(int value, struct GameTracker 
 	for (int i = 0; i < 3; i++)
 	{
 		int sin = MATH_Sin(value);
-		void *ot = gGT->pushBuffer_UI.ptrOT;
+		void *ot = P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT);
 
 		if ((i != 1) && (value == 0x600))
 		{
@@ -207,20 +207,20 @@ static inline void MainFreeze_ConfigDrawRaceWheel(int value, struct GameTracker 
 			triangle[(point * 2) + 1] = sdata->analogConfigY[0] + ((angleSin << 5) >> 0xc) + 0x20 + data.raceConfig_unk80084290[base + 3];
 		}
 
-		RECTMENU_DrawRwdTriangle(triangle, (char *)data.raceConfig_colors_arrows, gGT->pushBuffer_UI.ptrOT, &gGT->backBuffer->primMem);
+		RECTMENU_DrawRwdTriangle(triangle, (char *)data.raceConfig_colors_arrows, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), &P32_GET(struct DB *, gGT->backBuffer)->primMem);
 	}
 
 	rect.x = 0xec;
 	rect.y = sdata->analogConfigY[0];
 	rect.w = 0x28;
 	rect.h = 0x41;
-	RECTMENU_DrawRwdBlueRect(&rect, (char *)data.raceConfig_colors_blueRect, gGT->pushBuffer_UI.ptrOT, &gGT->backBuffer->primMem);
+	RECTMENU_DrawRwdBlueRect(&rect, (char *)data.raceConfig_colors_blueRect, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), &P32_GET(struct DB *, gGT->backBuffer)->primMem);
 
 	rect.x = -0x14;
 	rect.y = sdata->analogConfigY[0] - 0x14;
 	rect.w = 0x228;
 	rect.h = 0x91;
-	RECTMENU_DrawInnerRect(&rect, 4, gGT->pushBuffer_UI.ptrOT);
+	RECTMENU_DrawInnerRect(&rect, 4, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT));
 }
 
 static inline void MainFreeze_ConfigDrawNamco(int value, struct GameTracker *gGT)
@@ -236,7 +236,7 @@ static inline void MainFreeze_ConfigDrawNamco(int value, struct GameTracker *gGT
 		int cos = MATH_Cos(angle);
 
 		MainFreeze_ConfigDrawWire(0x100 + ((cos * 400) / 0x5000), sdata->analogConfigY[1] + ((sin * 0x32) >> 0xc), 0x100 + ((cos * 0x118) / 0x5000),
-		                          sdata->analogConfigY[1] + ((sin * 0x23) >> 0xc), 0, 0xff, 0, gGT->pushBuffer_UI.ptrOT);
+		                          sdata->analogConfigY[1] + ((sin * 0x23) >> 0xc), 0, 0xff, 0, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT));
 	}
 
 	u32 frameAngle = (u32)FPS_HALF(sdata->frameCounter << 6);
@@ -250,7 +250,7 @@ static inline void MainFreeze_ConfigDrawNamco(int value, struct GameTracker *gGT
 		int colorOffset = point * 4;
 		MainFreeze_ConfigDrawNPC105(data.unkNamcoGamepad_800842DC[offset] + ((baseCos * 200) / 0x5000) + 0x100,
 		                            data.unkNamcoGamepad_800842DC[offset + 1] + sdata->analogConfigY[1] + ((baseSin * 0x19) >> 0xc), 10, 0x80, baseAngle,
-		                            (char *)&data.unkNamcoGamepadRwdTriangleColors[colorOffset], gGT->pushBuffer_UI.ptrOT, &gGT->backBuffer->primMem);
+		                            (char *)&data.unkNamcoGamepadRwdTriangleColors[colorOffset], P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), &P32_GET(struct DB *, gGT->backBuffer)->primMem);
 	}
 
 	for (int row = 0; row < 0x400; row += 0xaa)
@@ -264,7 +264,7 @@ static inline void MainFreeze_ConfigDrawNamco(int value, struct GameTracker *gGT
 
 			MainFreeze_ConfigDrawWire(0x100 + ((cos < 0 ? cos + 0x3f : cos) >> 6), sdata->analogConfigY[1] + ((sin * 0x28) >> 0xc),
 			                          0x100 + ((cos * 0x120) / 0x5000), sdata->analogConfigY[1] + ((sin * 0x24) >> 0xc), color, color, color,
-			                          gGT->pushBuffer_UI.ptrOT);
+			                          P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT));
 		}
 	}
 
@@ -278,7 +278,7 @@ static inline void MainFreeze_ConfigDrawNamco(int value, struct GameTracker *gGT
 			MainFreeze_ConfigDrawNPC105(data.unkNamcoGamepad_800842DC[pointOffset + 18] * scale + 0x100,
 			                            sdata->analogConfigY[1] + (data.unkNamcoGamepad_800842DC[pointOffset + 19] * scale),
 			                            data.unkNamcoGamepad_800842DC[rowOffset + 6], 0x80, baseAngle, (char *)&data.unkNamcoGamepad_800842DC[pointOffset + 12],
-			                            gGT->pushBuffer_UI.ptrOT, &gGT->backBuffer->primMem);
+			                            P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), &P32_GET(struct DB *, gGT->backBuffer)->primMem);
 		}
 	}
 
@@ -286,12 +286,12 @@ static inline void MainFreeze_ConfigDrawNamco(int value, struct GameTracker *gGT
 	rect.y = sdata->analogConfigY[1] - 0x3c;
 	rect.w = 0x228;
 	rect.h = 0xa0;
-	RECTMENU_DrawInnerRect(&rect, 4, gGT->pushBuffer_UI.ptrOT);
+	RECTMENU_DrawInnerRect(&rect, 4, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT));
 }
 
 void MainFreeze_ConfigSetupEntry(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	if ((sdata->AnyPlayerTap & (BTN_TRIANGLE | BTN_SQUARE_one)) != 0)
 	{
@@ -300,8 +300,8 @@ void MainFreeze_ConfigSetupEntry(void)
 	}
 
 	int gamepadID = sdata->gamepadID_OwnerRaceWheelConfig;
-	struct GamepadBuffer *gamepad = &sdata->gGamepads->gamepad[gamepadID];
-	struct ControllerPacket *controller = gamepad->ptrControllerPacket;
+	struct GamepadBuffer *gamepad = &P32_GET(struct GamepadSystem *, sdata->gGamepads)->gamepad[gamepadID];
+	struct ControllerPacket *controller = P32_GET(struct ControllerPacket *, gamepad->ptrControllerPacket);
 
 	if ((controller == NULL) || (controller->plugged != PLUGGED))
 	{
@@ -338,18 +338,18 @@ void MainFreeze_ConfigSetupEntry(void)
 			data.rwd[gamepadID].deadZone = data.raceConfig_DeadZone[(s16)sdata->WheelConfigOption].hi1;
 		}
 
-		DecalFont_DrawMultiLine(sdata->lngStrings[LNG_SELECT_DEAD_ZONE_AND_PRESS_BUTTON], 0x100, sdata->posY_MultiLine[posIndex], 0x1cc, FONT_BIG,
+		DecalFont_DrawMultiLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_SELECT_DEAD_ZONE_AND_PRESS_BUTTON]), 0x100, sdata->posY_MultiLine[posIndex], 0x1cc, FONT_BIG,
 		                        JUSTIFY_CENTER);
-		DecalFont_DrawLine(sdata->lngStrings[data.raceConfig_DeadZone[(s16)sdata->WheelConfigOption].lngIndex], 0x100, sdata->posY_Arrows[posIndex], FONT_BIG,
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.raceConfig_DeadZone[(s16)sdata->WheelConfigOption].lngIndex]), 0x100, sdata->posY_Arrows[posIndex], FONT_BIG,
 		                   JUSTIFY_CENTER);
-		MainFreeze_ConfigDrawArrows(0x100, sdata->posY_Arrows[posIndex], sdata->lngStrings[data.raceConfig_DeadZone[(s16)sdata->WheelConfigOption].lngIndex]);
+		MainFreeze_ConfigDrawArrows(0x100, sdata->posY_Arrows[posIndex], P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.raceConfig_DeadZone[(s16)sdata->WheelConfigOption].lngIndex]));
 		sdata->unk_RaceWheelConfig[0] = data.raceConfig_DeadZone[(s16)sdata->WheelConfigOption].lo16;
 	}
 	else if (sdata->raceWheelConfigPageIndex < 2)
 	{
 		if (sdata->raceWheelConfigPageIndex == 0)
 		{
-			DecalFont_DrawMultiLine(sdata->lngStrings[LNG_CENTER_THE_CONTROLLER_AND_PRESS_BUTTON], 0x100, sdata->posY_MultiLine[posIndex], 0x1cc, FONT_BIG,
+			DecalFont_DrawMultiLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_CENTER_THE_CONTROLLER_AND_PRESS_BUTTON]), 0x100, sdata->posY_MultiLine[posIndex], 0x1cc, FONT_BIG,
 			                        JUSTIFY_CENTER);
 
 			if ((sdata->buttonTapPerPlayer[gamepadID] & (BTN_CIRCLE | BTN_CROSS_one)) != 0)
@@ -398,11 +398,11 @@ void MainFreeze_ConfigSetupEntry(void)
 		}
 
 		sdata->unk_RaceWheelConfig[0] = data.raceConfig_Range[(s16)sdata->raceWheelConfigOptionIndex].lo16;
-		DecalFont_DrawMultiLine(sdata->lngStrings[LNG_SELECT_RANGE_AND_PRESS_BUTTON], 0x100, sdata->posY_MultiLine[posIndex], 0x1cc, FONT_BIG, JUSTIFY_CENTER);
-		DecalFont_DrawLine(sdata->lngStrings[data.raceConfig_Range[(s16)sdata->raceWheelConfigOptionIndex].lngIndex], 0x100, sdata->posY_Arrows[posIndex],
+		DecalFont_DrawMultiLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_SELECT_RANGE_AND_PRESS_BUTTON]), 0x100, sdata->posY_MultiLine[posIndex], 0x1cc, FONT_BIG, JUSTIFY_CENTER);
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.raceConfig_Range[(s16)sdata->raceWheelConfigOptionIndex].lngIndex]), 0x100, sdata->posY_Arrows[posIndex],
 		                   FONT_BIG, JUSTIFY_CENTER);
 		MainFreeze_ConfigDrawArrows(0x100, sdata->posY_Arrows[posIndex],
-		                            sdata->lngStrings[data.raceConfig_Range[(s16)sdata->raceWheelConfigOptionIndex].lngIndex]);
+		                            P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.raceConfig_Range[(s16)sdata->raceWheelConfigOptionIndex].lngIndex]));
 	}
 
 	if (!isNamco)
@@ -430,13 +430,13 @@ typedef struct
 force_inline void IDENTIFYGAMEPADS_MainFreeze_MenuPtrOptions(struct RectMenu *menu, GAMEPAD_MainFreeze_MenuPtrOptions *gamepad)
 {
 	(void)menu;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// get number of ordinary gamepads and/or "analog controllers" connected, and which players are using which
 
 	for (int i = 0; i < gGT->numPlyrCurrGame; i++)
 	{
-		struct ControllerPacket *ptrControllerPacket = sdata->gGamepads->gamepad[i].ptrControllerPacket;
+		struct ControllerPacket *ptrControllerPacket = P32_GET(struct ControllerPacket *, P32_GET(struct GamepadSystem *, sdata->gGamepads)->gamepad[i].ptrControllerPacket);
 
 		// if gamepad is not an "analog controller", as CTR uses to refer to jogcons and negcons
 		if (
@@ -485,7 +485,7 @@ force_inline void IDENTIFYGAMEPADS_MainFreeze_MenuPtrOptions(struct RectMenu *me
 
 force_inline b32 PROCESSINPUTS_MainFreeze_MenuPtrOptions(struct RectMenu *menu, GAMEPAD_MainFreeze_MenuPtrOptions *gamepad)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	b32 exitMenu = false;
 
 	if (sdata->AnyPlayerTap & (BTN_UP | BTN_DOWN))
@@ -612,10 +612,10 @@ force_inline b32 PROCESSINPUTS_MainFreeze_MenuPtrOptions(struct RectMenu *menu, 
 // stuff is drawn last to first
 force_inline void DISPLAYRECTMENU_MainFreeze_MenuPtrOptions(struct RectMenu *menu, GAMEPAD_MainFreeze_MenuPtrOptions *gamepad)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// note: multitap only works if it's connected to the P1 slot
-	int multitapStringOffset = (sdata->gGamepads->slotBuffer[0].controllerData == (PAD_ID_MULTITAP << 4)) ? 2 : 0;
+	int multitapStringOffset = (P32_GET(struct GamepadSystem *, sdata->gGamepads)->slotBuffer[0].controllerData == (PAD_ID_MULTITAP << 4)) ? 2 : 0;
 
 	// a menu row is 10 pixels
 	int menuRowsNegativePadding = gamepad->menuRowsToRemove * 10;
@@ -664,19 +664,19 @@ force_inline void DISPLAYRECTMENU_MainFreeze_MenuPtrOptions(struct RectMenu *men
 	for (int i = 0; i < 3; i++)
 	{
 		//"FX:", "MUSIC:", "VOICE:"
-		int lineWidth = DecalFont_GetLineWidth(sdata->lngStrings[data.Options_StringIDs_Audio[i]], FONT_SMALL);
+		int lineWidth = DecalFont_GetLineWidth(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.Options_StringIDs_Audio[i]]), FONT_SMALL);
 		if (volumeSliderTriangleLeftMargin < lineWidth)
 		{
 			volumeSliderTriangleLeftMargin = lineWidth;
 		}
 	}
 
-	DecalFont_DrawLine(sdata->lngStrings[LNG_OPTIONS_TITLE], 256, 26 + (menuRowsNegativePadding / 2), FONT_BIG, (JUSTIFY_CENTER | ORANGE));
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_OPTIONS_TITLE]), 256, 26 + (menuRowsNegativePadding / 2), FONT_BIG, (JUSTIFY_CENTER | ORANGE));
 
 	int volumeSliderWidth = 380 - (30 + volumeSliderTriangleLeftMargin);
 
-	uint32_t *ot = gGT->backBuffer->otMem.uiOT;
-	struct PrimMem *primMem = &gGT->backBuffer->primMem;
+	uint32_t *ot = P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT);
+	struct PrimMem *primMem = &P32_GET(struct DB *, gGT->backBuffer)->primMem;
 	Color color;
 
 	// draw volume sliders
@@ -719,27 +719,27 @@ force_inline void DISPLAYRECTMENU_MainFreeze_MenuPtrOptions(struct RectMenu *men
 		RECTMENU_DrawRwdTriangle(volumeSliderTriangle, data.Options_VolumeSlider_Colors, ot, primMem);
 
 		// "FX:" "MUSIC:" "VOICE:"
-		DecalFont_DrawLine(sdata->lngStrings[data.Options_StringIDs_Audio[i]], 76, 50 + (menuRowsNegativePadding / 2) + (i * 10), FONT_SMALL, ORANGE);
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.Options_StringIDs_Audio[i]]), 76, 50 + (menuRowsNegativePadding / 2) + (i * 10), FONT_SMALL, ORANGE);
 	}
 
-	DecalFont_DrawLine(sdata->lngStrings[LNG_MODE], 76, 80 + (menuRowsNegativePadding / 2), FONT_SMALL, ORANGE);
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_MODE]), 76, 80 + (menuRowsNegativePadding / 2), FONT_SMALL, ORANGE);
 
 	// 333: MONO
 	// 334: STEREO
 	int mode = howl_ModeGet();
 
 	// "MONO", "STEREO"
-	DecalFont_DrawLine(sdata->lngStrings[333 + mode], 436, 80 + (menuRowsNegativePadding / 2), FONT_SMALL, (JUSTIFY_RIGHT | WHITE));
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[333 + mode]), 436, 80 + (menuRowsNegativePadding / 2), FONT_SMALL, (JUSTIFY_RIGHT | WHITE));
 
 	if (gamepad->numGamepads != 0)
 	{
-		DecalFont_DrawLine(sdata->lngStrings[LNG_DUAL_SHOCK], 76, 90 + (menuRowsNegativePadding / 2), FONT_SMALL, ORANGE);
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_DUAL_SHOCK]), 76, 90 + (menuRowsNegativePadding / 2), FONT_SMALL, ORANGE);
 
-		int lineWidth_controller1A = DecalFont_GetLineWidth(sdata->lngStrings[data.Options_StringIDs_Gamepads[2]], FONT_SMALL);
+		int lineWidth_controller1A = DecalFont_GetLineWidth(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.Options_StringIDs_Gamepads[2]]), FONT_SMALL);
 
 		// width can change depending on language
-		int lineWidth_vibrateOff = DecalFont_GetLineWidth(sdata->lngStrings[LNG_VIBRATE_OFF], FONT_SMALL);
-		int lineWidth_vibrateOn = DecalFont_GetLineWidth(sdata->lngStrings[LNG_VIBRATE_ON], FONT_SMALL);
+		int lineWidth_vibrateOff = DecalFont_GetLineWidth(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_VIBRATE_OFF]), FONT_SMALL);
+		int lineWidth_vibrateOn = DecalFont_GetLineWidth(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_VIBRATE_ON]), FONT_SMALL);
 		if (lineWidth_vibrateOn < lineWidth_vibrateOff)
 		{
 			lineWidth_vibrateOn = lineWidth_vibrateOff;
@@ -753,7 +753,7 @@ force_inline void DISPLAYRECTMENU_MainFreeze_MenuPtrOptions(struct RectMenu *men
 			int dualShockRowColor = ORANGE;
 			int currPad = gamepad->gamepadId[i];
 
-			struct ControllerPacket *ptrControllerPacket = sdata->gGamepads->gamepad[currPad].ptrControllerPacket;
+			struct ControllerPacket *ptrControllerPacket = P32_GET(struct ControllerPacket *, P32_GET(struct GamepadSystem *, sdata->gGamepads)->gamepad[currPad].ptrControllerPacket);
 
 			if (ptrControllerPacket == 0 || ptrControllerPacket->plugged != PLUGGED)
 			{
@@ -765,7 +765,7 @@ force_inline void DISPLAYRECTMENU_MainFreeze_MenuPtrOptions(struct RectMenu *men
 			// "CONTROLLER 1", "CONTROLLER 2",
 			// "CONTROLLER 1A", "CONTROLLER 1B",
 			// "CONTROLLER 1C", "CONTROLLER 1D"
-			DecalFont_DrawLine(sdata->lngStrings[data.Options_StringIDs_Gamepads[currPad + multitapStringOffset]], lineWidth_vibrateOn, rowY, FONT_SMALL,
+			DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.Options_StringIDs_Gamepads[currPad + multitapStringOffset]]), lineWidth_vibrateOn, rowY, FONT_SMALL,
 			                   dualShockRowColor);
 
 			b32 boolDisabled = (gGT->gameMode1 & data.gGT_gameMode1_VibPerPlayer[currPad]) != 0;
@@ -778,22 +778,22 @@ force_inline void DISPLAYRECTMENU_MainFreeze_MenuPtrOptions(struct RectMenu *men
 			// 325: "VIBRATE ON"
 			// 326: "VIBRATE OFF"
 
-			DecalFont_DrawLine(sdata->lngStrings[325 + boolDisabled], lineWidth_vibrateOn + lineWidth_controller1A + 10, rowY, FONT_SMALL, dualShockRowColor);
+			DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[325 + boolDisabled]), lineWidth_vibrateOn + lineWidth_controller1A + 10, rowY, FONT_SMALL, dualShockRowColor);
 		}
 	}
 
 	if (gamepad->numAnalogs != 0)
 	{
-		DecalFont_DrawLine(sdata->lngStrings[LNG_CONFIGURE_ANALOG], 76, 90 + (menuRowsNegativePadding / 2) + analogRowPosY, FONT_SMALL, ORANGE);
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_CONFIGURE_ANALOG]), 76, 90 + (menuRowsNegativePadding / 2) + analogRowPosY, FONT_SMALL, ORANGE);
 
 		for (int i = 0; i < gamepad->numAnalogs; i++)
 		{
-			DecalFont_DrawLine(sdata->lngStrings[data.Options_StringIDs_Gamepads[gamepad->analogId[i] + multitapStringOffset]], 256,
+			DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.Options_StringIDs_Gamepads[gamepad->analogId[i] + multitapStringOffset]]), 256,
 			                   100 + (menuRowsNegativePadding / 2) + analogRowPosY + (i * 10), FONT_SMALL, (JUSTIFY_CENTER | ORANGE));
 		}
 	}
 
-	DecalFont_DrawLine(sdata->lngStrings[LNG_OPTIONS_EXIT], 76, 140 - (menuRowsNegativePadding / 2), FONT_SMALL, ORANGE);
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_OPTIONS_EXIT]), 76, 140 - (menuRowsNegativePadding / 2), FONT_SMALL, ORANGE);
 
 	RECT cursor = {.x = 74,
 	               .y = data.Options_HighlightBar[menu->rowSelected].posY + (menuRowsNegativePadding / 2) + 20,
@@ -845,7 +845,7 @@ void MainFreeze_MenuPtrOptions(struct RectMenu *menu)
 		OtherFX_Play(1, 1);
 		OptionsMenu_TestSound(0, 0);
 		RECTMENU_ClearInput();
-		sdata->ptrDesiredMenu = MainFreeze_GetMenuPtr();
+		P32_SET(sdata->ptrDesiredMenu, MainFreeze_GetMenuPtr());
 	}
 }
 
@@ -853,7 +853,7 @@ void MainFreeze_MenuPtrOptions(struct RectMenu *menu)
 void MainFreeze_MenuPtrQuit(struct RectMenu *menu)
 {
 	s16 row;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	if (menu->funcState == RECTMENU_FUNC_STATE_INPUT)
 	{
@@ -897,7 +897,7 @@ void MainFreeze_MenuPtrQuit(struct RectMenu *menu)
 
 		if ((row == 1) || (row == -1))
 		{
-			sdata->ptrDesiredMenu = MainFreeze_GetMenuPtr();
+			P32_SET(sdata->ptrDesiredMenu, MainFreeze_GetMenuPtr());
 		}
 	}
 	else
@@ -919,7 +919,7 @@ void MainFreeze_MenuPtrQuit(struct RectMenu *menu)
 void MainFreeze_SafeAdvDestroy(void)
 {
 	// If you're in Adventure Arena
-	if ((sdata->gGT->gameMode1 & ADVENTURE_ARENA) == 0)
+	if ((P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 & ADVENTURE_ARENA) == 0)
 	{
 		return;
 	}
@@ -941,7 +941,7 @@ void MainFreeze_MenuPtrDefault(struct RectMenu *menu)
 	u16 stringID;
 	u32 gameMode;
 
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	gameMode = gGT->gameMode1;
 
 	// if you have not waited 5 frames since the game was paused then quit
@@ -983,7 +983,7 @@ void MainFreeze_MenuPtrDefault(struct RectMenu *menu)
 	}
 
 	// get stringID from selected row
-	stringID = menu->rows[menu->rowSelected].stringIndex;
+	stringID = P32_GET(struct MenuRow *, menu->rows)[menu->rowSelected].stringIndex;
 
 	// stringID 14: "OPTIONS"
 	if (stringID == 14)
@@ -998,7 +998,7 @@ void MainFreeze_MenuPtrDefault(struct RectMenu *menu)
 	if (stringID == 11 || stringID == 12)
 	{
 		// Set Menu to Hints
-		sdata->ptrDesiredMenu = &D232.menuHintMenu; // in 232
+		P32_SET(sdata->ptrDesiredMenu, &D232.menuHintMenu); // in 232
 		return;
 	}
 
@@ -1021,7 +1021,7 @@ void MainFreeze_MenuPtrDefault(struct RectMenu *menu)
 	if (stringID == 3)
 	{
 		// Set Menu to Quit
-		sdata->ptrDesiredMenu = &data.menuQuit;
+		P32_SET(sdata->ptrDesiredMenu, &data.menuQuit);
 		data.menuQuit.rowSelected = 1;
 		return;
 	}
@@ -1072,14 +1072,14 @@ void MainFreeze_MenuPtrDefault(struct RectMenu *menu)
 		}
 
 		// If the ghost playing buffer is nullptr
-		if (sdata->ptrGhostTapePlaying == 0)
+		if (P32_GET(struct GhostHeader *, sdata->ptrGhostTapePlaying) == 0)
 		{
 			return;
 		}
 
 		// Make P2 the character that is saved in the header of the
 		// ghost that you will see in the race
-		data.characterIDs[1] = sdata->ptrGhostTapePlaying->characterID;
+		data.characterIDs[1] = P32_GET(struct GhostHeader *, sdata->ptrGhostTapePlaying)->characterID;
 		return;
 
 	// stringID 2: "RESUME"
@@ -1213,7 +1213,7 @@ void MainFreeze_MenuPtrDefault(struct RectMenu *menu)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80039dcc-0x80039e98.
 struct RectMenu *MainFreeze_GetMenuPtr(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	u32 gameMode = gGT->gameMode1;
 #if defined(__vita__)
 	if (NativeAdhoc_IsActive())
@@ -1225,13 +1225,13 @@ struct RectMenu *MainFreeze_GetMenuPtr(void)
 	if ((gameMode & ADVENTURE_ARENA) != 0)
 	{
 		s32 hintString = LNG_UKA_UKA_HINTS;
-		if (VehPickupItem_MaskBoolGoodGuy(gGT->drivers[0]) != 0)
+		if (VehPickupItem_MaskBoolGoodGuy(P32_GET(struct Driver *, gGT->drivers[0])) != 0)
 		{
 			hintString = LNG_AKU_AKU_HINTS;
 		}
 
 		data.rowsAdvHub[1].stringIndex = hintString;
-		data.menuAdvHub.rows = s_adventureHubRowsWithCharacter;
+		P32_SET(data.menuAdvHub.rows, s_adventureHubRowsWithCharacter);
 		s_adventureHubRowsWithCharacter[1].stringIndex = hintString;
 		return &data.menuAdvHub;
 	}
@@ -1269,7 +1269,7 @@ struct RectMenu *MainFreeze_GetMenuPtr(void)
 		static struct RectMenu ghostReplayMenu;
 
 		ghostReplayMenu = data.menuArcadeRace;
-		ghostReplayMenu.rows = ghostReplayRows;
+		P32_SET(ghostReplayMenu.rows, ghostReplayRows);
 		return &ghostReplayMenu;
 	}
 
@@ -1279,7 +1279,7 @@ struct RectMenu *MainFreeze_GetMenuPtr(void)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80039e98-0x80039fa8.
 void MainFreeze_IfPressStart(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	u32 gameMode1;
 	struct RectMenu *menu;
 
@@ -1298,7 +1298,7 @@ void MainFreeze_IfPressStart(void)
 		return;
 	}
 
-	if (sdata->ptrActiveMenu != NULL)
+	if (P32_GET(struct RectMenu *, sdata->ptrActiveMenu) != NULL)
 	{
 		return;
 	}

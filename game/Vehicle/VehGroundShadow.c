@@ -62,7 +62,7 @@ enum
 b32 VehGroundShadow_Subset1(struct TextureLayout *pDst, int iconIndex)
 {
 	// get pointer to icon
-	struct Icon *pIcon = sdata->gGT->ptrIcons[iconIndex];
+	struct Icon *pIcon = P32_GET(struct Icon *, P32_GET(struct GameTracker *, sdata->gGT)->ptrIcons[iconIndex]);
 
 	// validate icon pointer
 	if (!pIcon)
@@ -84,8 +84,8 @@ struct VehGroundShadowEntry
 	SVec3 local[3];
 	s8 state;
 	s8 depthBias;
-	struct Driver *driver;
-	struct Instance *inst;
+	P32(struct Driver *) driver;
+	P32(struct Instance *) inst;
 	u8 idppFlags[VEH_GROUND_SHADOW_MAX_PLAYERS];
 	SVec3 pos;
 	u16 instFlags;
@@ -96,7 +96,7 @@ struct VehGroundShadowScratch
 	u8 pad_000[0xa4];
 	struct VehGroundShadowEntry entries[VEH_GROUND_SHADOW_MAX_DRIVERS];
 	u8 pad_1e4[0x14];
-	struct Driver *sentinelDriver;
+	P32(struct Driver *) sentinelDriver;
 	u8 pad_1fc[0x28];
 	struct TextureLayout shadowTex[VEH_GROUND_SHADOW_TEXTURE_COUNT];
 };
@@ -191,10 +191,10 @@ static void VehGroundShadow_ProjectPoints(SVec3 points[VEH_GROUND_SHADOW_NUM_POI
 
 static void VehGroundShadow_BuildEntry(struct VehGroundShadowEntry *entry, struct Driver *driver, int numPlayers)
 {
-	struct Instance *inst = driver->instSelf;
+	struct Instance *inst = P32_GET(struct Instance *, driver->instSelf);
 
-	entry->driver = driver;
-	entry->inst = inst;
+	P32_SET(entry->driver, driver);
+	P32_SET(entry->inst, inst);
 	entry->instFlags = (u16)inst->flags;
 
 	for (int playerIndex = numPlayers - 1; playerIndex >= 0; playerIndex--)
@@ -211,7 +211,7 @@ static void VehGroundShadow_BuildEntry(struct VehGroundShadowEntry *entry, struc
 
 static void VehGroundShadow_TransformLocalAxes(struct VehGroundShadowEntry *entry)
 {
-	struct Driver *driver = entry->driver;
+	struct Driver *driver = P32_GET(struct Driver *, entry->driver);
 	MATRIX axisMatrix;
 	SVec3 local;
 	int height =
@@ -396,7 +396,7 @@ static void VehGroundShadow_EmitQuad(u32 **primCursor, u32 *otBase, const struct
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8005b720-0x8005c120.
 void VehGroundShadow_Main(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	struct PrimMem *primMem;
 	u32 *prim;
 	struct VehGroundShadowScratch *scratch = CTR_SCRATCHPAD_PTR(struct VehGroundShadowScratch, 0);
@@ -415,9 +415,9 @@ void VehGroundShadow_Main(void)
 		return;
 	}
 
-	primMem = &gGT->backBuffer->primMem;
-	prim = (u32 *)primMem->cursor;
-	if (prim + VEH_GROUND_SHADOW_PRIM_GUARD_WORDS >= (u32 *)primMem->guardEnd)
+	primMem = &P32_GET(struct DB *, gGT->backBuffer)->primMem;
+	prim = (u32 *)P32_GET(void *, primMem->cursor);
+	if (prim + VEH_GROUND_SHADOW_PRIM_GUARD_WORDS >= (u32 *)P32_GET(void *, primMem->guardEnd))
 	{
 		return;
 	}
@@ -431,7 +431,7 @@ void VehGroundShadow_Main(void)
 	for (int driverIndex = 0; driverIndex < VEH_GROUND_SHADOW_MAX_DRIVERS; driverIndex++)
 	{
 		struct VehGroundShadowEntry *entry = &entries[driverIndex];
-		struct Driver *driver = gGT->drivers[driverIndex];
+		struct Driver *driver = P32_GET(struct Driver *, gGT->drivers[driverIndex]);
 
 		if (driver != NULL)
 		{
@@ -439,11 +439,11 @@ void VehGroundShadow_Main(void)
 		}
 		else
 		{
-			entry->driver = NULL;
+			P32_SET(entry->driver, NULL);
 			entry->state = VEH_GROUND_SHADOW_STATE_PENDING;
 		}
 	}
-	scratch->sentinelDriver = NULL;
+	P32_SET(scratch->sentinelDriver, NULL);
 
 #if defined(CTR_NATIVE)
 	// NOTE: The camera delta is always scaled by four, whatever the screen
@@ -474,7 +474,7 @@ void VehGroundShadow_Main(void)
 		s32 camX = pb->matrix_Camera.t[0];
 		s32 camY = pb->matrix_Camera.t[1];
 		s32 camZ = pb->matrix_Camera.t[2];
-		u32 *otBase = pb->ptrOT;
+		u32 *otBase = P32_GET(uint32_t *, pb->ptrOT);
 		int isLargeGeomScreen;
 
 		CTC2((u32)(s32)pb->rect.w << VEH_GROUND_SHADOW_GTE_SCREEN_SHIFT, 24);
@@ -499,7 +499,7 @@ void VehGroundShadow_Main(void)
 			u32 sxy[VEH_GROUND_SHADOW_NUM_POINTS];
 			s32 depth[VEH_GROUND_SHADOW_NUM_POINTS];
 
-			if (entry->driver == NULL)
+			if (P32_GET(struct Driver *, entry->driver) == NULL)
 			{
 				break;
 			}
@@ -607,5 +607,5 @@ void VehGroundShadow_Main(void)
 #if defined(CTR_NATIVE)
 	NativePgxp_SetDepthContext(nativeDepthContext);
 #endif
-	primMem->cursor = prim;
+	P32_SET(primMem->cursor, prim);
 }

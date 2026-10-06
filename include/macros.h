@@ -26,6 +26,7 @@ typedef double f64;
 // sites that may only see this header. native_options.h's own include of
 // macros.h is a no-op by guard, and it needs only the typedefs above.
 #include <platform/native_options.h>
+#include <ctr_ptr32.h>
 
 #define AugReview 805
 // TODO: Aug5 and Aug14

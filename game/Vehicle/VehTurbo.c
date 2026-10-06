@@ -76,16 +76,16 @@ void VehTurbo_ProcessBucket(struct Thread *turboThread)
 {
 	while (turboThread != NULL)
 	{
-		struct Instance *primaryInst = turboThread->inst;
-		struct Turbo *turbo = (struct Turbo *)turboThread->object;
-		struct Instance *secondaryInst = turbo->inst;
-		struct Instance *driverInst = turbo->driver->instSelf;
+		struct Instance *primaryInst = P32_GET(struct Instance *, turboThread->inst);
+		struct Turbo *turbo = (struct Turbo *)P32_GET(void *, turboThread->object);
+		struct Instance *secondaryInst = P32_GET(struct Instance *, turbo->inst);
+		struct Instance *driverInst = P32_GET(struct Instance *, P32_GET(struct Driver *, turbo->driver)->instSelf);
 
 		struct InstDrawPerPlayer *primary = INST_GETIDPP(primaryInst);
 		struct InstDrawPerPlayer *secondary = INST_GETIDPP(secondaryInst);
 		struct InstDrawPerPlayer *driver = INST_GETIDPP(driverInst);
 
-		for (int i = 0; i < sdata->gGT->numPlyrCurrGame; i++)
+		for (int i = 0; i < P32_GET(struct GameTracker *, sdata->gGT)->numPlyrCurrGame; i++)
 		{
 			if ((driver->instFlags & PUSHBUFFER_EXISTS) == 0)
 			{
@@ -110,19 +110,19 @@ void VehTurbo_ProcessBucket(struct Thread *turboThread)
 			driver++;
 		}
 
-		turboThread = turboThread->siblingThread;
+		turboThread = P32_GET(struct Thread *, turboThread->siblingThread);
 	}
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80069370-0x800693c8.
 void VehTurbo_ThDestroy(struct Thread *t)
 {
-	struct Turbo *turboObj = t->object;
-	struct Driver *d = turboObj->driver;
+	struct Turbo *turboObj = P32_GET(void *, t->object);
+	struct Driver *d = P32_GET(struct Driver *, turboObj->driver);
 	d->actionsFlagSet &= ~ACTION_TURBO_ITEM;
 
-	INSTANCE_Death(turboObj->inst);
-	INSTANCE_Death(t->inst);
+	INSTANCE_Death(P32_GET(struct Instance *, turboObj->inst));
+	INSTANCE_Death(P32_GET(struct Instance *, t->inst));
 }
 
 static void VehTurbo_TransformOffset(struct Instance *driverInst, s16 x, s16 y, s16 z, s32 *out)
@@ -140,12 +140,12 @@ static void VehTurbo_TransformOffset(struct Instance *driverInst, s16 x, s16 y, 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800693c8-0x80069bb0.
 void VehTurbo_ThTick(struct Thread *turboThread)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
-	struct Turbo *turbo = (struct Turbo *)turboThread->object;
-	struct Driver *driver = turbo->driver;
-	struct Instance *instance = turboThread->inst;
-	struct Instance *instanceDriver = driver->instSelf;
+	struct Turbo *turbo = (struct Turbo *)P32_GET(void *, turboThread->object);
+	struct Driver *driver = P32_GET(struct Driver *, turbo->driver);
+	struct Instance *instance = P32_GET(struct Instance *, turboThread->inst);
+	struct Instance *instanceDriver = P32_GET(struct Instance *, driver->instSelf);
 
 	if ((
 	        // if not burnt
@@ -155,7 +155,7 @@ void VehTurbo_ThTick(struct Thread *turboThread)
 	        (instance->alphaScale == 0)) &&
 
 
-	    (instanceDriver->thread->modelIndex != DYNAMIC_GHOST))
+	    (P32_GET(struct Thread *, instanceDriver->thread)->modelIndex != DYNAMIC_GHOST))
 	{
 		// cut driverInst transparency in half
 		instanceDriver->alphaScale = instanceDriver->alphaScale >> 1;
@@ -166,7 +166,7 @@ void VehTurbo_ThTick(struct Thread *turboThread)
 	{
 		// instance flags
 		instance->flags &= ~SPLIT_LINE;
-		turbo->inst->flags &= ~SPLIT_LINE;
+		P32_GET(struct Instance *, turbo->inst)->flags &= ~SPLIT_LINE;
 	}
 
 	// if instance is split by water
@@ -175,8 +175,8 @@ void VehTurbo_ThTick(struct Thread *turboThread)
 		// turbos are now split by water, set vertical split height
 		instance->flags |= SPLIT_LINE;
 		instance->vertSplit = instanceDriver->vertSplit;
-		turbo->inst->flags |= SPLIT_LINE;
-		turbo->inst->vertSplit = instanceDriver->vertSplit;
+		P32_GET(struct Instance *, turbo->inst)->flags |= SPLIT_LINE;
+		P32_GET(struct Instance *, turbo->inst)->vertSplit = instanceDriver->vertSplit;
 	}
 
 	// if driver instance is not reflective
@@ -184,7 +184,7 @@ void VehTurbo_ThTick(struct Thread *turboThread)
 	{
 		// remove reflection from turbo instances
 		instance->flags &= ~REFLECTIVE;
-		turbo->inst->flags &= ~REFLECTIVE;
+		P32_GET(struct Instance *, turbo->inst)->flags &= ~REFLECTIVE;
 	}
 
 	// if driver instance is reflective
@@ -194,8 +194,8 @@ void VehTurbo_ThTick(struct Thread *turboThread)
 		// copy reflection height axis to instance
 		instance->flags |= REFLECTIVE;
 		instance->vertSplit = instanceDriver->vertSplit;
-		turbo->inst->flags |= REFLECTIVE;
-		turbo->inst->vertSplit = instanceDriver->vertSplit;
+		P32_GET(struct Instance *, turbo->inst)->flags |= REFLECTIVE;
+		P32_GET(struct Instance *, turbo->inst)->vertSplit = instanceDriver->vertSplit;
 	}
 
 	int fireSize = (int)turbo->fireSize;
@@ -224,19 +224,19 @@ void VehTurbo_ThTick(struct Thread *turboThread)
 	                         instanceDriver->scale.z * TURBO_FIRE_Z_NUMERATOR >> TURBO_FIRE_Z_SHIFT, &instance->matrix.t[0]);
 
 	// matrix of second turbo instance, negate X axis
-	turbo->inst->matrix.m[0][0] = (s16)(-(int)instanceDriver->matrix.m[0][0] * fireSize >> TURBO_FIRE_MATRIX_SCALE_SHIFT);
-	turbo->inst->matrix.m[0][1] = (s16)(instanceDriver->matrix.m[0][1] * fireSize >> TURBO_FIRE_MATRIX_SCALE_SHIFT);
-	turbo->inst->matrix.m[0][2] = (s16)(instanceDriver->matrix.m[0][2] * fireSize >> TURBO_FIRE_MATRIX_SCALE_SHIFT);
-	turbo->inst->matrix.m[1][0] = (s16)(-(int)instanceDriver->matrix.m[1][0] * fireSize >> TURBO_FIRE_MATRIX_SCALE_SHIFT);
-	turbo->inst->matrix.m[1][1] = (s16)(instanceDriver->matrix.m[1][1] * fireSize >> TURBO_FIRE_MATRIX_SCALE_SHIFT);
-	turbo->inst->matrix.m[1][2] = (s16)(instanceDriver->matrix.m[1][2] * fireSize >> TURBO_FIRE_MATRIX_SCALE_SHIFT);
-	turbo->inst->matrix.m[2][0] = (s16)(-(int)instanceDriver->matrix.m[2][0] * fireSize >> TURBO_FIRE_MATRIX_SCALE_SHIFT);
-	turbo->inst->matrix.m[2][1] = (s16)(instanceDriver->matrix.m[2][1] * fireSize >> TURBO_FIRE_MATRIX_SCALE_SHIFT);
-	turbo->inst->matrix.m[2][2] = (s16)(instanceDriver->matrix.m[2][2] * fireSize >> TURBO_FIRE_MATRIX_SCALE_SHIFT);
+	P32_GET(struct Instance *, turbo->inst)->matrix.m[0][0] = (s16)(-(int)instanceDriver->matrix.m[0][0] * fireSize >> TURBO_FIRE_MATRIX_SCALE_SHIFT);
+	P32_GET(struct Instance *, turbo->inst)->matrix.m[0][1] = (s16)(instanceDriver->matrix.m[0][1] * fireSize >> TURBO_FIRE_MATRIX_SCALE_SHIFT);
+	P32_GET(struct Instance *, turbo->inst)->matrix.m[0][2] = (s16)(instanceDriver->matrix.m[0][2] * fireSize >> TURBO_FIRE_MATRIX_SCALE_SHIFT);
+	P32_GET(struct Instance *, turbo->inst)->matrix.m[1][0] = (s16)(-(int)instanceDriver->matrix.m[1][0] * fireSize >> TURBO_FIRE_MATRIX_SCALE_SHIFT);
+	P32_GET(struct Instance *, turbo->inst)->matrix.m[1][1] = (s16)(instanceDriver->matrix.m[1][1] * fireSize >> TURBO_FIRE_MATRIX_SCALE_SHIFT);
+	P32_GET(struct Instance *, turbo->inst)->matrix.m[1][2] = (s16)(instanceDriver->matrix.m[1][2] * fireSize >> TURBO_FIRE_MATRIX_SCALE_SHIFT);
+	P32_GET(struct Instance *, turbo->inst)->matrix.m[2][0] = (s16)(-(int)instanceDriver->matrix.m[2][0] * fireSize >> TURBO_FIRE_MATRIX_SCALE_SHIFT);
+	P32_GET(struct Instance *, turbo->inst)->matrix.m[2][1] = (s16)(instanceDriver->matrix.m[2][1] * fireSize >> TURBO_FIRE_MATRIX_SCALE_SHIFT);
+	P32_GET(struct Instance *, turbo->inst)->matrix.m[2][2] = (s16)(instanceDriver->matrix.m[2][2] * fireSize >> TURBO_FIRE_MATRIX_SCALE_SHIFT);
 
 	VehTurbo_TransformOffset(instanceDriver, instanceDriver->scale.x * TURBO_FIRE_RIGHT_X_NUMERATOR >> TURBO_FIRE_RIGHT_X_SHIFT,
 	                         instanceDriver->scale.y * TURBO_FIRE_Y_NUMERATOR >> TURBO_FIRE_Y_SHIFT,
-	                         instanceDriver->scale.z * TURBO_FIRE_Z_NUMERATOR >> TURBO_FIRE_Z_SHIFT, &turbo->inst->matrix.t[0]);
+	                         instanceDriver->scale.z * TURBO_FIRE_Z_NUMERATOR >> TURBO_FIRE_Z_SHIFT, &P32_GET(struct Instance *, turbo->inst)->matrix.t[0]);
 
 	// decrease turbo visibility cooldown by elapsed milliseconds per frame, ~32
 	s16 elapsedTime = turbo->fireVisibilityCooldown - gGT->elapsedTimeMS;
@@ -252,7 +252,7 @@ void VehTurbo_ThTick(struct Thread *turboThread)
 	{
 		// make fire visible now that there's no cooldown
 		instance->flags &= ~HIDE_MODEL;
-		turbo->inst->flags &= ~HIDE_MODEL;
+		P32_GET(struct Instance *, turbo->inst)->flags &= ~HIDE_MODEL;
 	}
 
 	if (instance->alphaScale < TURBO_ALPHA_RUMBLE_THRESHOLD)
@@ -262,7 +262,7 @@ void VehTurbo_ThTick(struct Thread *turboThread)
 	}
 
 	// set new model pointer, one of eight
-	instance->model = gGT->modelPtr[(int)turbo->fireAnimIndex + STATIC_TURBO_EFFECT];
+	P32_SET(instance->model, P32_GET(struct Model *, gGT->modelPtr[(int)turbo->fireAnimIndex + STATIC_TURBO_EFFECT]));
 
 	// set new model pointer, one of eight
 
@@ -274,7 +274,7 @@ void VehTurbo_ThTick(struct Thread *turboThread)
 	// STATIC_TURBO_EFFECT5
 	// STATIC_TURBO_EFFECT6
 	// STATIC_TURBO_EFFECT7
-	turbo->inst->model = gGT->modelPtr[(((int)turbo->fireAnimIndex + TURBO_SECONDARY_MODEL_FRAME_OFFSET) & TURBO_ANIM_FRAME_MASK) + STATIC_TURBO_EFFECT];
+	P32_SET(P32_GET(struct Instance *, turbo->inst)->model, P32_GET(struct Model *, gGT->modelPtr[(((int)turbo->fireAnimIndex + TURBO_SECONDARY_MODEL_FRAME_OFFSET) & TURBO_ANIM_FRAME_MASK) + STATIC_TURBO_EFFECT]));
 
 #if CTR_NATIVE_60FPS
 	if (CTR_RETAIL_FRAME_TICK(gGT->timer))
@@ -298,7 +298,7 @@ void VehTurbo_ThTick(struct Thread *turboThread)
 	}
 
 	// player of any kind
-	if (instanceDriver->thread->modelIndex == DYNAMIC_PLAYER)
+	if (P32_GET(struct Thread *, instanceDriver->thread)->modelIndex == DYNAMIC_PLAYER)
 	{
 		int fireSfxVolume = TURBO_AUDIO_VOLUME_BASE - (u32)(instance->alphaScale >> TURBO_AUDIO_ALPHA_SHIFT);
 
@@ -353,7 +353,7 @@ void VehTurbo_ThTick(struct Thread *turboThread)
 
 	if (
 	    // if this is a ghost
-	    (instanceDriver->thread->modelIndex == DYNAMIC_GHOST) ||
+	    (P32_GET(struct Thread *, instanceDriver->thread)->modelIndex == DYNAMIC_GHOST) ||
 
 	    ((kartState != KS_MASK_GRABBED) && (kartState != KS_CRASHING)
 
@@ -378,7 +378,7 @@ void VehTurbo_ThTick(struct Thread *turboThread)
 				{
 					// increase transparency
 					instance->alphaScale += TURBO_FADE_FAST_STEP;
-					turbo->inst->alphaScale += TURBO_FADE_FAST_STEP;
+					P32_GET(struct Instance *, turbo->inst)->alphaScale += TURBO_FADE_FAST_STEP;
 				}
 			}
 			else
@@ -387,7 +387,7 @@ void VehTurbo_ThTick(struct Thread *turboThread)
 				{
 					// increase transparency
 					instance->alphaScale += TURBO_FADE_SLOW_STEP;
-					turbo->inst->alphaScale += TURBO_FADE_SLOW_STEP;
+					P32_GET(struct Instance *, turbo->inst)->alphaScale += TURBO_FADE_SLOW_STEP;
 				}
 			}
 		}
@@ -410,7 +410,7 @@ void VehTurbo_ThTick(struct Thread *turboThread)
 	LAB_80069b50:
 
 		// player of any kind
-		if (instanceDriver->thread->modelIndex == DYNAMIC_PLAYER)
+		if (P32_GET(struct Thread *, instanceDriver->thread)->modelIndex == DYNAMIC_PLAYER)
 		{
 			// volume, distortion, left/right
 			u32 stopSfxParams = HOWL_SFX_CENTER_NO_DISTORTION;

@@ -82,7 +82,7 @@ void VB_EndEvent_DrawMenu(void)
 	char text[24];
 	SVec2 pos;
 
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	s32 numPlayers = gGT->numPlyrCurrGame;
 	s32 playerCountIndex = numPlayers - VB_MIN_PLAYERS;
 	b32 isBattleMode = (gGT->gameMode1 & BATTLE_MODE) != 0;
@@ -118,7 +118,7 @@ void VB_EndEvent_DrawMenu(void)
 
 		for (s32 player = 0; player < numPlayers; player++)
 		{
-			teamPlayerCount[gGT->drivers[player]->BattleHUD.teamID]++;
+			teamPlayerCount[P32_GET(struct Driver *, gGT->drivers[player])->BattleHUD.teamID]++;
 		}
 
 		titleY = (VB_BATTLE_BLOCK_BOTTOM_Y -
@@ -150,9 +150,9 @@ void VB_EndEvent_DrawMenu(void)
 	s32 rowY = titleY + VB_TITLE_TO_ROWS_Y;
 
 	// "Versus" or "Battle"
-	DecalFont_DrawLine(sdata->lngStrings[titleString], pos.x, pos.y, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[titleString]), pos.x, pos.y, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
 
-	DecalFont_DrawLine(sdata->lngStrings[LNG_STANDINGS], pos.x, pos.y + VB_STANDINGS_SUBTITLE_Y, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_STANDINGS]), pos.x, pos.y + VB_STANDINGS_SUBTITLE_Y, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
 
 	s32 visiblePlaces = VB_STANDINGS_VISIBLE_PLACES_MIN;
 	if (standingsEntryCount >= 3)
@@ -189,11 +189,11 @@ void VB_EndEvent_DrawMenu(void)
 		{
 			rankTextY = s_vsStandingsYByPlayerCount[playerCountIndex][VB_POSY_P1 + standingsIndex];
 
-			struct Driver *driver = gGT->drivers[entityID];
-			struct Icon *icon = gGT->ptrIcons[data.MetaDataCharacters[data.characterIDs[driver->driverID]].iconID];
+			struct Driver *driver = P32_GET(struct Driver *, gGT->drivers[entityID]);
+			struct Icon *icon = P32_GET(struct Icon *, gGT->ptrIcons[data.MetaDataCharacters[data.characterIDs[driver->driverID]].iconID]);
 
 			UI_DrawDriverIconDecalForDriver(driver->driverID, icon, pos.x, rankTextY,
-			                                  &gGT->backBuffer->primMem, gGT->pushBuffer_UI.ptrOT,
+			                                  &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT),
 			                                  VB_ICON_TRANSPARENCY, VB_ICON_SCALE);
 		}
 		else
@@ -204,16 +204,16 @@ void VB_EndEvent_DrawMenu(void)
 			s16 iconSlot = 0;
 			for (s32 player = 0; player < numPlayers; player++)
 			{
-				struct Driver *driver = gGT->drivers[player];
+				struct Driver *driver = P32_GET(struct Driver *, gGT->drivers[player]);
 
 				if (driver->BattleHUD.teamID != entityID)
 				{
 					continue;
 				}
 
-				struct Icon *icon = gGT->ptrIcons[data.MetaDataCharacters[data.characterIDs[driver->driverID]].iconID];
+				struct Icon *icon = P32_GET(struct Icon *, gGT->ptrIcons[data.MetaDataCharacters[data.characterIDs[driver->driverID]].iconID]);
 				UI_DrawDriverIconDecalForDriver(driver->driverID, icon, pos.x, currRowY + iconSlot * VB_BATTLE_PLAYER_ICON_SPACING,
-				                                  &gGT->backBuffer->primMem, gGT->pushBuffer_UI.ptrOT,
+				                                  &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT),
 				                                  VB_ICON_TRANSPARENCY, VB_ICON_SCALE);
 				iconSlot++;
 			}
@@ -223,7 +223,7 @@ void VB_EndEvent_DrawMenu(void)
 
 		for (s32 place = 0; place < visiblePlaces; place++)
 		{
-			s32 entityRank = isBattleMode ? gGT->battleSetup.finishedRankOfEachTeam[entityID] : gGT->drivers[entityID]->driverRank;
+			s32 entityRank = isBattleMode ? gGT->battleSetup.finishedRankOfEachTeam[entityID] : P32_GET(struct Driver *, gGT->drivers[entityID])->driverRank;
 
 			s32 placeTextColor = JUSTIFY_RIGHT | RED;
 			if (place == entityRank)
@@ -231,7 +231,7 @@ void VB_EndEvent_DrawMenu(void)
 					placeTextColor = (FPS_HALF(gGT->timer) & 1) ? (JUSTIFY_RIGHT | RED) : (JUSTIFY_RIGHT | WHITE);
 			}
 
-			sprintf(text, "%d%s-%2.02ld", place + 1, sdata->lngStrings[VB_STANDINGS_SUFFIX_FIRST + place],
+			sprintf(text, "%d%s-%2.02ld", place + 1, P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[VB_STANDINGS_SUFFIX_FIRST + place]),
 			        CTR_PRINTF_PSX_LONG(gGT->standingsPoints[entityID * VB_STANDINGS_POINTS_PER_ENTRY + place]));
 
 			DecalFont_DrawLine(text, pos.x + VB_STANDINGS_TEXT_X_OFFSET,
@@ -253,7 +253,7 @@ void VB_EndEvent_DrawMenu(void)
 		rowDelay += FPS_DOUBLE(VB_ROW_STAGGER_FRAMES);
 
 		previousStandingsScore = (s16)gGT->battleSetup.standingsScore[entityID];
-		sprintf(text, "%d%s", displayedRank + 1, sdata->lngStrings[VB_STANDINGS_SUFFIX_FIRST + displayedRank]);
+		sprintf(text, "%d%s", displayedRank + 1, P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[VB_STANDINGS_SUFFIX_FIRST + displayedRank]));
 
 		DecalFont_DrawLine(text, pos.x + VB_STANDINGS_RANK_X_OFFSET, rankTextY + VB_STANDINGS_RANK_Y_OFFSET, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
 	}
@@ -261,7 +261,7 @@ void VB_EndEvent_DrawMenu(void)
 	b32 winnerViewportFound = false;
 	for (s32 player = 0; player < numPlayers; player++)
 	{
-		struct Instance *bigNum = gGT->drivers[player]->instBigNum;
+		struct Instance *bigNum = P32_GET(struct Instance *, P32_GET(struct Driver *, gGT->drivers[player])->instBigNum);
 		struct PushBuffer *view = &gGT->pushBuffer[player];
 
 		if (bigNum != NULL)
@@ -274,7 +274,7 @@ void VB_EndEvent_DrawMenu(void)
 			continue;
 		}
 
-		s32 winnerDriverID = isBattleMode ? gGT->winnerIndex[0] : gGT->driversInRaceOrder[0]->driverID;
+		s32 winnerDriverID = isBattleMode ? gGT->winnerIndex[0] : P32_GET(struct Driver *, gGT->driversInRaceOrder[0])->driverID;
 		b32 isWinnerViewport = !winnerViewportFound && (winnerDriverID == player);
 
 		if (isWinnerViewport)
@@ -299,7 +299,7 @@ void VB_EndEvent_DrawMenu(void)
 
 			Color color;
 			color.self = sdata->battleSetup_Color_UI_1;
-			RECTMENU_DrawOuterRect_HighLevel(&box, color, 0, gGT->backBuffer->otMem.uiOT);
+			RECTMENU_DrawOuterRect_HighLevel(&box, color, 0, P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT));
 
 			view->rect.x = pos.x;
 			view->rect.y = pos.y;
@@ -375,11 +375,18 @@ global_variable struct RectMenu menuVS = {
     .posY_curr = 162,
     .unk1 = 0,
     .state = RECTMENU_STATE_SMALL_EXEC_CENTERED,
-    .rows = rowsVS,
-    .funcPtr = UI_RaceEnd_MenuProc,
+    .rows = P32_DEFER(rowsVS),
+    .funcPtr = P32_DEFER(UI_RaceEnd_MenuProc),
     .drawStyle = 4,
     // rest of variables all default zero
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(menuVS)
+{
+	P32_SET(menuVS.rows, rowsVS);
+	P32_SET(menuVS.funcPtr, UI_RaceEnd_MenuProc);
+}
+#endif
 
 global_variable struct MenuRow rowsBattle[6] = {
     // Retry
@@ -437,8 +444,15 @@ global_variable struct RectMenu menuBattle = {
     .posY_curr = 166,
     .unk1 = 0,
     .state = RECTMENU_STATE_SMALL_EXEC_CENTERED,
-    .rows = rowsBattle,
-    .funcPtr = UI_RaceEnd_MenuProc,
+    .rows = P32_DEFER(rowsBattle),
+    .funcPtr = P32_DEFER(UI_RaceEnd_MenuProc),
     .drawStyle = 4,
     // rest of variables all default zero
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(menuBattle)
+{
+	P32_SET(menuBattle.rows, rowsBattle);
+	P32_SET(menuBattle.funcPtr, UI_RaceEnd_MenuProc);
+}
+#endif

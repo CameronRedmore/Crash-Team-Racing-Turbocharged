@@ -3,12 +3,12 @@
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800af3a4-0x800af3e4.
 void AH_SaveObj_ThDestroy(struct Thread *t)
 {
-	struct SaveObj *save = t->object;
+	struct SaveObj *save = P32_GET(void *, t->object);
 
-	if (save->inst != NULL)
+	if (P32_GET(struct Instance *, save->inst) != NULL)
 	{
-		INSTANCE_Death(save->inst);
-		save->inst = NULL;
+		INSTANCE_Death(P32_GET(struct Instance *, save->inst));
+		P32_SET(save->inst, NULL);
 	}
 	return;
 }
@@ -16,17 +16,17 @@ void AH_SaveObj_ThDestroy(struct Thread *t)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800af3e4-0x800af7f0.
 void AH_SaveObj_ThTick(struct Thread *t)
 {
-	struct GameTracker *gGT = sdata->gGT;
-	struct Driver *driver = gGT->drivers[0];
-	struct Instance *saveInst = t->inst;
-	struct Instance *driverInst = driver->instSelf;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct Driver *driver = P32_GET(struct Driver *, gGT->drivers[0]);
+	struct Instance *saveInst = P32_GET(struct Instance *, t->inst);
+	struct Instance *driverInst = P32_GET(struct Instance *, driver->instSelf);
 
 	// Get difference in positions between instances
 	int distX = saveInst->matrix.t[0] - driverInst->matrix.t[0];
 	int distY = saveInst->matrix.t[1] - driverInst->matrix.t[1];
 	int distZ = saveInst->matrix.t[2] - driverInst->matrix.t[2];
 
-	struct SaveObj *save = t->object;
+	struct SaveObj *save = P32_GET(void *, t->object);
 
 	// get distance from player instance and thread object instance
 	int dist = distX * distX + distY * distY + distZ * distZ;
@@ -63,7 +63,7 @@ void AH_SaveObj_ThTick(struct Thread *t)
 			{
 				SVec3 desiredPos;
 				SVec3 desiredRot;
-				struct SpawnPosRot *saveSpawn = gGT->level1->ptrSpawnType2_PosRot->posRot;
+				struct SpawnPosRot *saveSpawn = P32_GET(struct SpawnPosRot *, P32_GET(struct SpawnType2 *, P32_GET(struct Level *, gGT->level1)->ptrSpawnType2_PosRot)->posRot);
 
 				// desired transition position (x,y,z)
 				desiredPos.x = saveSpawn->pos.x + (s16)((int)saveInst->matrix.m[0][0] * AH_SAVEOBJ_CAMERA_FORWARD_OFFSET >> 7);
@@ -76,7 +76,7 @@ void AH_SaveObj_ThTick(struct Thread *t)
 				desiredRot.z = saveSpawn->rot.z + D232.saveObjCameraOffset.z;
 
 				// VehBirth_NullThread is an empty function that does nothing
-				driver->instSelf->thread->funcThTick = VehBirth_NullThread;
+				P32_SET(P32_GET(struct Thread *, P32_GET(struct Instance *, driver->instSelf)->thread)->funcThTick, VehBirth_NullThread);
 
 				// Set CameraDC's desired position and rotation,
 				// then begin the transition by setting flag
@@ -104,7 +104,7 @@ void AH_SaveObj_ThTick(struct Thread *t)
 
 			    ((save->flags & AH_SAVEOBJ_FLAG_HUD_RESTORED) == 0))
 			{
-				driverInst->thread->funcThTick = NULL;
+				P32_SET(P32_GET(struct Thread *, driverInst->thread)->funcThTick, NULL);
 
 				save->flags |= AH_SAVEOBJ_FLAG_HUD_RESTORED;
 #if defined(CTR_NATIVE)
@@ -149,7 +149,7 @@ void AH_SaveObj_ThTick(struct Thread *t)
 						    ((cameraFlags & CAMERA_FLAG_TRANSITION_BACK) == 0) &&
 
 						    // if there's no Menu active
-						    (sdata->ptrActiveMenu == NULL))
+						    (P32_GET(struct RectMenu *, sdata->ptrActiveMenu) == NULL))
 						{
 							// toggle flag to return, this either snaps back
 							// or transitions back depending on & 0x200 (like 0x600 or 0xe00)
@@ -168,7 +168,7 @@ void AH_SaveObj_ThTick(struct Thread *t)
 LAB_800af72c:
 
 	// SaveObj keeps the save/load instance pointer first.
-	saveInst = save->inst;
+	saveInst = P32_GET(struct Instance *, save->inst);
 
 	if (saveInst != NULL)
 	{
@@ -227,25 +227,25 @@ LAB_800af72c:
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800af7f0-0x800af9f8.
 void AH_SaveObj_LInB(struct Instance *savInst)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// if this Instance's thread is not valid
-	if (savInst->thread == NULL)
+	if (P32_GET(struct Thread *, savInst->thread) == NULL)
 	{
 		struct Thread *t = PROC_BirthWithObject(SIZE_RELATIVE_POOL_BUCKET(sizeof(struct SaveObj), NONE, SMALL, STATIC),
 
 		                                        AH_SaveObj_ThTick, R232.s_saveobj, 0);
 
-		savInst->thread = t;
+		P32_SET(savInst->thread, t);
 
 		// if the thread was built properly
 		if (t != NULL)
 		{
-			struct SaveObj *save = t->object;
+			struct SaveObj *save = P32_GET(void *, t->object);
 
-			t->inst = savInst;
+			P32_SET(t->inst, savInst);
 
-			t->funcThDestroy = AH_SaveObj_ThDestroy;
+			P32_SET(t->funcThDestroy, AH_SaveObj_ThDestroy);
 
 			// initialize object
 			save->flags = AH_SAVEOBJ_FLAG_NONE;
@@ -254,16 +254,16 @@ void AH_SaveObj_LInB(struct Instance *savInst)
 
 			savInst->flags |= HIDE_MODEL;
 
-			if (gGT->level1->numSpawnType2_PosRot == 0)
+			if (P32_GET(struct Level *, gGT->level1)->numSpawnType2_PosRot == 0)
 			{
-				save->inst = NULL;
+				P32_SET(save->inst, NULL);
 			}
 			else
 			{
-				struct SpawnType2 *spawn = gGT->level1->ptrSpawnType2_PosRot;
-				struct SpawnPosRot *saveSpawn = spawn->posRot;
-				struct Instance *inst = INSTANCE_Birth3D(gGT->modelPtr[STATIC_SCAN], R232.s_scan, t);
-				save->inst = inst;
+				struct SpawnType2 *spawn = P32_GET(struct SpawnType2 *, P32_GET(struct Level *, gGT->level1)->ptrSpawnType2_PosRot);
+				struct SpawnPosRot *saveSpawn = P32_GET(struct SpawnPosRot *, spawn->posRot);
+				struct Instance *inst = INSTANCE_Birth3D(P32_GET(struct Model *, gGT->modelPtr[STATIC_SCAN]), R232.s_scan, t);
+				P32_SET(save->inst, inst);
 
 				// NOTE(aalhendi): Native low-RAM audit candidate only. Retail
 				// uses this scan instance allocation before any null fallback;

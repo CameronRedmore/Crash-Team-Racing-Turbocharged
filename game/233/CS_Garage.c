@@ -116,7 +116,7 @@ void CS_Garage_ZoomOut(s16 zoomState)
 	gGarage.boolSelected = 0;
 	gGarage.delayOneSecond = 0;
 
-	sdata->gGT->gameMode2 &= ~(GARAGE_OSK);
+	P32_GET(struct GameTracker *, sdata->gGT)->gameMode2 &= ~(GARAGE_OSK);
 
 	// if just entered garage
 	if (zoomState == 0)
@@ -155,8 +155,8 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 	u32 statBarPosX;
 
 	u32 currSelectIndex = sdata->advCharSelectIndex_curr;
-	struct GameTracker *gGT = sdata->gGT;
-	struct PrimMem *primMem = &gGT->backBuffer->primMem;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct PrimMem *primMem = &P32_GET(struct DB *, gGT->backBuffer)->primMem;
 	s16 currCharacterID = gGarage.garageCharacterIDs[currSelectIndex];
 	struct MetaDataCHAR *MDC = &data.MetaDataCharacters[currCharacterID];
 	int nameIndex = MDC->name_LNG_long;
@@ -234,9 +234,9 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 		statBarPosX = 393;
 	}
 
-	DecalFont_DrawLine(sdata->lngStrings[LNG_SPEED], statNamePosX, GARAGE_STAT_NAME_SPEED_Y, FONT_BIG, JUSTIFY_RIGHT | ORANGE_RED);
-	DecalFont_DrawLine(sdata->lngStrings[LNG_ACCEL], statNamePosX, GARAGE_STAT_NAME_ACCEL_Y, FONT_BIG, JUSTIFY_RIGHT | LIME_GREEN);
-	DecalFont_DrawLine(sdata->lngStrings[LNG_TURN], statNamePosX, GARAGE_STAT_NAME_TURN_Y, FONT_BIG, JUSTIFY_RIGHT | BLUE);
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_SPEED]), statNamePosX, GARAGE_STAT_NAME_SPEED_Y, FONT_BIG, JUSTIFY_RIGHT | ORANGE_RED);
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_ACCEL]), statNamePosX, GARAGE_STAT_NAME_ACCEL_Y, FONT_BIG, JUSTIFY_RIGHT | LIME_GREEN);
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_TURN]), statNamePosX, GARAGE_STAT_NAME_TURN_Y, FONT_BIG, JUSTIFY_RIGHT | BLUE);
 
 	int engineID = statEngineID;
 
@@ -269,7 +269,7 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 	u16 statBarShadows_Y = GARAGE_STAT_BAR_SHADOW_Y;
 
 	// Draw class name
-	DecalFont_DrawLine(sdata->lngStrings[gGarage.classStringIDs[classStringIndex]], classNamePosX, GARAGE_CLASS_NAME_Y, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[gGarage.classStringIDs[classStringIndex]]), classNamePosX, GARAGE_CLASS_NAME_Y, FONT_BIG, (JUSTIFY_CENTER | ORANGE));
 
 	// bar length (animated)
 
@@ -291,7 +291,7 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 		r.h = GARAGE_STAT_BAR_HEIGHT;
 
 		// outline color white at 0x800b7780
-		CTR_Box_DrawWireBox(&r, &white, gGT->pushBuffer_UI.ptrOT, primMem);
+		CTR_Box_DrawWireBox(&r, &white, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), primMem);
 
 		// bar shadows
 		r.x = statBarPosX + 1;
@@ -300,7 +300,7 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 		r.h = GARAGE_STAT_BAR_SHADOW_HEIGHT;
 
 		// outline color black (shadows)
-		CTR_Box_DrawWireBox(&r, &black, gGT->pushBuffer_UI.ptrOT, primMem);
+		CTR_Box_DrawWireBox(&r, &black, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), primMem);
 
 		int segmentLen = GARAGE_STAT_BAR_SEGMENT_WIDTH;
 		int segmentStart = 0;
@@ -327,15 +327,15 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 			if (segmentStart + currSegmentLen <= *statBarLength)
 			{
 				// primMem curr
-				POLY_G4 *p = primMem->cursor;
+				POLY_G4 *p = P32_GET(void *, primMem->cursor);
 
 				// quit if prim mem runs out
-				if (primMem->end < (void *)p)
+				if (P32_GET(void *, primMem->end) < (void *)p)
 				{
 					return;
 				}
 
-				primMem->cursor = p + 1;
+				P32_SET(primMem->cursor, p + 1);
 
 				// color data
 				CtrGpu_WriteColorCode(&p->r0, barColor[0] | GARAGE_STAT_BAR_POLY_G4_COLOR_CODE);
@@ -362,7 +362,7 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 				p->x3 = segmentRightX;
 				p->y3 = statBarEnd_Y;
 
-				addPolyG4(gGT->pushBuffer_UI.ptrOT, p);
+				addPolyG4(P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), p);
 			}
 
 			segmentStart += segmentLen;
@@ -399,7 +399,7 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 
 	for (int i = 0; i < 3; i++)
 	{
-		int classWidth = DecalFont_GetLineWidth(sdata->lngStrings[gGarage.classStringIDs[i]], FONT_BIG);
+		int classWidth = DecalFont_GetLineWidth(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[gGarage.classStringIDs[i]]), FONT_BIG);
 		int classLeft = classNamePosX - (classWidth >> 1);
 		int classRight = classLeft + classWidth;
 
@@ -412,7 +412,7 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 	const int statStringIDs[3] = {LNG_SPEED, LNG_ACCEL, LNG_TURN};
 	for (int i = 0; i < 3; i++)
 	{
-		int statWidth = DecalFont_GetLineWidth(sdata->lngStrings[statStringIDs[i]], FONT_BIG);
+		int statWidth = DecalFont_GetLineWidth(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[statStringIDs[i]]), FONT_BIG);
 		int statLeft = (int)statNamePosX - statWidth;
 
 		if (statLeft < boxLeft)
@@ -476,7 +476,7 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 	r.h = GARAGE_STAT_BOX_HEIGHT + (showEngineSelector ? 18 : 0);
 
 	// Draw 2D Menu rectangle background
-	RECTMENU_DrawInnerRect(&r, 4, gGT->backBuffer->otMem.uiOT);
+	RECTMENU_DrawInnerRect(&r, 4, P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT));
 
 	char *name = sdata->lngStrings[nameIndex];
 #ifdef CTR_NATIVE
@@ -494,7 +494,7 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 	{
 		DecalHUD_Arrow2D(iconPtrArray[GARAGE_CHARACTER_ARROW_ICON_INDEX], arrowPos[i], arrowY,
 
-		                 primMem, gGT->pushBuffer_UI.ptrOT,
+		                 primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT),
 
 		                 arrowColors[0], arrowColors[1], arrowColors[2], arrowColors[3],
 
@@ -612,7 +612,7 @@ void CS_Garage_MenuProc(struct RectMenu *menu)
 				if (gGarage.boolSelected == 1)
 				{
 					// set desiredMenu to OSK (on-screen keyboard)
-					sdata->ptrDesiredMenu = &data.menuSubmitName;
+					P32_SET(sdata->ptrDesiredMenu, &data.menuSubmitName);
 
 					data.characterIDs[0] = gGarage.garageCharacterIDs[currSelectIndex];
 					sdata->advProgress.characterID = data.characterIDs[0];
@@ -698,7 +698,7 @@ update_garage_camera:
 		    (GARAGE_OSK_DELAY_FRAMES <= gGarage.delayOneSecond) || ((gGT->gameMode2 & GARAGE_OSK) != 0))
 		{
 			// set desiredMenu to OSK (on-screen keyboard)
-			sdata->ptrDesiredMenu = &data.menuSubmitName;
+			P32_SET(sdata->ptrDesiredMenu, &data.menuSubmitName);
 
 			data.characterIDs[0] = gGarage.garageCharacterIDs[currSelectIndex];
 			sdata->advProgress.characterID = data.characterIDs[0];
@@ -713,7 +713,7 @@ update_garage_camera:
 	}
 
 #ifdef CTR_NATIVE
-	if (sdata->ptrDesiredMenu == &data.menuSubmitName)
+	if (P32_GET(struct RectMenu *, sdata->ptrDesiredMenu) == &data.menuSubmitName)
 	{
 		// NOTE(aalhendi): PC-only keyboard shim; retail gamepad flow above stays unchanged.
 		// flush async key state buffer. If not, tapping Enter "before" picking a garage character,
@@ -795,7 +795,7 @@ struct RectMenu *CS_Garage_GetMenuPtr(void)
 void CS_Garage_Init(void)
 {
 	// go to 3D character selection
-	sdata->ptrActiveMenu = &gGarage.menuGarage;
+	P32_SET(sdata->ptrActiveMenu, &gGarage.menuGarage);
 
 	gGarage.menuGarage.state &= ~(ONLY_DRAW_TITLE);
 

@@ -594,7 +594,7 @@ enum
 /* Generated from assets/bigfile/overlays/233_Threads_Cutscene.bin. */
 /* Embedded retail pointer words are translated by native opcode dispatch. */
 
-const struct OverlayRDATA_233 R233 =
+CTR_P32_MUTABLE struct OverlayRDATA_233 R233 =
     {
         .s_spawn = "spawn",
         .s_g_dancer = "g-dancer",
@@ -945,28 +945,28 @@ const struct OverlayRDATA_233 R233 =
         },
         .particleConfigs =
             {
-                {.emitter = (struct ParticleEmitter *)&R233.particleEmitterData[0],
+                {.emitter = P32_DEFER((struct ParticleEmitter *)&R233.particleEmitterData[0]),
                  .meta = {.iconGroupIndex = 1, .frameOffset = 0, .count = 3, .flags = 1},
                  .spawn = {.modelDelta = 0}},
-                {.emitter = (struct ParticleEmitter *)&R233.particleEmitterData[10],
+                {.emitter = P32_DEFER((struct ParticleEmitter *)&R233.particleEmitterData[10]),
                  .meta = {.iconGroupIndex = 1, .frameOffset = 0, .count = 1, .flags = 0},
                  .spawn = {.modelDelta = 0}},
-                {.emitter = (struct ParticleEmitter *)&R233.particleEmitterData[20],
+                {.emitter = P32_DEFER((struct ParticleEmitter *)&R233.particleEmitterData[20]),
                  .meta = {.iconGroupIndex = 1, .frameOffset = 0, .count = 1, .flags = 0},
                  .spawn = {.modelDelta = 2}},
-                {.emitter = (struct ParticleEmitter *)&R233.particleEmitterData[28],
+                {.emitter = P32_DEFER((struct ParticleEmitter *)&R233.particleEmitterData[28]),
                  .meta = {.iconGroupIndex = 1, .frameOffset = 0, .count = 2, .flags = 1},
                  .spawn = {.modelDelta = 0}},
-                {.emitter = (struct ParticleEmitter *)&R233.particleEmitterData[28],
+                {.emitter = P32_DEFER((struct ParticleEmitter *)&R233.particleEmitterData[28]),
                  .meta = {.iconGroupIndex = 1, .frameOffset = 1, .count = 2, .flags = 0},
                  .spawn = {.modelDelta = 0}},
-                {.emitter = (struct ParticleEmitter *)&R233.particleEmitterData[38],
+                {.emitter = P32_DEFER((struct ParticleEmitter *)&R233.particleEmitterData[38]),
                  .meta = {.iconGroupIndex = 1, .frameOffset = 0, .count = 1, .flags = 0},
                  .spawn = {.modelDelta = 2}},
-                {.emitter = (struct ParticleEmitter *)&R233.particleEmitterData[46],
+                {.emitter = P32_DEFER((struct ParticleEmitter *)&R233.particleEmitterData[46]),
                  .meta = {.iconGroupIndex = 1, .frameOffset = 0, .count = 1, .flags = 0},
                  .spawn = {.modelDelta = 2}},
-                {.emitter = (struct ParticleEmitter *)&R233.particleEmitterData[54],
+                {.emitter = P32_DEFER((struct ParticleEmitter *)&R233.particleEmitterData[54]),
                  .meta = {.iconGroupIndex = 1, .frameOffset = 2, .count = 10, .flags = 0},
                  .spawn = {.modelDelta = -2}},
             },
@@ -2870,158 +2870,158 @@ const struct OverlayRDATA_233 R233 =
         },
         .danceFirstScripts =
             {
-                (char *)(R233.script_tawnaCredits + 0x30),
-                (char *)(R233.script_tawnaCredits + 0x2bc),
-                (char *)(R233.script_tawnaCredits + 0x338),
-                (char *)(R233.script_tawnaCredits + 0x424),
-                (char *)(R233.script_tawnaCredits + 0x47c),
-                (char *)(R233.script_tawnaCredits + 0x748),
-                (char *)(R233.script_tawnaCredits + 0x81c),
-                (char *)(R233.script_tawnaCredits + 0x8ec),
-                (char *)(R233.script_tawnaCredits + 0xa90),
-                (char *)(R233.script_tawnaCredits + 0xb2c),
-                (char *)(R233.script_tawnaCredits + 0xc4c),
-                (char *)(R233.script_tawnaCredits + 0xd00),
-                (char *)(R233.script_tawnaCredits + 0x15e0),
-                (char *)(R233.script_tawnaCredits + 0xdcc),
-                (char *)(R233.script_tawnaCredits + 0x1458),
-                (char *)R233.script_default,
+                P32_DEFER((char *)(R233.script_tawnaCredits + 0x30)),
+                P32_DEFER((char *)(R233.script_tawnaCredits + 0x2bc)),
+                P32_DEFER((char *)(R233.script_tawnaCredits + 0x338)),
+                P32_DEFER((char *)(R233.script_tawnaCredits + 0x424)),
+                P32_DEFER((char *)(R233.script_tawnaCredits + 0x47c)),
+                P32_DEFER((char *)(R233.script_tawnaCredits + 0x748)),
+                P32_DEFER((char *)(R233.script_tawnaCredits + 0x81c)),
+                P32_DEFER((char *)(R233.script_tawnaCredits + 0x8ec)),
+                P32_DEFER((char *)(R233.script_tawnaCredits + 0xa90)),
+                P32_DEFER((char *)(R233.script_tawnaCredits + 0xb2c)),
+                P32_DEFER((char *)(R233.script_tawnaCredits + 0xc4c)),
+                P32_DEFER((char *)(R233.script_tawnaCredits + 0xd00)),
+                P32_DEFER((char *)(R233.script_tawnaCredits + 0x15e0)),
+                P32_DEFER((char *)(R233.script_tawnaCredits + 0xdcc)),
+                P32_DEFER((char *)(R233.script_tawnaCredits + 0x1458)),
+                P32_DEFER((char *)R233.script_default),
             },
         .danceOtherScripts =
             {
-                (char *)R233.danceOtherOpcodeData,
-                (char *)(R233.danceOtherOpcodeData + 0x30),
-                (char *)(R233.danceOtherOpcodeData + 0xbc),
-                (char *)(R233.danceOtherOpcodeData + 0xf0),
-                (char *)(R233.danceOtherOpcodeData + 0x170),
-                (char *)(R233.danceOtherOpcodeData + 0x200),
-                (char *)(R233.danceOtherOpcodeData + 0x260),
-                (char *)(R233.danceOtherOpcodeData + 0x2c4),
-                (char *)(R233.danceOtherOpcodeData + 0x2ec),
-                (char *)(R233.danceOtherOpcodeData + 0x350),
-                (char *)(R233.danceOtherOpcodeData + 0x3b4),
-                (char *)(R233.danceOtherOpcodeData + 0x3cc),
-                (char *)(R233.danceOtherOpcodeData + 0x56c),
-                (char *)(R233.danceOtherOpcodeData + 0x5d4),
-                (char *)(R233.danceOtherOpcodeData + 0x1128),
-                (char *)(R233.danceOtherOpcodeData + 0x1174),
+                P32_DEFER((char *)R233.danceOtherOpcodeData),
+                P32_DEFER((char *)(R233.danceOtherOpcodeData + 0x30)),
+                P32_DEFER((char *)(R233.danceOtherOpcodeData + 0xbc)),
+                P32_DEFER((char *)(R233.danceOtherOpcodeData + 0xf0)),
+                P32_DEFER((char *)(R233.danceOtherOpcodeData + 0x170)),
+                P32_DEFER((char *)(R233.danceOtherOpcodeData + 0x200)),
+                P32_DEFER((char *)(R233.danceOtherOpcodeData + 0x260)),
+                P32_DEFER((char *)(R233.danceOtherOpcodeData + 0x2c4)),
+                P32_DEFER((char *)(R233.danceOtherOpcodeData + 0x2ec)),
+                P32_DEFER((char *)(R233.danceOtherOpcodeData + 0x350)),
+                P32_DEFER((char *)(R233.danceOtherOpcodeData + 0x3b4)),
+                P32_DEFER((char *)(R233.danceOtherOpcodeData + 0x3cc)),
+                P32_DEFER((char *)(R233.danceOtherOpcodeData + 0x56c)),
+                P32_DEFER((char *)(R233.danceOtherOpcodeData + 0x5d4)),
+                P32_DEFER((char *)(R233.danceOtherOpcodeData + 0x1128)),
+                P32_DEFER((char *)(R233.danceOtherOpcodeData + 0x1174)),
             },
         .introModelScripts =
             {
-                (char *)R233.introModelOpcodeData,
-                (char *)(R233.introModelOpcodeData + 0x30),
-                (char *)(R233.introModelOpcodeData + 0xb4),
-                (char *)(R233.introModelOpcodeData + 0xe8),
-                (char *)R233.script_default,
-                (char *)(R233.introModelOpcodeData + 0x18c),
-                (char *)(R233.introModelOpcodeData + 0x2a0),
-                (char *)(R233.script_dingofire + 0x10),
-                (char *)(R233.introModelOpcodeData + 0x15c),
-                (char *)(R233.introModelOpcodeData + 0x1e8),
-                (char *)R233.script_default,
-                (char *)R233.script_default,
-                (char *)R233.script_default,
-                (char *)(R233.introModelOpcodeData + 0x224),
-                (char *)(R233.introModelOpcodeData + 0x274),
-                (char *)(R233.introModelOpcodeData + 0x2c4),
+                P32_DEFER((char *)R233.introModelOpcodeData),
+                P32_DEFER((char *)(R233.introModelOpcodeData + 0x30)),
+                P32_DEFER((char *)(R233.introModelOpcodeData + 0xb4)),
+                P32_DEFER((char *)(R233.introModelOpcodeData + 0xe8)),
+                P32_DEFER((char *)R233.script_default),
+                P32_DEFER((char *)(R233.introModelOpcodeData + 0x18c)),
+                P32_DEFER((char *)(R233.introModelOpcodeData + 0x2a0)),
+                P32_DEFER((char *)(R233.script_dingofire + 0x10)),
+                P32_DEFER((char *)(R233.introModelOpcodeData + 0x15c)),
+                P32_DEFER((char *)(R233.introModelOpcodeData + 0x1e8)),
+                P32_DEFER((char *)R233.script_default),
+                P32_DEFER((char *)R233.script_default),
+                P32_DEFER((char *)R233.script_default),
+                P32_DEFER((char *)(R233.introModelOpcodeData + 0x224)),
+                P32_DEFER((char *)(R233.introModelOpcodeData + 0x274)),
+                P32_DEFER((char *)(R233.introModelOpcodeData + 0x2c4)),
             },
         .introCutsceneOpcodes =
             {
-                (char *)R233.introCutsceneOpcodeData,
-                (char *)(R233.introCutsceneOpcodeData + 0x70),
-                (char *)(R233.introCutsceneOpcodeData + 0x90),
-                (char *)(R233.introCutsceneOpcodeData + 0xa4),
-                (char *)(R233.introCutsceneOpcodeData + 0xc0),
-                (char *)(R233.introCutsceneOpcodeData + 0xd4),
-                (char *)(R233.introCutsceneOpcodeData + 0x44),
-                (char *)(R233.introCutsceneOpcodeData + 0xf0),
-                (char *)(R233.introCutsceneOpcodeData + 0x68),
+                P32_DEFER((char *)R233.introCutsceneOpcodeData),
+                P32_DEFER((char *)(R233.introCutsceneOpcodeData + 0x70)),
+                P32_DEFER((char *)(R233.introCutsceneOpcodeData + 0x90)),
+                P32_DEFER((char *)(R233.introCutsceneOpcodeData + 0xa4)),
+                P32_DEFER((char *)(R233.introCutsceneOpcodeData + 0xc0)),
+                P32_DEFER((char *)(R233.introCutsceneOpcodeData + 0xd4)),
+                P32_DEFER((char *)(R233.introCutsceneOpcodeData + 0x44)),
+                P32_DEFER((char *)(R233.introCutsceneOpcodeData + 0xf0)),
+                P32_DEFER((char *)(R233.introCutsceneOpcodeData + 0x68)),
             },
         .creditsCutsceneOpcodes =
             {
-                (char *)R233.creditsCutsceneOpcodeData,           (char *)(R233.creditsCutsceneOpcodeData + 0x18),
-                (char *)(R233.creditsCutsceneOpcodeData + 0x30),  (char *)(R233.creditsCutsceneOpcodeData + 0x48),
-                (char *)(R233.creditsCutsceneOpcodeData + 0x60),  (char *)(R233.creditsCutsceneOpcodeData + 0x78),
-                (char *)(R233.creditsCutsceneOpcodeData + 0x90),  (char *)(R233.creditsCutsceneOpcodeData + 0xa8),
-                (char *)(R233.creditsCutsceneOpcodeData + 0xc0),  (char *)(R233.creditsCutsceneOpcodeData + 0xd8),
-                (char *)(R233.creditsCutsceneOpcodeData + 0xf0),  (char *)(R233.creditsCutsceneOpcodeData + 0x108),
-                (char *)(R233.creditsCutsceneOpcodeData + 0x120), (char *)(R233.creditsCutsceneOpcodeData + 0x138),
-                (char *)(R233.creditsCutsceneOpcodeData + 0x150), (char *)(R233.creditsCutsceneOpcodeData + 0x168),
-                (char *)(R233.creditsCutsceneOpcodeData + 0x180), (char *)(R233.creditsCutsceneOpcodeData + 0x198),
-                (char *)(R233.creditsCutsceneOpcodeData + 0x1b0), (char *)(R233.creditsCutsceneOpcodeData + 0x1c8),
+                P32_DEFER((char *)R233.creditsCutsceneOpcodeData),           P32_DEFER((char *)(R233.creditsCutsceneOpcodeData + 0x18)),
+                P32_DEFER((char *)(R233.creditsCutsceneOpcodeData + 0x30)),  P32_DEFER((char *)(R233.creditsCutsceneOpcodeData + 0x48)),
+                P32_DEFER((char *)(R233.creditsCutsceneOpcodeData + 0x60)),  P32_DEFER((char *)(R233.creditsCutsceneOpcodeData + 0x78)),
+                P32_DEFER((char *)(R233.creditsCutsceneOpcodeData + 0x90)),  P32_DEFER((char *)(R233.creditsCutsceneOpcodeData + 0xa8)),
+                P32_DEFER((char *)(R233.creditsCutsceneOpcodeData + 0xc0)),  P32_DEFER((char *)(R233.creditsCutsceneOpcodeData + 0xd8)),
+                P32_DEFER((char *)(R233.creditsCutsceneOpcodeData + 0xf0)),  P32_DEFER((char *)(R233.creditsCutsceneOpcodeData + 0x108)),
+                P32_DEFER((char *)(R233.creditsCutsceneOpcodeData + 0x120)), P32_DEFER((char *)(R233.creditsCutsceneOpcodeData + 0x138)),
+                P32_DEFER((char *)(R233.creditsCutsceneOpcodeData + 0x150)), P32_DEFER((char *)(R233.creditsCutsceneOpcodeData + 0x168)),
+                P32_DEFER((char *)(R233.creditsCutsceneOpcodeData + 0x180)), P32_DEFER((char *)(R233.creditsCutsceneOpcodeData + 0x198)),
+                P32_DEFER((char *)(R233.creditsCutsceneOpcodeData + 0x1b0)), P32_DEFER((char *)(R233.creditsCutsceneOpcodeData + 0x1c8)),
             },
         .boxModelScripts =
             {
-                (char *)R233.boxAndAdvCharSelectOpcodeData,
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x110),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x134),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x158),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x274),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x298),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x28),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x2bc),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x50),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x2ec),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x314),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x330),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x364),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x3a0),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x3e8),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x330),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x330),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x418),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x448),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x78),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xa0),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xd8),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x478),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x488),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x4b4),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x67c),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x7a8),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x920),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xa30),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xbc4),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xd48),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xe74),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xf04),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xf30),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xf50),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xf78),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xfa0),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xfdc),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x1024),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x1050),
-                NULL,
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x107c),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x10a4),
+                P32_DEFER((char *)R233.boxAndAdvCharSelectOpcodeData),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x110)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x134)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x158)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x274)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x298)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x28)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x2bc)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x50)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x2ec)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x314)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x330)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x364)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x3a0)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x3e8)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x330)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x330)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x418)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x448)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x78)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0xa0)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0xd8)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x478)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x488)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x4b4)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x67c)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x7a8)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x920)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0xa30)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0xbc4)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0xd48)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0xe74)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0xf04)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0xf30)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0xf50)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0xf78)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0xfa0)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0xfdc)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x1024)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x1050)),
+                P32_DEFER(NULL),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x107c)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x10a4)),
             },
         .advCharSelectSelectOpcodes =
             {
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x62c),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x760),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x8b8),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x9f4),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xb74),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xd10),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xe3c),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xecc),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x62c)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x760)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x8b8)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x9f4)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0xb74)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0xd10)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0xe3c)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0xecc)),
             },
         .advCharSelectDeselectOpcodes =
             {
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x66c),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x79c),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x914),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xa24),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xbb8),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xd3c),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xe68),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xef8),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x66c)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x79c)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x914)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0xa24)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0xbb8)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0xd3c)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0xe68)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0xef8)),
             },
         .boxAndAdvCharSelectExtraOpcodes =
             {
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x478),
-                (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x488),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x478)),
+                P32_DEFER((char *)(R233.boxAndAdvCharSelectOpcodeData + 0x488)),
             },
         .cs_initMatrixData = {
             /* 0xa180 */ {{0, 173, 0, 0}, {{-121, 0, -126, 0, 5324, 6963, 5324, 0, 0, 0}}, {0, 0}},
@@ -3217,10 +3217,10 @@ const struct OverlayRDATA_233 R233 =
         },
         .cs_initMatrixTable =
             {
-                {.data = (struct CsInitMatrixEntry *)&R233.cs_initMatrixData[0], .count = 41},
-                {.data = (struct CsInitMatrixEntry *)&R233.cs_initMatrixData[41], .count = 45},
-                {.data = (struct CsInitMatrixEntry *)&R233.cs_initMatrixData[86], .count = 49},
-                {.data = (struct CsInitMatrixEntry *)&R233.cs_initMatrixData[135], .count = 55},
+                {.data = P32_DEFER((struct CsInitMatrixEntry *)&R233.cs_initMatrixData[0]), .count = 41},
+                {.data = P32_DEFER((struct CsInitMatrixEntry *)&R233.cs_initMatrixData[41]), .count = 45},
+                {.data = P32_DEFER((struct CsInitMatrixEntry *)&R233.cs_initMatrixData[86]), .count = 49},
+                {.data = P32_DEFER((struct CsInitMatrixEntry *)&R233.cs_initMatrixData[135]), .count = 55},
             },
         .introClearBoxColor = {.r = 0x40, .g = 0x40, .b = 0x60},
         .introClearBoxRect = {.x = 0, .y = 0, .w = 0x200, .h = 0xd8},
@@ -3232,7 +3232,7 @@ const struct OverlayRDATA_233 R233 =
                     .headFile = 458,
                     .bodyFile = 478,
                     .modelIndex_unused = 173,
-                    .opcode = (char *)(R233.bossOpcodeData + 0x254),
+                    .opcode = P32_DEFER((char *)(R233.bossOpcodeData + 0x254)),
                     .camPos = {{-13585, 881, 15641}},
                     .camRot = {{81, 737, 0}},
                     .bossPos = {{-14255, 682, 15198}},
@@ -3243,7 +3243,7 @@ const struct OverlayRDATA_233 R233 =
                     .headFile = 464,
                     .bodyFile = 474,
                     .modelIndex_unused = 169,
-                    .opcode = (char *)(R233.bossOpcodeData + 0x30),
+                    .opcode = P32_DEFER((char *)(R233.bossOpcodeData + 0x30)),
                     .camPos = {{-14277, 741, 15619}},
                     .camRot = {{151, -162, 0}},
                     .bossPos = {{-14191, 682, 15134}},
@@ -3254,7 +3254,7 @@ const struct OverlayRDATA_233 R233 =
                     .headFile = 450,
                     .bodyFile = 470,
                     .modelIndex_unused = 171,
-                    .opcode = (char *)(R233.bossOpcodeData + 0xc4),
+                    .opcode = P32_DEFER((char *)(R233.bossOpcodeData + 0xc4)),
                     .camPos = {{-17590, 589, -10427}},
                     .camRot = {{111, -1611, 0}},
                     .bossPos = {{-17146, 417, -10034}},
@@ -3265,7 +3265,7 @@ const struct OverlayRDATA_233 R233 =
                     .headFile = 460,
                     .bodyFile = 470,
                     .modelIndex_unused = 171,
-                    .opcode = (char *)(R233.bossOpcodeData + 0x154),
+                    .opcode = P32_DEFER((char *)(R233.bossOpcodeData + 0x154)),
                     .camPos = {{-17590, 589, -10427}},
                     .camRot = {{111, -1611, 0}},
                     .bossPos = {{-17146, 417, -10034}},
@@ -3276,7 +3276,7 @@ const struct OverlayRDATA_233 R233 =
                     .headFile = 456,
                     .bodyFile = 476,
                     .modelIndex_unused = 170,
-                    .opcode = (char *)(R233.bossOpcodeData + 0x64),
+                    .opcode = P32_DEFER((char *)(R233.bossOpcodeData + 0x64)),
                     .camPos = {{5959, 1676, 11714}},
                     .camRot = {{136, 1295, 0}},
                     .bossPos = {{5528, 1535, 11838}},
@@ -3287,7 +3287,7 @@ const struct OverlayRDATA_233 R233 =
                     .headFile = 466,
                     .bodyFile = 476,
                     .modelIndex_unused = 170,
-                    .opcode = (char *)(R233.bossOpcodeData + 0x94),
+                    .opcode = P32_DEFER((char *)(R233.bossOpcodeData + 0x94)),
                     .camPos = {{5959, 1676, 11714}},
                     .camRot = {{136, 1295, 0}},
                     .bossPos = {{5528, 1535, 11838}},
@@ -3298,7 +3298,7 @@ const struct OverlayRDATA_233 R233 =
                     .headFile = 452,
                     .bodyFile = 472,
                     .modelIndex_unused = 172,
-                    .opcode = (char *)(R233.bossOpcodeData + 0x1f4),
+                    .opcode = P32_DEFER((char *)(R233.bossOpcodeData + 0x1f4)),
                     .camPos = {{6598, 256, -2800}},
                     .camRot = {{48, -1385, 0}},
                     .bossPos = {{7020, 25, -2549}},
@@ -3309,7 +3309,7 @@ const struct OverlayRDATA_233 R233 =
                     .headFile = 462,
                     .bodyFile = 472,
                     .modelIndex_unused = 172,
-                    .opcode = (char *)(R233.bossOpcodeData + 0x224),
+                    .opcode = P32_DEFER((char *)(R233.bossOpcodeData + 0x224)),
                     .camPos = {{6598, 256, -2800}},
                     .camRot = {{48, -1385, 0}},
                     .bossPos = {{7020, 25, -2549}},
@@ -3320,7 +3320,7 @@ const struct OverlayRDATA_233 R233 =
                     .headFile = 454,
                     .bodyFile = 474,
                     .modelIndex_unused = 169,
-                    .opcode = (char *)R233.bossOpcodeData,
+                    .opcode = P32_DEFER((char *)R233.bossOpcodeData),
                     .camPos = {{533, 869, -20688}},
                     .camRot = {{187, -733, 0}},
                     .bossPos = {{1024, 768, -20928}},
@@ -3331,7 +3331,7 @@ const struct OverlayRDATA_233 R233 =
                     .headFile = 468,
                     .bodyFile = 478,
                     .modelIndex_unused = 173,
-                    .opcode = (char *)(R233.bossOpcodeData + 0x284),
+                    .opcode = P32_DEFER((char *)(R233.bossOpcodeData + 0x284)),
                     .camPos = {{-13585, 881, 15641}},
                     .camRot = {{81, 737, 0}},
                     .bossPos = {{-14255, 682, 15198}},
@@ -3342,7 +3342,7 @@ const struct OverlayRDATA_233 R233 =
                     .headFile = 468,
                     .bodyFile = 478,
                     .modelIndex_unused = 173,
-                    .opcode = (char *)(R233.bossOpcodeData + 0x284),
+                    .opcode = P32_DEFER((char *)(R233.bossOpcodeData + 0x284)),
                     .camPos = {{-17590, 589, -10427}},
                     .camRot = {{111, -1611, 0}},
                     .bossPos = {{-17146, 417, -10034}},
@@ -3353,7 +3353,7 @@ const struct OverlayRDATA_233 R233 =
                     .headFile = 468,
                     .bodyFile = 478,
                     .modelIndex_unused = 173,
-                    .opcode = (char *)(R233.bossOpcodeData + 0x284),
+                    .opcode = P32_DEFER((char *)(R233.bossOpcodeData + 0x284)),
                     .camPos = {{5959, 1676, 11714}},
                     .camRot = {{136, 1295, 0}},
                     .bossPos = {{5528, 1535, 11838}},
@@ -3364,7 +3364,7 @@ const struct OverlayRDATA_233 R233 =
                     .headFile = 468,
                     .bodyFile = 478,
                     .modelIndex_unused = 173,
-                    .opcode = (char *)(R233.bossOpcodeData + 0x284),
+                    .opcode = P32_DEFER((char *)(R233.bossOpcodeData + 0x284)),
                     .camPos = {{6598, 256, -2800}},
                     .camRot = {{48, -1385, 0}},
                     .bossPos = {{7020, 25, -2549}},
@@ -3375,7 +3375,7 @@ const struct OverlayRDATA_233 R233 =
                     .headFile = 468,
                     .bodyFile = 478,
                     .modelIndex_unused = 173,
-                    .opcode = (char *)(R233.bossOpcodeData + 0x284),
+                    .opcode = P32_DEFER((char *)(R233.bossOpcodeData + 0x284)),
                     .camPos = {{533, 869, -20688}},
                     .camRot = {{187, -733, 0}},
                     .bossPos = {{1024, 768, -20928}},
@@ -3383,6 +3383,174 @@ const struct OverlayRDATA_233 R233 =
                 },
             },
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(R233)
+{
+	P32_SET(R233.particleConfigs[0].emitter, (struct ParticleEmitter *)&R233.particleEmitterData[0]);
+	P32_SET(R233.particleConfigs[1].emitter, (struct ParticleEmitter *)&R233.particleEmitterData[10]);
+	P32_SET(R233.particleConfigs[2].emitter, (struct ParticleEmitter *)&R233.particleEmitterData[20]);
+	P32_SET(R233.particleConfigs[3].emitter, (struct ParticleEmitter *)&R233.particleEmitterData[28]);
+	P32_SET(R233.particleConfigs[4].emitter, (struct ParticleEmitter *)&R233.particleEmitterData[28]);
+	P32_SET(R233.particleConfigs[5].emitter, (struct ParticleEmitter *)&R233.particleEmitterData[38]);
+	P32_SET(R233.particleConfigs[6].emitter, (struct ParticleEmitter *)&R233.particleEmitterData[46]);
+	P32_SET(R233.particleConfigs[7].emitter, (struct ParticleEmitter *)&R233.particleEmitterData[54]);
+	P32_SET(R233.danceFirstScripts[0], (char *)(R233.script_tawnaCredits + 0x30));
+	P32_SET(R233.danceFirstScripts[1], (char *)(R233.script_tawnaCredits + 0x2bc));
+	P32_SET(R233.danceFirstScripts[2], (char *)(R233.script_tawnaCredits + 0x338));
+	P32_SET(R233.danceFirstScripts[3], (char *)(R233.script_tawnaCredits + 0x424));
+	P32_SET(R233.danceFirstScripts[4], (char *)(R233.script_tawnaCredits + 0x47c));
+	P32_SET(R233.danceFirstScripts[5], (char *)(R233.script_tawnaCredits + 0x748));
+	P32_SET(R233.danceFirstScripts[6], (char *)(R233.script_tawnaCredits + 0x81c));
+	P32_SET(R233.danceFirstScripts[7], (char *)(R233.script_tawnaCredits + 0x8ec));
+	P32_SET(R233.danceFirstScripts[8], (char *)(R233.script_tawnaCredits + 0xa90));
+	P32_SET(R233.danceFirstScripts[9], (char *)(R233.script_tawnaCredits + 0xb2c));
+	P32_SET(R233.danceFirstScripts[10], (char *)(R233.script_tawnaCredits + 0xc4c));
+	P32_SET(R233.danceFirstScripts[11], (char *)(R233.script_tawnaCredits + 0xd00));
+	P32_SET(R233.danceFirstScripts[12], (char *)(R233.script_tawnaCredits + 0x15e0));
+	P32_SET(R233.danceFirstScripts[13], (char *)(R233.script_tawnaCredits + 0xdcc));
+	P32_SET(R233.danceFirstScripts[14], (char *)(R233.script_tawnaCredits + 0x1458));
+	P32_SET(R233.danceFirstScripts[15], (char *)R233.script_default);
+	P32_SET(R233.danceOtherScripts[0], (char *)R233.danceOtherOpcodeData);
+	P32_SET(R233.danceOtherScripts[1], (char *)(R233.danceOtherOpcodeData + 0x30));
+	P32_SET(R233.danceOtherScripts[2], (char *)(R233.danceOtherOpcodeData + 0xbc));
+	P32_SET(R233.danceOtherScripts[3], (char *)(R233.danceOtherOpcodeData + 0xf0));
+	P32_SET(R233.danceOtherScripts[4], (char *)(R233.danceOtherOpcodeData + 0x170));
+	P32_SET(R233.danceOtherScripts[5], (char *)(R233.danceOtherOpcodeData + 0x200));
+	P32_SET(R233.danceOtherScripts[6], (char *)(R233.danceOtherOpcodeData + 0x260));
+	P32_SET(R233.danceOtherScripts[7], (char *)(R233.danceOtherOpcodeData + 0x2c4));
+	P32_SET(R233.danceOtherScripts[8], (char *)(R233.danceOtherOpcodeData + 0x2ec));
+	P32_SET(R233.danceOtherScripts[9], (char *)(R233.danceOtherOpcodeData + 0x350));
+	P32_SET(R233.danceOtherScripts[10], (char *)(R233.danceOtherOpcodeData + 0x3b4));
+	P32_SET(R233.danceOtherScripts[11], (char *)(R233.danceOtherOpcodeData + 0x3cc));
+	P32_SET(R233.danceOtherScripts[12], (char *)(R233.danceOtherOpcodeData + 0x56c));
+	P32_SET(R233.danceOtherScripts[13], (char *)(R233.danceOtherOpcodeData + 0x5d4));
+	P32_SET(R233.danceOtherScripts[14], (char *)(R233.danceOtherOpcodeData + 0x1128));
+	P32_SET(R233.danceOtherScripts[15], (char *)(R233.danceOtherOpcodeData + 0x1174));
+	P32_SET(R233.introModelScripts[0], (char *)R233.introModelOpcodeData);
+	P32_SET(R233.introModelScripts[1], (char *)(R233.introModelOpcodeData + 0x30));
+	P32_SET(R233.introModelScripts[2], (char *)(R233.introModelOpcodeData + 0xb4));
+	P32_SET(R233.introModelScripts[3], (char *)(R233.introModelOpcodeData + 0xe8));
+	P32_SET(R233.introModelScripts[4], (char *)R233.script_default);
+	P32_SET(R233.introModelScripts[5], (char *)(R233.introModelOpcodeData + 0x18c));
+	P32_SET(R233.introModelScripts[6], (char *)(R233.introModelOpcodeData + 0x2a0));
+	P32_SET(R233.introModelScripts[7], (char *)(R233.script_dingofire + 0x10));
+	P32_SET(R233.introModelScripts[8], (char *)(R233.introModelOpcodeData + 0x15c));
+	P32_SET(R233.introModelScripts[9], (char *)(R233.introModelOpcodeData + 0x1e8));
+	P32_SET(R233.introModelScripts[10], (char *)R233.script_default);
+	P32_SET(R233.introModelScripts[11], (char *)R233.script_default);
+	P32_SET(R233.introModelScripts[12], (char *)R233.script_default);
+	P32_SET(R233.introModelScripts[13], (char *)(R233.introModelOpcodeData + 0x224));
+	P32_SET(R233.introModelScripts[14], (char *)(R233.introModelOpcodeData + 0x274));
+	P32_SET(R233.introModelScripts[15], (char *)(R233.introModelOpcodeData + 0x2c4));
+	P32_SET(R233.introCutsceneOpcodes[0], (char *)R233.introCutsceneOpcodeData);
+	P32_SET(R233.introCutsceneOpcodes[1], (char *)(R233.introCutsceneOpcodeData + 0x70));
+	P32_SET(R233.introCutsceneOpcodes[2], (char *)(R233.introCutsceneOpcodeData + 0x90));
+	P32_SET(R233.introCutsceneOpcodes[3], (char *)(R233.introCutsceneOpcodeData + 0xa4));
+	P32_SET(R233.introCutsceneOpcodes[4], (char *)(R233.introCutsceneOpcodeData + 0xc0));
+	P32_SET(R233.introCutsceneOpcodes[5], (char *)(R233.introCutsceneOpcodeData + 0xd4));
+	P32_SET(R233.introCutsceneOpcodes[6], (char *)(R233.introCutsceneOpcodeData + 0x44));
+	P32_SET(R233.introCutsceneOpcodes[7], (char *)(R233.introCutsceneOpcodeData + 0xf0));
+	P32_SET(R233.introCutsceneOpcodes[8], (char *)(R233.introCutsceneOpcodeData + 0x68));
+	P32_SET(R233.creditsCutsceneOpcodes[0], (char *)R233.creditsCutsceneOpcodeData);
+	P32_SET(R233.creditsCutsceneOpcodes[1], (char *)(R233.creditsCutsceneOpcodeData + 0x18));
+	P32_SET(R233.creditsCutsceneOpcodes[2], (char *)(R233.creditsCutsceneOpcodeData + 0x30));
+	P32_SET(R233.creditsCutsceneOpcodes[3], (char *)(R233.creditsCutsceneOpcodeData + 0x48));
+	P32_SET(R233.creditsCutsceneOpcodes[4], (char *)(R233.creditsCutsceneOpcodeData + 0x60));
+	P32_SET(R233.creditsCutsceneOpcodes[5], (char *)(R233.creditsCutsceneOpcodeData + 0x78));
+	P32_SET(R233.creditsCutsceneOpcodes[6], (char *)(R233.creditsCutsceneOpcodeData + 0x90));
+	P32_SET(R233.creditsCutsceneOpcodes[7], (char *)(R233.creditsCutsceneOpcodeData + 0xa8));
+	P32_SET(R233.creditsCutsceneOpcodes[8], (char *)(R233.creditsCutsceneOpcodeData + 0xc0));
+	P32_SET(R233.creditsCutsceneOpcodes[9], (char *)(R233.creditsCutsceneOpcodeData + 0xd8));
+	P32_SET(R233.creditsCutsceneOpcodes[10], (char *)(R233.creditsCutsceneOpcodeData + 0xf0));
+	P32_SET(R233.creditsCutsceneOpcodes[11], (char *)(R233.creditsCutsceneOpcodeData + 0x108));
+	P32_SET(R233.creditsCutsceneOpcodes[12], (char *)(R233.creditsCutsceneOpcodeData + 0x120));
+	P32_SET(R233.creditsCutsceneOpcodes[13], (char *)(R233.creditsCutsceneOpcodeData + 0x138));
+	P32_SET(R233.creditsCutsceneOpcodes[14], (char *)(R233.creditsCutsceneOpcodeData + 0x150));
+	P32_SET(R233.creditsCutsceneOpcodes[15], (char *)(R233.creditsCutsceneOpcodeData + 0x168));
+	P32_SET(R233.creditsCutsceneOpcodes[16], (char *)(R233.creditsCutsceneOpcodeData + 0x180));
+	P32_SET(R233.creditsCutsceneOpcodes[17], (char *)(R233.creditsCutsceneOpcodeData + 0x198));
+	P32_SET(R233.creditsCutsceneOpcodes[18], (char *)(R233.creditsCutsceneOpcodeData + 0x1b0));
+	P32_SET(R233.creditsCutsceneOpcodes[19], (char *)(R233.creditsCutsceneOpcodeData + 0x1c8));
+	P32_SET(R233.boxModelScripts[0], (char *)R233.boxAndAdvCharSelectOpcodeData);
+	P32_SET(R233.boxModelScripts[1], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x110));
+	P32_SET(R233.boxModelScripts[2], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x134));
+	P32_SET(R233.boxModelScripts[3], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x158));
+	P32_SET(R233.boxModelScripts[4], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x274));
+	P32_SET(R233.boxModelScripts[5], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x298));
+	P32_SET(R233.boxModelScripts[6], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x28));
+	P32_SET(R233.boxModelScripts[7], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x2bc));
+	P32_SET(R233.boxModelScripts[8], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x50));
+	P32_SET(R233.boxModelScripts[9], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x2ec));
+	P32_SET(R233.boxModelScripts[10], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x314));
+	P32_SET(R233.boxModelScripts[11], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x330));
+	P32_SET(R233.boxModelScripts[12], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x364));
+	P32_SET(R233.boxModelScripts[13], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x3a0));
+	P32_SET(R233.boxModelScripts[14], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x3e8));
+	P32_SET(R233.boxModelScripts[15], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x330));
+	P32_SET(R233.boxModelScripts[16], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x330));
+	P32_SET(R233.boxModelScripts[17], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x418));
+	P32_SET(R233.boxModelScripts[18], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x448));
+	P32_SET(R233.boxModelScripts[19], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x78));
+	P32_SET(R233.boxModelScripts[20], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xa0));
+	P32_SET(R233.boxModelScripts[21], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xd8));
+	P32_SET(R233.boxModelScripts[22], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x478));
+	P32_SET(R233.boxModelScripts[23], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x488));
+	P32_SET(R233.boxModelScripts[24], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x4b4));
+	P32_SET(R233.boxModelScripts[25], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x67c));
+	P32_SET(R233.boxModelScripts[26], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x7a8));
+	P32_SET(R233.boxModelScripts[27], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x920));
+	P32_SET(R233.boxModelScripts[28], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xa30));
+	P32_SET(R233.boxModelScripts[29], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xbc4));
+	P32_SET(R233.boxModelScripts[30], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xd48));
+	P32_SET(R233.boxModelScripts[31], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xe74));
+	P32_SET(R233.boxModelScripts[32], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xf04));
+	P32_SET(R233.boxModelScripts[33], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xf30));
+	P32_SET(R233.boxModelScripts[34], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xf50));
+	P32_SET(R233.boxModelScripts[35], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xf78));
+	P32_SET(R233.boxModelScripts[36], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xfa0));
+	P32_SET(R233.boxModelScripts[37], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xfdc));
+	P32_SET(R233.boxModelScripts[38], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x1024));
+	P32_SET(R233.boxModelScripts[39], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x1050));
+	P32_SET(R233.boxModelScripts[41], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x107c));
+	P32_SET(R233.boxModelScripts[42], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x10a4));
+	P32_SET(R233.advCharSelectSelectOpcodes[0], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x62c));
+	P32_SET(R233.advCharSelectSelectOpcodes[1], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x760));
+	P32_SET(R233.advCharSelectSelectOpcodes[2], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x8b8));
+	P32_SET(R233.advCharSelectSelectOpcodes[3], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x9f4));
+	P32_SET(R233.advCharSelectSelectOpcodes[4], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xb74));
+	P32_SET(R233.advCharSelectSelectOpcodes[5], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xd10));
+	P32_SET(R233.advCharSelectSelectOpcodes[6], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xe3c));
+	P32_SET(R233.advCharSelectSelectOpcodes[7], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xecc));
+	P32_SET(R233.advCharSelectDeselectOpcodes[0], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x66c));
+	P32_SET(R233.advCharSelectDeselectOpcodes[1], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x79c));
+	P32_SET(R233.advCharSelectDeselectOpcodes[2], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x914));
+	P32_SET(R233.advCharSelectDeselectOpcodes[3], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xa24));
+	P32_SET(R233.advCharSelectDeselectOpcodes[4], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xbb8));
+	P32_SET(R233.advCharSelectDeselectOpcodes[5], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xd3c));
+	P32_SET(R233.advCharSelectDeselectOpcodes[6], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xe68));
+	P32_SET(R233.advCharSelectDeselectOpcodes[7], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0xef8));
+	P32_SET(R233.boxAndAdvCharSelectExtraOpcodes[0], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x478));
+	P32_SET(R233.boxAndAdvCharSelectExtraOpcodes[1], (char *)(R233.boxAndAdvCharSelectOpcodeData + 0x488));
+	P32_SET(R233.cs_initMatrixTable[0].data, (struct CsInitMatrixEntry *)&R233.cs_initMatrixData[0]);
+	P32_SET(R233.cs_initMatrixTable[1].data, (struct CsInitMatrixEntry *)&R233.cs_initMatrixData[41]);
+	P32_SET(R233.cs_initMatrixTable[2].data, (struct CsInitMatrixEntry *)&R233.cs_initMatrixData[86]);
+	P32_SET(R233.cs_initMatrixTable[3].data, (struct CsInitMatrixEntry *)&R233.cs_initMatrixData[135]);
+	P32_SET(R233.bossCS[0].opcode, (char *)(R233.bossOpcodeData + 0x254));
+	P32_SET(R233.bossCS[1].opcode, (char *)(R233.bossOpcodeData + 0x30));
+	P32_SET(R233.bossCS[2].opcode, (char *)(R233.bossOpcodeData + 0xc4));
+	P32_SET(R233.bossCS[3].opcode, (char *)(R233.bossOpcodeData + 0x154));
+	P32_SET(R233.bossCS[4].opcode, (char *)(R233.bossOpcodeData + 0x64));
+	P32_SET(R233.bossCS[5].opcode, (char *)(R233.bossOpcodeData + 0x94));
+	P32_SET(R233.bossCS[6].opcode, (char *)(R233.bossOpcodeData + 0x1f4));
+	P32_SET(R233.bossCS[7].opcode, (char *)(R233.bossOpcodeData + 0x224));
+	P32_SET(R233.bossCS[8].opcode, (char *)R233.bossOpcodeData);
+	P32_SET(R233.bossCS[9].opcode, (char *)(R233.bossOpcodeData + 0x284));
+	P32_SET(R233.bossCS[10].opcode, (char *)(R233.bossOpcodeData + 0x284));
+	P32_SET(R233.bossCS[11].opcode, (char *)(R233.bossOpcodeData + 0x284));
+	P32_SET(R233.bossCS[12].opcode, (char *)(R233.bossOpcodeData + 0x284));
+	P32_SET(R233.bossCS[13].opcode, (char *)(R233.bossOpcodeData + 0x284));
+}
+#endif
 /* END OVERLAY 233 IMMUTABLE INITIAL STATE */
 
 #undef OVR233_CS_OP_SET_AUDIO_VOLUME_AT

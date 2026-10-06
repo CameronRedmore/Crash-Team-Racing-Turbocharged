@@ -24,7 +24,7 @@ void Vector_SpecLightSpin2D(struct Instance *inst, const SVec3 *rot, const SVec3
 	SVec3 view = {.x = 0, .y = 0, .z = 0x1000};
 	SVec3 viewLocal;
 	SVec3 halfVector;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	struct InstDrawPerPlayer *idpp = INST_GETIDPP(inst);
 
 	ConvertRotToMatrix_Transpose(&rotMatrix, rot);
@@ -66,7 +66,7 @@ void Vector_SpecLightSpin3D(struct Instance *inst, const SVec3 *rot, const SVec3
 	// NOTE(aalhendi): ASM-verified NTSC-U 926 0x8005741c-0x800576b8.
 	MATRIX rotMatrix;
 	SVec3 light = *lightDir;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	struct InstDrawPerPlayer *idpp = INST_GETIDPP(inst);
 
 	ConvertRotToMatrix_Transpose(&rotMatrix, rot);
@@ -108,7 +108,7 @@ void Vector_SpecLightNoSpin3D(struct Instance *inst, const SVec3 *rot, const SVe
 	MATRIX lightMatrix;
 	SVec3 light = *lightDir;
 	SVec3 lightLocal;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	struct InstDrawPerPlayer *idpp = INST_GETIDPP(inst);
 
 	ConvertRotToMatrix_Transpose(&lightMatrix, rot);
@@ -153,7 +153,7 @@ static s16 Vector_BakeMatrixTable_Div4TowardZero(s32 value)
 
 static void Vector_BakeMatrixTable_PrepareBlastedFrames(void)
 {
-	struct MatrixND *entries = data.bakedGteMath[BAKED_GTE_MATRIX_BLASTED].physEntry;
+	struct MatrixND *entries = P32_GET(void *, data.bakedGteMath[BAKED_GTE_MATRIX_BLASTED].physEntry);
 	int count = data.bakedGteMath[BAKED_GTE_MATRIX_BLASTED].numEntries;
 
 	if ((entries == NULL) || (count <= 0))
@@ -182,7 +182,7 @@ static void Vector_BakeMatrixTable_BakeRotScaleEntries(void)
 
 	for (int i = 0; i < BAKED_GTE_MATRIX_COUNT; i++)
 	{
-		struct MatrixND *entries = data.bakedGteMath[i].physEntry;
+		struct MatrixND *entries = P32_GET(void *, data.bakedGteMath[i].physEntry);
 		int count = data.bakedGteMath[i].numEntries;
 
 		if ((entries == NULL) || (count <= 0))
@@ -210,7 +210,7 @@ static void Vector_BakeMatrixTable_BakeRotScaleEntries(void)
 
 static void Vector_BakeMatrixTable_BakeBlastedOffsets(void)
 {
-	struct MatrixND *entries = data.bakedGteMath[BAKED_GTE_MATRIX_BLASTED].physEntry;
+	struct MatrixND *entries = P32_GET(void *, data.bakedGteMath[BAKED_GTE_MATRIX_BLASTED].physEntry);
 	int count = data.bakedGteMath[BAKED_GTE_MATRIX_BLASTED].numEntries;
 
 	if ((entries == NULL) || (count <= 0))

@@ -43,7 +43,7 @@ void DecalGlobal_Clear(struct GameTracker *gGT)
 void DecalGlobal_Store(struct GameTracker *gGT, struct LevTexLookup *LTL)
 {
 	struct Icon *currIcon;
-	struct IconGroup **currGroup;
+	P32(struct IconGroup *) *currGroup;
 
 	if (LTL == 0)
 	{
@@ -52,23 +52,24 @@ void DecalGlobal_Store(struct GameTracker *gGT, struct LevTexLookup *LTL)
 
 	for (
 	    // array of Icon
-	    currIcon = &LTL->firstIcon[0]; currIcon < &LTL->firstIcon[LTL->numIcon]; currIcon++)
+	    currIcon = &P32_GET(struct Icon *, LTL->firstIcon)[0]; currIcon < &P32_GET(struct Icon *, LTL->firstIcon)[LTL->numIcon]; currIcon++)
 	{
 		// uint, in case of negatives
 		if ((u32)currIcon->global_IconArray_Index < 0x88)
 		{
-			gGT->ptrIcons[currIcon->global_IconArray_Index] = currIcon;
+			P32_SET(gGT->ptrIcons[currIcon->global_IconArray_Index], currIcon);
 		}
 	}
 
 	for (
 	    // array of POINTER to iconGroup
-	    currGroup = &LTL->firstIconGroupPtr[0]; currGroup < &LTL->firstIconGroupPtr[LTL->numIconGroup]; currGroup++)
+	    currGroup = &P32_GET(P32(struct IconGroup *) *, LTL->firstIconGroupPtr)[0]; currGroup < &P32_GET(P32(struct IconGroup *) *, LTL->firstIconGroupPtr)[LTL->numIconGroup]; currGroup++)
 	{
 		// use '[0]' to dereference pointer
-		if ((u32)currGroup[0]->groupID < 0x11)
+		struct IconGroup *group = P32_GET(struct IconGroup *, currGroup[0]);
+		if ((u32)group->groupID < 0x11)
 		{
-			gGT->iconGroup[currGroup[0]->groupID] = currGroup[0];
+			P32_SET(gGT->iconGroup[group->groupID], group);
 		}
 	}
 }
@@ -77,19 +78,19 @@ void DecalGlobal_Store(struct GameTracker *gGT, struct LevTexLookup *LTL)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80022c88-0x80022d2c.
 int *DecalGlobal_FindInLEV(struct Level *level, char *str)
 {
-	struct LevTexLookup *ltl = level->levTexLookup;
+	struct LevTexLookup *ltl = P32_GET(struct LevTexLookup *, level->levTexLookup);
 
 	if (ltl == NULL)
 	{
 		return NULL;
 	}
 
-	struct IconGroup **curr = ltl->firstIconGroupPtr;
-	struct IconGroup **end = &ltl->firstIconGroupPtr[ltl->numIconGroup];
+	P32(struct IconGroup *) *curr = P32_GET(P32(struct IconGroup *) *, ltl->firstIconGroupPtr);
+	P32(struct IconGroup *) *end = &P32_GET(P32(struct IconGroup *) *, ltl->firstIconGroupPtr)[ltl->numIconGroup];
 
 	for (; curr < end; curr++)
 	{
-		struct IconGroup *group = *curr;
+		struct IconGroup *group = P32_GET(struct IconGroup *, *curr);
 
 		if (DecalGlobal_NameEquals(group->name, str))
 		{

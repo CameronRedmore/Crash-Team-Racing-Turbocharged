@@ -91,7 +91,7 @@ struct XNF
 	// size = numXAs_total
 	// int XaCdPos[0];
 };
-#define XNF_GETXACDPOS(x) (int *)((u32)x + sizeof(struct XNF))
+#define XNF_GETXACDPOS(x) (int *)((uintptr_t)(x) + sizeof(struct XNF))
 
 struct XaSize
 {
@@ -113,7 +113,7 @@ struct AudioMeta
 	// \XA\MUSIC\S01.XA;1
 	// \XA\ENG\EXTRA\S05.XA;1
 	// \XA\ENG\GAME\S20.XA;1
-	char *name;
+	P32(char *) name;
 };
 
 CTR_STATIC_ASSERT(sizeof(struct AudioMeta) == 8);

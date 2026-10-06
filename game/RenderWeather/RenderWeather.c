@@ -144,7 +144,7 @@ static int RenderWeather_IsVisible(u32 gteFlag, u32 sxy0, u32 sxy1, u32 screenBo
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8006f9a8-0x8006fe08
 void RenderWeather(struct PushBuffer *pb, struct PrimMem *primMem, struct RainBuffer *rainBuffer, u8 numPlyr, int gameMode1)
 {
-	u32 *prim = (u32 *)primMem->cursor;
+	u32 *prim = (u32 *)P32_GET(void *, primMem->cursor);
 	u32 *rainWords = (u32 *)(void *)rainBuffer;
 	// NOTE(aalhendi): PSX-backfeed blocker: retail saves/restores callee
 	// registers in scratchpad 0x00-0x2c. Native C relies on the host ABI; restore
@@ -183,7 +183,7 @@ void RenderWeather(struct PushBuffer *pb, struct PrimMem *primMem, struct RainBu
 	u32 state1;
 	u32 rngXY;
 	u32 rngZ;
-	const int framePhase = sdata->gGT->timer;
+	const int framePhase = P32_GET(struct GameTracker *, sdata->gGT)->timer;
 
 	(void)numPlyr;
 
@@ -207,7 +207,7 @@ void RenderWeather(struct PushBuffer *pb, struct PrimMem *primMem, struct RainBu
 	scratch->centerZ = (u32)((trig.cos >> 2) + 0x400);
 
 	screenBounds = RenderWeather_ReadWord(pb, 0x20);
-	ot = &pb->ptrOT[rainBuffer->offsetOT];
+	ot = &P32_GET(uint32_t *, pb->ptrOT)[rainBuffer->offsetOT];
 
 	CTC2((u32)(s32)pb->rect.w << 15, 24);
 	CTC2((u32)(s32)pb->rect.h << 15, 25);
@@ -304,7 +304,7 @@ void RenderWeather(struct PushBuffer *pb, struct PrimMem *primMem, struct RainBu
 
 	int nativeLayer = -1;
 #if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
-	if (NATIVE_DRAW3D_ACTIVE() && (u8 *)prim + sizeof(DR_PSYX_DRAW3D) <= (u8 *)primMem->guardEnd)
+	if (NATIVE_DRAW3D_ACTIVE() && (u8 *)prim + sizeof(DR_PSYX_DRAW3D) <= (u8 *)P32_GET(void *, primMem->guardEnd))
 	{
 		NativeDraw3DView view = {0};
 		double rotation[9], translation[3];
@@ -404,7 +404,7 @@ void RenderWeather(struct PushBuffer *pb, struct PrimMem *primMem, struct RainBu
 		DR_PSYX_DRAW3D *marker = (DR_PSYX_DRAW3D *)prim;
 		NativeDraw3D_SetMarker(marker, nativeLayer);
 		AddPrim(ot, marker);
-		primMem->cursor = marker + 1;
+		P32_SET(primMem->cursor, marker + 1);
 		return;
 	}
 #else
@@ -416,5 +416,5 @@ void RenderWeather(struct PushBuffer *pb, struct PrimMem *primMem, struct RainBu
 	CtrGpu_LinkPacket24(ot, &drawMode->tag, drawMode, 0x02000000);
 	prim = (u32 *)(drawMode + 1);
 
-	primMem->cursor = prim;
+	P32_SET(primMem->cursor, prim);
 }

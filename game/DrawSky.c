@@ -85,7 +85,7 @@ static void DrawSky_EmitPrimitive(u32 **primCursor, uint32_t *ot)
 static u32 *DrawSky_Piece(struct Skybox *skybox, struct DrawSkyContext *ctx, int faceIndex, int countIndex, u32 *prim)
 {
 	u32 numFaces = (u16)skybox->numFaces[countIndex];
-	const struct SkyboxFace *face = skybox->ptrFaces[faceIndex];
+	const struct SkyboxFace *face = P32_GET(struct SkyboxFace *, skybox->ptrFaces[faceIndex]);
 
 	if (numFaces == 0)
 	{
@@ -138,7 +138,7 @@ static int DrawSky_SubmitNative(struct Skybox *sky, struct PushBuffer *pb, struc
 	for (int piece = 0; piece < 4; piece++)
 	{
 		int index = pieces[piece];
-		const struct SkyboxFace *faces = sky->ptrFaces[index];
+		const struct SkyboxFace *faces = P32_GET(struct SkyboxFace *, sky->ptrFaces[index]);
 		for (u32 i = 0; i < (u16)sky->numFaces[index]; i++)
 		{
 			int slot = 0x3ff + (s16)faces[i].D / 4;
@@ -151,8 +151,8 @@ static int DrawSky_SubmitNative(struct Skybox *sky, struct PushBuffer *pb, struc
 	for (int slot = 0x3ff; slot >= 0; slot--)
 	{
 		if (!usedSlots[slot]) continue;
-		DR_PSYX_DRAW3D *marker = primMem->cursor;
-		if ((u8 *)(marker + 1) > (u8 *)primMem->guardEnd) return 1;
+		DR_PSYX_DRAW3D *marker = P32_GET(void *, primMem->cursor);
+		if ((u8 *)(marker + 1) > (u8 *)P32_GET(void *, primMem->guardEnd)) return 1;
 		int layer = NativeDraw3D_BeginLayer(&view);
 		if (layer < 0) return submitted;
 		NativeDraw3DMaterial material = {0};
@@ -160,20 +160,20 @@ static int DrawSky_SubmitNative(struct Skybox *sky, struct PushBuffer *pb, struc
 		for (int piece = 3; piece >= 0; piece--)
 		{
 			int index = pieces[piece];
-			const struct SkyboxFace *faces = sky->ptrFaces[index];
+			const struct SkyboxFace *faces = P32_GET(struct SkyboxFace *, sky->ptrFaces[index]);
 			// Retail links at the head of each slot, reversing submission.
 			for (int i = (u16)sky->numFaces[index] - 1; i >= 0; i--)
 			{
 				const struct SkyboxFace *face = &faces[i];
 				if (0x3ff + (s16)face->D / 4 != slot) continue;
 				const u16 offsets[3] = {face->A, face->B, face->C};
-				const struct ShortVertex *first = (const struct ShortVertex *)((const char *)sky->ptrVertex + face->A);
+				const struct ShortVertex *first = (const struct ShortVertex *)((const char *)P32_GET(struct ShortVertex *, sky->ptrVertex) + face->A);
 				material.flags = NATIVE_DRAW3D_BACKGROUND | NATIVE_DRAW3D_DOUBLE_SIDED;
 				if (first->Color.cd & 2) material.flags |= NATIVE_DRAW3D_SEMI_TRANS;
 				NativeDraw3DVertex vertices[3];
 				for (int j = 0; j < 3; j++)
 				{
-					const struct ShortVertex *source = (const struct ShortVertex *)((const char *)sky->ptrVertex + offsets[j]);
+					const struct ShortVertex *source = (const struct ShortVertex *)((const char *)P32_GET(struct ShortVertex *, sky->ptrVertex) + offsets[j]);
 					vertices[j] = (NativeDraw3DVertex){.x=source->Position.vx, .y=source->Position.vy, .z=source->Position.vz,
 						.r=source->Color.r, .g=source->Color.g, .b=source->Color.b};
 				}
@@ -182,8 +182,8 @@ static int DrawSky_SubmitNative(struct Skybox *sky, struct PushBuffer *pb, struc
 		}
 		NativeDraw3D_EndLayer(layer);
 		NativeDraw3D_SetMarker(marker, layer);
-		AddPrim(&pb->ptrOT[slot], marker);
-		primMem->cursor = marker + 1;
+		AddPrim(&P32_GET(uint32_t *, pb->ptrOT)[slot], marker);
+		P32_SET(primMem->cursor, marker + 1);
 		submitted = 1;
 	}
 	return 1;
@@ -200,7 +200,7 @@ void DrawSky_Full(void *skybox, struct PushBuffer *pb, struct PrimMem *primMem)
 	float nativeDepthContext = NativePgxp_SetDepthContext(0.0f);
 #endif
 	struct Skybox *sky = skybox;
-	u32 *prim = (u32 *)primMem->cursor;
+	u32 *prim = (u32 *)P32_GET(void *, primMem->cursor);
 
 	// NOTE(aalhendi): PSX-backfeed blocker: retail saves/restores ra and s0-s2 in scratchpad 0x00-0x0c.
 	// Native C relies on the host ABI because the only retail data temporaries live in 0x10 and 0x14 and are explicit below.
@@ -228,8 +228,8 @@ void DrawSky_Full(void *skybox, struct PushBuffer *pb, struct PrimMem *primMem)
 		scratch->baseFaceOffset = baseFaceOffset;
 		scratch->baseCountOffset = baseCountOffset;
 
-		ctx.verts = sky->ptrVertex;
-		ctx.ot = &pb->ptrOT[0x3ff];
+		ctx.verts = P32_GET(struct ShortVertex *, sky->ptrVertex);
+		ctx.ot = &P32_GET(uint32_t *, pb->ptrOT)[0x3ff];
 		ctx.screenBounds = DrawSky_ReadWord(pb, 0x20);
 
 		faceIndex = (int)(baseFaceOffset >> 2);
@@ -255,7 +255,7 @@ void DrawSky_Full(void *skybox, struct PushBuffer *pb, struct PrimMem *primMem)
 		prim = DrawSky_Piece(sky, &ctx, faceIndex, countIndex, prim);
 	}
 
-	primMem->cursor = prim;
+	P32_SET(primMem->cursor, prim);
 #if defined(CTR_NATIVE)
 	NativePgxp_SetDepthContext(nativeDepthContext);
 #endif

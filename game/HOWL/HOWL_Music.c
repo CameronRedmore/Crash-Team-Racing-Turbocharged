@@ -31,7 +31,7 @@ void Music_LoadBanks(void)
 {
 	u32 bankID;
 	struct Bank thisBank;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	int level = gGT->levelID;
 	u8 *arr = (u8 *)&sdata->audioDefaults[7];
 
@@ -91,7 +91,7 @@ u32 Music_AsyncParseBanks(void)
 	u8 bVar1;
 	u16 index;
 	u32 uVar4;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	struct Bank thisBank;
 	int level = gGT->levelID;
 	u8 *arr = (u8 *)&sdata->audioDefaults[7];

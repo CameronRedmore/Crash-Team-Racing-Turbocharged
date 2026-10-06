@@ -52,7 +52,7 @@ void NativePhysics_Steer(struct Driver *driver)
 
 	NativePhysics_LerpRotation(driver, 0);
 
-	elapsedTimeMS = NativePhysics_ElapsedMS(sdata->gGT->elapsedTimeMS);
+	elapsedTimeMS = NativePhysics_ElapsedMS(P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS);
 	actionsFlagSet = driver->actionsFlagSet;
 	forwardDir = driver->forwardDir;
 	simpTurnState = driver->simpTurnState;
@@ -92,7 +92,7 @@ void NativePhysics_Steer(struct Driver *driver)
 	{
 		rotCurrW_interp = NativeSteering_Map(speedApprox, VEH_PHYS_ANGULAR_STICK_MIN_SPEED, VEH_PHYS_ANGULAR_STEER_SPEED_THRESHOLD, 0, rotCurrW_interp);
 	}
-	terrain = driver->terrainMeta1;
+	terrain = P32_GET(struct Terrain *, driver->terrainMeta1);
 	rotCurrW_original = NATIVE_PHYSICS_READ(driver, rotationSpinRate);
 	if (rotCurrW_interp == 0)
 	{
@@ -231,7 +231,7 @@ void NativePhysics_Steer(struct Driver *driver)
 	// spins camera from side of driver, to back of driver,
 	// when the drifting ends. "LerpToForwards"
 #if CTR_NATIVE_60FPS
-	if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+	if (CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer))
 #endif
 		NATIVE_PHYSICS_WRITE(driver, turnAngleLerpVel, NativeSteering_LerpForwards(driver, driftAngleCurr_og, forwardDir, classSpeed_halved));
 
@@ -917,7 +917,7 @@ void NativePhysics_LerpRotation(struct Driver *driver, double targetRotW)
 	{
 		if (CTR_FRAMES_PER_SECOND > 60)
 			lerpStep = remainingRot * (1.0 - pow(0.875, NativePhysics_FrameScale()));
-		else if ((sdata->gGT->timer & 1) != 0)
+		else if ((P32_GET(struct GameTracker *, sdata->gGT)->timer & 1) != 0)
 			lerpStep = ldexp(remainingRot, -(4));
 		else
 			lerpStep = ldexp((remainingRot * 16) / 15, -(3));

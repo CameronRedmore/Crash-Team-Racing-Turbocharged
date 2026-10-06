@@ -20,7 +20,7 @@ CTR_STATIC_ASSERT(VEH_LAP_WRONG_WAY_DOT_LIMIT == 0x5a801);
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8005ca24-0x8005cd1c
 void VehLap_UpdateProgress(struct Driver *driver)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	s16 checkpointIndex = -1;
 
 	if (driver == NULL)
@@ -30,7 +30,7 @@ void VehLap_UpdateProgress(struct Driver *driver)
 
 	if ((driver->actionsFlagSet & ACTION_BOT) == 0)
 	{
-		struct QuadBlock *quad = driver->lastValid;
+		struct QuadBlock *quad = P32_GET(struct QuadBlock *, driver->lastValid);
 
 		if ((quad != NULL) && (quad->checkpointIndex != VEH_LAP_INVALID_CHECKPOINT))
 		{
@@ -42,13 +42,13 @@ void VehLap_UpdateProgress(struct Driver *driver)
 		checkpointIndex = driver->botData.ai_quadblock_checkpointIndex;
 	}
 
-	struct Level *level = gGT->level1;
+	struct Level *level = P32_GET(struct Level *, gGT->level1);
 	if (((u32)(level->cnt_restart_points - 1) >= VEH_LAP_INVALID_CHECKPOINT) || (checkpointIndex < 0))
 	{
 		return;
 	}
 
-	struct CheckpointNode *nodes = level->ptr_restart_points;
+	struct CheckpointNode *nodes = P32_GET(struct CheckpointNode *, level->ptr_restart_points);
 	struct CheckpointNode *checkpointNode = &nodes[checkpointIndex];
 	struct CheckpointNode *progressNode = &nodes[checkpointNode->nextIndex_forward];
 	struct CheckpointNode *nextNode = &nodes[progressNode->nextIndex_forward];

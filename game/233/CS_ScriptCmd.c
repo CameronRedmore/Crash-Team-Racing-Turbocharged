@@ -56,9 +56,9 @@ static void CS_ScriptCmd_ReadOpcode_Main(struct CutsceneObj *cs)
 	u8 metaFlags;
 	char *cursor;
 
-	opcodes = cs->currOpcode[0];
+	opcodes = P32_GET(char *, cs->currOpcode[0]);
 
-	if (opcodes == cs->prevOpcode)
+	if (opcodes == P32_GET(char *, cs->prevOpcode))
 	{
 		return;
 	}
@@ -67,7 +67,7 @@ static void CS_ScriptCmd_ReadOpcode_Main(struct CutsceneObj *cs)
 	decoded = &cs->decodedOpcode;
 	decodedShorts = decoded->shorts;
 
-	cs->prevOpcode = opcodes;
+	P32_SET(cs->prevOpcode, opcodes);
 	opcode = (u8)opcodes[0];
 	decodedShorts[0] = opcode;
 
@@ -147,15 +147,15 @@ static void CS_ScriptCmd_ReadOpcode_Main(struct CutsceneObj *cs)
 		decodedShorts[9] = 0;
 	}
 
-	cs->prevOpcode = cursor;
+	P32_SET(cs->prevOpcode, cursor);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800ac1c0-0x800ac1ec
 void CS_ScriptCmd_OpcodeNext(struct CutsceneObj *cs)
 {
-	char *prev = cs->prevOpcode;
-	cs->prevOpcode = (char *)-1;
-	cs->currOpcode[0] = prev;
+	char *prev = P32_GET(char *, cs->prevOpcode);
+	P32_SET(cs->prevOpcode, (char *)-1);
+	P32_SET(cs->currOpcode[0], prev);
 	CS_ScriptCmd_ReadOpcode_Main(cs);
 }
 
@@ -167,7 +167,7 @@ void CS_ScriptCmd_OpcodeAt(struct CutsceneObj *cs, char *opCodeAt)
 	opCodeAt = CS_OVR233_TranslateRetailOpcodePointer(opCodeAt);
 #endif
 
-	cs->currOpcode[0] = opCodeAt;
-	cs->prevOpcode = (char *)-1;
+	P32_SET(cs->currOpcode[0], opCodeAt);
+	P32_SET(cs->prevOpcode, (char *)-1);
 	CS_ScriptCmd_ReadOpcode_Main(cs);
 }

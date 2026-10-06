@@ -94,7 +94,7 @@ enum DrawLevelOvr1PGridSlotMode
 
 #define DRAW_LEVEL_OVR1P_SLOT_WORD_PRESERVE UINT32_C(0xffffffff)
 static int sDrawLevelOvr1P_FullDynamicInheritedOtIndex;
-static struct QuadBlock **sDrawLevelOvr1P_RenderedOverflowBase;
+static P32(struct QuadBlock *) *sDrawLevelOvr1P_RenderedOverflowBase;
 static u8 *sDrawLevelOvr1P_ClipRecordStart;
 static u32 sDrawLevelOvr1P_PrimReserveBias;
 static u32 sDrawLevelOvr1P_MosaicReloadSpanOverride;
@@ -395,7 +395,7 @@ static struct TextureLayout *DrawLevelOvr1P_ResolveTexturePointer(uintptr_t text
 
 	if ((texturePtr & 1) != 0)
 	{
-		return *(struct TextureLayout **)(texturePtr - 1);
+		return P32_DEC(struct TextureLayout *, *(const u32 *)(texturePtr - 1));
 	}
 
 	return (struct TextureLayout *)texturePtr;
@@ -403,7 +403,7 @@ static struct TextureLayout *DrawLevelOvr1P_ResolveTexturePointer(uintptr_t text
 
 static struct TextureLayout *DrawLevelOvr1P_ResolveMidTexture(const struct QuadBlock *block, int faceIndex)
 {
-	return DrawLevelOvr1P_ResolveTexturePointer((uintptr_t)block->ptr_texture_mid[faceIndex]);
+	return DrawLevelOvr1P_ResolveTexturePointer((uintptr_t)P32_GET(void *const, block->ptr_texture_mid[faceIndex]));
 }
 
 static int DrawLevelOvr1P_IsPlausibleTextureLayout(const struct TextureLayout *texture)
@@ -421,7 +421,7 @@ static int DrawLevelOvr1P_IsPlausibleTextureLayout(const struct TextureLayout *t
 // words in level data; native level loads store host-rebased pointers instead.
 static int DrawLevelOvr1P_MempackContains(const struct Mempack *pack, uintptr_t ptr, uintptr_t *span)
 {
-	uintptr_t start = (uintptr_t)pack->start;
+	uintptr_t start = (uintptr_t)P32_GET(void *const, pack->start);
 	if ((start == 0) || (pack->packSize <= 0))
 	{
 		return 0;
@@ -446,7 +446,7 @@ static const struct Mempack *DrawLevelOvr1P_FindMempackContaining(uintptr_t ptr)
 {
 	const struct Mempack *bestPack = NULL;
 	uintptr_t bestSpan = UINTPTR_MAX;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// PtrMempack can point at inactive mask/podium loads while level1 renders.
 	if ((gGT == NULL) || ((gGT->gameMode2 & LEV_SWAP) == 0))
@@ -499,7 +499,7 @@ static int DrawLevelOvr1P_IsNativeLevelSpan(uintptr_t ptr, uintptr_t size)
 		return 0;
 	}
 
-	return end <= (uintptr_t)pack->start + span;
+	return end <= (uintptr_t)P32_GET(void *const, pack->start) + span;
 }
 
 #endif
@@ -509,7 +509,8 @@ static int DrawLevelOvr1P_IsNativeLevelTexturePointer(u32 value)
 #ifdef CTR_NATIVE
 	// NOTE(aalhendi): Native classifies host-rebased level texture pointers at
 	// the data boundary; renderer control flow still follows retail sign tests.
-	uintptr_t ptr = (uintptr_t)value;
+	// Level pointer words are retail pointer slots (handles on 64-bit builds).
+	uintptr_t ptr = (uintptr_t)P32_DEC(void *, value);
 
 	if (!DrawLevelOvr1P_IsNativeLevelSpan(ptr, sizeof(struct TextureLayout)))
 	{
@@ -550,14 +551,14 @@ static int DrawLevelOvr1P_TryConvertNativeMempackPointerToPsxWord(u32 hostWord, 
 {
 	const u32 psxRamBase = 0x80000000u;
 	const uintptr_t psxRamSize = 0x200000u;
-	uintptr_t hostPtr = (uintptr_t)hostWord;
+	uintptr_t hostPtr = (uintptr_t)P32_DEC(void *, hostWord);
 	const struct Mempack *pack = DrawLevelOvr1P_FindMempackContaining(hostPtr);
-	if (pack == NULL || pack->endOfMemory == NULL)
+	if (pack == NULL || P32_GET(void *const, pack->endOfMemory) == NULL)
 	{
 		return 0;
 	}
 
-	uintptr_t hostEnd = (uintptr_t)pack->endOfMemory;
+	uintptr_t hostEnd = (uintptr_t)P32_GET(void *const, pack->endOfMemory);
 	if (hostEnd < psxRamSize)
 	{
 		return 0;
@@ -588,12 +589,12 @@ static struct TextureLayout *DrawLevelOvr1P_ResolveTexturePointerChecked(uintptr
 	{
 		uintptr_t activePtrSlot = texturePtr - 1;
 
-		if (!DrawLevelOvr1P_IsNativeLevelSpan(activePtrSlot, sizeof(texture)))
+		if (!DrawLevelOvr1P_IsNativeLevelSpan(activePtrSlot, sizeof(u32)))
 		{
 			return NULL;
 		}
 
-		texture = *(struct TextureLayout **)activePtrSlot;
+		texture = P32_DEC(struct TextureLayout *, *(const u32 *)activePtrSlot);
 	}
 	else
 	{
@@ -647,7 +648,7 @@ static struct TextureLayout *DrawLevelOvr1P_ResolveProjectedMidTexture(const str
 
 	// NOTE(aalhendi): Retail selector bodies load raw `quad+0x1c+slot`.
 	// Native validates the host-rebased word before following it.
-	return DrawLevelOvr1P_ResolveTexturePointerChecked((uintptr_t)*(void *const *)((const u8 *)block + 0x1c + slotWord));
+	return DrawLevelOvr1P_ResolveTexturePointerChecked((uintptr_t)P32_DEC(void *, *(const u32 *)((const u8 *)block + 0x1c + slotWord)));
 }
 
 static struct TextureLayout *DrawLevelOvr1P_GetProjectedMidTexture(const struct QuadBlock *block, const struct DrawLevelOvr1PScratchVertex *projected,
@@ -920,7 +921,7 @@ static void DrawLevelOvr1P_PrepareDeepestMosaicUv(const struct DrawLevelOvr1PScr
 	}
 	sourceOffset += *CTR_SCRATCHPAD_PTR(u32, DRAW_LEVEL_OVR1P_MOSAIC_SOURCE_BIAS_OFFSET);
 
-	const u8 *source = (const u8 *)(uintptr_t)(mosaicBase + sourceOffset);
+	const u8 *source = P32_DEC(const u8 *, mosaicBase + sourceOffset);
 	u32 uv0 = DrawLevelOvr1P_ReadPackedWord(source + 0);
 	u32 uv1 = DrawLevelOvr1P_ReadPackedWord(source + 4);
 
@@ -985,12 +986,12 @@ static s32 DrawLevelOvr1P_GetDepthClipThreshold(void)
 
 static u8 *DrawLevelOvr1P_GetClipRecordCursor(void)
 {
-	return (u8 *)(uintptr_t)DrawLevelOvr1P_Scratch()->clipCursorPtr32;
+	return P32_DEC(u8 *, DrawLevelOvr1P_Scratch()->clipCursorPtr32);
 }
 
 static void DrawLevelOvr1P_SetClipRecordCursor(u8 *cursor)
 {
-	DrawLevelOvr1P_Scratch()->clipCursorPtr32 = (u32)(uintptr_t)cursor;
+	DrawLevelOvr1P_Scratch()->clipCursorPtr32 = P32_ENC(cursor);
 }
 
 static u8 *DrawLevelOvr1P_GetClipRecordStart(void);
@@ -1033,7 +1034,7 @@ static u8 *DrawLevelOvr1P_GetClipRecordStart(void)
 		return sDrawLevelOvr1P_ClipRecordStart;
 	}
 
-	return data.PtrClipBuffer[0];
+	return P32_GET(void *, data.PtrClipBuffer[0]);
 }
 
 static void DrawLevelOvr1P_SetClipRecordStart(u8 *start)
@@ -1044,7 +1045,7 @@ static void DrawLevelOvr1P_SetClipRecordStart(u8 *start)
 static u8 *DrawLevelOvr1P_GetClipRecordEnd(void)
 {
 	u8 *start = DrawLevelOvr1P_GetClipRecordStart();
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	if (start == NULL || gGT == NULL)
 	{
@@ -1240,9 +1241,9 @@ static void Ovr226_800a0f78_ProjectFullDynamicLowQuad(struct LevVertex *vertices
 
 static void Ovr226_800a0d20_SeedEntryScratchPointers(struct DrawLevelOvr1PRenderList *renderList, struct PushBuffer *pb)
 {
-	DrawLevelOvr1P_Scratch()->clipCursorPtr32 = (u32)(uintptr_t)data.PtrClipBuffer[0];
-	DrawLevelOvr1P_Scratch()->pushBufferPtr32[0] = (u32)(uintptr_t)pb;
-	DrawLevelOvr1P_Scratch()->renderListPtr32 = (u32)(uintptr_t)renderList;
+	DrawLevelOvr1P_Scratch()->clipCursorPtr32 = P32_ENC(P32_GET(void *, data.PtrClipBuffer[0]));
+	DrawLevelOvr1P_Scratch()->pushBufferPtr32[0] = P32_ENC(pb);
+	DrawLevelOvr1P_Scratch()->renderListPtr32 = P32_ENC(renderList);
 }
 
 static void Ovr226_800a0dc4_ClearProjectedScratch(void)
@@ -2266,7 +2267,7 @@ static uint32_t *Ovr226_800a2690_ResolveWaterListInheritedOtEntry(struct PushBuf
 	otIndex = (s32)(selectedDepth >> 6) + drawOrder;
 	DrawLevelOvr1P_NoteDrawOrder(drawOrder);
 
-	return &pb->ptrOT[otIndex];
+	return &P32_GET(uint32_t *, pb->ptrOT)[otIndex];
 }
 
 #if defined(CTR_NATIVE)
@@ -2362,7 +2363,7 @@ static int DrawLevelOvr1P_EmitPreparedProjectedQuadRawCodeAtOtEntry(struct PushB
 	(void)pb;
 	(void)block;
 
-	POLY_GT4 *prim = primMem->cursor;
+	POLY_GT4 *prim = P32_GET(void *, primMem->cursor);
 	POLY_GT4 *nextPrim = prim + 1;
 
 	DrawLevelOvr1P_StoreProjectedDirectUvScratch(projected, indices, 4);
@@ -2377,7 +2378,7 @@ static int DrawLevelOvr1P_EmitPreparedProjectedQuadRawCodeAtOtEntry(struct PushB
 
 	DrawLevelOvr1P_WriteProjectedGT4(prim, block, projected, indices, code, uv0, uv1, uv2);
 	DrawLevelOvr1P_AddRawPrimToOt(primMem, prim, 12, otEntry);
-	primMem->cursor = nextPrim;
+	P32_SET(primMem->cursor, nextPrim);
 	return 1;
 }
 
@@ -2387,7 +2388,7 @@ static int DrawLevelOvr1P_EmitPreparedProjectedQuadRawCodeAtOt(struct PushBuffer
 {
 	int otIndex = DrawLevelOvr1P_ResolveProjectedOtIndex(block, projected, maxDepth, faceIndex, otIndexOverride);
 
-	return DrawLevelOvr1P_EmitPreparedProjectedQuadRawCodeAtOtEntry(pb, primMem, block, projected, indices, texture, &pb->ptrOT[otIndex], primCodeOverride);
+	return DrawLevelOvr1P_EmitPreparedProjectedQuadRawCodeAtOtEntry(pb, primMem, block, projected, indices, texture, &P32_GET(uint32_t *, pb->ptrOT)[otIndex], primCodeOverride);
 }
 
 static int DrawLevelOvr1P_EmitPreparedProjectedTriRawCodeAtOtEntry(struct PushBuffer *pb, struct PrimMem *primMem, const struct QuadBlock *block,
@@ -2397,7 +2398,7 @@ static int DrawLevelOvr1P_EmitPreparedProjectedTriRawCodeAtOtEntry(struct PushBu
 	(void)pb;
 	(void)block;
 
-	POLY_GT3 *prim = primMem->cursor;
+	POLY_GT3 *prim = P32_GET(void *, primMem->cursor);
 	POLY_GT3 *nextPrim = prim + 1;
 
 	DrawLevelOvr1P_StoreProjectedDirectUvScratch(projected, indices, 3);
@@ -2412,7 +2413,7 @@ static int DrawLevelOvr1P_EmitPreparedProjectedTriRawCodeAtOtEntry(struct PushBu
 
 	DrawLevelOvr1P_WriteProjectedGT3(prim, block, projected, indices, code, uv0, uv1, uv2);
 	DrawLevelOvr1P_AddRawPrimToOt(primMem, prim, 9, otEntry);
-	primMem->cursor = nextPrim;
+	P32_SET(primMem->cursor, nextPrim);
 	return 1;
 }
 
@@ -2422,7 +2423,7 @@ static int DrawLevelOvr1P_EmitPreparedProjectedTriRawCodeAtOt(struct PushBuffer 
 {
 	int otIndex = DrawLevelOvr1P_ResolveProjectedOtIndex(block, projected, maxDepth, faceIndex, otIndexOverride);
 
-	return DrawLevelOvr1P_EmitPreparedProjectedTriRawCodeAtOtEntry(pb, primMem, block, projected, indices, texture, &pb->ptrOT[otIndex], primCodeOverride);
+	return DrawLevelOvr1P_EmitPreparedProjectedTriRawCodeAtOtEntry(pb, primMem, block, projected, indices, texture, &P32_GET(uint32_t *, pb->ptrOT)[otIndex], primCodeOverride);
 }
 
 static int DrawLevelOvr1P_IsClipByteSet(u8 clipByte)
@@ -2710,7 +2711,7 @@ static int DrawLevelOvr1P_WriteRenderedClippedRecordAtOt(struct PushBuffer *pb, 
 
 	record = (struct DrawLevelOvr1PClipRecord *)cursor;
 	record->header = DrawLevelOvr1P_GetRenderedClipRecordHeader(block, count);
-	record->otEntry = (u32)(uintptr_t)&pb->ptrOT[otIndex];
+	record->otEntry = P32_ENC(&P32_GET(uint32_t *, pb->ptrOT)[otIndex]);
 	// NOTE(aalhendi): Retail terminal near writers 0x800a89dc/0x800aa5fc
 	// store the freshly selected scratch UV metadata, not the caller texture.
 	record->tpage = DrawLevelOvr1P_GetNativeDecoratedTpage(block, DrawLevelOvr1P_Scratch()->uv.tpage);
@@ -2752,7 +2753,7 @@ static int DrawLevelOvr1P_WriteWaterRenderedClippedRecordAtOt(struct PushBuffer 
 	// NOTE(aalhendi): Retail water direct helpers 0x800a34d4/0x800a3578 set
 	// bit 31 on clipped-record headers so the consumer keeps the NCLIP result.
 	record->header = count == 4 ? 0x80000001u : 0x80000000u;
-	record->otEntry = (u32)(uintptr_t)&pb->ptrOT[otIndex];
+	record->otEntry = P32_ENC(&P32_GET(uint32_t *, pb->ptrOT)[otIndex]);
 	record->tpage = DrawLevelOvr1P_Scratch()->uv.tpage;
 	record->clut = DrawLevelOvr1P_Scratch()->uv.clut;
 
@@ -2788,7 +2789,7 @@ static int Ovr226_800a34d4_WriteWaterRenderedClippedRecordAtOtEntry(struct PushB
 	// NOTE(aalhendi): Retail water-rendered clipped-record writers
 	// 0x800a34d4/0x800a3578 store the inherited GP/OT pointer directly.
 	record->header = count == 4 ? 0x80000001u : 0x80000000u;
-	record->otEntry = (u32)(uintptr_t)otEntry;
+	record->otEntry = P32_ENC(otEntry);
 	record->tpage = DrawLevelOvr1P_Scratch()->uv.tpage;
 	record->clut = DrawLevelOvr1P_Scratch()->uv.clut;
 
@@ -3023,7 +3024,7 @@ static int Ovr226_800aad44_EmitClipRecordGT4(struct PushBuffer *pb, struct PrimM
 	}
 
 	// NOTE(aalhendi): Retail relies on the 0x800aa848 per-record 0xd68 prim reserve.
-	POLY_GT4 *prim = primMem->cursor;
+	POLY_GT4 *prim = P32_GET(void *, primMem->cursor);
 	POLY_GT4 *nextPrim = prim + 1;
 	u32 uv0 = DrawLevelOvr1P_StoreClipRecordUvScratch(&emit[0], DRAW_LEVEL_OVR1P_UV_SCRATCH_SLOT_0);
 	u32 uv1 = DrawLevelOvr1P_StoreClipRecordUvScratch(&emit[1], DRAW_LEVEL_OVR1P_UV_SCRATCH_SLOT_1);
@@ -3032,7 +3033,7 @@ static int Ovr226_800aad44_EmitClipRecordGT4(struct PushBuffer *pb, struct PrimM
 
 	DrawLevelOvr1P_WriteClipRecordGT4(prim, emit, code, uv0, uv1, uv2);
 	DrawLevelOvr1P_AddRawPrimToOt(primMem, prim, 12, otEntry);
-	primMem->cursor = nextPrim;
+	P32_SET(primMem->cursor, nextPrim);
 	return 1;
 }
 
@@ -3056,7 +3057,7 @@ static int Ovr226_800aac00_EmitClipRecordGT3(struct PushBuffer *pb, struct PrimM
 	}
 
 	// NOTE(aalhendi): Retail relies on the 0x800aa848 per-record 0xd68 prim reserve.
-	POLY_GT3 *prim = primMem->cursor;
+	POLY_GT3 *prim = P32_GET(void *, primMem->cursor);
 	POLY_GT3 *nextPrim = prim + 1;
 	u32 uv0 = DrawLevelOvr1P_StoreClipRecordUvScratch(&emit[0], DRAW_LEVEL_OVR1P_UV_SCRATCH_SLOT_0);
 	u32 uv1 = DrawLevelOvr1P_StoreClipRecordUvScratch(&emit[1], DRAW_LEVEL_OVR1P_UV_SCRATCH_SLOT_1);
@@ -3065,7 +3066,7 @@ static int Ovr226_800aac00_EmitClipRecordGT3(struct PushBuffer *pb, struct PrimM
 
 	DrawLevelOvr1P_WriteClipRecordGT3(prim, emit, code, uv0, uv1, uv2);
 	DrawLevelOvr1P_AddRawPrimToOt(primMem, prim, 9, otEntry);
-	primMem->cursor = nextPrim;
+	P32_SET(primMem->cursor, nextPrim);
 	return 1;
 }
 
@@ -3519,7 +3520,7 @@ static int DrawLevelOvr1P_EmitClipRecordGT4Table(struct PushBuffer *pb, struct P
 static int Ovr226_800aaed4_ProjectFourthClipRecordAndDispatchGT4(struct PushBuffer *pb, struct PrimMem *primMem, struct DrawLevelOvr1PScratchVertex *projected,
                                                                  const struct DrawLevelOvr1PClipRecord *record)
 {
-	uint32_t *otEntry = (uint32_t *)(uintptr_t)record->otEntry;
+	uint32_t *otEntry = P32_DEC(uint32_t *, record->otEntry);
 
 	Ovr226_800aa858_ProjectClipRecordRawVertex(&projected[3], &record->vertex[3]);
 	DrawLevelOvr1P_PrepareClipRecordDepthScratchRange(projected, 4);
@@ -3564,7 +3565,7 @@ static int Ovr226_800aa848_ProjectFirstThreeClipRecordsAndDispatch(struct PushBu
 	DrawLevelOvr1P_PrepareClipRecordDepthScratchRange(projected, 3);
 	// NOTE(aalhendi): Retail 0x800aa934..0x800aa968 dispatches through scratch
 	// 0x240; native keeps the handler bodies as C cases keyed by copied addresses.
-	return DrawLevelOvr1P_EmitClipRecordGT3Table(pb, primMem, (uint32_t *)(uintptr_t)record->otEntry, projected, record);
+	return DrawLevelOvr1P_EmitClipRecordGT3Table(pb, primMem, P32_DEC(uint32_t *, record->otEntry), projected, record);
 }
 
 static int Ovr226_800aa790_TerminalPreamble(struct PushBuffer *pb, const u8 *cursor, const u8 *end)
@@ -3619,13 +3620,13 @@ static int Ovr226_800aa790_TerminalPreamble(struct PushBuffer *pb, const u8 *cur
 
 static int DrawLevelOvr1P_HasClipRecordConsumerPrimReserve(const struct PrimMem *primMem)
 {
-	return (u8 *)primMem->cursor + DRAW_LEVEL_OVR1P_CLIP_RECORD_PRIM_RESERVE + sDrawLevelOvr1P_PrimReserveBias <= (u8 *)primMem->end;
+	return (u8 *)P32_GET(void *const, primMem->cursor) + DRAW_LEVEL_OVR1P_CLIP_RECORD_PRIM_RESERVE + sDrawLevelOvr1P_PrimReserveBias <= (u8 *)P32_GET(void *const, primMem->end);
 }
 
 static int DrawLevelOvr1P_HasBucketPrimReserve(const struct PrimMem *primMem, u32 reserve)
 {
-	u8 *curr = primMem->cursor;
-	u8 *end = primMem->end;
+	u8 *curr = P32_GET(void *const, primMem->cursor);
+	u8 *end = P32_GET(void *const, primMem->end);
 
 	return curr <= end && (size_t)(reserve + sDrawLevelOvr1P_PrimReserveBias) <= (size_t)(end - curr);
 }
@@ -4941,7 +4942,7 @@ static void Ovr226_800a3f74_PrepareGround4x1DeepestUv(const struct DrawLevelOvr1
 	}
 	sourceOffset += *CTR_SCRATCHPAD_PTR(u32, DRAW_LEVEL_OVR1P_MOSAIC_SOURCE_BIAS_OFFSET);
 
-	const u8 *source = (const u8 *)(uintptr_t)(mosaicBase + sourceOffset);
+	const u8 *source = P32_DEC(const u8 *, mosaicBase + sourceOffset);
 	u32 uv0 = DrawLevelOvr1P_ReadPackedWord(source + 0);
 	u32 uv1 = DrawLevelOvr1P_ReadPackedWord(source + 4);
 
@@ -4972,7 +4973,7 @@ static uint32_t *Ovr226_800a4158_ResolveGround4x1DirectOtEntry(struct PushBuffer
 		return NULL;
 	}
 
-	return &pb->ptrOT[inheritedOtIndex];
+	return &P32_GET(uint32_t *, pb->ptrOT)[inheritedOtIndex];
 }
 
 static int Ovr226_800a4034_EmitGround4x1GT3Raw(struct PushBuffer *pb, struct PrimMem *primMem, const struct QuadBlock *block,
@@ -5003,7 +5004,7 @@ static int Ovr226_800a4034_EmitGround4x1GT3Raw(struct PushBuffer *pb, struct Pri
 		triIndices[2] = indices[2];
 	}
 
-	POLY_GT3 *prim = primMem->cursor;
+	POLY_GT3 *prim = P32_GET(void *, primMem->cursor);
 	POLY_GT3 *nextPrim = prim + 1;
 
 	DrawLevelOvr1P_StoreProjectedDirectUvScratch(projected, triIndices, 3);
@@ -5014,7 +5015,7 @@ static int Ovr226_800a4034_EmitGround4x1GT3Raw(struct PushBuffer *pb, struct Pri
 
 	DrawLevelOvr1P_WriteProjectedGT3(prim, block, projected, triIndices, code, uv0, uv1, uv2);
 	DrawLevelOvr1P_AddRawPrimToOt(primMem, prim, 9, otEntry);
-	primMem->cursor = nextPrim;
+	P32_SET(primMem->cursor, nextPrim);
 	return 1;
 }
 
@@ -5032,7 +5033,7 @@ static int Ovr226_800a40b8_EmitGround4x1GT4Raw(struct PushBuffer *pb, struct Pri
 		return 1;
 	}
 
-	POLY_GT4 *prim = primMem->cursor;
+	POLY_GT4 *prim = P32_GET(void *, primMem->cursor);
 	POLY_GT4 *nextPrim = prim + 1;
 
 	DrawLevelOvr1P_StoreProjectedDirectUvScratch(projected, indices, 4);
@@ -5043,7 +5044,7 @@ static int Ovr226_800a40b8_EmitGround4x1GT4Raw(struct PushBuffer *pb, struct Pri
 
 	DrawLevelOvr1P_WriteProjectedGT4(prim, block, projected, indices, code, uv0, uv1, uv2);
 	DrawLevelOvr1P_AddRawPrimToOt(primMem, prim, 12, otEntry);
-	primMem->cursor = nextPrim;
+	P32_SET(primMem->cursor, nextPrim);
 	return 1;
 }
 
@@ -5097,7 +5098,7 @@ static uint32_t *Ovr226_800a4978_ResolveGround4x1RenderedOtEntry(struct PushBuff
 {
 	int otIndex = Ovr226_800a3d98_ResolveGround4x1SelectorOtIndex(block, projected, maxDepth, faceIndex);
 
-	return &pb->ptrOT[otIndex];
+	return &P32_GET(uint32_t *, pb->ptrOT)[otIndex];
 }
 
 static struct TextureLayout *Ovr226_800a49e0_SelectGround4x1RenderedTexture(const struct QuadBlock *block, const struct DrawLevelOvr1PScratchVertex *projected,
@@ -5143,7 +5144,7 @@ static int Ovr226_800a4dcc_WriteGround4x1RenderedClippedRecordAtOtEntry(struct P
 
 	struct DrawLevelOvr1PClipRecord *record = (struct DrawLevelOvr1PClipRecord *)cursor;
 	record->header = DrawLevelOvr1P_GetRenderedClipRecordHeader(block, count);
-	record->otEntry = (u32)(uintptr_t)otEntry;
+	record->otEntry = P32_ENC(otEntry);
 	record->tpage = DrawLevelOvr1P_GetNativeDecoratedTpage(block, DrawLevelOvr1P_Scratch()->uv.tpage);
 	record->clut = DrawLevelOvr1P_Scratch()->uv.clut;
 
@@ -5275,7 +5276,7 @@ static void Ovr226_800a4b54_PrepareGround4x1RenderedDeepestUv(const struct DrawL
 	}
 	sourceOffset += *CTR_SCRATCHPAD_PTR(u32, DRAW_LEVEL_OVR1P_MOSAIC_SOURCE_BIAS_OFFSET);
 
-	const u8 *source = (const u8 *)(uintptr_t)(mosaicBase + sourceOffset);
+	const u8 *source = P32_DEC(const u8 *, mosaicBase + sourceOffset);
 	u32 uv0 = DrawLevelOvr1P_ReadPackedWord(source + 0);
 	u32 uv1 = DrawLevelOvr1P_ReadPackedWord(source + 4);
 
@@ -5720,7 +5721,7 @@ static uint32_t *Ovr226_800a5e38_ResolveGround4x2DirectOtEntry(struct PushBuffer
 		return NULL;
 	}
 
-	return &pb->ptrOT[inheritedOtIndex];
+	return &P32_GET(uint32_t *, pb->ptrOT)[inheritedOtIndex];
 }
 
 static int Ovr226_800a5d14_EmitGround4x2GT3Raw(struct PushBuffer *pb, struct PrimMem *primMem, const struct QuadBlock *block,
@@ -6474,7 +6475,7 @@ static int Ovr226_800a6d6c_WriteGround4x2RenderedClippedRecordAtOtEntry(struct P
 
 	struct DrawLevelOvr1PClipRecord *record = (struct DrawLevelOvr1PClipRecord *)cursor;
 	record->header = DrawLevelOvr1P_GetRenderedClipRecordHeader(block, count);
-	record->otEntry = (u32)(uintptr_t)otEntry;
+	record->otEntry = P32_ENC(otEntry);
 	record->tpage = DrawLevelOvr1P_GetNativeDecoratedTpage(block, DrawLevelOvr1P_Scratch()->uv.tpage);
 	record->clut = DrawLevelOvr1P_Scratch()->uv.clut;
 
@@ -6941,7 +6942,7 @@ static int Ovr226_800a898c_WriteDynamicRenderedClippedRecordAtOtEntry(struct Pus
 
 	record = (struct DrawLevelOvr1PClipRecord *)cursor;
 	record->header = DrawLevelOvr1P_GetRenderedClipRecordHeader(block, count);
-	record->otEntry = (u32)(uintptr_t)otEntry;
+	record->otEntry = P32_ENC(otEntry);
 	record->tpage = DrawLevelOvr1P_GetNativeDecoratedTpage(block, DrawLevelOvr1P_Scratch()->uv.tpage);
 	record->clut = DrawLevelOvr1P_Scratch()->uv.clut;
 
@@ -7374,7 +7375,7 @@ static int Ovr226_800aa5ac_WriteQuad4x4RenderedClippedRecordAtOtEntry(struct Pus
 
 	struct DrawLevelOvr1PClipRecord *record = (struct DrawLevelOvr1PClipRecord *)cursor;
 	record->header = DrawLevelOvr1P_GetRenderedClipRecordHeader(block, count);
-	record->otEntry = (u32)(uintptr_t)otEntry;
+	record->otEntry = P32_ENC(otEntry);
 	record->tpage = DrawLevelOvr1P_GetNativeDecoratedTpage(block, DrawLevelOvr1P_Scratch()->uv.tpage);
 	record->clut = DrawLevelOvr1P_Scratch()->uv.clut;
 
@@ -7750,22 +7751,22 @@ static int DrawLevelOvr1P_Emit4x1ListSelectedFace(struct PushBuffer *pb, struct 
 	return Ovr226_800a3c70_Ground4x1SelectorNearGate(pb, primMem, projected, block, faceIndex);
 }
 
-static void DrawLevelOvr1P_SetRenderedListCursor(struct QuadBlock **renderedList)
+static void DrawLevelOvr1P_SetRenderedListCursor(P32(struct QuadBlock *) *renderedList)
 {
-	DrawLevelOvr1P_Scratch()->renderedOverflowPtr32 = (u32)(uintptr_t)renderedList;
+	DrawLevelOvr1P_Scratch()->renderedOverflowPtr32 = P32_ENC(renderedList);
 }
 
-static void DrawLevelOvr1P_SetRenderedOverflowBase(struct QuadBlock **renderedList)
+static void DrawLevelOvr1P_SetRenderedOverflowBase(P32(struct QuadBlock *) *renderedList)
 {
 	sDrawLevelOvr1P_RenderedOverflowBase = renderedList;
 }
 
 static void DrawLevelOvr1P_SetViewportScratchContext(struct PushBuffer *pb, const int *visFaceList, u8 *clipStart, u8 *clipCursor,
-                                                     struct QuadBlock **renderedOverflowBase)
+                                                     P32(struct QuadBlock *) *renderedOverflowBase)
 {
 	DrawLevelOvr1P_SetRenderedListCursor(renderedOverflowBase);
 	DrawLevelOvr1P_SetClipRecordCursor(clipCursor);
-	DrawLevelOvr1P_Scratch()->visFaceListPtr32 = (u32)(uintptr_t)visFaceList;
+	DrawLevelOvr1P_Scratch()->visFaceListPtr32 = P32_ENC(visFaceList);
 	DrawLevelOvr1P_SetClipRecordStart(clipStart);
 	DrawLevelOvr1P_SetRenderedOverflowBase(renderedOverflowBase);
 	Ovr226_800a0d34_SetEntryGteAndCameraScratch(pb);
@@ -7773,25 +7774,25 @@ static void DrawLevelOvr1P_SetViewportScratchContext(struct PushBuffer *pb, cons
 
 static void DrawLevelOvr_ClearRenderedOverflowBase(int playerIndex)
 {
-	struct QuadBlock **renderedOverflowBase = (struct QuadBlock **)data.ptrRenderedQuadblockDestination_forEachPlayer[playerIndex];
+	P32(struct QuadBlock *) *renderedOverflowBase = (P32(struct QuadBlock *) *)P32_GET(void *, data.ptrRenderedQuadblockDestination_forEachPlayer[playerIndex]);
 
 	if (renderedOverflowBase != NULL)
 	{
-		*renderedOverflowBase = NULL;
+		P32_SET(*renderedOverflowBase, NULL);
 	}
 }
 
 static int DrawLevelOvr_ConsumeClipRecordsForViewport(struct PushBuffer *pb, struct PrimMem *primMem, u8 *clipCursor, int playerIndex,
                                                       int (*consume)(struct PushBuffer *pb, struct PrimMem *primMem, u8 *clipCursor, int playerIndex))
 {
-	u8 *start = data.PtrClipBuffer[playerIndex];
+	u8 *start = P32_GET(void *, data.PtrClipBuffer[playerIndex]);
 
 	DrawLevelOvr1P_SetClipRecordStart(start);
 	DrawLevelOvr1P_SetClipRecordCursor(clipCursor);
 	return consume(pb, primMem, clipCursor, playerIndex);
 }
 
-static struct QuadBlock **DrawLevelOvr1P_GetRenderedOverflowBase(void)
+static P32(struct QuadBlock *) *DrawLevelOvr1P_GetRenderedOverflowBase(void)
 {
 	if (sDrawLevelOvr1P_RenderedOverflowBase != NULL)
 	{
@@ -7801,38 +7802,38 @@ static struct QuadBlock **DrawLevelOvr1P_GetRenderedOverflowBase(void)
 	return sdata_static.quadBlocksRendered;
 }
 
-static struct QuadBlock **DrawLevelOvr1P_GetRenderedListCursor(void)
+static P32(struct QuadBlock *) *DrawLevelOvr1P_GetRenderedListCursor(void)
 {
-	return (struct QuadBlock **)(uintptr_t)DrawLevelOvr1P_Scratch()->renderedOverflowPtr32;
+	return P32_DEC(P32(struct QuadBlock *) *, DrawLevelOvr1P_Scratch()->renderedOverflowPtr32);
 }
 
 static void DrawLevelOvr1P_AppendRenderedQuadBlock(struct QuadBlock *block)
 {
-	struct QuadBlock **renderedList = DrawLevelOvr1P_GetRenderedListCursor();
+	P32(struct QuadBlock *) *renderedList = DrawLevelOvr1P_GetRenderedListCursor();
 
 	if (renderedList == NULL)
 	{
 		return;
 	}
 
-	*renderedList = block;
+	P32_SET(*renderedList, block);
 	DrawLevelOvr1P_SetRenderedListCursor(renderedList + 1);
 }
 
 static void DrawLevelOvr1P_TerminateRenderedListCursor(void)
 {
-	struct QuadBlock **renderedList = DrawLevelOvr1P_GetRenderedListCursor();
+	P32(struct QuadBlock *) *renderedList = DrawLevelOvr1P_GetRenderedListCursor();
 
 	if (renderedList != NULL)
 	{
-		*renderedList = NULL;
+		P32_SET(*renderedList, NULL);
 	}
 }
 
 static struct TextureLayout *Ovr226_800a1058_PrepareFullDynamicLowUv(struct QuadBlock *block, struct DrawLevelOvr1PScratchVertex *projected)
 {
 	const int *indices = sDrawLevelOvr1PFullDynamicLowIndices;
-	struct TextureLayout *texture = block->ptr_texture_low;
+	struct TextureLayout *texture = P32_GET(void *, block->ptr_texture_low);
 
 	// NOTE(aalhendi): Retail full-dynamic 0x800a0ef4 seeds low-LOD UVs before
 	// choosing either the direct low quad or the near/transition helper table.
@@ -8437,7 +8438,7 @@ static void Ovr226_800a0f0c_SeedFullDynamicVisibilityScratch(const int *visFaceL
 	u32 blockID = (u16)block->blockID;
 	const u32 *word = (const u32 *)((const u8 *)visFaceList + ((blockID >> 3) & 0x1fc));
 
-	DrawLevelOvr1P_Scratch()->visibilityWordPtr32 = (u32)(uintptr_t)word;
+	DrawLevelOvr1P_Scratch()->visibilityWordPtr32 = P32_ENC(word);
 	DrawLevelOvr1P_Scratch()->visibilityBitIndex = blockID & 0x1f;
 	DrawLevelOvr1P_Scratch()->visibilityWord = *word;
 }
@@ -8450,12 +8451,12 @@ static int Ovr226_800a0f34_ConsumeFullDynamicVisibilityBit(void)
 
 	if (bitIndex < 0)
 	{
-		u32 *wordPtr = (u32 *)(uintptr_t)DrawLevelOvr1P_Scratch()->visibilityWordPtr32;
+		u32 *wordPtr = P32_DEC(u32 *, DrawLevelOvr1P_Scratch()->visibilityWordPtr32);
 
 		bitIndex = 0x1f;
 		word = wordPtr[1];
 		wordPtr++;
-		DrawLevelOvr1P_Scratch()->visibilityWordPtr32 = (u32)(uintptr_t)wordPtr;
+		DrawLevelOvr1P_Scratch()->visibilityWordPtr32 = P32_ENC(wordPtr);
 		DrawLevelOvr1P_Scratch()->visibilityWord = word;
 	}
 
@@ -8468,12 +8469,12 @@ static int Ovr226_800a0f34_ConsumeFullDynamicVisibilityBit(void)
 static int Ovr226_800a0ef4_DrawFullDynamicBspList(struct VisMemBspListNode *slot, struct PushBuffer *pb, struct mesh_info *mesh, struct PrimMem *primMem,
                                                   const int *visFaceList)
 {
-	struct LevVertex *vertices = mesh->ptrVertexArray;
+	struct LevVertex *vertices = P32_GET(struct LevVertex *, mesh->ptrVertexArray);
 
 	while (slot != NULL)
 	{
-		struct BSP *bsp = slot->bsp;
-		struct QuadBlock *block = bsp->data.leaf.ptrQuadBlockArray;
+		struct BSP *bsp = P32_GET(struct BSP *, slot->bsp);
+		struct QuadBlock *block = P32_GET(struct QuadBlock *, bsp->data.leaf.ptrQuadBlockArray);
 		s32 quadCount = bsp->data.leaf.numQuads;
 
 		DrawLevelOvr1P_Scratch()->quadCount = quadCount;
@@ -8502,7 +8503,7 @@ static int Ovr226_800a0ef4_DrawFullDynamicBspList(struct VisMemBspListNode *slot
 			DrawLevelOvr1P_Scratch()->quadCount = quadCount;
 		}
 
-		slot = slot->next;
+		slot = P32_GET(struct VisMemBspListNode *, slot->next);
 	}
 
 	return 1;
@@ -8544,7 +8545,7 @@ static int DrawLevelOvr1P_ProjectSplitGroundListATransitionGrid(struct LevVertex
 
 static int DrawLevelOvr1P_EmitSplitGroundListAQuadBlock(struct PushBuffer *pb, struct PrimMem *primMem, struct mesh_info *mesh, struct QuadBlock *block)
 {
-	struct LevVertex *vertices = mesh->ptrVertexArray;
+	struct LevVertex *vertices = P32_GET(struct LevVertex *, mesh->ptrVertexArray);
 	struct DrawLevelOvr1PScratchVertex *projected = DrawLevelOvr1P_GetScratchVertices();
 
 	if (DrawLevelOvr1P_ProjectSplitGroundListALowGrid(vertices, block, projected))
@@ -8579,8 +8580,8 @@ static int DrawLevelOvr1P_DrawSplitGroundListABspList(struct VisMemBspListNode *
 
 	while (slot != NULL)
 	{
-		struct BSP *bsp = slot->bsp;
-		struct QuadBlock *block = bsp->data.leaf.ptrQuadBlockArray;
+		struct BSP *bsp = P32_GET(struct BSP *, slot->bsp);
+		struct QuadBlock *block = P32_GET(struct QuadBlock *, bsp->data.leaf.ptrQuadBlockArray);
 		s32 quadCount = bsp->data.leaf.numQuads;
 
 		DrawLevelOvr1P_Scratch()->quadCount = quadCount;
@@ -8606,7 +8607,7 @@ static int DrawLevelOvr1P_DrawSplitGroundListABspList(struct VisMemBspListNode *
 			DrawLevelOvr1P_Scratch()->quadCount = quadCount;
 		}
 
-		slot = slot->next;
+		slot = P32_GET(struct VisMemBspListNode *, slot->next);
 	}
 
 	DrawLevelOvr1P_TerminateRenderedListCursor();
@@ -8615,7 +8616,7 @@ static int DrawLevelOvr1P_DrawSplitGroundListABspList(struct VisMemBspListNode *
 
 static int Ovr226_800a3738_EmitGround4x1ListQuadBlock(struct PushBuffer *pb, struct PrimMem *primMem, struct mesh_info *mesh, struct QuadBlock *block)
 {
-	struct LevVertex *vertices = mesh->ptrVertexArray;
+	struct LevVertex *vertices = P32_GET(struct LevVertex *, mesh->ptrVertexArray);
 	struct DrawLevelOvr1PScratchVertex *projected = DrawLevelOvr1P_GetScratchVertices();
 
 	if (DrawLevelOvr1P_ProjectListGrid(vertices, block, projected, DRAW_LEVEL_OVR1P_PROJECTED_SOURCE_POS_FLAGS, DRAW_LEVEL_OVR1P_GRID_SLOT_FACE))
@@ -8697,10 +8698,10 @@ static int DrawLevelOvr1P_NonWaterRenderedSelectorNearGate(struct PushBuffer *pb
 	}
 }
 
-static int DrawLevelOvr1P_DrawNonWaterRenderedList(struct QuadBlock **renderedList, struct PushBuffer *pb, struct mesh_info *mesh, struct PrimMem *primMem,
+static int DrawLevelOvr1P_DrawNonWaterRenderedList(P32(struct QuadBlock *) *renderedList, struct PushBuffer *pb, struct mesh_info *mesh, struct PrimMem *primMem,
                                                    int role)
 {
-	struct LevVertex *vertices = mesh->ptrVertexArray;
+	struct LevVertex *vertices = P32_GET(struct LevVertex *, mesh->ptrVertexArray);
 	struct DrawLevelOvr1PScratchVertex *projected = DrawLevelOvr1P_GetScratchVertices();
 	u32 reserve = DrawLevelOvr1P_GetNonWaterRenderedListReserve(role);
 	enum DrawLevelOvr1PGridSlotMode slotMode = DrawLevelOvr1P_GetNonWaterRenderedListSlotMode(role);
@@ -8712,7 +8713,7 @@ static int DrawLevelOvr1P_DrawNonWaterRenderedList(struct QuadBlock **renderedLi
 
 	while (1)
 	{
-		struct QuadBlock *block = *renderedList;
+		struct QuadBlock *block = P32_GET(struct QuadBlock *, *renderedList);
 
 		if (!DrawLevelOvr1P_HasBucketPrimReserve(primMem, reserve))
 		{
@@ -8741,7 +8742,7 @@ static int DrawLevelOvr1P_DrawNonWaterRenderedList(struct QuadBlock **renderedLi
 
 static int Ovr226_800a5030_EmitGround4x2ListQuadBlock(struct PushBuffer *pb, struct PrimMem *primMem, struct mesh_info *mesh, struct QuadBlock *block)
 {
-	struct LevVertex *vertices = mesh->ptrVertexArray;
+	struct LevVertex *vertices = P32_GET(struct LevVertex *, mesh->ptrVertexArray);
 	struct DrawLevelOvr1PScratchVertex *projected = DrawLevelOvr1P_GetScratchVertices();
 
 	if (DrawLevelOvr1P_ProjectListGrid(vertices, block, projected, DRAW_LEVEL_OVR1P_PROJECTED_SOURCE_POS_FLAGS, DRAW_LEVEL_OVR1P_GRID_SLOT_FACE))
@@ -8763,7 +8764,7 @@ static int Ovr226_800a5030_EmitGround4x2ListQuadBlock(struct PushBuffer *pb, str
 
 static int Ovr226_800a6fd0_EmitDynamicListQuadBlock(struct PushBuffer *pb, struct PrimMem *primMem, struct mesh_info *mesh, struct QuadBlock *block)
 {
-	struct LevVertex *vertices = mesh->ptrVertexArray;
+	struct LevVertex *vertices = P32_GET(struct LevVertex *, mesh->ptrVertexArray);
 	struct DrawLevelOvr1PScratchVertex *projected = DrawLevelOvr1P_GetScratchVertices();
 
 	if (DrawLevelOvr1P_ProjectListGrid(vertices, block, projected, DRAW_LEVEL_OVR1P_PROJECTED_SOURCE_POS_FLAGS, DRAW_LEVEL_OVR1P_GRID_SLOT_WORD))
@@ -8785,7 +8786,7 @@ static int Ovr226_800a6fd0_EmitDynamicListQuadBlock(struct PushBuffer *pb, struc
 
 static int Ovr226_800a8bf0_EmitWideDynamicQuadBlock(struct PushBuffer *pb, struct PrimMem *primMem, struct mesh_info *mesh, struct QuadBlock *block)
 {
-	struct LevVertex *vertices = mesh->ptrVertexArray;
+	struct LevVertex *vertices = P32_GET(struct LevVertex *, mesh->ptrVertexArray);
 	struct DrawLevelOvr1PScratchVertex *projected = DrawLevelOvr1P_GetScratchVertices();
 
 	if (DrawLevelOvr1P_ProjectListGrid(vertices, block, projected, DRAW_LEVEL_OVR1P_PROJECTED_SOURCE_POS_FLAGS, DRAW_LEVEL_OVR1P_GRID_SLOT_WORD))
@@ -8835,8 +8836,8 @@ static int DrawLevelOvr1P_DrawBspListQuadBlocks(struct VisMemBspListNode *slot, 
 
 	while (slot != NULL)
 	{
-		struct BSP *bsp = slot->bsp;
-		struct QuadBlock *block = bsp->data.leaf.ptrQuadBlockArray;
+		struct BSP *bsp = P32_GET(struct BSP *, slot->bsp);
+		struct QuadBlock *block = P32_GET(struct QuadBlock *, bsp->data.leaf.ptrQuadBlockArray);
 		s32 quadCount = bsp->data.leaf.numQuads;
 
 		DrawLevelOvr1P_Scratch()->quadCount = quadCount;
@@ -8862,14 +8863,14 @@ static int DrawLevelOvr1P_DrawBspListQuadBlocks(struct VisMemBspListNode *slot, 
 			DrawLevelOvr1P_Scratch()->quadCount = quadCount;
 		}
 
-		slot = slot->next;
+		slot = P32_GET(struct VisMemBspListNode *, slot->next);
 	}
 
 	DrawLevelOvr1P_TerminateRenderedListCursor();
 	return 1;
 }
 
-static struct QuadBlock **DrawLevelOvr1P_GetRenderedListForRole(struct DrawLevelOvr1PRenderList *renderList, int role)
+static P32(struct QuadBlock *) *DrawLevelOvr1P_GetRenderedListForRole(struct DrawLevelOvr1PRenderList *renderList, int role)
 {
 	switch (role)
 	{
@@ -8879,19 +8880,19 @@ static struct QuadBlock **DrawLevelOvr1P_GetRenderedListForRole(struct DrawLevel
 		return DrawLevelOvr1P_GetRenderedOverflowBase();
 	case DRAW_LEVEL_OVR1P_BUCKET_4X4_LIST:
 	case DRAW_LEVEL_OVR1P_BUCKET_4X4_RENDERED:
-		return renderList->list[0].ptrQuadBlocksRendered;
+		return P32_GET(P32(struct QuadBlock *) *, renderList->list[0].ptrQuadBlocksRendered);
 	case DRAW_LEVEL_OVR1P_BUCKET_DYNAMIC_LIST:
 	case DRAW_LEVEL_OVR1P_BUCKET_DYNAMIC_RENDERED:
-		return renderList->list[1].ptrQuadBlocksRendered;
+		return P32_GET(P32(struct QuadBlock *) *, renderList->list[1].ptrQuadBlocksRendered);
 	case DRAW_LEVEL_OVR1P_BUCKET_4X2_LIST:
 	case DRAW_LEVEL_OVR1P_BUCKET_4X2_RENDERED:
-		return renderList->list[2].ptrQuadBlocksRendered;
+		return P32_GET(P32(struct QuadBlock *) *, renderList->list[2].ptrQuadBlocksRendered);
 	case DRAW_LEVEL_OVR1P_BUCKET_4X1_LIST:
 	case DRAW_LEVEL_OVR1P_BUCKET_4X1_RENDERED:
-		return renderList->list[3].ptrQuadBlocksRendered;
+		return P32_GET(P32(struct QuadBlock *) *, renderList->list[3].ptrQuadBlocksRendered);
 	case DRAW_LEVEL_OVR1P_BUCKET_WATER_LIST:
 	case DRAW_LEVEL_OVR1P_BUCKET_WATER_RENDERED:
-		return renderList->list[4].ptrQuadBlocksRendered;
+		return P32_GET(P32(struct QuadBlock *) *, renderList->list[4].ptrQuadBlocksRendered);
 	default:
 		return NULL;
 	}
@@ -8899,11 +8900,11 @@ static struct QuadBlock **DrawLevelOvr1P_GetRenderedListForRole(struct DrawLevel
 
 static void DrawLevelOvr1P_ClearRenderedListForRole(struct DrawLevelOvr1PRenderList *renderList, int role)
 {
-	struct QuadBlock **renderedList = DrawLevelOvr1P_GetRenderedListForRole(renderList, role);
+	P32(struct QuadBlock *) *renderedList = DrawLevelOvr1P_GetRenderedListForRole(renderList, role);
 
 	if (renderedList != NULL)
 	{
-		*renderedList = NULL;
+		P32_SET(*renderedList, NULL);
 	}
 }
 
@@ -9341,7 +9342,7 @@ static int Ovr226_800a27dc_EmitWaterListGT3Raw(struct PushBuffer *pb, struct Pri
 		return 1;
 	}
 
-	POLY_GT3 *prim = primMem->cursor;
+	POLY_GT3 *prim = P32_GET(void *, primMem->cursor);
 	POLY_GT3 *nextPrim = prim + 1;
 	DrawLevelOvr1P_StoreProjectedDirectUvScratch(projected, triIndices, 3);
 	u32 uv0 = DrawLevelOvr1P_Scratch()->uv.uv0;
@@ -9350,7 +9351,7 @@ static int Ovr226_800a27dc_EmitWaterListGT3Raw(struct PushBuffer *pb, struct Pri
 
 	DrawLevelOvr1P_WriteProjectedGT3(prim, block, projected, triIndices, 0x36, uv0, uv1, uv2);
 	DrawLevelOvr1P_AddRawPrimToOt(primMem, prim, 9, inheritedOtEntry);
-	primMem->cursor = nextPrim;
+	P32_SET(primMem->cursor, nextPrim);
 	return 1;
 }
 
@@ -9367,7 +9368,7 @@ static int Ovr226_800a2850_EmitWaterListGT4Raw(struct PushBuffer *pb, struct Pri
 		return 1;
 	}
 
-	POLY_GT4 *prim = primMem->cursor;
+	POLY_GT4 *prim = P32_GET(void *, primMem->cursor);
 	POLY_GT4 *nextPrim = prim + 1;
 	DrawLevelOvr1P_StoreProjectedDirectUvScratch(projected, indices, 4);
 	u32 uv0 = DrawLevelOvr1P_Scratch()->uv.uv0;
@@ -9376,7 +9377,7 @@ static int Ovr226_800a2850_EmitWaterListGT4Raw(struct PushBuffer *pb, struct Pri
 
 	DrawLevelOvr1P_WriteProjectedGT4(prim, block, projected, indices, 0x3e, uv0, uv1, uv2);
 	DrawLevelOvr1P_AddRawPrimToOt(primMem, prim, 12, inheritedOtEntry);
-	primMem->cursor = nextPrim;
+	P32_SET(primMem->cursor, nextPrim);
 	return 1;
 }
 
@@ -9473,7 +9474,7 @@ static int Ovr226_800a25d0_WaterListFaceGate(struct PushBuffer *pb, struct PrimM
 
 static void Ovr226_800a1e30_SeedWaterListState(void)
 {
-	const struct TextureLayout *waterEnvMap = (const struct TextureLayout *)(uintptr_t)DrawLevelOvr1P_Scratch()->waterEnvMapPtr32;
+	const struct TextureLayout *waterEnvMap = P32_DEC(const struct TextureLayout *, DrawLevelOvr1P_Scratch()->waterEnvMapPtr32);
 
 	// NOTE(aalhendi): Retail 0x800a1e30 uses the global 1P retry list, not the
 	// current render-list field, before walking the water BSP list.
@@ -9500,7 +9501,7 @@ static int Ovr226_800a1eb0_ConsumeWaterVisibilityBit(void)
 
 static int Ovr226_800a1ee0_EmitWaterListQuadBlock(struct PushBuffer *pb, struct PrimMem *primMem, struct mesh_info *mesh, struct QuadBlock *block)
 {
-	struct LevVertex *vertices = mesh->ptrVertexArray;
+	struct LevVertex *vertices = P32_GET(struct LevVertex *, mesh->ptrVertexArray);
 	struct DrawLevelOvr1PScratchVertex *projected = DrawLevelOvr1P_GetScratchVertices();
 
 	if (DrawLevelOvr1P_ProjectListGrid(vertices, block, projected, DRAW_LEVEL_OVR1P_PROJECTED_SOURCE_WATER_COLOR_LO_FLAGS, DRAW_LEVEL_OVR1P_GRID_SLOT_FACE))
@@ -9522,8 +9523,8 @@ static int Ovr226_800a1e30_DrawWaterBspList(struct VisMemBspListNode *slot, stru
 
 	while (slot != NULL)
 	{
-		struct BSP *bsp = slot->bsp;
-		struct QuadBlock *block = bsp->data.leaf.ptrQuadBlockArray;
+		struct BSP *bsp = P32_GET(struct BSP *, slot->bsp);
+		struct QuadBlock *block = P32_GET(struct QuadBlock *, bsp->data.leaf.ptrQuadBlockArray);
 		s32 quadCount = bsp->data.leaf.numQuads;
 
 		DrawLevelOvr1P_Scratch()->quadCount = quadCount;
@@ -9549,7 +9550,7 @@ static int Ovr226_800a1e30_DrawWaterBspList(struct VisMemBspListNode *slot, stru
 			DrawLevelOvr1P_Scratch()->quadCount = quadCount;
 		}
 
-		slot = slot->next;
+		slot = P32_GET(struct VisMemBspListNode *, slot->next);
 	}
 
 	DrawLevelOvr1P_TerminateRenderedListCursor();
@@ -9837,7 +9838,7 @@ static uint32_t *Ovr226_800a31f0_ResolveWaterRenderedInheritedOtEntry(struct Pus
 	s32 otIndex = (s32)(selectedDepth >> 6) + drawOrder;
 	DrawLevelOvr1P_NoteDrawOrder(drawOrder);
 
-	return &pb->ptrOT[otIndex];
+	return &P32_GET(uint32_t *, pb->ptrOT)[otIndex];
 }
 
 static int Ovr226_800a333c_EmitWaterRenderedGT3RawOrClip(struct PushBuffer *pb, struct PrimMem *primMem, const struct QuadBlock *block,
@@ -9989,7 +9990,7 @@ static int Ovr226_800a30f0_WaterRenderedFaceGate(struct PushBuffer *pb, struct P
 static int DrawLevelOvr1P_DrawRenderedWaterQuadBlockWithDefaultHandler(struct PushBuffer *pb, struct PrimMem *primMem, struct mesh_info *mesh,
                                                                        struct QuadBlock *block, DrawLevelOvrRetailLabel defaultHandlerAddress)
 {
-	struct LevVertex *vertices = mesh->ptrVertexArray;
+	struct LevVertex *vertices = P32_GET(struct LevVertex *, mesh->ptrVertexArray);
 	struct DrawLevelOvr1PScratchVertex *projected = DrawLevelOvr1P_GetScratchVertices();
 
 	DrawLevelOvr1P_ProjectRenderedGrid(vertices, block, projected, DRAW_LEVEL_OVR1P_PROJECTED_SOURCE_WATER_COLOR_LO_FLAGS, DRAW_LEVEL_OVR1P_GRID_SLOT_NONE);
@@ -10001,7 +10002,7 @@ static int DrawLevelOvr1P_DrawRenderedWaterQuadBlockWithDefaultHandler(struct Pu
 	                                                           NULL);
 }
 
-static int Ovr226_800a2904_DrawWaterRenderedListWithDefaultHandler(struct QuadBlock **renderedList, struct PushBuffer *pb, struct mesh_info *mesh,
+static int Ovr226_800a2904_DrawWaterRenderedListWithDefaultHandler(P32(struct QuadBlock *) *renderedList, struct PushBuffer *pb, struct mesh_info *mesh,
                                                                    struct PrimMem *primMem, DrawLevelOvrRetailLabel defaultHandlerAddress)
 {
 	if (renderedList == NULL)
@@ -10011,7 +10012,7 @@ static int Ovr226_800a2904_DrawWaterRenderedListWithDefaultHandler(struct QuadBl
 
 	while (1)
 	{
-		struct QuadBlock *block = *renderedList;
+		struct QuadBlock *block = P32_GET(struct QuadBlock *, *renderedList);
 
 		if (!DrawLevelOvr1P_HasBucketPrimReserve(primMem, DRAW_LEVEL_OVR1P_BUCKET_RESERVE_DEFAULT))
 		{
@@ -10033,12 +10034,12 @@ static int Ovr226_800a2904_DrawWaterRenderedListWithDefaultHandler(struct QuadBl
 	}
 }
 
-static int Ovr226_800a2904_DrawWaterRenderedList(struct QuadBlock **renderedList, struct PushBuffer *pb, struct mesh_info *mesh, struct PrimMem *primMem)
+static int Ovr226_800a2904_DrawWaterRenderedList(P32(struct QuadBlock *) *renderedList, struct PushBuffer *pb, struct mesh_info *mesh, struct PrimMem *primMem)
 {
 	return Ovr226_800a2904_DrawWaterRenderedListWithDefaultHandler(renderedList, pb, mesh, primMem, DRAW_LEVEL_OVR_RETAIL_LABEL_WATER_RENDERED_WRAPPER_SLOT5);
 }
 
-static int DrawLevelOvr1P_DrawRenderedQuadBlocks(struct QuadBlock **renderedList, struct PushBuffer *pb, struct mesh_info *mesh, struct PrimMem *primMem,
+static int DrawLevelOvr1P_DrawRenderedQuadBlocks(P32(struct QuadBlock *) *renderedList, struct PushBuffer *pb, struct mesh_info *mesh, struct PrimMem *primMem,
                                                  int role)
 {
 	if (renderedList == NULL)
@@ -10068,12 +10069,12 @@ static void *DrawLevelOvr1P_GetRenderListBucketValue(struct DrawLevelOvr1PRender
 
 	if (renderListOffset == offsetof(struct DrawLevelOvr1PRenderList, bspListStart_FullDynamic))
 	{
-		return renderList->bspListStart_FullDynamic;
+		return P32_GET(struct VisMemBspListNode *, renderList->bspListStart_FullDynamic);
 	}
 
 	if (renderListOffset == offsetof(struct DrawLevelOvr1PRenderList, ptrQuadBlocksRendered_FullDynamic))
 	{
-		return renderList->ptrQuadBlocksRendered_FullDynamic;
+		return P32_GET(P32(struct QuadBlock *) *, renderList->ptrQuadBlocksRendered_FullDynamic);
 	}
 
 	u32 slotIndex = (u32)renderListOffset / sizeof(renderList->list[0]);
@@ -10085,10 +10086,10 @@ static void *DrawLevelOvr1P_GetRenderListBucketValue(struct DrawLevelOvr1PRender
 
 	if (bucket->kind == DRAW_LEVEL_OVR1P_BUCKET_QUADBLOCKS_RENDERED)
 	{
-		return renderList->list[slotIndex].ptrQuadBlocksRendered;
+		return P32_GET(P32(struct QuadBlock *) *, renderList->list[slotIndex].ptrQuadBlocksRendered);
 	}
 
-	return renderList->list[slotIndex].bspListStart;
+	return P32_GET(struct VisMemBspListNode *, renderList->list[slotIndex].bspListStart);
 }
 
 static void Ovr226_800a0d34_SetEntryGteAndCameraScratch(struct PushBuffer *pb)
@@ -10144,7 +10145,7 @@ static int Ovr226_800a0e78_DispatchBucketHandler(u32 handlerAddress, void *bucke
 
 	if (bucket->kind == DRAW_LEVEL_OVR1P_BUCKET_QUADBLOCKS_RENDERED)
 	{
-		return DrawLevelOvr1P_DrawRenderedQuadBlocks((struct QuadBlock **)bucketValue, pb, mesh, primMem, bucket->role);
+		return DrawLevelOvr1P_DrawRenderedQuadBlocks((P32(struct QuadBlock *) *)bucketValue, pb, mesh, primMem, bucket->role);
 	}
 
 	if (bucket->role == DRAW_LEVEL_OVR1P_BUCKET_FULL_DYNAMIC_LIST)
@@ -10205,7 +10206,7 @@ static int Ovr226_800a0e10_DispatchBucketTable(struct DrawLevelOvr1PRenderList *
 }
 
 static void DrawLevelOvr1P_WithContext(void *LevRenderList, struct PushBuffer *pb, struct BSP *bspList, struct PrimMem *primMem, const int *visFaceList,
-                                         const struct TextureLayout *waterEnvMap, u8 *clipStart, struct QuadBlock **renderedOverflowBase)
+                                         const struct TextureLayout *waterEnvMap, u8 *clipStart, P32(struct QuadBlock *) *renderedOverflowBase)
 {
 	struct DrawLevelOvr1PRenderList *renderList = LevRenderList;
 	struct mesh_info *mesh = (struct mesh_info *)bspList;
@@ -10216,17 +10217,17 @@ static void DrawLevelOvr1P_WithContext(void *LevRenderList, struct PushBuffer *p
 	// scratch users see the same entry-owned word; the host ABI owns SP.
 	DrawLevelOvr1P_Scratch()->savedStackPtr32 = (u32)(uintptr_t)&hostStackAnchor;
 
-	DrawLevelOvr1P_Scratch()->primMemEndPtr32 = (u32)(uintptr_t)primMem->end;
-	DrawLevelOvr1P_Scratch()->visFaceListPtr32 = (u32)(uintptr_t)visFaceList;
+	DrawLevelOvr1P_Scratch()->primMemEndPtr32 = P32_ENC(P32_GET(void *, primMem->end));
+	DrawLevelOvr1P_Scratch()->visFaceListPtr32 = P32_ENC(visFaceList);
 
 	if (visFaceList == NULL)
 	{
 		return;
 	}
 
-	DrawLevelOvr1P_Scratch()->waterEnvMapPtr32 = (u32)(uintptr_t)waterEnvMap;
+	DrawLevelOvr1P_Scratch()->waterEnvMapPtr32 = P32_ENC(waterEnvMap);
 
-	if (mesh->ptrQuadBlockArray == NULL)
+	if (P32_GET(struct QuadBlock *, mesh->ptrQuadBlockArray) == NULL)
 	{
 		return;
 	}
@@ -10259,5 +10260,5 @@ static void DrawLevelOvr1P_WithContext(void *LevRenderList, struct PushBuffer *p
 void DrawLevelOvr1P(void *LevRenderList, struct PushBuffer *pb, struct BSP *bspList, struct PrimMem *primMem, const int *visFaceList,
                     const struct TextureLayout *waterEnvMap)
 {
-	DrawLevelOvr1P_WithContext(LevRenderList, pb, bspList, primMem, visFaceList, waterEnvMap, data.PtrClipBuffer[0], sdata_static.quadBlocksRendered);
+	DrawLevelOvr1P_WithContext(LevRenderList, pb, bspList, primMem, visFaceList, waterEnvMap, P32_GET(void *, data.PtrClipBuffer[0]), sdata_static.quadBlocksRendered);
 }

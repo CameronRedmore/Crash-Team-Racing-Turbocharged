@@ -161,9 +161,9 @@ int VehPhysCrash_BounceSelf(const SVec3 *normal, const Vec3 *origin, Vec3 *vel, 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8005d0d0-0x8005d218.
 void VehPhysCrash_AI(struct Driver *bot, Vec3 *vel)
 {
-	sdata->botCrashNavRot.x = (s16)CTR_MipsSll(bot->botData.botNavFrame->rot[0], VEH_PHYS_CRASH_BOT_NAV_ROT_SHIFT);
-	sdata->botCrashNavRot.y = (s16)CTR_MipsSll(bot->botData.botNavFrame->rot[1], VEH_PHYS_CRASH_BOT_NAV_ROT_SHIFT);
-	sdata->botCrashNavRot.z = (s16)CTR_MipsSll(bot->botData.botNavFrame->rot[2], VEH_PHYS_CRASH_BOT_NAV_ROT_SHIFT);
+	sdata->botCrashNavRot.x = (s16)CTR_MipsSll(P32_GET(struct NavFrame *, bot->botData.botNavFrame)->rot[0], VEH_PHYS_CRASH_BOT_NAV_ROT_SHIFT);
+	sdata->botCrashNavRot.y = (s16)CTR_MipsSll(P32_GET(struct NavFrame *, bot->botData.botNavFrame)->rot[1], VEH_PHYS_CRASH_BOT_NAV_ROT_SHIFT);
+	sdata->botCrashNavRot.z = (s16)CTR_MipsSll(P32_GET(struct NavFrame *, bot->botData.botNavFrame)->rot[2], VEH_PHYS_CRASH_BOT_NAV_ROT_SHIFT);
 
 	struct VehPhysCrashAiScratch *scratch = (struct VehPhysCrashAiScratch *)(void *)&sdata->dataLibFiller[0];
 	MATRIX *matrix = &scratch->matrix;
@@ -214,7 +214,7 @@ int VehPhysCrash_Attack(struct Driver *driver1, struct Driver *driver2, b32 canP
 		{
 			driver1->pendingDamageType = VEH_PHYS_CRASH_DAMAGE_TYPE_MASK;
 			VehPhysCrash_Attack_SetReason(driver1, VEH_PHYS_CRASH_DAMAGE_REASON_MASK);
-			driver1->pendingDamageAttacker = driver2;
+			P32_SET(driver1->pendingDamageAttacker, driver2);
 
 			if ((canPlayFeedback != 0) && VehPhysCrash_ShouldPlayLocalFeedback(driver1, driver2) && (driver1->kartState != KS_BLASTED) && (driver1->invincibleTimer == 0))
 			{
@@ -223,16 +223,16 @@ int VehPhysCrash_Attack(struct Driver *driver1, struct Driver *driver2, b32 canP
 			}
 		}
 
-		if ((driver2->instBubbleHold != NULL) && (driver1->instBubbleHold == NULL))
+		if ((P32_GET(struct Instance *, driver2->instBubbleHold) != NULL) && (P32_GET(struct Instance *, driver1->instBubbleHold) == NULL))
 		{
-			struct Shield *bubble = driver2->instBubbleHold->thread->object;
+			struct Shield *bubble = P32_GET(void *, P32_GET(struct Thread *, P32_GET(struct Instance *, driver2->instBubbleHold)->thread)->object);
 
 			bubble->flags |= SHIELD_FLAG_CRASH_ATTACK;
-			driver2->instBubbleHold = NULL;
+			P32_SET(driver2->instBubbleHold, NULL);
 
 			driver1->pendingDamageType = VEH_PHYS_CRASH_DAMAGE_TYPE_MASK;
 			VehPhysCrash_Attack_SetReason(driver1, VEH_PHYS_CRASH_DAMAGE_REASON_SHIELD);
-			driver1->pendingDamageAttacker = driver2;
+			P32_SET(driver1->pendingDamageAttacker, driver2);
 
 			if ((canPlayFeedback != 0) && VehPhysCrash_ShouldPlayLocalFeedback(driver1, driver2) && (driver1->kartState != KS_BLASTED) && (driver1->invincibleTimer == 0))
 			{
@@ -259,7 +259,7 @@ int VehPhysCrash_Attack(struct Driver *driver1, struct Driver *driver2, b32 canP
 
 			driver1->pendingDamageType = VEH_PHYS_CRASH_DAMAGE_TYPE_TURBO;
 			VehPhysCrash_Attack_SetReason(driver1, VEH_PHYS_CRASH_DAMAGE_REASON_TURBO);
-			driver1->pendingDamageAttacker = driver2;
+			P32_SET(driver1->pendingDamageAttacker, driver2);
 		}
 	}
 
@@ -327,7 +327,7 @@ static void VehPhysCrash_PlayHumanFeedback(struct Thread *selfThread, struct Thr
 
 			// NOTE(aalhendi): Retail uses DAT_8008d838. This field currently
 			// names the same USA address as the last audioDefaults slot.
-			sdata->audioDefaults[8] = sdata->gGT->frameTimer_MainFrame_ResetDB;
+			sdata->audioDefaults[8] = P32_GET(struct GameTracker *, sdata->gGT)->frameTimer_MainFrame_ResetDB;
 
 			if ((u32)volume > VEH_PHYS_CRASH_HARD_CRASH_VOLUME)
 			{
@@ -370,9 +370,9 @@ void VehPhysCrash_AnyTwoCars(struct Thread *thread, struct DriverCollisionSearch
 		             (s16)CTR_MipsDiv(CTR_MipsSll(dist->z, VEH_PHYS_CRASH_MATRIX_FRAC_SHIFT), distance));
 	}
 
-	struct Thread *otherThread = search->bucket.th;
-	struct Driver *otherDriver = otherThread->object;
-	struct Driver *selfDriver = thread->object;
+	struct Thread *otherThread = P32_GET(struct Thread *, search->bucket.th);
+	struct Driver *otherDriver = P32_GET(void *, otherThread->object);
+	struct Driver *selfDriver = P32_GET(void *, thread->object);
 
 	int hitStrength = CTR_MipsSubLo(CTR_MipsAddLo(thread->driverHitRadius, otherThread->driverHitRadius), distance);
 	if (hitStrength <= 0)
@@ -441,7 +441,7 @@ void VehPhysCrash_AnyTwoCars(struct Thread *thread, struct DriverCollisionSearch
 		VehPhysCrash_SubImpulse(otherVel, hitDir, hitStrength);
 	}
 
-	u32 canPlayFeedback = ((u32)CTR_MipsSubLo(sdata->gGT->frameTimer_MainFrame_ResetDB, sdata->audioDefaults[8]) >= VEH_PHYS_CRASH_FEEDBACK_COOLDOWN_FRAMES);
+	u32 canPlayFeedback = ((u32)CTR_MipsSubLo(P32_GET(struct GameTracker *, sdata->gGT)->frameTimer_MainFrame_ResetDB, sdata->audioDefaults[8]) >= VEH_PHYS_CRASH_FEEDBACK_COOLDOWN_FRAMES);
 
 	VehPhysCrash_PlayHumanFeedback(thread, otherThread, selfDriver, otherDriver, canPlayFeedback);
 

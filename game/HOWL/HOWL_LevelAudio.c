@@ -55,7 +55,7 @@ void CalculateVolumeFromDistance(u32 *soundIDCount, u32 soundID, int distance)
 			{
 				if (soundID == 0x89)
 				{
-					int distort = ((u32)sdata->gGT->frameTimer_VsyncCallback >> 2 & 0x7f) - 0x40;
+					int distort = ((u32)P32_GET(struct GameTracker *, sdata->gGT)->frameTimer_VsyncCallback >> 2 & 0x7f) - 0x40;
 					if (distort < 0)
 					{
 						distort = -distort;
@@ -175,8 +175,8 @@ void Level_RandomFX(int *cooldown, u32 soundID, int baseCooldown, u32 randomRang
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8002ebe4-0x8002f0dc
 void Level_AmbientSound(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
-	struct Level *level = gGT->level1;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct Level *level = P32_GET(struct Level *, gGT->level1);
 	u32 levelID = gGT->levelID;
 	int closestDistance[2];
 
@@ -192,9 +192,9 @@ void Level_AmbientSound(void)
 
 		for (int i = 0; i < gGT->numPlyrCurrGame; i++)
 		{
-			struct Driver *driver = gGT->drivers[i];
+			struct Driver *driver = P32_GET(struct Driver *, gGT->drivers[i]);
 			u8 terrain = driver->currentTerrain;
-			s16 sound = driver->terrainMeta2->sound;
+			s16 sound = P32_GET(struct Terrain *, driver->terrainMeta2)->sound;
 
 			if ((terrain == 0) || (terrain == 1) || (terrain == 11))
 			{
@@ -223,7 +223,7 @@ void Level_AmbientSound(void)
 
 		for (int i = 0; i < gGT->numPlyrCurrGame; i++)
 		{
-			s16 sound = gGT->drivers[i]->terrainMeta2->sound;
+			s16 sound = P32_GET(struct Terrain *, P32_GET(struct Driver *, gGT->drivers[i])->terrainMeta2)->sound;
 
 			if (sound != -1)
 			{
@@ -261,7 +261,7 @@ void Level_AmbientSound(void)
 
 		if (spawnIndex < level->numSpawnType2)
 		{
-			struct SpawnType2 *spawn = &level->ptrSpawnType2[spawnIndex];
+			struct SpawnType2 *spawn = &P32_GET(struct SpawnType2 *, level->ptrSpawnType2)[spawnIndex];
 
 			if (spawn->numCoords > 9)
 			{
@@ -270,7 +270,7 @@ void Level_AmbientSound(void)
 
 			for (int coordIndex = 0; coordIndex < spawn->numCoords; coordIndex++)
 			{
-				SVec3 *coord = &spawn->positions[coordIndex];
+				SVec3 *coord = &P32_GET(SVec3 *, spawn->positions)[coordIndex];
 
 				for (int playerIndex = 0; playerIndex < gGT->numPlyrCurrGame; playerIndex++)
 				{
@@ -351,7 +351,7 @@ static u32 PlaySound3D_CalculateLR(s32 *dir)
 static u32 PlaySound3D_BuildFlags(struct GameTracker *gGT, int cameraIndex, u32 distance, u32 lr)
 {
 	u32 volume;
-	u32 echo = (u32)gGT->cameraDC[cameraIndex].ptrQuadBlock->quadFlags & QUADBLOCK_FLAG_ENGINE_ECHO;
+	u32 echo = (u32)P32_GET(struct QuadBlock *, gGT->cameraDC[cameraIndex].ptrQuadBlock)->quadFlags & QUADBLOCK_FLAG_ENGINE_ECHO;
 
 	if (distance < 301)
 	{
@@ -368,7 +368,7 @@ static u32 PlaySound3D_BuildFlags(struct GameTracker *gGT, int cameraIndex, u32 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8002f0dc-0x8002f31c
 void PlaySound3D(u32 soundID, struct Instance *inst)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	s32 dir[4][3];
 	u32 distance[4];
 	u32 closestDistance = 9000;
@@ -421,7 +421,7 @@ void PlaySound3D(u32 soundID, struct Instance *inst)
 static u32 PlaySound3D_Flags_BuildFlags(struct GameTracker *gGT, int cameraIndex, u32 distance, u32 lr)
 {
 	u32 volume;
-	u32 echo = (u32)gGT->cameraDC[cameraIndex].ptrQuadBlock->quadFlags & QUADBLOCK_FLAG_ENGINE_ECHO;
+	u32 echo = (u32)P32_GET(struct QuadBlock *, gGT->cameraDC[cameraIndex].ptrQuadBlock)->quadFlags & QUADBLOCK_FLAG_ENGINE_ECHO;
 
 	if (distance < 301)
 	{
@@ -438,7 +438,7 @@ static u32 PlaySound3D_Flags_BuildFlags(struct GameTracker *gGT, int cameraIndex
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8002f31c-0x8002f5f4
 void PlaySound3D_Flags(u32 *flags, u32 soundID, struct Instance *inst)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	s32 dir[4][3];
 	u32 distance[4];
 	u32 closestDistance = 9000;

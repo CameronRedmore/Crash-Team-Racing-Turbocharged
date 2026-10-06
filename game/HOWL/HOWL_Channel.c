@@ -57,9 +57,9 @@ int Channel_FindSound(int soundID)
 {
 	struct ChannelStats *curr, *backupNext;
 
-	for (curr = (struct ChannelStats *)sdata->channelTaken.first; curr != NULL; curr = backupNext)
+	for (curr = (struct ChannelStats *)P32_GET(struct Item *, sdata->channelTaken.first); curr != NULL; curr = backupNext)
 	{
-		backupNext = curr->next;
+		backupNext = P32_GET(struct ChannelStats *, curr->next);
 
 		if ((curr->type == HOWL_CHANNEL_TYPE_OTHER_FX) &&
 
@@ -88,16 +88,16 @@ struct ChannelStats *Channel_AllocSlot_AntiSpam(s16 soundID, u8 boolUseAntiSpam,
 
 	if (boolUseAntiSpam == 1)
 	{
-		for (curr = (struct ChannelStats *)sdata->channelTaken.first; curr != NULL; curr = backupNext)
+		for (curr = (struct ChannelStats *)P32_GET(struct Item *, sdata->channelTaken.first); curr != NULL; curr = backupNext)
 		{
-			backupNext = curr->next;
+			backupNext = P32_GET(struct ChannelStats *, curr->next);
 
 			if ((curr->type == HOWL_CHANNEL_TYPE_OTHER_FX) &&
 
 			    // matching ID
 			    ((curr->soundID & 0xffff) == ((u16)soundID)))
 			{
-				u32 duration = (u32)sdata->gGT->frameTimer_MainFrame_ResetDB - (u32)curr->startFrame;
+				u32 duration = (u32)P32_GET(struct GameTracker *, sdata->gGT)->frameTimer_MainFrame_ResetDB - (u32)curr->startFrame;
 
 				// if started within 10 frames, cancel old and start new,
 				// otherwise you'll allocate too many sounds and overflow
@@ -133,7 +133,7 @@ struct ChannelStats *Channel_AllocSlot(int flags, struct ChannelAttr *attr)
 	struct ChannelStats *stats;
 
 	// get free slot
-	stats = (struct ChannelStats *)sdata->channelFree.first;
+	stats = (struct ChannelStats *)P32_GET(struct Item *, sdata->channelFree.first);
 
 	// quit if no free slots
 	if (stats == NULL)
@@ -167,9 +167,9 @@ struct ChannelStats *Channel_SearchFX_EditAttr(int type, int soundID, int update
 
 	struct ChannelStats *curr, *backupNext;
 
-	for (curr = (struct ChannelStats *)sdata->channelTaken.first; curr != NULL; curr = backupNext)
+	for (curr = (struct ChannelStats *)P32_GET(struct Item *, sdata->channelTaken.first); curr != NULL; curr = backupNext)
 	{
-		backupNext = curr->next;
+		backupNext = P32_GET(struct ChannelStats *, curr->next);
 
 		if (
 		    // matching type
@@ -235,9 +235,9 @@ struct ChannelStats *Channel_SearchFX_Destroy(int type, int soundID, int flags)
 {
 	struct ChannelStats *curr, *backupNext;
 
-	for (curr = (struct ChannelStats *)sdata->channelTaken.first; curr != NULL; curr = backupNext)
+	for (curr = (struct ChannelStats *)P32_GET(struct Item *, sdata->channelTaken.first); curr != NULL; curr = backupNext)
 	{
-		backupNext = curr->next;
+		backupNext = P32_GET(struct ChannelStats *, curr->next);
 
 		if (
 		    // matching type
@@ -270,9 +270,9 @@ void Channel_DestroyAll_LowLevel(int opt1, b32 boolKeepMusic, u8 type)
 {
 	struct ChannelStats *curr, *backupNext;
 
-	for (curr = (struct ChannelStats *)sdata->channelTaken.first; curr != NULL; curr = backupNext)
+	for (curr = (struct ChannelStats *)P32_GET(struct Item *, sdata->channelTaken.first); curr != NULL; curr = backupNext)
 	{
-		backupNext = curr->next;
+		backupNext = P32_GET(struct ChannelStats *, curr->next);
 
 		if (
 		    // destroy if not music
@@ -304,14 +304,14 @@ void Channel_ParseSongToChannels()
 {
 	struct Song *song;
 	struct SongSeq *seq;
-	struct SongSeq **seqEntry;
+	P32(struct SongSeq *) *seqEntry;
 	b32 boolVolumeChange;
 
 	if (sdata->boolAudioEnabled == 0)
 	{
 		return;
 	}
-	if (sdata->ptrCseqHeader == 0)
+	if (P32_GET(struct CseqHeader *, sdata->ptrCseqHeader) == 0)
 	{
 		return;
 	}
@@ -380,7 +380,7 @@ void Channel_ParseSongToChannels()
 
 		for (seqEntry = &song->CseqSequences[0]; seqEntry < &song->CseqSequences[song->numSequences]; seqEntry++)
 		{
-			seq = seqEntry[0];
+			seq = P32_GET(struct SongSeq *, seqEntry[0]);
 
 			volCurr = seq->vol_Curr;
 			volNew = seq->vol_New;
@@ -428,13 +428,13 @@ void Channel_ParseSongToChannels()
 					seq->NoteTimeElapsed -= seq->NoteLength;
 
 					// currNote->opcode
-					int opcode = (u8)seq->currNote[0];
+					int opcode = (u8)P32_GET(u8 *, seq->currNote)[0];
 
 					if (opcode < 0xb)
 					{
 						// call opcode from funcPtr array,
 						// this is OG until DATA is rewritten
-						(*data.opcodeFunc[opcode])(seq);
+						(*P32_GET(void (*)(struct SongSeq *), data.opcodeFunc[opcode]))(seq);
 
 						// if reached end, quit
 						if ((seq->flags & 1) == 0)
@@ -447,16 +447,16 @@ void Channel_ParseSongToChannels()
 						{
 							seq->flags &= ~(8);
 
-							seq->currNote = seq->firstNote;
+							P32_SET(seq->currNote, P32_GET(u8 *, seq->firstNote));
 						}
 
 						// if song not restarting (opcode03)
 						else
 						{
-							seq->currNote += data.opcodeOffset[opcode];
+							P32_SET(seq->currNote, P32_GET(u8 *, seq->currNote) + data.opcodeOffset[opcode]);
 						}
 
-						seq->currNote = howl_GetNextNote(seq->currNote, &seq->NoteLength);
+						P32_SET(seq->currNote, howl_GetNextNote(P32_GET(u8 *, seq->currNote), &seq->NoteLength));
 					}
 				}
 			}
@@ -527,7 +527,7 @@ void Channel_UpdateChannels()
 		// start address needs to change
 		if ((updateFlags & HOWL_CHANNEL_UPDATE_SPU_ADDR) != 0)
 		{
-			void *startAddr = new->spuStartAddr;
+			u32 startAddr = new->spuStartAddr;
 
 			if (startAddr != cur->spuStartAddr)
 			{

@@ -25,7 +25,7 @@ void RB_Default_LInB(struct Instance *inst)
 
 	sps->Union.QuadBlockColl.quadFlagsWanted = QUADBLOCK_FLAG_GROUND | QUADBLOCK_FLAG_COLLISION_SURFACE;
 	sps->Union.QuadBlockColl.quadFlagsIgnored = 0;
-	sps->ptr_mesh_info = sdata->gGT->level1->ptr_mesh_info;
+	P32_SET(sps->ptr_mesh_info, P32_GET(struct mesh_info *, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->ptr_mesh_info));
 
 	// Make a hitbox
 	probeTop->x = inst->matrix.t[0];

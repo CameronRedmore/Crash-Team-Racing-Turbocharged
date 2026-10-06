@@ -7,7 +7,7 @@
 // packID will always be 3-gGT->activeMempackIndex
 void LOAD_Hub_ReadFile(struct BigHeader *bigfile, int levID, int packID)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// if level is already loaded, quit
 	if (gGT->levID_in_each_mempack[packID] == levID)
@@ -15,7 +15,7 @@ void LOAD_Hub_ReadFile(struct BigHeader *bigfile, int levID, int packID)
 		return;
 	}
 
-	sdata->modelMaskHints3D = 0;
+	P32_SET(sdata->modelMaskHints3D, 0);
 
 	// Swap to pack of hub you're NOT on,
 	// wipe the pack to reload the new hub
@@ -23,12 +23,12 @@ void LOAD_Hub_ReadFile(struct BigHeader *bigfile, int levID, int packID)
 	MEMPACK_ClearLowMem();
 
 	sdata->load_inProgress = 1;
-	gGT->level2 = 0;
+	P32_SET(gGT->level2, 0);
 	gGT->levID_in_each_mempack[packID] = levID;
 
 	LOAD_AppendQueue(bigfile, LT_VRAM, LOAD_GetBigfileIndex(levID, LOAD_LEVEL_LOD_1P, LVI_VRAM), NULL, NULL);
 	LOAD_AppendQueue(bigfile, LT_GETADDR, LOAD_GetBigfileIndex(levID, LOAD_LEVEL_LOD_1P, LVI_LEV), NULL, LOAD_Callback_LEV);
-	LOAD_AppendQueue(bigfile, LT_SETADDR, LOAD_GetBigfileIndex(levID, LOAD_LEVEL_LOD_1P, LVI_PTR), sdata->PatchMem_Ptr, LOAD_HubCallback);
+	LOAD_AppendQueue(bigfile, LT_SETADDR, LOAD_GetBigfileIndex(levID, LOAD_LEVEL_LOD_1P, LVI_PTR), P32_GET(void *, sdata->PatchMem_Ptr), LOAD_HubCallback);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80033108-0x80033318.
@@ -37,10 +37,10 @@ void LOAD_Hub_SwapNow()
 	struct Level *level1;
 	struct VisMem *visMem;
 	struct CameraDC *cDC;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// stall until load is done
-	while (gGT->level2 == 0)
+	while (P32_GET(struct Level *, gGT->level2) == 0)
 	{
 		LOAD_NextQueuedFile();
 		VSync(0);
@@ -50,7 +50,7 @@ void LOAD_Hub_SwapNow()
 	// ptrintf("gGT->level2 = 0x%08x\n",gGT->level2);
 	// ptrintf("SWAPPING 1...\n");
 
-	LevInstDef_RePack(gGT->level1->ptr_mesh_info, 1);
+	LevInstDef_RePack(P32_GET(struct mesh_info *, P32_GET(struct Level *, gGT->level1)->ptr_mesh_info), 1);
 
 	// Aug 5
 	// ptrintf("SWAPPING 2...\n");
@@ -78,12 +78,12 @@ void LOAD_Hub_SwapNow()
 	}
 	*/
 
-	if (sdata->PLYROBJECTLIST != 0)
+	if (P32_GET(P32(int *) *, sdata->PLYROBJECTLIST) != 0)
 	{
 		LOAD_GlobalModelPtrs_MPK();
 	}
 
-	level1 = gGT->level1;
+	level1 = P32_GET(struct Level *, gGT->level1);
 
 	/*
 	In Aug 5
@@ -95,13 +95,13 @@ void LOAD_Hub_SwapNow()
 
 	if (level1 != 0)
 	{
-		LibraryOfModels_Store(gGT, level1->numModels, level1->ptrModelsPtrArray);
+		LibraryOfModels_Store(gGT, level1->numModels, P32_GET(P32(struct Model *) *, level1->ptrModelsPtrArray));
 
-		INSTANCE_LevInitAll(level1->ptrInstDefs, level1->numInstances);
+		INSTANCE_LevInitAll(P32_GET(struct InstDef *, level1->ptrInstDefs), level1->numInstances);
 
-		LevInstDef_UnPack(level1->ptr_mesh_info);
+		LevInstDef_UnPack(P32_GET(struct mesh_info *, level1->ptr_mesh_info));
 
-		DecalGlobal_Store(gGT, level1->levTexLookup);
+		DecalGlobal_Store(gGT, P32_GET(struct LevTexLookup *, level1->levTexLookup));
 	}
 
 	MEMPACK_SwapPacks(gGT->activeMempackIndex);
@@ -111,20 +111,20 @@ void LOAD_Hub_SwapNow()
 #endif
 
 	cDC = &gGT->cameraDC[0];
-	cDC->ptrQuadBlock = 0;
-	cDC->visLeafSrc = 0;
-	cDC->visFaceSrc = 0;
-	cDC->visInstSrc = 0;
-	cDC->visOVertSrc = 0;
-	cDC->visSCVertSrc = 0;
+	P32_SET(cDC->ptrQuadBlock, 0);
+	P32_SET(cDC->visLeafSrc, 0);
+	P32_SET(cDC->visFaceSrc, 0);
+	P32_SET(cDC->visInstSrc, 0);
+	P32_SET(cDC->visOVertSrc, 0);
+	P32_SET(cDC->visSCVertSrc, 0);
 
-	visMem = gGT->visMem1;
-	visMem->visLeafSrc[0] = 0;
-	visMem->visFaceSrc[0] = 0;
-	visMem->visOVertSrc[0] = 0;
-	visMem->visSCVertSrc[0] = 0;
+	visMem = P32_GET(struct VisMem *, gGT->visMem1);
+	P32_SET(visMem->visLeafSrc[0], 0);
+	P32_SET(visMem->visFaceSrc[0], 0);
+	P32_SET(visMem->visOVertSrc[0], 0);
+	P32_SET(visMem->visSCVertSrc[0], 0);
 
-	gGT->drivers[0]->underDriver = 0;
+	P32_SET(P32_GET(struct Driver *, gGT->drivers[0])->underDriver, 0);
 
 	gGT->framesInThisLEV = 0;
 	gGT->msInThisLEV = 0;
@@ -156,11 +156,11 @@ void LOAD_Hub_Main(struct BigHeader *bigfilePtr)
 		return;
 	}
 
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	for (int i = 0; i < gGT->numPlyrCurrGame; i++)
 	{
-		CollStepFlags stepFlagSet = gGT->drivers[i]->stepFlagSet;
+		CollStepFlags stepFlagSet = P32_GET(struct Driver *, gGT->drivers[i])->stepFlagSet;
 		int nextLevelID = (stepFlagSet & COLL_STEP_TRIGGER_HUB_LEVEL_ID_MASK) >> COLL_STEP_TRIGGER_HUB_LEVEL_ID_SHIFT;
 		int needSwapNow = (stepFlagSet & COLL_STEP_TRIGGER_HUB_SWAP_NOW_MASK) >> COLL_STEP_TRIGGER_HUB_SWAP_NOW_SHIFT;
 

@@ -97,9 +97,16 @@ static struct RectMenu s_nativeExtraDifficultyMenu =
 {
 	.stringIndexTitle = LNG_DIFFICULTY,
 	.state = CENTER_ON_X | USE_SMALL_FONT | BIG_TEXT_IN_TITLE,
-	.rows = s_nativeExtraDifficultyRows,
-	.funcPtr = MM_MenuProc_Difficulty,
+	.rows = P32_DEFER(s_nativeExtraDifficultyRows),
+	.funcPtr = P32_DEFER(MM_MenuProc_Difficulty),
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(s_nativeExtraDifficultyMenu)
+{
+	P32_SET(s_nativeExtraDifficultyMenu.rows, s_nativeExtraDifficultyRows);
+	P32_SET(s_nativeExtraDifficultyMenu.funcPtr, MM_MenuProc_Difficulty);
+}
+#endif
 
 static struct MenuRow s_nativeLanguageRows[MM_NATIVE_LANGUAGE_COUNT + 1] =
 {
@@ -547,20 +554,34 @@ static struct RectMenu s_nativeLanguageBootMenu =
 	.posX_curr = 256,
 	.posY_curr = 118,
 	.state = RECTMENU_STATE_EXEC_CENTERED,
-	.rows = s_nativeLanguageRows,
-	.funcPtr = MM_NativeLanguageBootMenuProc,
+	.rows = P32_DEFER(s_nativeLanguageRows),
+	.funcPtr = P32_DEFER(MM_NativeLanguageBootMenuProc),
 #if CTR_NATIVE_WIDESCREEN
 	.drawStyle = MM_NATIVE_LANGUAGE_DRAWSTYLE_WIDESCREEN,
 #endif
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(s_nativeLanguageBootMenu)
+{
+	P32_SET(s_nativeLanguageBootMenu.rows, s_nativeLanguageRows);
+	P32_SET(s_nativeLanguageBootMenu.funcPtr, MM_NativeLanguageBootMenuProc);
+}
+#endif
 
 static struct RectMenu s_nativeLanguageMainMenu =
 {
 	.stringIndexTitle = RECTMENU_STRING_NONE,
 	.state = CENTER_ON_X | USE_SMALL_FONT,
-	.rows = s_nativeLanguageRows,
-	.funcPtr = MM_NativeLanguageMainMenuProc,
+	.rows = P32_DEFER(s_nativeLanguageRows),
+	.funcPtr = P32_DEFER(MM_NativeLanguageMainMenuProc),
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(s_nativeLanguageMainMenu)
+{
+	P32_SET(s_nativeLanguageMainMenu.rows, s_nativeLanguageRows);
+	P32_SET(s_nativeLanguageMainMenu.funcPtr, MM_NativeLanguageMainMenuProc);
+}
+#endif
 
 static void MM_NativePresetMenuProc(struct RectMenu *menu);
 
@@ -615,18 +636,32 @@ static struct RectMenu s_nativeTimeTrialMenu =
 {
 	.stringIndexTitle = RECTMENU_STRING_NONE,
 	.state = CENTER_ON_X,
-	.rows = s_nativeTimeTrialRows,
-	.funcPtr = MM_NativeTimeTrialMenuProc,
+	.rows = P32_DEFER(s_nativeTimeTrialRows),
+	.funcPtr = P32_DEFER(MM_NativeTimeTrialMenuProc),
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(s_nativeTimeTrialMenu)
+{
+	P32_SET(s_nativeTimeTrialMenu.rows, s_nativeTimeTrialRows);
+	P32_SET(s_nativeTimeTrialMenu.funcPtr, MM_NativeTimeTrialMenuProc);
+}
+#endif
 
 static struct RectMenu s_nativeOptionsMenu =
 {
 	.stringIndexTitle = RECTMENU_STRING_NONE,
 	.state = CENTER_ON_X | USE_SMALL_FONT | BIG_TEXT_IN_TITLE,
-	.rows = s_nativeOptionsRows,
-	.funcPtr = MM_NativeOptionsMenuProc,
+	.rows = P32_DEFER(s_nativeOptionsRows),
+	.funcPtr = P32_DEFER(MM_NativeOptionsMenuProc),
 	.drawStyle = RECTMENU_DRAW_STYLE_NATIVE_OPTIONS,
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(s_nativeOptionsMenu)
+{
+	P32_SET(s_nativeOptionsMenu.rows, s_nativeOptionsRows);
+	P32_SET(s_nativeOptionsMenu.funcPtr, MM_NativeOptionsMenuProc);
+}
+#endif
 
 static struct RectMenu s_nativeDisplayMenu =
 {
@@ -674,6 +709,13 @@ static struct RectMenu s_nativeExperimentalMenu =
 	.funcPtr = MM_NativeOptionsMenuProc,
 	.drawStyle = RECTMENU_DRAW_STYLE_NATIVE_OPTIONS,
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(s_nativeEnhancementsMenu)
+{
+	P32_SET(s_nativeEnhancementsMenu.rows, s_nativeEnhancementsRows);
+	P32_SET(s_nativeEnhancementsMenu.funcPtr, MM_NativeOptionsMenuProc);
+}
+#endif
 #endif
 
 static struct RectMenu s_nativeUiMenu =
@@ -692,6 +734,13 @@ static struct RectMenu s_nativeCheatsMenu =
 	.rows = s_nativeCheatsRows,
 	.funcPtr = MM_NativeCheatsMenuProc,
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(s_nativeCheatsMenu)
+{
+	P32_SET(s_nativeCheatsMenu.rows, s_nativeCheatsRows);
+	P32_SET(s_nativeCheatsMenu.funcPtr, MM_NativeCheatsMenuProc);
+}
+#endif
 
 static struct RectMenu s_nativeControlsMenu =
 {
@@ -699,10 +748,17 @@ static struct RectMenu s_nativeControlsMenu =
 	.posX_curr = 256,
 	.posY_curr = 120,
 	.state = CENTER_ON_COORDS | USE_SMALL_FONT | BIG_TEXT_IN_TITLE | RECTMENU_DRAW_CALLBACK_FLAGS,
-	.rows = s_nativeControlsRows,
-	.funcPtr = MM_NativeControlsMenuProc,
+	.rows = P32_DEFER(s_nativeControlsRows),
+	.funcPtr = P32_DEFER(MM_NativeControlsMenuProc),
 	.rowSelected = 1,
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(s_nativeControlsMenu)
+{
+	P32_SET(s_nativeControlsMenu.rows, s_nativeControlsRows);
+	P32_SET(s_nativeControlsMenu.funcPtr, MM_NativeControlsMenuProc);
+}
+#endif
 
 static struct RectMenu s_nativeBossFightMenu =
 {
@@ -710,9 +766,16 @@ static struct RectMenu s_nativeBossFightMenu =
 	.posX_curr = 256,
 	.posY_curr = 82,
 	.state = RECTMENU_STATE_EXEC_CENTERED | USE_SMALL_FONT | BIG_TEXT_IN_TITLE,
-	.rows = s_nativeBossFightRows,
-	.funcPtr = MM_NativeBossFightMenuProc,
+	.rows = P32_DEFER(s_nativeBossFightRows),
+	.funcPtr = P32_DEFER(MM_NativeBossFightMenuProc),
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(s_nativeBossFightMenu)
+{
+	P32_SET(s_nativeBossFightMenu.rows, s_nativeBossFightRows);
+	P32_SET(s_nativeBossFightMenu.funcPtr, MM_NativeBossFightMenuProc);
+}
+#endif
 
 s32 s_nativeLanguageChosen = 0;
 static s32 s_nativeLanguageTimer;
@@ -924,9 +987,9 @@ static void MM_NativeExtraDifficultyPrepare(void)
 	{
 		.stringIndexTitle = LNG_DIFFICULTY,
 		.state = CENTER_ON_X | USE_SMALL_FONT | BIG_TEXT_IN_TITLE,
-		.rows = s_nativeExtraDifficultyRows,
-		.funcPtr = MM_MenuProc_Difficulty,
 	};
+	P32_SET(s_nativeExtraDifficultyMenu.rows, s_nativeExtraDifficultyRows);
+	P32_SET(s_nativeExtraDifficultyMenu.funcPtr, MM_MenuProc_Difficulty);
 }
 
 static void MM_NativeLanguageLoad(s16 row)
@@ -937,7 +1000,7 @@ static void MM_NativeLanguageLoad(s16 row)
 	}
 
 	cfg_language = s_nativeLanguageFileIndex[row];
-	LOAD_LangFile((int)sdata->ptrBigfile1, cfg_language);
+	LOAD_LangFile(P32_GET(struct BigHeader *, sdata->ptrBigfile1), cfg_language);
 
 	s_nativeLanguageRow = row;
 	s_nativeLanguageChosen = 1;
@@ -965,7 +1028,7 @@ static void MM_NativeLanguageBootMenuProc(struct RectMenu *menu)
 {
 	if (menu->funcState == RECTMENU_FUNC_STATE_UPDATE)
 	{
-		if (sdata->gGamepads->anyoneHeldCurr != 0)
+		if (P32_GET(struct GamepadSystem *, sdata->gGamepads)->anyoneHeldCurr != 0)
 		{
 			s_nativeLanguageTimer = FPS_DOUBLE(MM_NATIVE_LANGUAGE_TIMEOUT_FRAMES);
 		}
@@ -998,7 +1061,7 @@ static void MM_NativeLanguageMainMenuProc(struct RectMenu *menu)
 		return;
 	}
 
-	struct RectMenu *parent = menu->ptrPrevBox_InHierarchy;
+	struct RectMenu *parent = P32_GET(struct RectMenu *, menu->ptrPrevBox_InHierarchy);
 	if (parent == NULL)
 	{
 		return;
@@ -1261,7 +1324,7 @@ static void MM_NativeTimeTrialMenuProc(struct RectMenu *menu)
 		return;
 	}
 
-	struct RectMenu *parent = menu->ptrPrevBox_InHierarchy;
+	struct RectMenu *parent = P32_GET(struct RectMenu *, menu->ptrPrevBox_InHierarchy);
 	if (menu->rowSelected < 0)
 	{
 		if (parent != NULL)
@@ -1271,8 +1334,8 @@ static void MM_NativeTimeTrialMenuProc(struct RectMenu *menu)
 		return;
 	}
 
-	struct GameTracker *gGT = sdata->gGT;
-	s16 choose = menu->rows[menu->rowSelected].stringIndex & MENU_ROW_LNG_MASK;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	s16 choose = P32_GET(struct MenuRow *, menu->rows)[menu->rowSelected].stringIndex & MENU_ROW_LNG_MASK;
 
 	gGT->gameMode1 &= ~(TIME_TRIAL | RELIC_RACE);
 	gNativeGhostReplayMode = 0;
@@ -1334,7 +1397,7 @@ static void MM_NativeTimeTrialMenuProc(struct RectMenu *menu)
 
 static b32 MM_NativeOptionsInGame(void)
 {
-	return sdata->gGT->levelID != MAIN_MENU_LEVEL;
+	return P32_GET(struct GameTracker *, sdata->gGT)->levelID != MAIN_MENU_LEVEL;
 }
 
 static b32 MM_NativeOptionsRowLocked(s16 stringIndex, b32 inGame)
@@ -1431,9 +1494,9 @@ void MM_NativeOptions_OpenFromPause(void)
 	s_nativeOptionsMenu.posX_curr = 256;
 	s_nativeOptionsMenu.posY_curr = 120;
 	s_nativeOptionsMenu.state = CENTER_ON_COORDS | USE_SMALL_FONT | BIG_TEXT_IN_TITLE;
-	s_nativeOptionsMenu.ptrNextBox_InHierarchy = NULL;
-	s_nativeOptionsMenu.ptrPrevBox_InHierarchy = NULL;
-	sdata->ptrDesiredMenu = &s_nativeOptionsMenu;
+	P32_SET(s_nativeOptionsMenu.ptrNextBox_InHierarchy, NULL);
+	P32_SET(s_nativeOptionsMenu.ptrPrevBox_InHierarchy, NULL);
+	P32_SET(sdata->ptrDesiredMenu, &s_nativeOptionsMenu);
 }
 
 static void MM_NativeOptionsOpenFromPreset(void)
@@ -1462,7 +1525,7 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 		return;
 	}
 
-	struct RectMenu *parent = menu->ptrPrevBox_InHierarchy;
+	struct RectMenu *parent = P32_GET(struct RectMenu *, menu->ptrPrevBox_InHierarchy);
 	if (menu->rowSelected < 0)
 	{
 		if (parent != NULL)
@@ -1478,7 +1541,7 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 		else if (MM_NativeOptionsInGame())
 		{
 			// opened from the pause menu, go back to it
-			sdata->ptrDesiredMenu = MainFreeze_GetMenuPtr();
+			P32_SET(sdata->ptrDesiredMenu, MainFreeze_GetMenuPtr());
 		}
 		return;
 	}
@@ -1486,12 +1549,12 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 	MM_NativeOptionsApplyLocks(menu->rows, MM_NativeOptionsInGame());
 
 	// left/right bypass the row lock check done for confirm
-	if ((menu->rows[menu->rowSelected].stringIndex & MENU_ROW_LOCKED) != 0)
+	if ((P32_GET(struct MenuRow *, menu->rows)[menu->rowSelected].stringIndex & MENU_ROW_LOCKED) != 0)
 	{
 		return;
 	}
 
-	s16 choose = menu->rows[menu->rowSelected].stringIndex & MENU_ROW_LNG_MASK;
+	s16 choose = P32_GET(struct MenuRow *, menu->rows)[menu->rowSelected].stringIndex & MENU_ROW_LNG_MASK;
 	u32 button = sdata->buttonTapPerPlayer[0];
 
 	if (choose == NATIVE_MENU_STRING_PRESET)
@@ -1512,7 +1575,7 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 
 	if (choose == NATIVE_MENU_STRING_GAMEPAD)
 	{
-		sdata->ptrDesiredMenu = &data.menuRacingWheelConfig;
+		P32_SET(sdata->ptrDesiredMenu, &data.menuRacingWheelConfig);
 		data.menuRacingWheelConfig.rowSelected = 8;
 		return;
 	}
@@ -1552,10 +1615,10 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 	if (choose == LNG_LANGUAGE)
 	{
 		s_nativeLanguageMainMenu.rowSelected = s_nativeLanguageRow;
-		s_nativeLanguageMainMenu.ptrNextBox_InHierarchy = NULL;
-		s_nativeLanguageMainMenu.ptrPrevBox_InHierarchy = menu;
+		P32_SET(s_nativeLanguageMainMenu.ptrNextBox_InHierarchy, NULL);
+		P32_SET(s_nativeLanguageMainMenu.ptrPrevBox_InHierarchy, menu);
 
-		menu->ptrNextBox_InHierarchy = &s_nativeLanguageMainMenu;
+		P32_SET(menu->ptrNextBox_InHierarchy, &s_nativeLanguageMainMenu);
 		menu->state |= ONLY_DRAW_TITLE | DRAW_NEXT_MENU_IN_HIERARCHY;
 		return;
 	}
@@ -1566,14 +1629,14 @@ static void MM_NativeOptionsMenuProc(struct RectMenu *menu)
 		s_nativeControlsMenu.posX_curr = 256;
 		s_nativeControlsMenu.posY_curr = 120;
 		s_nativeControlsMenu.state = CENTER_ON_COORDS | USE_SMALL_FONT | BIG_TEXT_IN_TITLE | RECTMENU_DRAW_CALLBACK_FLAGS;
-		s_nativeControlsMenu.ptrNextBox_InHierarchy = NULL;
-		s_nativeControlsMenu.ptrPrevBox_InHierarchy = menu;
+		P32_SET(s_nativeControlsMenu.ptrNextBox_InHierarchy, NULL);
+		P32_SET(s_nativeControlsMenu.ptrPrevBox_InHierarchy, menu);
 		gNativeControlsSelectedColumn = 0;
 		gNativeControlsSelectedAction = 0;
 		gNativeControlsCaptureActive = 0;
 		s_nativeControlsWaitForRelease = 0;
 
-		sdata->ptrDesiredMenu = &s_nativeControlsMenu;
+		P32_SET(sdata->ptrDesiredMenu, &s_nativeControlsMenu);
 		return;
 	}
 
@@ -1990,7 +2053,7 @@ static void MM_NativeCheatsMenuProc(struct RectMenu *menu)
 	if (menu->funcState == RECTMENU_FUNC_STATE_UPDATE) return;
 	if (menu->funcState != RECTMENU_FUNC_STATE_INPUT) return;
 
-	struct RectMenu *parent = menu->ptrPrevBox_InHierarchy;
+	struct RectMenu *parent = P32_GET(struct RectMenu *, menu->ptrPrevBox_InHierarchy);
 	if (menu->rowSelected < 0)
 	{
 		if (parent != NULL) parent->state &= ~(ONLY_DRAW_TITLE | DRAW_NEXT_MENU_IN_HIERARCHY);
@@ -2129,17 +2192,17 @@ static void MM_NativeControlsMenuProc(struct RectMenu *menu)
 
 	if ((tap & (BTN_TRIANGLE | BTN_SQUARE_one)) != 0)
 	{
-		struct RectMenu *parent = menu->ptrPrevBox_InHierarchy;
+		struct RectMenu *parent = P32_GET(struct RectMenu *, menu->ptrPrevBox_InHierarchy);
 		gNativeControlsCaptureActive = 0;
 		s_nativeControlsWaitForRelease = 0;
 		if (parent != NULL)
 		{
 			struct RectMenu *root = parent;
-			while (root->ptrPrevBox_InHierarchy != NULL)
+			while (P32_GET(struct RectMenu *, root->ptrPrevBox_InHierarchy) != NULL)
 			{
-				root = root->ptrPrevBox_InHierarchy;
+				root = P32_GET(struct RectMenu *, root->ptrPrevBox_InHierarchy);
 			}
-			sdata->ptrDesiredMenu = root;
+			P32_SET(sdata->ptrDesiredMenu, root);
 		}
 		OtherFX_Play(2, 1);
 		RECTMENU_ClearInput();
@@ -2152,23 +2215,23 @@ static void MM_NativeBossFightPrepareMenu(void)
 	s_nativeBossFightMenu.posX_curr = 256;
 	s_nativeBossFightMenu.posY_curr = 82;
 	s_nativeBossFightMenu.state = RECTMENU_STATE_EXEC_CENTERED | USE_SMALL_FONT | BIG_TEXT_IN_TITLE;
-	s_nativeBossFightMenu.rows = s_nativeBossFightRows;
-	s_nativeBossFightMenu.funcPtr = MM_NativeBossFightMenuProc;
+	P32_SET(s_nativeBossFightMenu.rows, s_nativeBossFightRows);
+	P32_SET(s_nativeBossFightMenu.funcPtr, MM_NativeBossFightMenuProc);
 	s_nativeBossFightMenu.rowSelected = (s16)gNativeBossFightBossID;
-	s_nativeBossFightMenu.ptrNextBox_InHierarchy = NULL;
-	s_nativeBossFightMenu.ptrPrevBox_InHierarchy = NULL;
+	P32_SET(s_nativeBossFightMenu.ptrNextBox_InHierarchy, NULL);
+	P32_SET(s_nativeBossFightMenu.ptrPrevBox_InHierarchy, NULL);
 }
 
 void MM_NativeBossFight_OpenBossSelect(void)
 {
 	MM_NativeBossFightPrepareMenu();
-	sdata->ptrDesiredMenu = &s_nativeBossFightMenu;
+	P32_SET(sdata->ptrDesiredMenu, &s_nativeBossFightMenu);
 }
 
 void MM_NativeBossFight_JumpToBossSelect(void)
 {
 	MM_NativeBossFightPrepareMenu();
-	sdata->ptrActiveMenu = &s_nativeBossFightMenu;
+	P32_SET(sdata->ptrActiveMenu, &s_nativeBossFightMenu);
 }
 
 static void MM_NativeBossFightMenuProc(struct RectMenu *menu)
@@ -2180,13 +2243,13 @@ static void MM_NativeBossFightMenuProc(struct RectMenu *menu)
 
 	if (menu->rowSelected < 0)
 	{
-		sdata->ptrDesiredMenu = &D230.menuCharacterSelect;
+		P32_SET(sdata->ptrDesiredMenu, &D230.menuCharacterSelect);
 		MM_Characters_RestoreIDs();
 		return;
 	}
 
 	NativeBossFight_SelectBoss(menu->rowSelected);
-	sdata->ptrDesiredMenu = &D230.menuTrackSelect;
+	P32_SET(sdata->ptrDesiredMenu, &D230.menuTrackSelect);
 	MM_TrackSelect_Init();
 }
 #endif
@@ -2242,7 +2305,7 @@ static void MM_NativeAdventureConfigureRows(void);
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800acff4-0x800ad448.
 void MM_MenuProc_Main(struct RectMenu *mainMenu)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 #if defined(CTR_NATIVE)
 	if (MM_BootCredits_Update(mainMenu))
@@ -2274,11 +2337,11 @@ void MM_MenuProc_Main(struct RectMenu *mainMenu)
 
 	if (CHECK_ADV_BIT(sdata->gameProgress.unlocks, GAME_UNLOCK_BIT_SCRAPBOOK))
 	{
-		mainMenu->rows = s_nativeMainMenuWithScrapbook;
+		P32_SET(mainMenu->rows, s_nativeMainMenuWithScrapbook);
 	}
 	else
 	{
-		mainMenu->rows = s_nativeMainMenuBasic;
+		P32_SET(mainMenu->rows, s_nativeMainMenuBasic);
 	}
 #else
 	// if scrapbook is unlocked, change "rows" to extended array
@@ -2302,10 +2365,10 @@ void MM_MenuProc_Main(struct RectMenu *mainMenu)
 
 		if (
 		    // main menu, "title" exists, and timer >= 230
-		    (D230.titleMenuState == TITLE_MENU_STATE_IN_MENU) && (D230.titleObj != NULL) && (FPS_DOUBLE(TITLE_INTRO_TM_DRAW_MIN_FRAME) < D230.titleIntroFrame))
+		    (D230.titleMenuState == TITLE_MENU_STATE_IN_MENU) && (P32_GET(struct Title *, D230.titleObj) != NULL) && (FPS_DOUBLE(TITLE_INTRO_TM_DRAW_MIN_FRAME) < D230.titleIntroFrame))
 		{
-			DecalFont_DrawLineOT(sdata->lngStrings[LNG_TM], MM_TITLE_TM_X, MM_TITLE_TM_Y, FONT_SMALL, ORANGE,
-			                     &gGT->backBuffer->otMem.uiOT[MM_TITLE_TM_OT_INDEX]);
+			DecalFont_DrawLineOT(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_TM]), MM_TITLE_TM_X, MM_TITLE_TM_Y, FONT_SMALL, ORANGE,
+			                     &P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT)[MM_TITLE_TM_OT_INDEX]);
 
 #if defined(CTR_NATIVE)
 			b32 userIdShown = false;
@@ -2338,7 +2401,7 @@ void MM_MenuProc_Main(struct RectMenu *mainMenu)
 			}
 
 			// if no buttons pressed, check demo mode
-			if (sdata->gGamepads->anyoneHeldCurr == 0)
+			if (P32_GET(struct GamepadSystem *, sdata->gGamepads)->anyoneHeldCurr == 0)
 			{
 				gGT->demoCountdownTimer--;
 
@@ -2376,7 +2439,7 @@ void MM_MenuProc_Main(struct RectMenu *mainMenu)
 		return;
 	}
 
-	struct Title *titleObj = D230.titleObj;
+	struct Title *titleObj = P32_GET(struct Title *, D230.titleObj);
 
 	// if "title" object exists
 	if (titleObj != NULL)
@@ -2415,7 +2478,7 @@ void MM_MenuProc_Main(struct RectMenu *mainMenu)
 	gGT->numLaps = MM_DEFAULT_LAP_COUNT;
 
 	// get LNG index of row selected
-	s16 choose = mainMenu->rows[mainMenu->rowSelected].stringIndex;
+	s16 choose = P32_GET(struct MenuRow *, mainMenu->rows)[mainMenu->rowSelected].stringIndex;
 
 	gNativeGhostReplayMode = 0;
 	gNativeRelicRaceMode = 0;
@@ -2434,7 +2497,7 @@ void MM_MenuProc_Main(struct RectMenu *mainMenu)
 #if defined(CTR_NATIVE)
 		MM_NativeAdventureConfigureRows();
 #endif
-		mainMenu->ptrNextBox_InHierarchy = &D230.menuAdventure;
+		P32_SET(mainMenu->ptrNextBox_InHierarchy, &D230.menuAdventure);
 		mainMenu->state |= DRAW_NEXT_MENU_IN_HIERARCHY;
 		return;
 	}
@@ -2445,10 +2508,10 @@ void MM_MenuProc_Main(struct RectMenu *mainMenu)
 #if defined(CTR_NATIVE)
 		s_nativeTimeTrialMenu.rowSelected = 0;
 		s_nativeTimeTrialMenu.state = CENTER_ON_X;
-		s_nativeTimeTrialMenu.ptrNextBox_InHierarchy = NULL;
-		s_nativeTimeTrialMenu.ptrPrevBox_InHierarchy = mainMenu;
+		P32_SET(s_nativeTimeTrialMenu.ptrNextBox_InHierarchy, NULL);
+		P32_SET(s_nativeTimeTrialMenu.ptrPrevBox_InHierarchy, mainMenu);
 
-		mainMenu->ptrNextBox_InHierarchy = &s_nativeTimeTrialMenu;
+		P32_SET(mainMenu->ptrNextBox_InHierarchy, &s_nativeTimeTrialMenu);
 		mainMenu->state |= DRAW_NEXT_MENU_IN_HIERARCHY;
 		return;
 #else
@@ -2469,7 +2532,7 @@ void MM_MenuProc_Main(struct RectMenu *mainMenu)
 		gGT->gameMode1 |= ARCADE_MODE;
 
 		// set next menu
-		mainMenu->ptrNextBox_InHierarchy = &D230.menuRaceType;
+		P32_SET(mainMenu->ptrNextBox_InHierarchy, &D230.menuRaceType);
 		mainMenu->state |= DRAW_NEXT_MENU_IN_HIERARCHY;
 		return;
 	}
@@ -2479,7 +2542,7 @@ void MM_MenuProc_Main(struct RectMenu *mainMenu)
 	{
 		// DONT change, should only work in Arcade, and VS
 		// next menu is choosing single+cup
-		mainMenu->ptrNextBox_InHierarchy = &D230.menuRaceType;
+		P32_SET(mainMenu->ptrNextBox_InHierarchy, &D230.menuRaceType);
 		mainMenu->state |= DRAW_NEXT_MENU_IN_HIERARCHY;
 		return;
 	}
@@ -2505,7 +2568,7 @@ void MM_MenuProc_Main(struct RectMenu *mainMenu)
 		gGT->gameMode1 |= BATTLE_MODE;
 
 		// set next menu to 2P,3P,4P
-		mainMenu->ptrNextBox_InHierarchy = &D230.menuPlayers2P3P4P;
+		P32_SET(mainMenu->ptrNextBox_InHierarchy, &D230.menuPlayers2P3P4P);
 		mainMenu->state |= DRAW_NEXT_MENU_IN_HIERARCHY;
 		return;
 	}
@@ -2555,10 +2618,10 @@ void MM_MenuProc_Main(struct RectMenu *mainMenu)
 		s_nativeOptionsMenu.posX_curr = 0;
 		s_nativeOptionsMenu.posY_curr = 0;
 		s_nativeOptionsMenu.state = CENTER_ON_X | USE_SMALL_FONT | BIG_TEXT_IN_TITLE;
-		s_nativeOptionsMenu.ptrNextBox_InHierarchy = NULL;
-		s_nativeOptionsMenu.ptrPrevBox_InHierarchy = mainMenu;
+		P32_SET(s_nativeOptionsMenu.ptrNextBox_InHierarchy, NULL);
+		P32_SET(s_nativeOptionsMenu.ptrPrevBox_InHierarchy, mainMenu);
 
-		mainMenu->ptrNextBox_InHierarchy = &s_nativeOptionsMenu;
+		P32_SET(mainMenu->ptrNextBox_InHierarchy, &s_nativeOptionsMenu);
 		mainMenu->state |= DRAW_NEXT_MENU_IN_HIERARCHY;
 		return;
 	}
@@ -2639,13 +2702,13 @@ void MM_ToggleRows_PlayerCount(void)
 // NOTE(aalhendi): ASM-verified against NTSC-U 926 overlay 230 0x800ad560-0x800ad5e8.
 void MM_MenuProc_1p2p(struct RectMenu *menu)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	s16 row = menu->rowSelected;
 
 	// if uninitialized
 	if (row == -1)
 	{
-		menu->ptrPrevBox_InHierarchy->state &= ~(ONLY_DRAW_TITLE | DRAW_NEXT_MENU_IN_HIERARCHY);
+		P32_GET(struct RectMenu *, menu->ptrPrevBox_InHierarchy)->state &= ~(ONLY_DRAW_TITLE | DRAW_NEXT_MENU_IN_HIERARCHY);
 
 		gGT->numPlyrNextGame = 1;
 
@@ -2663,7 +2726,7 @@ void MM_MenuProc_1p2p(struct RectMenu *menu)
 			// go to difficulty box
 #if defined(CTR_NATIVE)
 			MM_NativeExtraDifficultyPrepare();
-			menu->ptrNextBox_InHierarchy = &s_nativeExtraDifficultyMenu;
+			P32_SET(menu->ptrNextBox_InHierarchy, &s_nativeExtraDifficultyMenu);
 #else
 			menu->ptrNextBox_InHierarchy = &D230.menuDifficulty;
 #endif
@@ -2678,13 +2741,13 @@ void MM_MenuProc_1p2p(struct RectMenu *menu)
 // NOTE(aalhendi): ASM-verified against NTSC-U 926 overlay 230 0x800ad5e8-0x800ad678.
 void MM_MenuProc_2p3p4p(struct RectMenu *menu)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	s16 row = menu->rowSelected;
 
 	// if uninitialized
 	if (row == -1)
 	{
-		menu->ptrPrevBox_InHierarchy->state &= ~(ONLY_DRAW_TITLE | DRAW_NEXT_MENU_IN_HIERARCHY);
+		P32_GET(struct RectMenu *, menu->ptrPrevBox_InHierarchy)->state &= ~(ONLY_DRAW_TITLE | DRAW_NEXT_MENU_IN_HIERARCHY);
 
 		gGT->numPlyrNextGame = 1;
 
@@ -2711,7 +2774,7 @@ void MM_MenuProc_2p3p4p(struct RectMenu *menu)
 // NOTE(aalhendi): ASM-verified against NTSC-U 926 overlay 230 0x800ad678-0x800ad7a4.
 void MM_ToggleRows_Difficulty(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// check 3 mods (easy, medium, hard)
 	for (s32 difficultyIndex = 0; difficultyIndex < MM_DIFFICULTY_COUNT; difficultyIndex++)
@@ -2786,7 +2849,7 @@ void MM_MenuProc_Difficulty(struct RectMenu *menu)
 	// if uninitialized
 	if (row == -1)
 	{
-		menu->ptrPrevBox_InHierarchy->state &= ~(ONLY_DRAW_TITLE | DRAW_NEXT_MENU_IN_HIERARCHY);
+		P32_GET(struct RectMenu *, menu->ptrPrevBox_InHierarchy)->state &= ~(ONLY_DRAW_TITLE | DRAW_NEXT_MENU_IN_HIERARCHY);
 	}
 
 	else
@@ -2803,17 +2866,17 @@ void MM_MenuProc_Difficulty(struct RectMenu *menu)
 #if defined(CTR_NATIVE)
 			if (row == MM_NATIVE_DIFFICULTY_SUPER_HARD)
 			{
-				sdata->gGT->arcadeDifficulty = 0x140;
+				P32_GET(struct GameTracker *, sdata->gGT)->arcadeDifficulty = 0x140;
 			}
 			else if (row == MM_NATIVE_DIFFICULTY_ULTRA_HARD)
 			{
-				sdata->gGT->arcadeDifficulty = 0x280;
+				P32_GET(struct GameTracker *, sdata->gGT)->arcadeDifficulty = 0x280;
 			}
 			else
 #endif
 			{
 				// set difficulty to value, from array of fixed difficulty values
-				sdata->gGT->arcadeDifficulty = D230.cupDifficulty.speed[row];
+				P32_GET(struct GameTracker *, sdata->gGT)->arcadeDifficulty = D230.cupDifficulty.speed[row];
 			}
 
 			D230.titleMenuState = TITLE_MENU_STATE_EXITING;
@@ -2829,12 +2892,12 @@ void MM_MenuProc_Difficulty(struct RectMenu *menu)
 // NOTE(aalhendi): ASM-verified against NTSC-U 926 overlay 230 0x800ad828-0x800ad8f0.
 void MM_MenuProc_SingleCup(struct RectMenu *menu)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	s16 row = menu->rowSelected;
 
 	if (row == -1)
 	{
-		menu->ptrPrevBox_InHierarchy->state &= ~(ONLY_DRAW_TITLE | DRAW_NEXT_MENU_IN_HIERARCHY);
+		P32_GET(struct RectMenu *, menu->ptrPrevBox_InHierarchy)->state &= ~(ONLY_DRAW_TITLE | DRAW_NEXT_MENU_IN_HIERARCHY);
 		return;
 	}
 
@@ -2856,7 +2919,7 @@ void MM_MenuProc_SingleCup(struct RectMenu *menu)
 		if ((gGT->gameMode1 & ARCADE_MODE) != 0)
 		{
 			// set next menu to 1P+2P select
-			menu->ptrNextBox_InHierarchy = &D230.menuPlayers1P2P;
+			P32_SET(menu->ptrNextBox_InHierarchy, &D230.menuPlayers1P2P);
 			D230.characterSelectTransitionState = IN_MENU;
 			return;
 		}
@@ -2864,7 +2927,7 @@ void MM_MenuProc_SingleCup(struct RectMenu *menu)
 		// if mode is VS
 
 		// set next menu to 2P+3P+4P (vs or battle)
-		menu->ptrNextBox_InHierarchy = &D230.menuPlayers2P3P4P;
+		P32_SET(menu->ptrNextBox_InHierarchy, &D230.menuPlayers2P3P4P);
 		D230.characterSelectTransitionState = EXITING_MENU;
 	}
 }
@@ -2884,7 +2947,7 @@ static void MM_NativeAdventureConfigureRows(void)
 {
 	NativeAutoSave_Refresh();
 	s_nativeAdventureHasQuickLoad = NativeAutoSave_Exists();
-	D230.menuAdventure.rows = s_nativeAdventureHasQuickLoad ? &s_nativeAdventureRows[0] : &D230.rowsAdventure[0];
+	P32_SET(D230.menuAdventure.rows, s_nativeAdventureHasQuickLoad ? &s_nativeAdventureRows[0] : &D230.rowsAdventure[0]);
 	D230.menuAdventure.rowSelected = 0;
 }
 #endif
@@ -2897,7 +2960,7 @@ void MM_MenuProc_NewLoad(struct RectMenu *menu)
 
 	if (row == -1)
 	{
-		menu->ptrPrevBox_InHierarchy->state &= ~(ONLY_DRAW_TITLE | DRAW_NEXT_MENU_IN_HIERARCHY);
+		P32_GET(struct RectMenu *, menu->ptrPrevBox_InHierarchy)->state &= ~(ONLY_DRAW_TITLE | DRAW_NEXT_MENU_IN_HIERARCHY);
 		return;
 	}
 
@@ -2945,14 +3008,14 @@ void MM_ResetAllMenus(void)
 {
 	for (s32 menuIndex = 0; menuIndex < MM_MENU_RESET_COUNT; menuIndex++)
 	{
-		struct RectMenu *menu = D230.arrayMenuPtrs[menuIndex];
+		struct RectMenu *menu = P32_GET(struct RectMenu *, D230.arrayMenuPtrs[menuIndex]);
 
 // NOTE(aalhendi): Retail resets one menu per array slot; native walks chained
 // menus because overlay 230 data is not reloaded.
 #ifdef CTR_NATIVE
 		do
 		{
-			struct RectMenu *next = menu->ptrNextBox_InHierarchy;
+			struct RectMenu *next = P32_GET(struct RectMenu *, menu->ptrNextBox_InHierarchy);
 #endif
 
 			// Close menu
@@ -2960,8 +3023,8 @@ void MM_ResetAllMenus(void)
 			menu->state &= ~(ONLY_DRAW_TITLE | DRAW_NEXT_MENU_IN_HIERARCHY);
 
 			// Reset ptrNext and ptrPrev
-			menu->ptrNextBox_InHierarchy = 0;
-			menu->ptrPrevBox_InHierarchy = 0;
+			P32_SET(menu->ptrNextBox_InHierarchy, 0);
+			P32_SET(menu->ptrPrevBox_InHierarchy, 0);
 
 #ifdef CTR_NATIVE
 			menu = next;
@@ -2980,7 +3043,7 @@ void MM_JumpTo_Title_Returning(void)
 	D230.titleMenuState = TITLE_MENU_STATE_RETURNING;
 
 	// return to main menu
-	sdata->ptrDesiredMenu = &D230.menuMainMenu;
+	P32_SET(sdata->ptrDesiredMenu, &D230.menuMainMenu);
 
 	D230.titleMenuTransitionFrame = FPS_DOUBLE(D230.titleMenuTransitionDurationFrames);
 }
@@ -2988,7 +3051,7 @@ void MM_JumpTo_Title_Returning(void)
 // NOTE(aalhendi): ASM-verified against NTSC-U 926 overlay 230 0x800b4364-0x800b43f4.
 void MM_JumpTo_Title_FirstTime(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	MM_ResetAllMenus();
 
@@ -2999,10 +3062,10 @@ void MM_JumpTo_Title_FirstTime(void)
 	{
 		s_nativeLanguageBootMenu.state = RECTMENU_STATE_EXEC_CENTERED;
 		s_nativeLanguageBootMenu.rowSelected = s_nativeLanguageRow;
-		s_nativeLanguageBootMenu.ptrNextBox_InHierarchy = 0;
-		s_nativeLanguageBootMenu.ptrPrevBox_InHierarchy = 0;
+		P32_SET(s_nativeLanguageBootMenu.ptrNextBox_InHierarchy, 0);
+		P32_SET(s_nativeLanguageBootMenu.ptrPrevBox_InHierarchy, 0);
 		s_nativeLanguageTimer = FPS_DOUBLE(MM_NATIVE_LANGUAGE_TIMEOUT_FRAMES);
-		sdata->ptrActiveMenu = &s_nativeLanguageBootMenu;
+		P32_SET(sdata->ptrActiveMenu, &s_nativeLanguageBootMenu);
 	}
 	else if (gNativePresetPending)
 	{
@@ -3014,7 +3077,7 @@ void MM_JumpTo_Title_FirstTime(void)
 	}
 	else
 	{
-		sdata->ptrActiveMenu = &D230.menuMainMenu;
+		P32_SET(sdata->ptrActiveMenu, &D230.menuMainMenu);
 	}
 #elif BUILD == EurRetail
 	// if you have not chose a language or skipped the language menu
@@ -3057,7 +3120,7 @@ void MM_JumpTo_Title_FirstTime(void)
 void MM_JumpTo_BattleSetup(void)
 {
 	// Go to battle setup
-	sdata->ptrActiveMenu = &D230.menuBattleWeapons;
+	P32_SET(sdata->ptrActiveMenu, &D230.menuBattleWeapons);
 
 	D230.menuBattleWeapons.state &= ~(ONLY_DRAW_TITLE);
 
@@ -3068,7 +3131,7 @@ void MM_JumpTo_BattleSetup(void)
 void MM_JumpTo_TrackSelect(void)
 {
 	// return to track selection
-	sdata->ptrActiveMenu = &D230.menuTrackSelect;
+	P32_SET(sdata->ptrActiveMenu, &D230.menuTrackSelect);
 
 	D230.menuTrackSelect.state &= ~(ONLY_DRAW_TITLE);
 
@@ -3079,7 +3142,7 @@ void MM_JumpTo_TrackSelect(void)
 void MM_JumpTo_Characters(void)
 {
 	// return to character selection
-	sdata->ptrActiveMenu = &D230.menuCharacterSelect;
+	P32_SET(sdata->ptrActiveMenu, &D230.menuCharacterSelect);
 
 	D230.menuCharacterSelect.state &= ~(ONLY_DRAW_TITLE);
 
@@ -3090,7 +3153,7 @@ void MM_JumpTo_Characters(void)
 void MM_JumpTo_Scrapbook(void)
 {
 	// go to scrapbook
-	sdata->ptrActiveMenu = &D230.menuScrapbook;
+	P32_SET(sdata->ptrActiveMenu, &D230.menuScrapbook);
 
 	D230.menuScrapbook.state &= ~(ONLY_DRAW_TITLE);
 

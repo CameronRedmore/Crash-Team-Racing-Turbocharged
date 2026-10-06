@@ -17,8 +17,8 @@ void RB_Armadillo_ThTick_TurnAround(struct Thread *t)
 	struct Instance *armInst;
 	struct Armadillo *armObj;
 
-	armInst = t->inst;
-	armObj = (struct Armadillo *)t->object;
+	armInst = P32_GET(struct Instance *, t->inst);
+	armObj = (struct Armadillo *)P32_GET(void *, t->object);
 
 	if (armObj->rotCurr.y == armObj->rotDesired.y)
 	{
@@ -69,8 +69,8 @@ void RB_Armadillo_ThTick_Rolling(struct Thread *t)
 	struct Armadillo *armObj;
 	SVECTOR rot;
 
-	armInst = t->inst;
-	armObj = (struct Armadillo *)t->object;
+	armInst = P32_GET(struct Instance *, t->inst);
+	armObj = (struct Armadillo *)P32_GET(void *, t->object);
 
 	if (armObj->timeAtEdge != 0)
 	{
@@ -81,7 +81,7 @@ void RB_Armadillo_ThTick_Rolling(struct Thread *t)
 	if (armObj->timeRolling < 0x500)
 	{
 		// 32ms, 30fps
-		armObj->timeRolling += CTR_FRAME_STEP(0x20, sdata->gGT->timer);
+		armObj->timeRolling += CTR_FRAME_STEP(0x20, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 
 		if (armObj->direction == 0)
 		{
@@ -138,10 +138,10 @@ void RB_Armadillo_LInB(struct Instance *inst)
 	struct Armadillo *armObj;
 	SVECTOR rot;
 	s16 *metaArray;
-	void **pointers;
+	P32(void *) *pointers;
 	struct Thread *t;
 
-	if (inst->thread != 0)
+	if (P32_GET(struct Thread *, inst->thread) != 0)
 	{
 		return;
 	}
@@ -159,14 +159,14 @@ void RB_Armadillo_LInB(struct Instance *inst)
 	{
 		return;
 	}
-	inst->thread = t;
-	t->inst = inst;
-	t->funcThCollide = (void *)RB_Armadillo_ThCollide;
+	P32_SET(inst->thread, t);
+	P32_SET(t->inst, inst);
+	P32_SET(t->funcThCollide, (void *)RB_Armadillo_ThCollide);
 
 	// rolling animation
 	inst->animIndex = 1;
 
-	armObj = ((struct Armadillo *)t->object);
+	armObj = ((struct Armadillo *)P32_GET(void *, t->object));
 	armObj->timeRolling = 0;
 	armObj->numFramesSpinning = 0;
 	armObj->timeAtEdge = 0;
@@ -186,13 +186,13 @@ void RB_Armadillo_LInB(struct Instance *inst)
 	armObj->velX = FPS_HALF(inst->matrix.m[0][2]) >> 7;
 	armObj->velZ = FPS_HALF(inst->matrix.m[2][2]) >> 7;
 
-	if (sdata->gGT->level1->ptrSpawnType1->count <= 0)
+	if (P32_GET(struct SpawnType1 *, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->ptrSpawnType1)->count <= 0)
 	{
 		return;
 	}
 
 	// puts armadillos on separate cycles
-	pointers = ST1_GETPOINTERS(sdata->gGT->level1->ptrSpawnType1);
-	metaArray = (s16 *)pointers[ST1_SPAWN];
+	pointers = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->ptrSpawnType1));
+	metaArray = (s16 *)P32_GET(void *, pointers[ST1_SPAWN]);
 	armObj->timeAtEdge = FPS_DOUBLE(metaArray[inst->name[strlen(inst->name) - 1] - '0']);
 }

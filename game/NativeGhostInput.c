@@ -132,9 +132,9 @@ static void NativeGhostInput_ApplyReplaySpeed(void)
 
 static void NativeGhostInput_ResetReplayControls(void)
 {
-    if (s_nativeGhostReplayPauseOwned && (sdata != NULL) && (sdata->gGT != NULL))
+    if (s_nativeGhostReplayPauseOwned && (sdata != NULL) && (P32_GET(struct GameTracker *, sdata->gGT) != NULL))
     {
-        sdata->gGT->gameMode1 &= ~PAUSE_1;
+        P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 &= ~PAUSE_1;
     }
 
     if (s_nativeGhostReplayAudioPauseOwned && (sdata != NULL) && sdata->boolSoundPaused)
@@ -154,7 +154,7 @@ static void NativeGhostInput_ResetReplayControls(void)
 
 static void NativeGhostInput_SetReplayPaused(b32 paused)
 {
-    struct GameTracker *gGT = sdata->gGT;
+    struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
     if (paused == s_nativeGhostReplayPaused)
     {
@@ -225,7 +225,7 @@ static void NativeGhostInput_BeginReplayFrameStep(void)
 
     if (s_nativeGhostReplayPauseOwned)
     {
-        sdata->gGT->gameMode1 &= ~PAUSE_1;
+        P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 &= ~PAUSE_1;
     }
     s_nativeGhostReplayStepInProgress = true;
     Platform_SetVBlankPacingScale(1, 1);
@@ -302,7 +302,7 @@ void NativeGhostInput_EndReplaySimulationFrame(void)
     }
 
     if ((s_nativeGhostInputPlaybackIndex >= s_nativeGhostInputFrameCount) ||
-        ((sdata->gGT->gameMode1 & END_OF_RACE) != 0))
+        ((P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 & END_OF_RACE) != 0))
     {
         s_nativeGhostInputPlaybackActive = false;
         s_nativeGhostInputDisplayValid = false;
@@ -316,7 +316,7 @@ void NativeGhostInput_EndReplaySimulationFrame(void)
         s_nativeGhostReplayStepInProgress = false;
         if (s_nativeGhostReplayPaused && s_nativeGhostReplayPauseOwned)
         {
-            sdata->gGT->gameMode1 |= PAUSE_1;
+            P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 |= PAUSE_1;
         }
     }
 }
@@ -596,10 +596,10 @@ static u32 NativeGhostInput_GetOverlayButtons(u32 logicalButtons)
 b32 NativeGhostInput_GetReplayOverlayState(u32 *buttonsHeld, u8 *stickLX, u8 *stickLY, u8 *stickRX, u8 *stickRY)
 {
     if ((gNativeGhostReplayMode == 0) || !s_nativeGhostInputPlaybackActive || !s_nativeGhostInputDisplayValid ||
-        (sdata->gGT == NULL) || (sdata->Loading.stage != LOAD_IDLE) ||
-        ((sdata->gGT->renderFlags & RENDER_FLAG_CHECKERED_FLAG) != 0) ||
-        ((sdata->gGT->gameMode1 & (END_OF_RACE | MAIN_MENU | LOADING | GAME_CUTSCENE)) != 0) ||
-        (((sdata->gGT->gameMode1 & PAUSE_ALL) != 0) && !s_nativeGhostReplayPaused))
+        (P32_GET(struct GameTracker *, sdata->gGT) == NULL) || (sdata->Loading.stage != LOAD_IDLE) ||
+        ((P32_GET(struct GameTracker *, sdata->gGT)->renderFlags & RENDER_FLAG_CHECKERED_FLAG) != 0) ||
+        ((P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 & (END_OF_RACE | MAIN_MENU | LOADING | GAME_CUTSCENE)) != 0) ||
+        (((P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 & PAUSE_ALL) != 0) && !s_nativeGhostReplayPaused))
     {
         return false;
     }
@@ -672,8 +672,8 @@ b32 NativeGhostInput_SelectGhost(const char *ghostName, u16 trackID, u16 charact
 
 void NativeGhostInput_StartRecording(void)
 {
-    struct GameTracker *gGT = sdata->gGT;
-    struct Driver *driver = gGT->drivers[0];
+    struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+    struct Driver *driver = P32_GET(struct Driver *, gGT->drivers[0]);
 
     gNativeGhostReplayFpsOverride = -1;
     s_nativeGhostInputExternalLoaded = false;
@@ -785,7 +785,7 @@ void NativeGhostInput_ProcessGamepad(struct GamepadSystem *gGamepads)
     if ((gNativeGhostReplayMode != 0) && s_nativeGhostInputPlaybackActive)
     {
         if ((s_nativeGhostInputPlaybackIndex >= s_nativeGhostInputFrameCount) ||
-            ((sdata->gGT->gameMode1 & END_OF_RACE) != 0))
+            ((P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 & END_OF_RACE) != 0))
         {
             s_nativeGhostInputPlaybackActive = false;
             s_nativeGhostInputDisplayValid = false;
@@ -816,7 +816,7 @@ void NativeGhostInput_ProcessGamepad(struct GamepadSystem *gGamepads)
 
         // A normal Start-menu pause keeps its physical input and always runs at
         // normal wall speed. Replay controls only own PAUSE_1 when X paused it.
-        if (((sdata->gGT->gameMode1 & PAUSE_ALL) != 0) && !s_nativeGhostReplayPaused)
+        if (((P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 & PAUSE_ALL) != 0) && !s_nativeGhostReplayPaused)
         {
             Platform_SetVBlankPacingScale(1, 1);
             return;
@@ -857,7 +857,7 @@ void NativeGhostInput_ProcessGamepad(struct GamepadSystem *gGamepads)
         }
 #endif
 
-        if ((sdata->gGT->gameMode1 & PAUSE_ALL) == 0)
+        if ((P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 & PAUSE_ALL) == 0)
         {
             NativeGhostInput_SetReplayPad(gGamepads);
         }
@@ -871,7 +871,7 @@ void NativeGhostInput_ProcessGamepad(struct GamepadSystem *gGamepads)
     }
 
     struct GamepadBuffer *pad = &gGamepads->gamepad[0];
-    struct ControllerPacket *packet = pad->ptrControllerPacket;
+    struct ControllerPacket *packet = P32_GET(struct ControllerPacket *, pad->ptrControllerPacket);
     u8 physicalLX = 0x80;
     u8 physicalLY = 0x80;
     u8 physicalRX = (u8)pad->stickRX;
@@ -911,9 +911,9 @@ void NativeGhostInput_ProcessFrameTiming(s32 *elapsedTimeMS)
         {
             if (s_nativeGhostInputPlaybackTimerPhasePending)
             {
-                u32 timer = (u32)sdata->gGT->timer;
+                u32 timer = (u32)P32_GET(struct GameTracker *, sdata->gGT)->timer;
                 timer = (timer & ~NativeGhostInput_TimerPhaseMask(s_nativeGhostInputRecordingFlags)) | s_nativeGhostInputPlaybackTimerPhase;
-                sdata->gGT->timer = (s32)timer;
+                P32_GET(struct GameTracker *, sdata->gGT)->timer = (s32)timer;
                 s_nativeGhostInputPlaybackTimerPhasePending = false;
             }
 
@@ -921,7 +921,7 @@ void NativeGhostInput_ProcessFrameTiming(s32 *elapsedTimeMS)
 #if CTR_NATIVE_60FPS
             if (CTR_NATIVE_60FPS_ACTIVE)
             {
-                s32 frameMS = CTR_FRAME_STEP(ELAPSED_MS, sdata->gGT->timer);
+                s32 frameMS = CTR_FRAME_STEP(ELAPSED_MS, P32_GET(struct GameTracker *, sdata->gGT)->timer);
                 s32 replayVBlanks = (*elapsedTimeMS + frameMS - 1) / frameMS;
                 if (CTR_FRAMES_PER_SECOND > 60)
                     replayVBlanks = (*elapsedTimeMS * CTR_FRAMES_PER_SECOND + ELAPSED_MS * FPS / 2) / (ELAPSED_MS * FPS);
@@ -942,7 +942,7 @@ void NativeGhostInput_ProcessFrameTiming(s32 *elapsedTimeMS)
         return;
     }
 
-    u32 gameMode = (u32)sdata->gGT->gameMode1;
+    u32 gameMode = (u32)P32_GET(struct GameTracker *, sdata->gGT)->gameMode1;
     b32 timeTrialGameplay = (gameMode & GAME_MODE_TIME_TRIAL_GAMEPLAY_MASK) == TIME_TRIAL;
     b32 relicRaceGameplay = (gNativeRelicRaceMode != 0) &&
                             ((gameMode & RELIC_RACE) != 0) &&
@@ -963,7 +963,7 @@ void NativeGhostInput_ProcessFrameTiming(s32 *elapsedTimeMS)
 
     if (s_nativeGhostInputFrameCount == 0)
     {
-        s_nativeGhostInputStartTimerPhase = (u32)sdata->gGT->timer & NativeGhostInput_TimerPhaseMask(s_nativeGhostInputRecordingFlags);
+        s_nativeGhostInputStartTimerPhase = (u32)P32_GET(struct GameTracker *, sdata->gGT)->timer & NativeGhostInput_TimerPhaseMask(s_nativeGhostInputRecordingFlags);
     }
 
     s_nativeGhostInputPending.elapsedTimeMS = (u16)*elapsedTimeMS;
@@ -1084,12 +1084,12 @@ void NativeGhostInput_RemoveForGhost(const char *ghostName)
 
 static b32 NativeGhostInput_ModeMatchesCurrentGame(int ghostMode)
 {
-    if ((sdata == NULL) || (sdata->gGT == NULL))
+    if ((sdata == NULL) || (P32_GET(struct GameTracker *, sdata->gGT) == NULL))
     {
         return false;
     }
 
-    u32 gameMode = (u32)sdata->gGT->gameMode1;
+    u32 gameMode = (u32)P32_GET(struct GameTracker *, sdata->gGT)->gameMode1;
     if (ghostMode == NATIVE_GHOST_MODE_RELIC_RACE)
     {
         return (gNativeRelicRaceMode != 0) &&

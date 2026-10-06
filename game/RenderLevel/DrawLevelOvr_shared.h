@@ -19,7 +19,7 @@ u8 *DrawLevelOvr1P_GetClipRecordCursor(void);
 void DrawLevelOvr1P_SetClipRecordCursor(u8 *cursor);
 void DrawLevelOvr1P_SetClipRecordStart(u8 *start);
 void DrawLevelOvr1P_SetViewportScratchContext(struct PushBuffer *pb, const int *visFaceList, u8 *clipStart, u8 *clipCursor,
-                                              struct QuadBlock **renderedOverflowBase);
+                                              P32(struct QuadBlock *) *renderedOverflowBase);
 void DrawLevelOvr1P_SetPrimReserveBias(u32 bias);
 void DrawLevelOvr1P_SetListHandlersSeedRenderedCursor(int enabled);
 void DrawLevelOvr_ClearRenderedOverflowBase(int playerIndex);
@@ -31,7 +31,7 @@ int DrawLevelOvr_ConsumeClipRecordsForViewport(struct PushBuffer *pb, struct Pri
 void *DrawLevelOvr1P_GetRenderListBucketValue(struct DrawLevelOvr1PRenderList *renderList, const struct DrawLevelOvr1PBucket *bucket);
 int DrawLevelOvr1P_DrawBspListQuadBlocks(struct VisMemBspListNode *slot, struct PushBuffer *pb, struct mesh_info *mesh, struct PrimMem *primMem,
                                          const int *visFaceList, int role);
-int DrawLevelOvr1P_DrawRenderedQuadBlocks(struct QuadBlock **renderedList, struct PushBuffer *pb, struct mesh_info *mesh, struct PrimMem *primMem, int role);
+int DrawLevelOvr1P_DrawRenderedQuadBlocks(P32(struct QuadBlock *) *renderedList, struct PushBuffer *pb, struct mesh_info *mesh, struct PrimMem *primMem, int role);
 
 // Canonical 226 helper bodies reused by 227/228/229.
 int Ovr226_800a0ef4_DrawFullDynamicBspList(struct VisMemBspListNode *slot, struct PushBuffer *pb, struct mesh_info *mesh, struct PrimMem *primMem,
@@ -41,7 +41,7 @@ int Ovr226_800a1e30_DrawWaterBspList(struct VisMemBspListNode *slot, struct Push
 void DrawLevelOvr1P_SetSplitGroundThresholdScratch(void);
 int DrawLevelOvr1P_DrawSplitGroundListABspList(struct VisMemBspListNode *slot, struct PushBuffer *pb, struct mesh_info *mesh, struct PrimMem *primMem,
                                                const int *visFaceList);
-int Ovr226_800a2904_DrawWaterRenderedListWithDefaultHandler(struct QuadBlock **renderedList, struct PushBuffer *pb, struct mesh_info *mesh,
+int Ovr226_800a2904_DrawWaterRenderedListWithDefaultHandler(P32(struct QuadBlock *) *renderedList, struct PushBuffer *pb, struct mesh_info *mesh,
                                                             struct PrimMem *primMem, u32 defaultHandlerAddress);
 
 #endif

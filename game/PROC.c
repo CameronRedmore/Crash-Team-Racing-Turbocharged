@@ -17,7 +17,7 @@ static struct ThTickNativeContext *s_thTickContext;
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80041dc0-0x80041dfc.
 void PROC_DestroyTracker(struct Thread *t)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	if (gGT->numMissiles > 0)
 	{
@@ -31,7 +31,7 @@ void PROC_DestroyTracker(struct Thread *t)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80041dfc-0x80041e20.
 void PROC_DestroyInstance(struct Thread *t)
 {
-	INSTANCE_Death(t->inst);
+	INSTANCE_Death(P32_GET(struct Instance *, t->inst));
 }
 
 
@@ -47,15 +47,15 @@ void PROC_DestroyObject(void *object, int threadFlags)
 
 	if ((threadFlags & 0x300) == 0x100)
 	{
-		myPool = &sdata->gGT->JitPools.largeStack;
+		myPool = &P32_GET(struct GameTracker *, sdata->gGT)->JitPools.largeStack;
 	}
 	else if ((threadFlags & 0x300) == 0x200)
 	{
-		myPool = &sdata->gGT->JitPools.mediumStack;
+		myPool = &P32_GET(struct GameTracker *, sdata->gGT)->JitPools.mediumStack;
 	}
 	else
 	{
-		myPool = &sdata->gGT->JitPools.smallStack;
+		myPool = &P32_GET(struct GameTracker *, sdata->gGT)->JitPools.smallStack;
 	}
 
 	// in allocation, "next" and "prev" are abstracted
@@ -78,9 +78,9 @@ void PROC_DestroySelf(struct Thread *t)
 	}
 
 	// this is usuallly PROC_DestroyInstance
-	if (t->funcThDestroy != 0)
+	if (P32_GET(ThreadFunc, t->funcThDestroy) != 0)
 	{
-		t->funcThDestroy(t);
+		P32_GET(ThreadFunc, t->funcThDestroy)(t);
 	}
 
 	// used by RB_Follower
@@ -88,10 +88,10 @@ void PROC_DestroySelf(struct Thread *t)
 
 	// destroy object attached,
 	// guaranteed all threads have one
-	PROC_DestroyObject(t->object, t->flags);
+	PROC_DestroyObject(P32_GET(void *, t->object), t->flags);
 
 	// recycle thread
-	LIST_AddFront(&sdata->gGT->JitPools.thread.free, (struct Item *)t);
+	LIST_AddFront(&P32_GET(struct GameTracker *, sdata->gGT)->JitPools.thread.free, (struct Item *)t);
 }
 
 
@@ -103,12 +103,12 @@ void PROC_DestroyBloodline(struct Thread *t)
 		struct Thread *siblingThread;
 
 		// recursively find all children
-		if (t->childThread != 0)
+		if (P32_GET(struct Thread *, t->childThread) != 0)
 		{
-			PROC_DestroyBloodline(t->childThread);
+			PROC_DestroyBloodline(P32_GET(struct Thread *, t->childThread));
 		}
 
-		siblingThread = t->siblingThread;
+		siblingThread = P32_GET(struct Thread *, t->siblingThread);
 		PROC_DestroySelf(t);
 		t = siblingThread;
 	}
@@ -116,11 +116,11 @@ void PROC_DestroyBloodline(struct Thread *t)
 
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80041f58-0x80041ff4.
-void PROC_CheckBloodlineForDead(struct Thread **replaceSelf, struct Thread *th)
+void PROC_CheckBloodlineForDead(P32(struct Thread *) *replaceSelf, struct Thread *th)
 {
 	while (th != 0)
 	{
-		struct Thread *siblingThread = th->siblingThread;
+		struct Thread *siblingThread = P32_GET(struct Thread *, th->siblingThread);
 
 		if ((th->flags & THREAD_FLAG_DEAD) == 0)
 		{
@@ -130,9 +130,9 @@ void PROC_CheckBloodlineForDead(struct Thread **replaceSelf, struct Thread *th)
 			// child's sibling, or nullptr if all children are dead
 
 			// recursively find all children
-			if (th->childThread != 0)
+			if (P32_GET(struct Thread *, th->childThread) != 0)
 			{
-				PROC_CheckBloodlineForDead(&th->childThread, th->childThread);
+				PROC_CheckBloodlineForDead(&th->childThread, P32_GET(struct Thread *, th->childThread));
 			}
 
 			// current thread is alive, doesn't need to be overwritten,
@@ -145,15 +145,15 @@ void PROC_CheckBloodlineForDead(struct Thread **replaceSelf, struct Thread *th)
 		else
 		{
 			// recursively find all children
-			if (th->childThread != 0)
+			if (P32_GET(struct Thread *, th->childThread) != 0)
 			{
-				PROC_DestroyBloodline(th->childThread);
+				PROC_DestroyBloodline(P32_GET(struct Thread *, th->childThread));
 			}
 
 			PROC_DestroySelf(th);
 
 			// replace thread with pointer to it's own sibling
-			*replaceSelf = siblingThread;
+			P32_SET(*replaceSelf, siblingThread);
 
 			// dont overwrite replaceSelf like in previous
 			// "if" block, cause the next dead sibling can
@@ -170,11 +170,11 @@ void PROC_CheckAllForDead()
 {
 	int i;
 
-	struct ThreadBucket *tb = &sdata->gGT->threadBuckets[0];
+	struct ThreadBucket *tb = &P32_GET(struct GameTracker *, sdata->gGT)->threadBuckets[0];
 
 	for (i = 0; i < NUM_BUCKETS; i++)
 	{
-		PROC_CheckBloodlineForDead(&tb[i].thread, tb[i].thread);
+		PROC_CheckBloodlineForDead(&tb[i].thread, P32_GET(struct Thread *, tb[i].thread));
 	}
 }
 
@@ -188,7 +188,7 @@ struct Thread *PROC_BirthWithObject(int flags, void *funcThTick, const char *nam
 	struct Thread *th;
 	struct GameTracker *gGT;
 
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// determine bucketID from relativeTh or flags
 	if (relativeTh != 0)
@@ -222,7 +222,7 @@ struct Thread *PROC_BirthWithObject(int flags, void *funcThTick, const char *nam
 	{
 		if (stackObj != 0)
 		{
-			PROC_DestroyObject((void *)((u32)stackObj + 8), flags);
+			PROC_DestroyObject((void *)((char *)stackObj + 8), flags);
 		}
 		return 0;
 	}
@@ -232,7 +232,7 @@ struct Thread *PROC_BirthWithObject(int flags, void *funcThTick, const char *nam
 	{
 		if (stackObj != 0)
 		{
-			PROC_DestroyObject((void *)((u32)stackObj + 8), flags);
+			PROC_DestroyObject((void *)((char *)stackObj + 8), flags);
 		}
 		return 0;
 	}
@@ -249,53 +249,53 @@ struct Thread *PROC_BirthWithObject(int flags, void *funcThTick, const char *nam
 	// check thread allocated
 	if (th == 0)
 	{
-		PROC_DestroyObject((void *)((u32)stackObj + 8), flags);
+		PROC_DestroyObject((void *)((char *)stackObj + 8), flags);
 		return 0;
 	}
 
 	// initialize thread fields
 	th->flags = flags;
 	th->cooldownFrameCount = 0;
-	th->funcThCollide = 0;
-	th->funcThDestroy = 0;
-	th->inst = 0;
+	P32_SET(th->funcThCollide, 0);
+	P32_SET(th->funcThDestroy, 0);
+	P32_SET(th->inst, 0);
 
 	// handle relative thread linking
 	if (relativeTh == 0)
 	{
 		struct ThreadBucket *tb = &gGT->threadBuckets[bucketID];
 
-		th->siblingThread = tb->thread;
-		tb->thread = th;
-		th->parentThread = 0;
-		th->childThread = 0;
+		P32_SET(th->siblingThread, P32_GET(struct Thread *, tb->thread));
+		P32_SET(tb->thread, th);
+		P32_SET(th->parentThread, 0);
+		P32_SET(th->childThread, 0);
 	}
 	else if (flags & SELF_SIBLING)
 	{
-		th->siblingThread = relativeTh->siblingThread;
-		relativeTh->siblingThread = th;
-		th->childThread = 0;
-		th->parentThread = relativeTh->parentThread;
+		P32_SET(th->siblingThread, P32_GET(struct Thread *, relativeTh->siblingThread));
+		P32_SET(relativeTh->siblingThread, th);
+		P32_SET(th->childThread, 0);
+		P32_SET(th->parentThread, P32_GET(struct Thread *, relativeTh->parentThread));
 	}
 	else if (flags & CHILD_BETWEEN)
 	{
-		th->childThread = relativeTh->childThread;
-		relativeTh->childThread = th;
-		th->parentThread = relativeTh;
-		th->siblingThread = 0;
+		P32_SET(th->childThread, P32_GET(struct Thread *, relativeTh->childThread));
+		P32_SET(relativeTh->childThread, th);
+		P32_SET(th->parentThread, relativeTh);
+		P32_SET(th->siblingThread, 0);
 	}
 	else
 	{
-		th->childThread = 0;
-		th->siblingThread = relativeTh->childThread;
-		relativeTh->childThread = th;
-		th->parentThread = relativeTh;
+		P32_SET(th->childThread, 0);
+		P32_SET(th->siblingThread, P32_GET(struct Thread *, relativeTh->childThread));
+		P32_SET(relativeTh->childThread, th);
+		P32_SET(th->parentThread, relativeTh);
 	}
 
 	// set remaining fields AFTER linking (ASM order)
-	th->funcThTick = funcThTick;
-	th->name = name;
-	th->object = (void *)(((u32)stackObj) + 8);
+	P32_SET(th->funcThTick, funcThTick);
+	P32_SET(th->name, name);
+	P32_SET(th->object, (void *)((char *)stackObj + 8));
 
 	return th;
 }
@@ -315,7 +315,7 @@ void PROC_CollidePointWithSelf(struct Thread *th, struct BucketSearchParams *buf
 		return;
 	}
 
-	inst = th->inst;
+	inst = P32_GET(struct Instance *, th->inst);
 
 	// Do not try to optimize this with loops,
 	// it will not compile to less assembly,
@@ -350,7 +350,7 @@ void PROC_CollidePointWithSelf(struct Thread *th, struct BucketSearchParams *buf
 	buf->bestDistSq = dist;
 
 	// save the thread collided with
-	buf->th = th;
+	P32_SET(buf->th, th);
 
 	CTR_SET_VEC3(buf->dist.v, (s16)distX, (s16)distY, (s16)distZ);
 }
@@ -366,7 +366,7 @@ void PROC_CollidePointWithBucket(struct Thread *th, struct BucketSearchParams *b
 		PROC_CollidePointWithSelf(th, buf);
 
 		// next
-		th = th->siblingThread;
+		th = P32_GET(struct Thread *, th->siblingThread);
 	}
 }
 
@@ -385,13 +385,13 @@ struct Thread *PROC_SearchForModel(struct Thread *th, s16 modelID)
 		}
 
 		// check children recursively, quit if found
-		struct Thread *other = PROC_SearchForModel(th->childThread, modelID);
+		struct Thread *other = PROC_SearchForModel(P32_GET(struct Thread *, th->childThread), modelID);
 		if (other != 0)
 		{
 			return other;
 		}
 
-		th = th->siblingThread;
+		th = P32_GET(struct Thread *, th->siblingThread);
 	}
 
 	return th;
@@ -414,7 +414,7 @@ void PROC_PerBspLeaf_CheckInstances(struct BSP *bspLeaf, struct ScratchpadStruct
 	struct InstDef *instDef;
 	CollThBuckCallback callback;
 
-	bspHitbox = bspLeaf->data.leaf.bspHitboxArray;
+	bspHitbox = P32_GET(struct BSP *, bspLeaf->data.leaf.bspHitboxArray);
 	if (bspHitbox == NULL)
 	{
 		return;
@@ -432,8 +432,8 @@ void PROC_PerBspLeaf_CheckInstances(struct BSP *bspLeaf, struct ScratchpadStruct
 			continue;
 		}
 
-		instDef = bspHitbox->data.hitbox.instDef;
-		if ((instDef != NULL) && ((instDef->ptrInstance->flags & DRAW_COLLISION_MASK) == 0))
+		instDef = P32_GET(struct InstDef *, bspHitbox->data.hitbox.instDef);
+		if ((instDef != NULL) && ((P32_GET(struct Instance *, instDef->ptrInstance)->flags & DRAW_COLLISION_MASK) == 0))
 		{
 			continue;
 		}
@@ -469,7 +469,7 @@ void PROC_PerBspLeaf_CheckInstances(struct BSP *bspLeaf, struct ScratchpadStruct
 
 		CTR_SET_VEC3(sps->Union.ThBuckColl.centerDelta.v, (s16)distX, (s16)distY, (s16)distZ);
 
-		callback = sps->Union.ThBuckColl.funcCallback;
+		callback = P32_GET(CollThBuckCallback, sps->Union.ThBuckColl.funcCallback);
 		callback(sps, bspHitbox);
 	}
 }
@@ -491,9 +491,9 @@ void PROC_StartSearch_Self(struct ScratchpadStruct *sps)
 	sps->Union.ThBuckColl.bbox.max.y = (s16)((u16)sps->Input1.pos.y + (u16)hitRadius);
 	sps->Union.ThBuckColl.bbox.max.z = (s16)((u16)sps->Input1.pos.z + (u16)hitRadius);
 
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
-	COLL_SearchBSP_CallbackPARAM(gGT->level1->ptr_mesh_info->bspRoot, &sps->Union.ThBuckColl.bbox, PROC_PerBspLeaf_CheckInstances, sps);
+	COLL_SearchBSP_CallbackPARAM(P32_GET(struct BSP *, P32_GET(struct mesh_info *, P32_GET(struct Level *, gGT->level1)->ptr_mesh_info)->bspRoot), &sps->Union.ThBuckColl.bbox, PROC_PerBspLeaf_CheckInstances, sps);
 }
 
 
@@ -512,11 +512,11 @@ void PROC_CollideHitboxWithBucket(struct Thread *collThread, struct ScratchpadSt
 	struct Instance *inst;
 	CollThBuckCallback callback;
 
-	for (/**/; collThread != NULL; collThread = collThread->siblingThread)
+	for (/**/; collThread != NULL; collThread = P32_GET(struct Thread *, collThread->siblingThread))
 	{
-		if (collThread->childThread != NULL)
+		if (P32_GET(struct Thread *, collThread->childThread) != NULL)
 		{
-			PROC_CollideHitboxWithBucket(collThread->childThread, sps, ignoredThread);
+			PROC_CollideHitboxWithBucket(P32_GET(struct Thread *, collThread->childThread), sps, ignoredThread);
 		}
 
 		if (collThread == ignoredThread)
@@ -529,7 +529,7 @@ void PROC_CollideHitboxWithBucket(struct Thread *collThread, struct ScratchpadSt
 			continue;
 		}
 
-		inst = collThread->inst;
+		inst = P32_GET(struct Instance *, collThread->inst);
 
 		distX = (int)sps->Input1.pos.x - inst->matrix.t[0];
 		distY = (int)sps->Input1.pos.y - inst->matrix.t[1];
@@ -562,7 +562,7 @@ void PROC_CollideHitboxWithBucket(struct Thread *collThread, struct ScratchpadSt
 
 		CTR_SET_VEC3(sps->Union.ThBuckColl.centerDelta.v, (s16)distX, (s16)distY, (s16)distZ);
 
-		callback = sps->Union.ThBuckColl.funcCallback;
+		callback = P32_GET(CollThBuckCallback, sps->Union.ThBuckColl.funcCallback);
 		callback(sps, collThread);
 	}
 }
@@ -595,7 +595,7 @@ internal struct Thread *ThTick_RunThreadNative(struct ThTickNativeContext *conte
 	context->currentThread = thread;
 	if (setjmp(context->env) == 0)
 	{
-		thread->funcThTick(thread);
+		P32_GET(ThreadFunc, thread->funcThTick)(thread);
 	}
 
 	return context->currentThread;
@@ -621,7 +621,7 @@ void ThTick_RunBucket(struct Thread *thread)
 	{
 		struct Thread *t = pending[--count];
 
-		ThTick_PushPending(pending, &count, t->siblingThread);
+		ThTick_PushPending(pending, &count, P32_GET(struct Thread *, t->siblingThread));
 
 		if (t->cooldownFrameCount < 0)
 		{
@@ -634,7 +634,7 @@ void ThTick_RunBucket(struct Thread *thread)
 			continue;
 		}
 
-		if (t->funcThTick != NULL)
+		if (P32_GET(ThreadFunc, t->funcThTick) != NULL)
 		{
 #if defined(CTR_NATIVE)
 			t = ThTick_RunThreadNative(&context, t);
@@ -643,7 +643,7 @@ void ThTick_RunBucket(struct Thread *thread)
 #endif
 		}
 
-		ThTick_PushPending(pending, &count, t->childThread);
+		ThTick_PushPending(pending, &count, P32_GET(struct Thread *, t->childThread));
 	}
 
 #if defined(CTR_NATIVE)
@@ -660,7 +660,7 @@ void ThTick_FastRET(struct Thread *thread)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800716ec-0x80071704 with native SetAndExec bridge.
 void ThTick_SetAndExec(struct Thread *thread, void (*funcThTick)(struct Thread *))
 {
-	thread->funcThTick = funcThTick;
+	P32_SET(thread->funcThTick, funcThTick);
 	funcThTick(thread);
 
 #if defined(CTR_NATIVE)
@@ -677,5 +677,5 @@ void ThTick_SetAndExec(struct Thread *thread, void (*funcThTick)(struct Thread *
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80071704-0x8007170c.
 void ThTick_Set(struct Thread *thread, void (*funcThTick)(struct Thread *))
 {
-	thread->funcThTick = funcThTick;
+	P32_SET(thread->funcThTick, funcThTick);
 }

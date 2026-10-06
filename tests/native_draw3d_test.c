@@ -11,6 +11,8 @@
 #include <platform/native_pgxp.h>
 
 int gNativeDepthBufferEnabled;
+int gNativePgxpMode;
+int gNativePreciseMinimapEnabled;
 
 void Platform_LogError(const char *fmt, ...)
 {

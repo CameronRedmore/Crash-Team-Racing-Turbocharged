@@ -38,8 +38,8 @@ void RB_Spider_DrawWebs(struct Thread *t, struct PushBuffer *pb)
 	WebLine *line;
 	int numSpiders;
 
-	gGT = sdata->gGT;
-	primMem = &gGT->backBuffer->primMem;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	primMem = &P32_GET(struct DB *, gGT->backBuffer)->primMem;
 
 	// quit if there are no spiders
 	if (t == NULL)
@@ -53,8 +53,8 @@ void RB_Spider_DrawWebs(struct Thread *t, struct PushBuffer *pb)
 	// all threads
 	for (numSpiders = 0; t != NULL; numSpiders++)
 	{
-		struct Instance *inst = t->inst;
-		struct InstDef *instDef = inst->instDef;
+		struct Instance *inst = P32_GET(struct Instance *, t->inst);
+		struct InstDef *instDef = P32_GET(struct InstDef *, inst->instDef);
 		u16 x = (u16)instDef->pos.x;
 		s32 z = instDef->pos.z;
 
@@ -63,16 +63,16 @@ void RB_Spider_DrawWebs(struct Thread *t, struct PushBuffer *pb)
 		line->z = z;
 		line++;
 
-		t = t->siblingThread;
+		t = P32_GET(struct Thread *, t->siblingThread);
 	}
 
 	int i, j;
 	int numPlyr;
 	numPlyr = gGT->numPlyrCurrGame;
 
-	p = primMem->cursor;
+	p = P32_GET(void *, primMem->cursor);
 	nextPrim = p + (numSpiders * numPlyr);
-	if (nextPrim >= (multiCmdPacket *)primMem->guardEnd)
+	if (nextPrim >= (multiCmdPacket *)P32_GET(void *, primMem->guardEnd))
 	{
 		return;
 	}
@@ -126,7 +126,7 @@ void RB_Spider_DrawWebs(struct Thread *t, struct PushBuffer *pb)
 				}
 
 				// pushBuffer 0xf4, ptrOT
-				ot = (u32 *)&pb->ptrOT[depth];
+				ot = (u32 *)&P32_GET(uint32_t *, pb->ptrOT)[depth];
 
 #if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
 				if (NATIVE_DRAW3D_ACTIVE())
@@ -177,7 +177,7 @@ void RB_Spider_DrawWebs(struct Thread *t, struct PushBuffer *pb)
 		pb++;
 	}
 
-	primMem->cursor = p;
+	P32_SET(primMem->cursor, p);
 }
 
 s16 spiderArr[] = {
@@ -198,13 +198,13 @@ void RB_Spider_ThTick(struct Thread *t)
 	struct Instance *spiderInst;
 	struct Spider *spider;
 
-	spider = t->object;
-	spiderInst = t->inst;
+	spider = P32_GET(void *, t->object);
+	spiderInst = P32_GET(struct Instance *, t->inst);
 
 	if (spider->delay != 0)
 	{
 #if CTR_NATIVE_60FPS
-		if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+		if (CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer))
 		{
 			spider->delay--;
 		}
@@ -224,7 +224,7 @@ void RB_Spider_ThTick(struct Thread *t)
 			// Play animation backwards
 			s16 animFrame = spiderInst->animFrame;
 #if CTR_NATIVE_60FPS
-			if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+			if (CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer))
 			{
 				animFrame--;
 			}
@@ -282,7 +282,7 @@ void RB_Spider_ThTick(struct Thread *t)
 			if (animFrame + 1 < numAnimFrames)
 			{
 #if CTR_NATIVE_60FPS
-				if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+				if (CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer))
 				{
 					spiderInst->animFrame++;
 				}
@@ -299,12 +299,12 @@ void RB_Spider_ThTick(struct Thread *t)
 			}
 
 		updatePosScale:
-			spiderInst->matrix.t[1] = (int)spiderInst->instDef->pos.y + spiderArr[spiderInst->animFrame];
+			spiderInst->matrix.t[1] = (int)P32_GET(struct InstDef *, spiderInst->instDef)->pos.y + spiderArr[spiderInst->animFrame];
 
 			if (spiderInst->animFrame < 0xb)
 			{
-				spider->shadowInst->scale.x = (s16)((spiderInst->animFrame << 0xc) / 10) + 0x1800;
-				spider->shadowInst->scale.z = (s16)((spiderInst->animFrame << 0xc) / 10) + 0x1800;
+				P32_GET(struct Instance *, spider->shadowInst)->scale.x = (s16)((spiderInst->animFrame << 0xc) / 10) + 0x1800;
+				P32_GET(struct Instance *, spider->shadowInst)->scale.z = (s16)((spiderInst->animFrame << 0xc) / 10) + 0x1800;
 			}
 
 			goto checkCollision;
@@ -331,7 +331,7 @@ void RB_Spider_ThTick(struct Thread *t)
 	}
 
 #if CTR_NATIVE_60FPS
-	if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+	if (CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer))
 	{
 		spiderInst->animFrame++;
 	}
@@ -340,29 +340,29 @@ void RB_Spider_ThTick(struct Thread *t)
 #endif
 
 checkCollision:
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
-	hitInst = (struct Instance *)LinkedCollide_Radius(spiderInst, t, gGT->threadBuckets[PLAYER].thread, 0x9000);
+	hitInst = (struct Instance *)LinkedCollide_Radius(spiderInst, t, P32_GET(struct Thread *, gGT->threadBuckets[PLAYER].thread), 0x9000);
 	if (hitInst == NULL)
 	{
-		hitInst = (struct Instance *)LinkedCollide_Radius(spiderInst, t, gGT->threadBuckets[ROBOT].thread, 0x9000);
+		hitInst = (struct Instance *)LinkedCollide_Radius(spiderInst, t, P32_GET(struct Thread *, gGT->threadBuckets[ROBOT].thread), 0x9000);
 		if (hitInst == NULL)
 		{
-			hitInst = (struct Instance *)LinkedCollide_Radius(spiderInst, t, gGT->threadBuckets[MINE].thread, 0x9000);
+			hitInst = (struct Instance *)LinkedCollide_Radius(spiderInst, t, P32_GET(struct Thread *, gGT->threadBuckets[MINE].thread), 0x9000);
 			if (hitInst != NULL)
 			{
-				((ThreadSimpleCollideFunc)hitInst->thread->funcThCollide)(hitInst->thread);
+				((ThreadSimpleCollideFunc)P32_GET(void *, P32_GET(struct Thread *, hitInst->thread)->funcThCollide))(P32_GET(struct Thread *, hitInst->thread));
 			}
 
 			return;
 		}
 
-		victim = (struct Driver *)hitInst->thread->object;
+		victim = (struct Driver *)P32_GET(void *, P32_GET(struct Thread *, hitInst->thread)->object);
 		RB_Hazard_HurtDriver(victim, 1, 0, 0);
 		return;
 	}
 
-	victim = (struct Driver *)hitInst->thread->object;
+	victim = (struct Driver *)P32_GET(void *, P32_GET(struct Thread *, hitInst->thread)->object);
 	prevKartState = victim->kartState;
 	if ((RB_Hazard_HurtDriver(victim, 1, 0, 0) != 0) && (prevKartState != KS_SPINNING))
 	{
@@ -397,21 +397,21 @@ void RB_Spider_LInB(struct Instance *inst)
 	struct Instance *shadowInst;
 	int spiderID;
 
-	if (inst->thread != NULL)
+	if (P32_GET(struct Thread *, inst->thread) != NULL)
 	{
 		return;
 	}
 
 	t = PROC_BirthWithObject(SIZE_RELATIVE_POOL_BUCKET(sizeof(struct Spider), NONE, SMALL, SPIDER), RB_Spider_ThTick, "spider", 0);
-	inst->thread = t;
+	P32_SET(inst->thread, t);
 	if (t == NULL)
 	{
 		return;
 	}
 
-	spider = t->object;
-	t->funcThCollide = (void *)RB_Spider_ThCollide;
-	t->inst = inst;
+	spider = P32_GET(void *, t->object);
+	P32_SET(t->funcThCollide, (void *)RB_Spider_ThCollide);
+	P32_SET(t->inst, inst);
 
 	inst->scale.x = 0x1c00;
 	inst->scale.y = 0x1c00;
@@ -436,9 +436,9 @@ void RB_Spider_LInB(struct Instance *inst)
 		spider->delay = 0;
 	}
 
-	shadowInst = INSTANCE_Birth3D(sdata->gGT->modelPtr[DYNAMIC_SPIDERSHADOW], 0, t);
+	shadowInst = INSTANCE_Birth3D(P32_GET(struct Model *, P32_GET(struct GameTracker *, sdata->gGT)->modelPtr[DYNAMIC_SPIDERSHADOW]), 0, t);
 
-	spider->shadowInst = shadowInst;
+	P32_SET(spider->shadowInst, shadowInst);
 
 	CTR_MatrixCopyRot(&shadowInst->matrix, &inst->matrix);
 

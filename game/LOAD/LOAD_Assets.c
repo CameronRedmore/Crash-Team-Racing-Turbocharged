@@ -6,6 +6,7 @@
 
 #if defined(CTR_NATIVE)
 #include <platform/native_custom_racer.h>
+#include <platform/native_memory.h>
 
 enum
 {
@@ -148,7 +149,7 @@ static void NativeAIRandomizer_2PModelLoaded(struct LoadQueueSlot *lqs)
 		int driverIndex = 2 + i;
 		if (data.characterIDs[driverIndex] == characterID)
 		{
-			s_nativeAIRandomizer2PModels[i] = (struct Model *)lqs->ptrDestination;
+			s_nativeAIRandomizer2PModels[i] = (struct Model *)P32_GET(void *, lqs->ptrDestination);
 			return;
 		}
 	}
@@ -170,12 +171,12 @@ static b32 NativeAIRandomizer_Queue2PModels(struct BigHeader *bigfile)
 		int fileIndex = BI_RACERMODELMED + data.characterIDs[driverIndex];
 		u32 readSize = (entries[fileIndex].size + LOAD_CD_DATA_SECTOR_ROUND_MASK) & ~LOAD_CD_DATA_SECTOR_ROUND_MASK;
 
-		s_nativeAIRandomizer2PBuffers[i] = malloc((size_t)readSize);
+		s_nativeAIRandomizer2PBuffers[i] = Platform_ImageAlloc((size_t)readSize);
 		if (s_nativeAIRandomizer2PBuffers[i] == NULL)
 		{
 			for (int j = 0; j < i; j++)
 			{
-				free(s_nativeAIRandomizer2PBuffers[j]);
+				Platform_ImageFree(s_nativeAIRandomizer2PBuffers[j]);
 				s_nativeAIRandomizer2PBuffers[j] = NULL;
 			}
 			return false;
@@ -200,7 +201,7 @@ static void NativeAIRandomizer_ResetModels(void)
 	{
 		if (s_nativeAIRandomizer2PBuffers[i] != NULL)
 		{
-			free(s_nativeAIRandomizer2PBuffers[i]);
+			Platform_ImageFree(s_nativeAIRandomizer2PBuffers[i]);
 			s_nativeAIRandomizer2PBuffers[i] = NULL;
 		}
 		s_nativeAIRandomizer2PModels[i] = NULL;
@@ -239,10 +240,9 @@ void NativeAIRandomizer_FinalizeModels(void)
 {
 	for (int driverIndex = 0; driverIndex < NATIVE_AI_RANDOMIZER_DRIVER_COUNT; driverIndex++)
 	{
-		if (s_nativeAIRandomizerModels[driverIndex].fileBase != NULL)
+		if (P32_GET(void *, s_nativeAIRandomizerModels[driverIndex].fileBase) != NULL)
 		{
-			s_nativeAIRandomizerModels[driverIndex].model =
-			    (struct Model *)((u8 *)s_nativeAIRandomizerModels[driverIndex].fileBase + LOAD_MODEL_FILE_HEADER_BYTES);
+			P32_SET(s_nativeAIRandomizerModels[driverIndex].model, (struct Model *)((u8 *)P32_GET(void *, s_nativeAIRandomizerModels[driverIndex].fileBase) + LOAD_MODEL_FILE_HEADER_BYTES));
 		}
 	}
 	NativeCustomRacer_ApplyDriverVramPatches();
@@ -272,7 +272,7 @@ struct Model *NativeAIRandomizer_GetDriverModel(int driverIndex)
 		}
 	}
 
-	return s_nativeAIRandomizerModels[driverIndex].model;
+	return P32_GET(struct Model *, s_nativeAIRandomizerModels[driverIndex].model);
 }
 #endif
 
@@ -284,7 +284,10 @@ void LOAD_RunPtrMap(char *origin, int *patchArr, int numPtrs)
 	for (ptrCurrOffset = &patchArr[0]; ptrCurrOffset < &patchArr[numPtrs]; ptrCurrOffset++)
 	{
 		int offset = (*ptrCurrOffset >> 2) << 2;
-		*(int *)&origin[offset] = *(int *)&origin[offset] + (int)origin;
+		int *slot = (int *)&origin[offset];
+		// File pointers are offsets from origin; store them as retail pointer
+		// slots (a raw address on 32-bit, a CtrPtr32 handle on 64-bit).
+		*slot = (int)P32_ENC(origin + *slot);
 #if defined(CTR_NATIVE) && defined(CTR_INTERNAL)
 		NativeCheckpoint_RegisterPointerSlot(&origin[offset]);
 #endif
@@ -325,9 +328,9 @@ void LOAD_Robots2P(struct BigHeader *bigfile, int p1, int p2, void (*callback)(s
 	}
 
 #if defined(CTR_NATIVE)
-	if (NativeAIRandomizer_ShouldUse(sdata->gGT))
+	if (NativeAIRandomizer_ShouldUse(P32_GET(struct GameTracker *, sdata->gGT)))
 	{
-		NativeAIRandomizer_SetCharacters(sdata->gGT, 2, 2 + LOAD_2P_AI_SET_RACER_COUNT);
+		NativeAIRandomizer_SetCharacters(P32_GET(struct GameTracker *, sdata->gGT), 2, 2 + LOAD_2P_AI_SET_RACER_COUNT);
 
 		if (!NativeAIRandomizer_Queue2PModels(bigfile))
 		{
@@ -359,7 +362,7 @@ void LOAD_Robots1P(int characterID)
 	data.characterIDs[0] = characterID;
 
 #if defined(CTR_NATIVE)
-	if (NativeAIRandomizer_ShouldPreserveCupLineup(sdata->gGT))
+	if (NativeAIRandomizer_ShouldPreserveCupLineup(P32_GET(struct GameTracker *, sdata->gGT)))
 	{
 		return;
 	}
@@ -376,9 +379,9 @@ void LOAD_Robots1P(int characterID)
 	}
 
 #if defined(CTR_NATIVE)
-	if (NativeAIRandomizer_ShouldUse(sdata->gGT))
+	if (NativeAIRandomizer_ShouldUse(P32_GET(struct GameTracker *, sdata->gGT)))
 	{
-		NativeAIRandomizer_SetCharacters(sdata->gGT, 1, LOAD_CHARACTER_ID_COUNT);
+		NativeAIRandomizer_SetCharacters(P32_GET(struct GameTracker *, sdata->gGT), 1, LOAD_CHARACTER_ID_COUNT);
 	}
 #endif
 }
@@ -391,7 +394,7 @@ int LOAD_DriverMPK(struct BigHeader *bigfile, int levelLOD, void (*callback)(str
 	int i;
 	int gameMode1;
 
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 #if defined(CTR_NATIVE)
 	NativeAIRandomizer_ResetModels();
 	if (!NativeAIRandomizer_ShouldUse(gGT))
@@ -578,14 +581,14 @@ struct LngFile
 // param_1 - Pointer to "cd position of bigfile"
 // param_2 - language index - 0 ja, 1 en, 2 en2, 3 fr, 4 de, 5 it, 6 es, 7 ne
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80032b50-0x80032c24
-void LOAD_LangFile(int bigfilePtr, int lang)
+void LOAD_LangFile(void *bigfilePtr, int lang)
 {
 	struct LngFile *lngFile;
 	u32 size;
 
 	int i;
 	int numStrings;
-	char **strArray;
+	P32(char *) *strArray;
 
 #if BUILD == EurRetail
 	// This is to turn the screen black for a bit (optional)
@@ -593,7 +596,7 @@ void LOAD_LangFile(int bigfilePtr, int lang)
 	VSync(0);
 #endif
 
-	if (sdata->lngFile == 0)
+	if (P32_GET(void *, sdata->lngFile) == 0)
 	{
 		struct BigHeader *bigfile = (struct BigHeader *)bigfilePtr;
 		struct BigEntry *entries = BIG_GETENTRY(bigfile);
@@ -611,10 +614,10 @@ void LOAD_LangFile(int bigfilePtr, int lang)
 		}
 
 		sdata->langBufferSize = (int)langBufferSize;
-		sdata->lngFile = MEMPACK_AllocMem(sdata->langBufferSize /* "lang buffer" */);
+		P32_SET(sdata->lngFile, MEMPACK_AllocMem(sdata->langBufferSize /* "lang buffer" */));
 	}
 
-	lngFile = sdata->lngFile;
+	lngFile = P32_GET(void *, sdata->lngFile);
 
 	lngFile = LOAD_ReadFile_ex((struct BigHeader *)bigfilePtr, LT_SETADDR, BI_LANGUAGEFILE + lang, lngFile, &size, NULL);
 	if (lngFile == NULL)
@@ -623,14 +626,15 @@ void LOAD_LangFile(int bigfilePtr, int lang)
 	}
 
 	numStrings = lngFile->numStrings;
-	strArray = (char **)((u32)lngFile + lngFile->offsetToPtrArr);
+	strArray = (P32(char *) *)((char *)lngFile + lngFile->offsetToPtrArr);
 
 	sdata->numLngStrings = numStrings;
-	sdata->lngStrings = strArray;
+	P32_SET(sdata->lngStrings, strArray);
 
 	for (i = 0; i < numStrings; i++)
 	{
-		strArray[i] = (char *)((u32)strArray[i] + (u32)lngFile);
+		// Entries hold offsets from the start of the file.
+		P32_SET(strArray[i], (char *)lngFile + *(u32 *)&strArray[i]);
 	}
 #if defined(CTR_NATIVE)
 	NativeAudio_SetVoiceLanguage(lang);

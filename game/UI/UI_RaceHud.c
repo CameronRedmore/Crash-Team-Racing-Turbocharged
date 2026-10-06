@@ -116,7 +116,7 @@ void UI_BattleDrawHeadArrows(struct Driver *player)
 	G3_SEMITRANS *arrow;
 	SVECTOR pos;
 
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	u8 playerID = player->driverID;
 
@@ -130,7 +130,7 @@ void UI_BattleDrawHeadArrows(struct Driver *player)
 	for (u8 i = 0; i < numPlyr; i++)
 	{
 		// something related to player structure address
-		struct Driver *currDriver = gGT->drivers[i];
+		struct Driver *currDriver = P32_GET(struct Driver *, gGT->drivers[i]);
 
 		if (
 		    // skip yourself, skip invisible, skip finished players
@@ -148,8 +148,8 @@ void UI_BattleDrawHeadArrows(struct Driver *player)
 			arrowBaseYOffset = UI_BATTLE_HEAD_ARROW_Y_OFFSET_1P2P;
 		}
 
-		struct Instance *currInst = currDriver->instSelf;
-		struct Instance *playerInst = player->instSelf;
+		struct Instance *currInst = P32_GET(struct Instance *, currDriver->instSelf);
+		struct Instance *playerInst = P32_GET(struct Instance *, player->instSelf);
 
 		// Get X distance and Z distance between two players
 		int xDistance = playerInst->matrix.t[0] - currInst->matrix.t[0];
@@ -184,15 +184,15 @@ void UI_BattleDrawHeadArrows(struct Driver *player)
 			continue;
 		}
 
-		struct PrimMem *primMem = &gGT->backBuffer->primMem;
+		struct PrimMem *primMem = &P32_GET(struct DB *, gGT->backBuffer)->primMem;
 
-		arrow = primMem->cursor;
-		if ((int)arrow > (int)primMem->guardEnd)
+		arrow = P32_GET(void *, primMem->cursor);
+		if ((char *)arrow > P32_GET(char *, primMem->guardEnd))
 		{
 			return;
 		}
 
-		primMem->cursor = arrow + 1;
+		P32_SET(primMem->cursor, arrow + 1);
 
 		arrow->tpage = UI_BATTLE_HEAD_ARROW_DRAW_MODE;
 		arrow->g3.tag = 0;
@@ -217,12 +217,12 @@ void UI_BattleDrawHeadArrows(struct Driver *player)
 		// Battle Team of this driver
 		currTeam = currDriver->BattleHUD.teamID;
 
-		gradient = data.ptrColor[PLAYER_BLUE + currTeam];
+		gradient = P32_GET(u32 *, data.ptrColor[PLAYER_BLUE + currTeam]);
 		CtrGpu_WriteColorCode(&arrow->g3.r0, (gradient[0] & UI_BATTLE_HEAD_ARROW_COLOR_MASK) | UI_BATTLE_HEAD_ARROW_SEMITRANS_MASK);
 		CtrGpu_WriteColorCode(&arrow->g3.r1, gradient[1] | UI_BATTLE_HEAD_ARROW_SEMITRANS_MASK);
 		CtrGpu_WriteColorCode(&arrow->g3.r2, gradient[2] | UI_BATTLE_HEAD_ARROW_SEMITRANS_MASK);
 
-		uint32_t *ot = gGT->pushBuffer[playerID].ptrOT;
+		uint32_t *ot = P32_GET(uint32_t *, gGT->pushBuffer[playerID].ptrOT);
 
 		arrow->tag = CtrGpu_PackOTTag(*ot, UI_BATTLE_HEAD_ARROW_OT_TAG);
 		*ot = CtrGpu_PrimToOTLink24(arrow);
@@ -255,7 +255,7 @@ void UI_TrackerSelf(struct Driver *d)
 	s16 trackerDistance;
 	int screenPosX;
 	s16 screenPosY;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// get index of driver in driver array
 	driverID = d->driverID;
@@ -280,7 +280,7 @@ void UI_TrackerSelf(struct Driver *d)
 	    (timer == 0) &&
 
 	    // no more missile chasing player
-	    (d->thTrackingMe == 0))
+	    (P32_GET(struct Thread *, d->thTrackingMe) == 0))
 	{
 		// clear type of object tracking the player
 		data.trackerType[driverID] = UI_TRACKER_TYPE_MISSILE;
@@ -290,7 +290,7 @@ void UI_TrackerSelf(struct Driver *d)
 	warpballDist = 0;
 
 	// If no missile or warpball is chasing this driver
-	if (d->thTrackingMe == 0)
+	if (P32_GET(struct Thread *, d->thTrackingMe) == 0)
 	{
 		trackerAnim = &data.trackerAnim2[0];
 	}
@@ -313,7 +313,7 @@ void UI_TrackerSelf(struct Driver *d)
 	    (trackerTh == NULL))
 	{
 		// warpball is repathing after target was mask-grabbed
-		if ((((struct TrackerWeapon *)d->thTrackingMe->object)->flags & TRACKER_FLAG_WARPBALL_MASK_REPATH) != 0)
+		if ((((struct TrackerWeapon *)P32_GET(void *, P32_GET(struct Thread *, d->thTrackingMe)->object))->flags & TRACKER_FLAG_WARPBALL_MASK_REPATH) != 0)
 		{
 			goto UpdateTrackerState;
 		}
@@ -331,7 +331,7 @@ void UI_TrackerSelf(struct Driver *d)
 		        ((d->actionsFlagSet & ACTION_TRACKER_TARGETED) != 0) &&
 
 		        // tracker chasing driver
-		        (trackerTh == d->thTrackingMe)) ||
+		        (trackerTh == P32_GET(struct Thread *, d->thTrackingMe))) ||
 
 		    // timer loop active
 		    (timer != 0))
@@ -352,7 +352,7 @@ void UI_TrackerSelf(struct Driver *d)
 UpdateTrackerState:
 
 	// set pointer of the missile or warpball chasing the player
-	d->thTrackingMe = trackerTh;
+	P32_SET(d->thTrackingMe, trackerTh);
 
 	if ((data.trackerTimer[driverID] != 0) &&
 	    (CTR_RETAIL_FRAME_TICK(gGT->timer)))
@@ -364,9 +364,9 @@ UpdateTrackerState:
 	gte_SetRotMatrix(viewProj);
 	gte_SetTransMatrix(viewProj);
 
-	pos.vx = (s16)d->instSelf->matrix.t[0];
-	pos.vy = (s16)d->instSelf->matrix.t[1];
-	pos.vz = (s16)d->instSelf->matrix.t[2];
+	pos.vx = (s16)P32_GET(struct Instance *, d->instSelf)->matrix.t[0];
+	pos.vy = (s16)P32_GET(struct Instance *, d->instSelf)->matrix.t[1];
+	pos.vz = (s16)P32_GET(struct Instance *, d->instSelf)->matrix.t[2];
 
 	CTR_GteLoadSV0(&pos);
 	gte_rtps();
@@ -376,7 +376,7 @@ UpdateTrackerState:
 	bgColor = UI_TRACKER_BG_RED;
 
 	// if no missile or warpball is chasing this player
-	if (d->thTrackingMe == NULL)
+	if (P32_GET(struct Thread *, d->thTrackingMe) == NULL)
 	{
 		trackerDistance = data.trackerDist[driverID];
 	}
@@ -384,7 +384,7 @@ UpdateTrackerState:
 	// if a missile or warpball is chasing this player
 	else
 	{
-		struct TrackerWeapon *tw = d->thTrackingMe->object;
+		struct TrackerWeapon *tw = P32_GET(void *, P32_GET(struct Thread *, d->thTrackingMe)->object);
 
 		// NOTE(aalhendi): Retail always computes tracker distance here.
 		missileDist = VehCalc_FastSqrt(tw->distanceToTarget, 0);
@@ -419,11 +419,11 @@ UpdateTrackerState:
 			bgColor = UI_TRACKER_BG_WHITE;
 		}
 
-		if (d->thTrackingMe->inst->model->id == DYNAMIC_WARPBALL)
+		if (P32_GET(struct Model *, P32_GET(struct Instance *, P32_GET(struct Thread *, d->thTrackingMe)->inst)->model)->id == DYNAMIC_WARPBALL)
 		{
-			struct CheckpointNode *firstNode = &gGT->level1->ptr_restart_points[0];
+			struct CheckpointNode *firstNode = &P32_GET(struct CheckpointNode *, P32_GET(struct Level *, gGT->level1)->ptr_restart_points)[0];
 
-			warpballDist = ((tw->ptrNodeCurr->distToFinish - firstNode[d->checkpoint.currentIndex].distToFinish) * UI_TRACKER_WARPBALL_DISTANCE_SCALE);
+			warpballDist = ((P32_GET(struct CheckpointNode *, tw->ptrNodeCurr)->distToFinish - firstNode[d->checkpoint.currentIndex].distToFinish) * UI_TRACKER_WARPBALL_DISTANCE_SCALE);
 
 			// if warpball is further in the lap than the driver,
 			// then add a full lap of distance until warpball hits driver
@@ -459,7 +459,7 @@ UpdateTrackerState:
 	// check distance
 	if (warpballDist < UI_TRACKER_WARPBALL_DRAW_DIST_MAX)
 	{
-		primMem = &gGT->backBuffer->primMem;
+		primMem = &P32_GET(struct DB *, gGT->backBuffer)->primMem;
 
 		sideOuterX = trackerDistance + (x >> 8);
 		sideHalfHeight = (s16)((y * UI_TRACKER_SIDE_HEIGHT_SCALE) >> UI_TRACKER_SIDE_HEIGHT_SHIFT);
@@ -491,12 +491,12 @@ UpdateTrackerState:
 				color2 = UI_TRACKER_MISSILE_BORDER_COLOR2;
 			}
 
-			poly = primMem->cursor;
-			if (poly > (POLY_G3 *)primMem->guardEnd)
+			poly = P32_GET(void *, primMem->cursor);
+			if (poly > (POLY_G3 *)P32_GET(void *, primMem->guardEnd))
 			{
 				return;
 			}
-			primMem->cursor = poly + 1;
+			P32_SET(primMem->cursor, poly + 1);
 
 			CtrGpu_WriteColorCode(&poly->r0, color0);
 			CtrGpu_WriteColorCode(&poly->r1, UI_TRACKER_BORDER_CENTER_COLOR);
@@ -513,19 +513,19 @@ UpdateTrackerState:
 			poly->y1 = screenPosY - UI_TRACKER_SIDE_TIP_OFFSET;
 			poly->y2 = screenPosY - UI_TRACKER_SIDE_TIP_OFFSET;
 
-			ot = presentationPB->ptrOT;
+			ot = P32_GET(uint32_t *, presentationPB->ptrOT);
 
 			poly->tag = CtrGpu_PackOTTag(*ot, UI_TRACKER_POLY_G3_OT_TAG);
 			*ot = CtrGpu_PrimToOTLink24(poly);
 
 			// next Prim
 			POLY_G3 *borderPoly = poly;
-			poly = primMem->cursor;
-			if (poly > (POLY_G3 *)primMem->guardEnd)
+			poly = P32_GET(void *, primMem->cursor);
+			if (poly > (POLY_G3 *)P32_GET(void *, primMem->guardEnd))
 			{
 				return;
 			}
-			primMem->cursor = poly + 1;
+			P32_SET(primMem->cursor, poly + 1);
 
 			// if tracking object is warpball
 			if (data.trackerType[driverID] == UI_TRACKER_TYPE_WARPBALL)
@@ -566,18 +566,18 @@ UpdateTrackerState:
 	UI_TrackerBG(
 
 	    // missile lock-on icon
-	    gGT->ptrIcons[UI_TRACKER_LOCK_ICON],
+	    P32_GET(struct Icon *, gGT->ptrIcons[UI_TRACKER_LOCK_ICON]),
 
 	    screenPosX - (x >> UI_TRACKER_BG_X_SHIFT), screenPosY - ((y * UI_TRACKER_BG_Y_SCALE) >> UI_TRACKER_BG_Y_SHIFT),
 
-	    &gGT->backBuffer->primMem, presentationPB->ptrOT, UI_TRACKER_BG_TRANSPARENCY, x, y, bgColor);
+	    &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, presentationPB->ptrOT), UI_TRACKER_BG_TRANSPARENCY, x, y, bgColor);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8005045c-0x80050528.
 void UI_DrawPosSuffix(s16 posX, s16 posY, struct Driver *d, s16 flags)
 {
 	int currRank;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// If you're not in Battle Mode
 	if ((gGT->gameMode1 & BATTLE_MODE) == 0)
@@ -592,12 +592,12 @@ void UI_DrawPosSuffix(s16 posX, s16 posY, struct Driver *d, s16 flags)
 	}
 
 	// Draw the suffix of your current position
-	DecalFont_DrawLine(sdata->lngStrings[data.stringIndexSuffix[currRank]], posX, posY, FONT_BIG, flags);
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.stringIndexSuffix[currRank]]), posX, posY, FONT_BIG, flags);
 
 	// setting posZ changes which number draws
-	if (d->instBigNum != 0)
+	if (P32_GET(struct Instance *, d->instBigNum) != 0)
 	{
-		d->instBigNum->matrix.t[2] = (d->driverRank + UI_POS_SUFFIX_BIG_NUM_Z_BASE);
+		P32_GET(struct Instance *, d->instBigNum)->matrix.t[2] = (d->driverRank + UI_POS_SUFFIX_BIG_NUM_Z_BASE);
 	}
 
 	return;
@@ -617,7 +617,7 @@ void UI_DrawLapCount(s16 posX, int posY, int unusedScale, struct Driver *d)
 	struct GameTracker *gGT;
 	int numPlyrCurrGame;
 
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	numLaps = gGT->numLaps;
 	numPlyrCurrGame = gGT->numPlyrCurrGame;
 
@@ -635,7 +635,7 @@ void UI_DrawLapCount(s16 posX, int posY, int unusedScale, struct Driver *d)
 	// 1P or 2P
 	if (numPlyrCurrGame < UI_LAP_COUNT_SPLIT_PLAYER_COUNT)
 	{
-		DecalFont_DrawLine(sdata->lngStrings[LNG_LAP], posX, posY, FONT_SMALL, (JUSTIFY_RIGHT | PERIWINKLE));
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_LAP]), posX, posY, FONT_SMALL, (JUSTIFY_RIGHT | PERIWINKLE));
 
 		sprintf(&message[0], &sdata->s_intDividing[0], currLap, numLaps);
 		str = &message[0];
@@ -663,7 +663,7 @@ void UI_DrawBattleScores(int posX, int posY, struct Driver *d)
 	struct Icon *icon;
 	int value;
 	char string[UI_BATTLE_SCORE_STRING_BUFFER_SIZE];
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	if ((gGT->gameMode1 & POINT_LIMIT) == 0)
 	{
@@ -675,7 +675,7 @@ void UI_DrawBattleScores(int posX, int posY, struct Driver *d)
 		// == Life Limit
 
 		value = d->BattleHUD.numLives;
-		icon = gGT->ptrIcons[UI_BATTLE_SCORE_LIFE_ICON];
+		icon = P32_GET(struct Icon *, gGT->ptrIcons[UI_BATTLE_SCORE_LIFE_ICON]);
 	}
 
 	else
@@ -683,7 +683,7 @@ void UI_DrawBattleScores(int posX, int posY, struct Driver *d)
 		// == Point Limit ==
 
 		value = gGT->battleSetup.pointsPerTeam[d->BattleHUD.teamID];
-		icon = gGT->ptrIcons[UI_BATTLE_SCORE_POINTS_ICON];
+		icon = P32_GET(struct Icon *, gGT->ptrIcons[UI_BATTLE_SCORE_POINTS_ICON]);
 	}
 
 	// add value to string
@@ -692,5 +692,5 @@ void UI_DrawBattleScores(int posX, int posY, struct Driver *d)
 	DecalFont_DrawLine(string, (s16)(posX + UI_BATTLE_SCORE_TEXT_X_OFFSET), (s16)(posY + UI_BATTLE_SCORE_TEXT_Y_OFFSET), FONT_SMALL,
 	                   data.battleScoreColor[gGT->numPlyrCurrGame - 1][d->driverID]);
 
-	DecalHUD_DrawPolyFT4(icon, posX, posY, &gGT->backBuffer->primMem, gGT->pushBuffer_UI.ptrOT, 1, UI_BATTLE_SCORE_ICON_SCALE);
+	DecalHUD_DrawPolyFT4(icon, posX, posY, &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), 1, UI_BATTLE_SCORE_ICON_SCALE);
 }

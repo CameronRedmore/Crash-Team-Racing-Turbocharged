@@ -111,14 +111,14 @@ CTR_STATIC_ASSERT(AH_MAP_ARROW_OUTLINE_BOSS_STEP == 0x199);
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b0b98-0x800b0ce0.
 void AH_Map_LoadSave_Prim(const SVec2 *vertPos, char *vertCol, void *ot, struct PrimMem *primMem)
 {
-	POLY_G4 *p = primMem->cursor;
+	POLY_G4 *p = P32_GET(void *, primMem->cursor);
 
-	if (primMem->end < (void *)p)
+	if (P32_GET(void *, primMem->end) < (void *)p)
 	{
 		return;
 	}
 
-	primMem->cursor = p + 1;
+	P32_SET(primMem->cursor, p + 1);
 
 	setPolyG4(p);
 
@@ -159,7 +159,7 @@ void AH_Map_LoadSave_Full(int posX, int posY, const SVec2 *vertPos, char *vertCo
 	SVec2 basePos[4];
 	SVec2 drawPos[4];
 
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	int sin = MATH_Sin(angle);
 	int cos = MATH_Cos(angle);
@@ -190,7 +190,7 @@ void AH_Map_LoadSave_Full(int posX, int posY, const SVec2 *vertPos, char *vertCo
 			drawPos[j].y = basePos[j].y + offset[i].y;
 		}
 
-		AH_Map_LoadSave_Prim(&drawPos[0], vertCol, gGT->pushBuffer_UI.ptrOT, &gGT->backBuffer->primMem);
+		AH_Map_LoadSave_Prim(&drawPos[0], vertCol, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), &P32_GET(struct DB *, gGT->backBuffer)->primMem);
 
 		vertCol = (char *)&D232.colorQuad[0];
 	}
@@ -464,7 +464,7 @@ void AH_Map_HubArrow(int posX, int posY, const SVec2 *vertPos, char *vertCol, in
 	SVec2 basePos[3];
 	SVec2 drawPos[3];
 
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	int sin = MATH_Sin(angle);
 	int cos = MATH_Cos(angle);
@@ -495,7 +495,7 @@ void AH_Map_HubArrow(int posX, int posY, const SVec2 *vertPos, char *vertCol, in
 			drawPos[j].y = basePos[j].y + offset[i].y;
 		}
 
-		RECTMENU_DrawRwdTriangle(drawPos[0].v, vertCol, gGT->pushBuffer_UI.ptrOT, &gGT->backBuffer->primMem);
+		RECTMENU_DrawRwdTriangle(drawPos[0].v, vertCol, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), &P32_GET(struct DB *, gGT->backBuffer)->primMem);
 
 		vertCol = (char *)&D232.colorTri[0];
 	}
@@ -505,7 +505,7 @@ void AH_Map_HubArrow(int posX, int posY, const SVec2 *vertPos, char *vertCol, in
 void AH_Map_HubArrowOuter(struct UIMap *map, int arrowIndex, int posX, int posY, int inputAngle, int type)
 {
 	struct GameTracker *gGT;
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	(void)map;
 
@@ -592,7 +592,7 @@ void AH_Map_HubArrowOuter(struct UIMap *map, int arrowIndex, int posX, int posY,
 			if (!isFirstPoint)
 			{
 				CTR_Box_DrawWirePrims((Point){{prevX, prevY}}, (Point){{sin, cos}}, MakeColor(outlineColorR, outlineColorG, 0xff),
-				                      (void *)gGT->pushBuffer_UI.ptrOT);
+				                      (void *)P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT));
 			}
 
 			isFirstPoint = false;
@@ -928,10 +928,10 @@ static void AH_Map_MarkerIcon(struct UIMap *map, const s32 worldPos[3], int icon
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b14f4-0x800b1a18.
 void AH_Map_HubItems(struct UIMap *map, s16 *arrowCounter)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	struct AdvProgress *adv = &sdata->advProgress;
 	s16 levelID = gGT->levelID;
-	struct HubItem *item = D232.hubItemsXY_ptrArray[levelID - GEM_STONE_VALLEY];
+	struct HubItem *item = P32_GET(struct HubItem *, D232.hubItemsXY_ptrArray[levelID - GEM_STONE_VALLEY]);
 	Vec3 pos3D;
 
 	if (item->posX != AH_HUB_ITEM_LIST_END_POS_X)
@@ -1218,22 +1218,22 @@ void AH_Map_HubItems(struct UIMap *map, s16 *arrowCounter)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b1a18-0x800b1c90.
 void AH_Map_Warppads(struct UIMap *map, struct Thread *warppadThread, s16 *arrowCounter)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// find minDistance, set to max
 	int minDistance = 0x7fffffff;
 	struct Instance *closestWarppadInst = NULL;
 
-	MATRIX *driverMatrix = &gGT->drivers[0]->instSelf->matrix;
+	MATRIX *driverMatrix = &P32_GET(struct Instance *, P32_GET(struct Driver *, gGT->drivers[0])->instSelf)->matrix;
 
 	for (
-	    /**/; warppadThread != NULL; warppadThread = warppadThread->siblingThread)
+	    /**/; warppadThread != NULL; warppadThread = P32_GET(struct Thread *, warppadThread->siblingThread))
 	{
 		int visualState = warppadThread->modelIndex;
 		b32 drawsTrophyArrow = false;
 		b32 includeInSoundDistance = true;
 
-		struct Instance *warppadInst = warppadThread->inst;
+		struct Instance *warppadInst = P32_GET(struct Instance *, warppadThread->inst);
 		int color;
 
 		switch ((u32)visualState)
@@ -1340,14 +1340,14 @@ force_inline void AH_MaskHint_DrawRepeatPrompt(void);
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b1c90-0x800b1ef8.
 void AH_Map_Main(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	sdata->HudAndDebugFlags &= ~AH_MAP_HUD_AND_DEBUG_SPEEDOMETER;
 
 	s16 driverIconCounter = 0;
 	s16 arrowCounter = 0;
-	struct Driver *advDriver = gGT->drivers[0];
-	struct UiElement2D *hud = data.hudStructPtr[gGT->numPlyrCurrGame - 1];
+	struct Driver *advDriver = P32_GET(struct Driver *, gGT->drivers[0]);
+	struct UiElement2D *hud = P32_GET(struct UiElement2D *, data.hudStructPtr[gGT->numPlyrCurrGame - 1]);
 	struct UIMap *map = NULL;
 
 	int raceFlagState = RaceFlag_GetCanDraw();
@@ -1374,10 +1374,10 @@ void AH_Map_Main(void)
 		sdata->HudAndDebugFlags = AH_MAP_HUD_AND_DEBUG_SPEEDOMETER;
 	}
 
-	if (gGT->level1->ptrSpawnType1->count != 0)
+	if (P32_GET(struct SpawnType1 *, P32_GET(struct Level *, gGT->level1)->ptrSpawnType1)->count != 0)
 	{
-		void **pointers = ST1_GETPOINTERS(gGT->level1->ptrSpawnType1);
-		map = pointers[ST1_MAP];
+		P32(void *) *pointers = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *, gGT->level1)->ptrSpawnType1));
+		map = P32_GET(void *, pointers[ST1_MAP]);
 	}
 
 	// if game is not paused
@@ -1393,17 +1393,17 @@ void AH_Map_Main(void)
 
 		D232.mapPriorityArrowDrawn = 0;
 
-		UI_Map_DrawDrivers(map, gGT->threadBuckets[PLAYER].thread, &driverIconCounter);
+		UI_Map_DrawDrivers(map, P32_GET(struct Thread *, gGT->threadBuckets[PLAYER].thread), &driverIconCounter);
 
-		AH_Map_Warppads(map, gGT->threadBuckets[WARPPAD].thread, &arrowCounter);
+		AH_Map_Warppads(map, P32_GET(struct Thread *, gGT->threadBuckets[WARPPAD].thread), &arrowCounter);
 
 		AH_Map_HubItems(map, &arrowCounter);
 
-		UI_Map_DrawMap(gGT->ptrIcons[AH_MAP_ICON_TOP_HALF], gGT->ptrIcons[AH_MAP_ICON_BOTTOM_HALF],
+		UI_Map_DrawMap(P32_GET(struct Icon *, gGT->ptrIcons[AH_MAP_ICON_TOP_HALF]), P32_GET(struct Icon *, gGT->ptrIcons[AH_MAP_ICON_BOTTOM_HALF]),
 
 		               AH_MAP_SCREEN_POS_X, AH_MAP_SCREEN_POS_Y,
 
-		               &gGT->backBuffer->primMem, gGT->pushBuffer_UI.ptrOT, 1);
+		               &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), 1);
 
 		UI_DrawSlideMeter(hud[AH_MAP_HUD_SLOT_SLIDE_METER].x, hud[AH_MAP_HUD_SLOT_SLIDE_METER].y, advDriver);
 	}

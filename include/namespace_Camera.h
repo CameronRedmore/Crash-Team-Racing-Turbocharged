@@ -156,8 +156,8 @@ struct ZoomData
 
 struct FlyInData
 {
-	u8 *ptrEnd;
-	u8 *ptrStart;
+	P32(u8 *) ptrEnd;
+	P32(u8 *) ptrStart;
 	s16 frameCount1;
 	s16 frameCount2;
 };
@@ -242,28 +242,28 @@ struct CameraDC
 	// 0x1c - ptrQuadBlock
 	// similar to driver +a0,
 	// quadblock camera is currently above
-	struct QuadBlock *ptrQuadBlock;
+	P32(struct QuadBlock *) ptrQuadBlock;
 
 	// 0x20
 	// VisMem->0x40[player], quadblock->0x44->0x0
-	int *visLeafSrc;
+	P32(int *) visLeafSrc;
 
 	// 0x24
 	// VisMem->0x50[player], quadblock->0x44->0x4
-	int *visFaceSrc;
+	P32(int *) visFaceSrc;
 
 	// 0x28
 	// quadblock->0x44->0x8
 	// which instances are visible from quadblock
-	struct Instance **visInstSrc;
+	P32(struct Instance **) visInstSrc;
 
 	// 0x2c
 	// VisMem->0x60[player]
-	int *visOVertSrc;
+	P32(int *) visOVertSrc;
 
 	// 0x30
 	// VisMem->0x70[player],
-	int *visSCVertSrc;
+	P32(int *) visSCVertSrc;
 
 	// 0x34
 	char padding34[8];
@@ -277,10 +277,10 @@ struct CameraDC
 	int cameraMoveSpeed;
 
 	// 0x44
-	struct Driver *driverToFollow;
+	P32(struct Driver *) driverToFollow;
 
 	// 0x48
-	struct PushBuffer *pushBuffer;
+	P32(struct PushBuffer *) pushBuffer;
 
 	// 0x4C
 	Vec3 pushBufferPosCorrection;
@@ -306,7 +306,7 @@ struct CameraDC
 	u32 botFlagsPrevFrame;
 
 	// 0x88
-	struct CheckpointNode *trackPathNode;
+	P32(struct CheckpointNode *) trackPathNode;
 
 	// 0x8C - Q12 blend: 0x0000 is transition camera, 0x1000 is driver camera
 	s16 transitionBlend;
@@ -336,7 +336,7 @@ struct CameraDC
 	s16 transitionFrameCount;
 
 	// 0xa0
-	void *currEOR;
+	P32(void *) currEOR;
 
 	// 0xa4
 	// union shared between camera modes

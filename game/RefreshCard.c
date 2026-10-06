@@ -275,9 +275,9 @@ void RefreshCard_NextMemcardAction(int slot, int action, char *fileName, char *f
 	sdata->frame2_memcardAction = action;
 	sdata->frame4_memcardSlot = slot;
 	sdata->frame2_memcardSlot = slot;
-	sdata->ghostProfile_fileName = fileName;
-	sdata->ghostProfile_fileIconHeader = fileIconHeader;
-	sdata->ghostProfile_ptrGhostHeader = ptrGhostHeader;
+	P32_SET(sdata->ghostProfile_fileName, fileName);
+	P32_SET(sdata->ghostProfile_fileIconHeader, fileIconHeader);
+	P32_SET(sdata->ghostProfile_ptrGhostHeader, ptrGhostHeader);
 	sdata->ghostProfile_size3E00 = fileSize;
 	sdata->memcardUnk1 &= ~8;
 }
@@ -336,7 +336,7 @@ void RefreshCard_GhostEncodeProfile(u32 slotIndex, u16 characterID, u16 levelID,
 	description[0] = '\0';
 
 	s16 physicalLevelID = NativeReverseTrack_GetPhysicalFromLogical((s16)levelID);
-	strcat(&description[strlen(description)], sdata->lngStrings[data.metaDataLEV[physicalLevelID].name_LNG]);
+	strcat(&description[strlen(description)], P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.metaDataLEV[physicalLevelID].name_LNG]));
 	if (NativeReverseTrack_IsLogicalReverse((s16)levelID))
 	{
 		strcat(description, NativeReverseTrack_GetSuffix());
@@ -346,7 +346,7 @@ void RefreshCard_GhostEncodeProfile(u32 slotIndex, u16 characterID, u16 levelID,
 		strcat(description, NativeReverseTrack_GetAlternativeSuffix());
 	}
 	strcat(description, sdata->strcatData1_colon);
-	strcat(&description[strlen(description)], sdata->lngStrings[data.MetaDataCharacters[(s16)characterID].name_LNG_short]);
+	strcat(&description[strlen(description)], P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.MetaDataCharacters[(s16)characterID].name_LNG_short]));
 	strcat(description, sdata->strcatData1_colon);
 	strcat(description, (char *)RECTMENU_DrawTime(time));
 
@@ -449,7 +449,7 @@ void RefreshCard_Unknown2(void)
 {
 	if ((s16)CTR_ReadU16LE(&sdata->boolAdvProfilesChecked) == 0)
 	{
-		GAMEPROG_InitFullMemcard((struct MemcardProfile *)sdata->ptrToMemcardBuffer1);
+		GAMEPROG_InitFullMemcard((struct MemcardProfile *)P32_GET(void *, sdata->ptrToMemcardBuffer1));
 		CTR_WriteU16LE(&sdata->boolAdvProfilesChecked, 1);
 	}
 
@@ -475,7 +475,7 @@ void RefreshCard_GameProgressAndOptions(void)
 	CTR_WriteU16LE(&sdata->unk_memcardRelated_8008d928[0], 1);
 	CTR_WriteU16LE(&sdata->advProfileIndex, (u16)-1);
 
-	memcard = (struct MemcardProfile *)sdata->ptrToMemcardBuffer1;
+	memcard = (struct MemcardProfile *)P32_GET(void *, sdata->ptrToMemcardBuffer1);
 
 	GAMEPROG_SyncGameAndCard(&memcard->gameProgress, &sdata->gameProgress);
 	memcpy(&sdata->gameProgress, &memcard->gameProgress, sizeof(struct GameProgress) + sizeof(struct GameOptions));
@@ -490,23 +490,23 @@ static void RefreshCard_QueueGetInfo(void)
 
 static void RefreshCard_QueueMainLoad(void)
 {
-	RefreshCard_NextMemcardAction(0, MC_ACTION_Load, data.s_BASCUS_94426_SLOTS, NULL, (struct GhostHeader *)sdata->ptrToMemcardBuffer1, 0x1680);
+	RefreshCard_NextMemcardAction(0, MC_ACTION_Load, data.s_BASCUS_94426_SLOTS, NULL, (struct GhostHeader *)P32_GET(void *, sdata->ptrToMemcardBuffer1), 0x1680);
 }
 
 static void RefreshCard_QueueMainSave(void)
 {
 	RefreshCard_NextMemcardAction(0, MC_ACTION_Save, data.s_BASCUS_94426_SLOTS, (char *)data.memcardIcon_HeaderSLOTS,
-	                              (struct GhostHeader *)sdata->ptrToMemcardBuffer1, 0x1680);
+	                              (struct GhostHeader *)P32_GET(void *, sdata->ptrToMemcardBuffer1), 0x1680);
 }
 
 static void RefreshCard_QueueGhostSave(void)
 {
-	RefreshCard_NextMemcardAction(0, MC_ACTION_Save, data.s_BASCUS_94426G_Question, sdata->memcardIcon_HeaderGHOST, sdata->GhostRecording.ptrGhost, 0x3e00);
+	RefreshCard_NextMemcardAction(0, MC_ACTION_Save, data.s_BASCUS_94426G_Question, sdata->memcardIcon_HeaderGHOST, P32_GET(struct GhostHeader *, sdata->GhostRecording.ptrGhost), 0x3e00);
 }
 
 static void RefreshCard_QueueGhostLoad(void)
 {
-	RefreshCard_NextMemcardAction(0, MC_ACTION_Load, sdata->ghostProfile_memcard[sdata->ghostProfile_indexLoad].profile_name, NULL, sdata->ptrGhostTapePlaying,
+	RefreshCard_NextMemcardAction(0, MC_ACTION_Load, sdata->ghostProfile_memcard[sdata->ghostProfile_indexLoad].profile_name, NULL, P32_GET(struct GhostHeader *, sdata->ptrGhostTapePlaying),
 	                              0x3e00);
 }
 
@@ -731,7 +731,7 @@ void RefreshCard_Unknown3(void)
 			{
 				if (sdata->memcardAction < 2)
 				{
-					GAMEPROG_InitFullMemcard(sdata->ptrToMemcardBuffer2);
+					GAMEPROG_InitFullMemcard(P32_GET(void *, sdata->ptrToMemcardBuffer2));
 					RefreshCard_SetScreenText(MC_SCREEN_NULL);
 					RefreshCard_QueueGetInfo();
 					keepPolling = false;
@@ -767,7 +767,7 @@ void RefreshCard_Unknown3(void)
 		CTR_WriteU16LE(&sdata->unk8008d964, 1);
 		RefreshCard_SetScreenText(MC_SCREEN_NULL);
 	}
-	else if (CTR_ReadU32LE(sdata->ptrToMemcardBuffer2) == 0x1600ffee)
+	else if (CTR_ReadU32LE(P32_GET(void *, sdata->ptrToMemcardBuffer2)) == 0x1600ffee)
 	{
 		sdata->boolMemcardDataValid = 0;
 		RefreshCard_GameProgressAndOptions();
@@ -823,18 +823,18 @@ void RefreshCard_Unknown4(void)
 			result = MEMCARD_GetInfo(sdata->frame1_memcardSlot);
 			break;
 		case MC_ACTION_Save:
-			result = MEMCARD_Save(sdata->frame1_memcardSlot, sdata->ghostProfile_fileName, sdata->ghostProfile_fileIconHeader,
-			                      (u8 *)sdata->ghostProfile_ptrGhostHeader, sdata->ghostProfile_size3E00, 0);
+			result = MEMCARD_Save(sdata->frame1_memcardSlot, P32_GET(char *, sdata->ghostProfile_fileName), P32_GET(char *, sdata->ghostProfile_fileIconHeader),
+			                      (u8 *)P32_GET(struct GhostHeader *, sdata->ghostProfile_ptrGhostHeader), sdata->ghostProfile_size3E00, 0);
 			break;
 		case MC_ACTION_Load:
-			result = MEMCARD_Load(sdata->frame1_memcardSlot, sdata->ghostProfile_fileName, (u8 *)sdata->ghostProfile_ptrGhostHeader,
+			result = MEMCARD_Load(sdata->frame1_memcardSlot, P32_GET(char *, sdata->ghostProfile_fileName), (u8 *)P32_GET(struct GhostHeader *, sdata->ghostProfile_ptrGhostHeader),
 			                      sdata->ghostProfile_size3E00, 0);
 			break;
 		case MC_ACTION_Format:
 			result = MEMCARD_Format(sdata->frame1_memcardSlot);
 			break;
 		case MC_ACTION_Erase:
-			result = MEMCARD_EraseFile(sdata->frame1_memcardSlot, sdata->ghostProfile_fileName);
+			result = MEMCARD_EraseFile(sdata->frame1_memcardSlot, P32_GET(char *, sdata->ghostProfile_fileName));
 			break;
 		}
 	}
@@ -859,9 +859,9 @@ void RefreshCard_Unknown4(void)
 			fileName = MEMCARD_FindNextGhost();
 		}
 
-		MEMCARD_IsFile(sdata->frame1_memcardSlot, sdata->ghostProfile_fileName);
+		MEMCARD_IsFile(sdata->frame1_memcardSlot, P32_GET(char *, sdata->ghostProfile_fileName));
 		sdata->memcardUnk1 |= 8;
-		result = MEMCARD_IsFile(sdata->frame1_memcardSlot, sdata->ghostProfile_fileName);
+		result = MEMCARD_IsFile(sdata->frame1_memcardSlot, P32_GET(char *, sdata->ghostProfile_fileName));
 	}
 
 	switch (result)
@@ -923,7 +923,7 @@ try_next_action:
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80047d64-0x80047da8.
 void RefreshCard_Entry(void)
 {
-	if ((sdata->gGT->gameMode1 & DEBUG_MENU) == 0)
+	if ((P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 & DEBUG_MENU) == 0)
 	{
 		RefreshCard_Unknown4();
 		RefreshCard_Unknown3();

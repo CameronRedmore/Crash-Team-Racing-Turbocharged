@@ -386,7 +386,7 @@ static struct DrawTiresSolidProjectedWheel DrawTiresSolid_SelectProjectedWheel(s
 		selected.jumpIndex += 4;
 	}
 
-	selected.wheelSprite = scratch->wheelSprites[spriteIndex];
+	selected.wheelSprite = P32_GET(struct Icon *, P32_GET(P32(struct Icon *) *, scratch->wheelSprites)[spriteIndex]);
 
 	return selected;
 }
@@ -493,7 +493,7 @@ static void DrawTiresSolid_LinkPrimitive(struct DrawTiresScratch *scratch, POLY_
 		selectedOTSlot = otRangeEnd;
 	}
 
-	uint32_t *otSlot = (uint32_t *)(uintptr_t)selectedOTSlot;
+	uint32_t *otSlot = P32_DEC(uint32_t *, selectedOTSlot);
 	p->tag = CtrGpu_PackOTTag(*otSlot, 0x09000000);
 	*otSlot = (uint32_t)CtrGpu_PrimToOTLink24(p);
 }
@@ -504,8 +504,8 @@ static int DrawTires_SubmitNativeWheel(struct DrawTiresScratch *scratch, struct 
                                        int wheelIndex, int jumpIndex, int selectedOTSlot, int originalOTSlot, int reflected)
 {
 	if (!NATIVE_DRAW3D_ACTIVE()) return 0;
-	DR_PSYX_DRAW3D *marker = primMem->cursor;
-	if ((u8 *)(marker + 1) > (u8 *)primMem->guardEnd)
+	DR_PSYX_DRAW3D *marker = P32_GET(void *, primMem->cursor);
+	if ((u8 *)(marker + 1) > (u8 *)P32_GET(void *, primMem->guardEnd))
 	{
 		return 0;
 	}
@@ -566,8 +566,8 @@ static int DrawTires_SubmitNativeWheel(struct DrawTiresScratch *scratch, struct 
 	if (selectedOTSlot < scratch->otRangeStart) selectedOTSlot = scratch->otRangeStart;
 	if (selectedOTSlot > scratch->otRangeEnd) selectedOTSlot = scratch->otRangeEnd;
 	NativeDraw3D_SetMarker(marker, layer);
-	AddPrim((uint32_t *)(uintptr_t)selectedOTSlot, marker);
-	primMem->cursor = marker + 1;
+	AddPrim(P32_DEC(uint32_t *, selectedOTSlot), marker);
+	P32_SET(primMem->cursor, marker + 1);
 	return 1;
 }
 #endif
@@ -575,7 +575,7 @@ static int DrawTires_SubmitNativeWheel(struct DrawTiresScratch *scratch, struct 
 static int DrawTiresSolid_EmitProjectedWheel(struct DrawTiresScratch *scratch, struct DrawTiresSolidProjectedWheel *selected, struct PrimMem *primMem,
                                              int *primCount, int wheelIndex, struct PushBuffer *pb)
 {
-	POLY_FT4 *p = (POLY_FT4 *)primMem->cursor;
+	POLY_FT4 *p = (POLY_FT4 *)P32_GET(void *, primMem->cursor);
 	int selectedOTSlot = selected->selectedOTSlot;
 	int sxy[4];
 
@@ -608,7 +608,7 @@ static int DrawTiresSolid_EmitProjectedWheel(struct DrawTiresScratch *scratch, s
 #endif
 	DrawTiresSolid_WritePrimitiveCorners(p, sxy);
 	DrawTiresSolid_LinkPrimitive(scratch, p, selectedOTSlot);
-	primMem->cursor = (char *)primMem->cursor + sizeof(POLY_FT4);
+	P32_SET(primMem->cursor, (char *)P32_GET(void *, primMem->cursor) + sizeof(POLY_FT4));
 	(*primCount)++;
 
 	return 1;
@@ -683,7 +683,7 @@ static int DrawTiresSolid_StagePlayer(struct DrawTiresScratch *scratch, struct D
                                       int *primCount)
 {
 	struct InstDrawPerPlayer *idpp = DrawTiresSolid_GetIdpp(inst, playerIndex);
-	struct PushBuffer *pb = idpp->pushBuffer;
+	struct PushBuffer *pb = P32_GET(struct PushBuffer *, idpp->pushBuffer);
 	int flags = idpp->instFlags;
 
 #if defined(__vita__)
@@ -716,7 +716,7 @@ static int DrawTiresSolid_StagePlayer(struct DrawTiresScratch *scratch, struct D
 		return 0;
 	}
 
-	scratch->wheelSprites = driver->wheelSprites;
+	P32_SET(scratch->wheelSprites, P32_GET(P32(struct Icon *) *, driver->wheelSprites));
 	scratch->tireColor = ((flags & PUSHBUFFER_EXISTS) != 0) ? 0x2e808080 : driver->tireColor;
 
 	if (pb == 0)
@@ -766,10 +766,10 @@ void DrawTires_Solid(struct Thread *thread, struct PrimMem *primMem, u8 numPlyr)
 	}
 #endif
 
-	for (struct Thread *currThread = thread; currThread != 0; currThread = currThread->siblingThread)
+	for (struct Thread *currThread = thread; currThread != 0; currThread = P32_GET(struct Thread *, currThread->siblingThread))
 	{
-		struct Driver *driver = (struct Driver *)currThread->object;
-		struct Instance *inst = currThread->inst;
+		struct Driver *driver = (struct Driver *)P32_GET(void *, currThread->object);
+		struct Instance *inst = P32_GET(struct Instance *, currThread->inst);
 
 		if (driver == 0 || inst == 0)
 		{
@@ -1086,7 +1086,7 @@ static struct DrawTiresReflectionProjectedWheel DrawTiresReflection_SelectProjec
 		selected.jumpIndex += 4;
 	}
 
-	selected.wheelSprite = scratch->wheelSprites[spriteIndex];
+	selected.wheelSprite = P32_GET(struct Icon *, P32_GET(P32(struct Icon *) *, scratch->wheelSprites)[spriteIndex]);
 
 	return selected;
 }
@@ -1193,7 +1193,7 @@ static void DrawTiresReflection_LinkPrimitive(struct DrawTiresScratch *scratch, 
 		selectedOTSlot = otRangeEnd;
 	}
 
-	uint32_t *otSlot = (uint32_t *)(uintptr_t)selectedOTSlot;
+	uint32_t *otSlot = P32_DEC(uint32_t *, selectedOTSlot);
 	p->tag = CtrGpu_PackOTTag(*otSlot, 0x09000000);
 	*otSlot = (uint32_t)CtrGpu_PrimToOTLink24(p);
 }
@@ -1201,7 +1201,7 @@ static void DrawTiresReflection_LinkPrimitive(struct DrawTiresScratch *scratch, 
 static void DrawTiresReflection_EmitProjectedWheel(struct DrawTiresScratch *scratch, struct DrawTiresReflectionProjectedWheel *selected,
                                                    struct PrimMem *primMem, int *primCount, int wheelIndex, struct PushBuffer *pb)
 {
-	POLY_FT4 *p = (POLY_FT4 *)primMem->cursor;
+	POLY_FT4 *p = (POLY_FT4 *)P32_GET(void *, primMem->cursor);
 	struct DrawTiresWheelLocal *wheelLocal = &scratch->wheelLocal[wheelIndex];
 	int selectedOTSlot = selected->selectedOTSlot;
 	int sxy[4];
@@ -1236,7 +1236,7 @@ static void DrawTiresReflection_EmitProjectedWheel(struct DrawTiresScratch *scra
 #endif
 	DrawTiresReflection_WritePrimitiveCorners(p, sxy);
 	DrawTiresReflection_LinkPrimitive(scratch, p, selectedOTSlot);
-	primMem->cursor = (char *)primMem->cursor + sizeof(POLY_FT4);
+	P32_SET(primMem->cursor, (char *)P32_GET(void *, primMem->cursor) + sizeof(POLY_FT4));
 	(*primCount)++;
 }
 
@@ -1278,7 +1278,7 @@ static int DrawTiresReflection_StagePlayer(struct DrawTiresScratch *scratch, str
                                            struct PrimMem *primMem, int *primCount)
 {
 	struct InstDrawPerPlayer *idpp = DrawTiresReflection_GetIdpp(inst, playerIndex);
-	struct PushBuffer *pb = idpp->pushBuffer;
+	struct PushBuffer *pb = P32_GET(struct PushBuffer *, idpp->pushBuffer);
 	int flags = idpp->instFlags;
 
 #if defined(__vita__)
@@ -1316,7 +1316,7 @@ static int DrawTiresReflection_StagePlayer(struct DrawTiresScratch *scratch, str
 		return 0;
 	}
 
-	scratch->wheelSprites = driver->wheelSprites;
+	P32_SET(scratch->wheelSprites, P32_GET(P32(struct Icon *) *, driver->wheelSprites));
 	scratch->tireColor = ((flags & PUSHBUFFER_EXISTS) != 0) ? 0x2e808080 : driver->tireColor;
 
 	DrawTiresReflection_BuildWheelLocalPairs(scratch, driver, inst, idpp);
@@ -1356,10 +1356,10 @@ void DrawTires_Reflection(struct Thread *thread, struct PrimMem *primMem, u8 num
 	}
 #endif
 
-	for (struct Thread *currThread = thread; currThread != 0; currThread = currThread->siblingThread)
+	for (struct Thread *currThread = thread; currThread != 0; currThread = P32_GET(struct Thread *, currThread->siblingThread))
 	{
-		struct Driver *driver = (struct Driver *)currThread->object;
-		struct Instance *inst = currThread->inst;
+		struct Driver *driver = (struct Driver *)P32_GET(void *, currThread->object);
+		struct Instance *inst = P32_GET(struct Instance *, currThread->inst);
 
 		if (driver == 0 || inst == 0)
 		{

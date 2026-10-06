@@ -3,14 +3,14 @@
 
 static void MainInit_InitVisMemBspListNodes(struct VisMem *visMem, struct mesh_info *mesh)
 {
-	if (mesh == NULL || mesh->bspRoot == NULL)
+	if (mesh == NULL || P32_GET(struct BSP *, mesh->bspRoot) == NULL)
 	{
 		return;
 	}
 
 	for (int playerIndex = 0; playerIndex < 4; playerIndex++)
 	{
-		struct VisMemBspListNode *bspList = visMem->bspList[playerIndex];
+		struct VisMemBspListNode *bspList = P32_GET(struct VisMemBspListNode *, visMem->bspList[playerIndex]);
 
 		if (bspList == NULL)
 		{
@@ -20,8 +20,8 @@ static void MainInit_InitVisMemBspListNodes(struct VisMem *visMem, struct mesh_i
 		for (int bspIndex = 0; bspIndex < mesh->numBspNodes; bspIndex++)
 		{
 			// NOTE(aalhendi): Native 226 reads the retained BSP pointer; RenderLists only rewrites the link word.
-			bspList[bspIndex].next = NULL;
-			bspList[bspIndex].bsp = &mesh->bspRoot[bspIndex];
+			P32_SET(bspList[bspIndex].next, NULL);
+			P32_SET(bspList[bspIndex].bsp, &P32_GET(struct BSP *, mesh->bspRoot)[bspIndex]);
 		}
 	}
 }
@@ -29,8 +29,8 @@ static void MainInit_InitVisMemBspListNodes(struct VisMem *visMem, struct mesh_i
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8003af84-0x8003b008 for the retail path.
 void MainInit_VisMem(struct GameTracker *gGT)
 {
-	struct VisMem *visMem = gGT->level1->visMem;
-	gGT->visMem1 = visMem;
+	struct VisMem *visMem = P32_GET(struct VisMem *, P32_GET(struct Level *, gGT->level1)->visMem);
+	P32_SET(gGT->visMem1, visMem);
 
 	if (visMem == NULL)
 	{
@@ -39,14 +39,14 @@ void MainInit_VisMem(struct GameTracker *gGT)
 
 	for (int i = 0; i < gGT->numPlyrCurrGame; i++)
 	{
-		visMem->visLeafSrc[i] = NULL;
-		visMem->visFaceSrc[i] = NULL;
-		visMem->visOVertSrc[i] = NULL;
-		visMem->visSCVertSrc[i] = NULL;
+		P32_SET(visMem->visLeafSrc[i], NULL);
+		P32_SET(visMem->visFaceSrc[i], NULL);
+		P32_SET(visMem->visOVertSrc[i], NULL);
+		P32_SET(visMem->visSCVertSrc[i], NULL);
 	}
 
 #ifdef CTR_NATIVE
-	MainInit_InitVisMemBspListNodes(visMem, gGT->level1->ptr_mesh_info);
+	MainInit_InitVisMemBspListNodes(visMem, P32_GET(struct mesh_info *, P32_GET(struct Level *, gGT->level1)->ptr_mesh_info));
 #endif
 }
 
@@ -63,7 +63,7 @@ void MainInit_RainBuffer(struct GameTracker *gGT)
 	for (int i = 0; i < numPlyr; i++)
 	{
 		struct RainBuffer *dst = &gGT->rainBuffer[i];
-		const u32 *srcWords = (const u32 *)(const void *)&gGT->level1->rainBuffer;
+		const u32 *srcWords = (const u32 *)(const void *)&P32_GET(struct Level *, gGT->level1)->rainBuffer;
 		u32 *dstWords = (u32 *)(void *)dst;
 
 		for (int word = 0; word < (int)(sizeof(struct RainBuffer) / sizeof(u32)); word += 4)
@@ -239,8 +239,8 @@ EndFunc:
 
 	// 0x1000 per player, plus 0x18 for linking
 	size = ((gGT->numPlyrCurrGame) << 0xC) | 0x18;
-	gGT->otSwapchainDB[0] = MEMPACK_AllocMem(size); // "ot1"
-	gGT->otSwapchainDB[1] = MEMPACK_AllocMem(size); // "ot2"
+	P32_SET(gGT->otSwapchainDB[0], MEMPACK_AllocMem(size)); // "ot1"
+	P32_SET(gGT->otSwapchainDB[1], MEMPACK_AllocMem(size)); // "ot2"
 }
 
 #if defined(CTR_NATIVE)
@@ -268,7 +268,7 @@ static void MainInit_JitPoolInitExternal(struct JitPool *pool, int maxItems, int
 		return;
 	}
 
-	pool->ptrPoolData = storage;
+	P32_SET(pool->ptrPoolData, storage);
 	JitPool_Clear(pool);
 }
 #endif
@@ -350,23 +350,24 @@ void MainInit_JitPoolsNew(struct GameTracker *gGT)
 #ifndef CTR_NATIVE
 	gGT->ptrRenderBucketInstance = MEMPACK_AllocMem(renderBucketSize);
 #else
-	gGT->ptrRenderBucketInstance = RenderBucket_GetNativeStorage();
+	P32_SET(gGT->ptrRenderBucketInstance, RenderBucket_GetNativeStorage());
 #endif
 
 	for (int i = 0; i < 3; i++)
 	{
 		struct JitPool *pool = (struct JitPool *)((char *)&gGT->JitPools.smallStack + (sizeof(struct JitPool) * i));
-		int *pointer = (int *)pool->free.first;
+		int *pointer = (int *)P32_GET(struct Item *, pool->free.first);
 		while (pointer != (int *)0x0)
 		{
-			*(int **)(pointer + 2) = pointer + 2;
-			pointer = (int *)*pointer;
+			// Pointer slots in pool items are retail 4-byte slots.
+			*(u32 *)(pointer + 2) = P32_ENC(pointer + 2);
+			pointer = P32_DEC(int *, *pointer);
 		}
 	}
 
 	for (int i = 0; i < gGT->numPlyrCurrGame; i++)
 	{
-		data.PtrClipBuffer[i] = MEMPACK_AllocMem(MainDB_GetClipSize(gGT->levelID, gGT->numPlyrCurrGame) << 2);
+		P32_SET(data.PtrClipBuffer[i], MEMPACK_AllocMem(MainDB_GetClipSize(gGT->levelID, gGT->numPlyrCurrGame) << 2));
 	}
 }
 
@@ -397,7 +398,7 @@ void MainInit_Drivers(struct GameTracker *gGT)
 
 	for (int i = 0; i < 8; i++)
 	{
-		gGT->drivers[i] = NULL;
+		P32_SET(gGT->drivers[i], NULL);
 	}
 
 	gGT->numBotsNextGame = 0;
@@ -416,8 +417,8 @@ void MainInit_Drivers(struct GameTracker *gGT)
 		sdata->boolCanSaveGhost = 0;
 		sdata->boolGhostsDrawing = 0;
 		sdata->boolReplayHumanGhost = 0;
-		sdata->ptrGhostTape[0] = NULL;
-		sdata->ptrGhostTape[1] = NULL;
+		P32_SET(sdata->ptrGhostTape[0], NULL);
+		P32_SET(sdata->ptrGhostTape[1], NULL);
 	}
 
 	if (LOAD_IsOpen_RacingOrBattle())
@@ -430,7 +431,7 @@ void MainInit_Drivers(struct GameTracker *gGT)
 	// because of threadBucket linked list order
 	for (int i = numPlyrCurrGame - 1; i >= 0; i--)
 	{
-		gGT->drivers[i] = VehBirth_Player(i);
+		P32_SET(gGT->drivers[i], VehBirth_Player(i));
 	}
 
 	// spawn all AIs
@@ -499,7 +500,7 @@ void MainInit_Drivers(struct GameTracker *gGT)
 		// fill up 4 players
 		for (int i = numPlyrCurrGame; i < 4; i++)
 		{
-			gGT->drivers[i] = VehBirth_Player(i);
+			P32_SET(gGT->drivers[i], VehBirth_Player(i));
 		}
 	}
 
@@ -524,13 +525,13 @@ void MainInit_Drivers(struct GameTracker *gGT)
 #if defined(CTR_NATIVE)
 		if (gNativeGhostReplayMode == 0)
 		{
-			struct Model **humanPlyrDriverModel = &gGT->threadBuckets[PLAYER].thread->inst->model;
+			P32(struct Model *) *humanPlyrDriverModel = &P32_GET(struct Instance *, P32_GET(struct Thread *, gGT->threadBuckets[PLAYER].thread)->inst)->model;
 
 			// that's characterIDs[1] from the MPK
 			// humanGhost = *humanPlyrDriverModel,
 
 			// then replace with intended P1 model
-			*humanPlyrDriverModel = data.driverModelExtras[0].model;
+			P32_SET(*humanPlyrDriverModel, P32_GET(struct Model *, data.driverModelExtras[0].model));
 		}
 #endif
 	}
@@ -567,8 +568,8 @@ void MainInit_FinalizeInit(struct GameTracker *gGT)
 	gGT->threadBuckets[HUD].boolCantPause = 1;
 
 	// particles
-	gGT->particleList_ordinary = NULL;
-	gGT->particleList_heatWarp = NULL;
+	P32_SET(gGT->particleList_ordinary, NULL);
+	P32_SET(gGT->particleList_heatWarp, NULL);
 	gGT->numParticles = 0;
 
 	// deadc0ed, FUN_8006c684
@@ -578,7 +579,7 @@ void MainInit_FinalizeInit(struct GameTracker *gGT)
 
 	for (i = 0; i < 12; i++)
 	{
-		gGT->DecalMP[i].inst = NULL;
+		P32_SET(gGT->DecalMP[i].inst, NULL);
 		*(s16 *)&gGT->DecalMP[i].data[0] = 1000;
 
 		gGT->DecalMP[i].ptrOT1 = 0;
@@ -587,15 +588,15 @@ void MainInit_FinalizeInit(struct GameTracker *gGT)
 
 	MainInit_JitPoolsReset(gGT);
 
-	lev1 = gGT->level1;
+	lev1 = P32_GET(struct Level *, gGT->level1);
 
 #if defined(CTR_NATIVE)
 	// NOTE(aalhendi): Native menu LEVs may publish no restart table.
-	if (lev1->ptr_restart_points != NULL)
+	if (P32_GET(struct CheckpointNode *, lev1->ptr_restart_points) != NULL)
 #endif
 	// 0x1d7c
 	{
-		gGT->trackLength_x_numLaps_x_8 = lev1->ptr_restart_points[0].distToFinish * gGT->numLaps * 8;
+		gGT->trackLength_x_numLaps_x_8 = P32_GET(struct CheckpointNode *, lev1->ptr_restart_points)[0].distToFinish * gGT->numLaps * 8;
 	}
 
 	MainInit_Drivers(gGT);
@@ -634,7 +635,7 @@ void MainInit_FinalizeInit(struct GameTracker *gGT)
 	for (i = 0; i < 8; i++)
 	{
 		// get pointer to player structure of each driver
-		d = gGT->drivers[i];
+		d = P32_GET(struct Driver *, gGT->drivers[i]);
 
 		// if pointer is not nullptr
 		if (d == NULL)
@@ -642,7 +643,7 @@ void MainInit_FinalizeInit(struct GameTracker *gGT)
 			continue;
 		}
 
-		inst = d->instSelf;
+		inst = P32_GET(struct Instance *, d->instSelf);
 		if (inst != 0)
 		{
 			inst->scale = (SVec3){{0xccc, 0xccc, 0xccc}};
@@ -672,7 +673,7 @@ void MainInit_FinalizeInit(struct GameTracker *gGT)
 	}
 
 	// copy InstDef to InstancePool
-	INSTANCE_LevInitAll(lev1->ptrInstDefs, lev1->numInstances);
+	INSTANCE_LevInitAll(P32_GET(struct InstDef *, lev1->ptrInstDefs), lev1->numInstances);
 
 	// Debug_ToggleNormalSpawn == normal spawn
 	if (gGT->Debug_ToggleNormalSpawn != 0)
@@ -688,13 +689,13 @@ void MainInit_FinalizeInit(struct GameTracker *gGT)
 		{
 			for (i = 0; i < gGT->numPlyrCurrGame; i++)
 			{
-				BOTS_Driver_Convert(gGT->drivers[i]);
+				BOTS_Driver_Convert(P32_GET(struct Driver *, gGT->drivers[i]));
 			}
 		}
 	}
 
 	// execute all camera thread update functions
-	ThTick_RunBucket(gGT->threadBuckets[CAMERA].thread);
+	ThTick_RunBucket(P32_GET(struct Thread *, gGT->threadBuckets[CAMERA].thread));
 
 // dont write unused variables
 #if 0
@@ -723,9 +724,9 @@ void MainInit_FinalizeInit(struct GameTracker *gGT)
 
 	if (lev1 != NULL)
 	{
-		if (lev1->ptr_mesh_info != NULL)
+		if (P32_GET(struct mesh_info *, lev1->ptr_mesh_info) != NULL)
 		{
-			LevInstDef_UnPack(lev1->ptr_mesh_info);
+			LevInstDef_UnPack(P32_GET(struct mesh_info *, lev1->ptr_mesh_info));
 		}
 	}
 
@@ -734,7 +735,7 @@ void MainInit_FinalizeInit(struct GameTracker *gGT)
 	MainInit_RainBuffer(gGT);
 
 	// animates water, 1P mode
-	AnimateWater1P(FPS_HALF(gGT->timer), lev1->numWaterVertices, lev1->ptr_water, lev1->ptr_tex_waterEnvMap, lev1->visOVertSrc);
+	AnimateWater1P(FPS_HALF(gGT->timer), lev1->numWaterVertices, P32_GET(struct WaterVert *, lev1->ptr_water), P32_GET(struct TextureLayout *, lev1->ptr_tex_waterEnvMap), P32_GET(int *, lev1->visOVertSrc));
 
 	gGT->pushBuffer_UI.fadeFromBlack_desiredResult = 0x1000;
 	gGT->pushBuffer_UI.fade_step = 0x200;
@@ -790,7 +791,7 @@ int MainInit_StringToLevID(char *str)
 {
 	for (int levelID = 0; levelID < 0x41; levelID++)
 	{
-		char *debugName = data.metaDataLEV[levelID].name_Debug;
+		char *debugName = P32_GET(char *, data.metaDataLEV[levelID].name_Debug);
 
 		if (strncmp(debugName, str, strlen(debugName)) == 0)
 		{

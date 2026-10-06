@@ -42,12 +42,12 @@ void UpdateChannelVol_Music(struct SongSeq *songSeq, struct ChannelAttr *attr, i
 
 	if ((songSeq->flags & 4) == 0)
 	{
-		sampleVol = sdata->ptrCseqLongSamples[songSeq->instrumentID].volume;
+		sampleVol = P32_GET(struct SampleInstrument *, sdata->ptrCseqLongSamples)[songSeq->instrumentID].volume;
 	}
 
 	else
 	{
-		sampleVol = sdata->ptrCseqShortSamples[index].volume;
+		sampleVol = P32_GET(struct SampleDrums *, sdata->ptrCseqShortSamples)[index].volume;
 	}
 
 	Channel_SetVolume(attr, (newVol * sampleVol * vol) >> 0xf, songSeq->LR);
@@ -58,7 +58,7 @@ void UpdateChannelVol_EngineFX_All()
 {
 	struct ChannelStats *curr;
 
-	for (curr = (struct ChannelStats *)sdata->channelTaken.first; curr != NULL; curr = curr->next)
+	for (curr = (struct ChannelStats *)P32_GET(struct Item *, sdata->channelTaken.first); curr != NULL; curr = P32_GET(struct ChannelStats *, curr->next))
 	{
 		if (curr->type == HOWL_CHANNEL_TYPE_MUSIC)
 		{
@@ -73,7 +73,7 @@ void UpdateChannelVol_EngineFX_All()
 
 		if (curr->type == HOWL_CHANNEL_TYPE_ENGINE_FX)
 		{
-			UpdateChannelVol_EngineFX(&sdata->howl_metaEngineFX[soundID], &sdata->channelAttrNew[curr->channelID], curr->vol, curr->LR);
+			UpdateChannelVol_EngineFX(&P32_GET(struct EngineFX *, sdata->howl_metaEngineFX)[soundID], &sdata->channelAttrNew[curr->channelID], curr->vol, curr->LR);
 		}
 
 		// type == OtherFX
@@ -84,7 +84,7 @@ void UpdateChannelVol_EngineFX_All()
 			    !NativeCustomRacer_UpdateSampledVoiceVolume((int)curr->unk2 - 1, soundID, &sdata->channelAttrNew[curr->channelID], curr->vol, curr->LR))
 #endif
 			{
-				UpdateChannelVol_OtherFX(&sdata->howl_metaOtherFX[soundID], &sdata->channelAttrNew[curr->channelID], curr->vol, curr->LR);
+				UpdateChannelVol_OtherFX(&P32_GET(struct OtherFX *, sdata->howl_metaOtherFX)[soundID], &sdata->channelAttrNew[curr->channelID], curr->vol, curr->LR);
 			}
 		}
 	}
@@ -95,9 +95,9 @@ void UpdateChannelVol_Music_All()
 {
 	struct ChannelStats *curr, *backupNext;
 
-	for (curr = (struct ChannelStats *)sdata->channelTaken.first; curr != NULL; curr = backupNext)
+	for (curr = (struct ChannelStats *)P32_GET(struct Item *, sdata->channelTaken.first); curr != NULL; curr = backupNext)
 	{
-		backupNext = curr->next;
+		backupNext = P32_GET(struct ChannelStats *, curr->next);
 
 		if (curr->type != HOWL_CHANNEL_TYPE_MUSIC)
 		{
@@ -116,9 +116,9 @@ void UpdateChannelVol_OtherFX_All()
 {
 	struct ChannelStats *curr, *backupNext;
 
-	for (curr = (struct ChannelStats *)sdata->channelTaken.first; curr != NULL; curr = backupNext)
+	for (curr = (struct ChannelStats *)P32_GET(struct Item *, sdata->channelTaken.first); curr != NULL; curr = backupNext)
 	{
-		backupNext = curr->next;
+		backupNext = P32_GET(struct ChannelStats *, curr->next);
 
 		if (curr->type != HOWL_CHANNEL_TYPE_OTHER_FX)
 		{
@@ -134,7 +134,7 @@ void UpdateChannelVol_OtherFX_All()
 		    !NativeCustomRacer_UpdateSampledVoiceVolume((int)curr->unk2 - 1, soundID, &sdata->channelAttrNew[curr->channelID], curr->vol, curr->LR))
 #endif
 		{
-			UpdateChannelVol_OtherFX(&sdata->howl_metaOtherFX[soundID], &sdata->channelAttrNew[curr->channelID], curr->vol, curr->LR);
+			UpdateChannelVol_OtherFX(&P32_GET(struct OtherFX *, sdata->howl_metaOtherFX)[soundID], &sdata->channelAttrNew[curr->channelID], curr->vol, curr->LR);
 		}
 	}
 }
@@ -335,11 +335,11 @@ void OptionsMenu_TestSound(int newRow, int newBoolPlay)
 	if ((sdata->OptionSlider_BoolPlay != 0) && (sdata->OptionSlider_Index == 2))
 	{
 		// OG game does this, instead of gGT->drivers[0]?
-		int driverID = sdata->gGT->cameraDC[0].driverToFollow->driverID;
+		int driverID = P32_GET(struct Driver *, P32_GET(struct GameTracker *, sdata->gGT)->cameraDC[0].driverToFollow)->driverID;
 
 		int characterID = data.characterIDs[driverID];
 
-		int frameCount = sdata->gGT->frameTimer_MainFrame_ResetDB;
+		int frameCount = P32_GET(struct GameTracker *, sdata->gGT)->frameTimer_MainFrame_ResetDB;
 
 		int sampleVoiceID;
 

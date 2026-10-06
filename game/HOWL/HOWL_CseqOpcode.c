@@ -4,13 +4,13 @@
 void cseq_opcode01_noteoff(struct SongSeq *seq)
 {
 	struct ChannelStats *curr, *backupNext;
-	u8 *currNote = seq->currNote;
+	u8 *currNote = P32_GET(u8 *, seq->currNote);
 	int soundID = seq->soundID;
 	u32 *flagPtr;
 
-	for (curr = (struct ChannelStats *)sdata->channelTaken.first; curr != NULL; curr = backupNext)
+	for (curr = (struct ChannelStats *)P32_GET(struct Item *, sdata->channelTaken.first); curr != NULL; curr = backupNext)
 	{
-		backupNext = curr->next;
+		backupNext = P32_GET(struct ChannelStats *, curr->next);
 
 		if (curr->type != HOWL_CHANNEL_TYPE_MUSIC)
 		{
@@ -86,11 +86,11 @@ void howl_InitChannelAttr_Music(struct SongSeq *seq, struct ChannelAttr *attr, i
 	// instrument
 	if ((seq->flags & 4) == 0)
 	{
-		struct SampleInstrument *longSample = &sdata->ptrCseqLongSamples[seq->instrumentID];
+		struct SampleInstrument *longSample = &P32_GET(struct SampleInstrument *, sdata->ptrCseqLongSamples)[seq->instrumentID];
 
 		pitch = howl_InstrumentPitch(longSample->basePitch, index, seq->distort);
 
-		attr->spuStartAddr = (void *)(sdata->howl_spuAddrs[longSample->spuIndex].spuAddr << 3);
+		attr->spuStartAddr = P32_GET(struct SpuAddrEntry *, sdata->howl_spuAddrs)[longSample->spuIndex].spuAddr << 3;
 
 		// audio ADSR
 		attr->ad = longSample->ad;
@@ -102,7 +102,7 @@ void howl_InitChannelAttr_Music(struct SongSeq *seq, struct ChannelAttr *attr, i
 	// drums
 	else
 	{
-		struct SampleDrums *shortSample = &sdata->ptrCseqShortSamples[index];
+		struct SampleDrums *shortSample = &P32_GET(struct SampleDrums *, sdata->ptrCseqShortSamples)[index];
 
 		if (seq->distort == HOWL_SFX_DISTORTION_NONE)
 		{
@@ -114,7 +114,7 @@ void howl_InitChannelAttr_Music(struct SongSeq *seq, struct ChannelAttr *attr, i
 			pitch = CTR_MipsSrl(CTR_MipsMulLo((u16)shortSample->pitch, data.distortConst_OtherFX[seq->distort]), 16);
 		}
 
-		attr->spuStartAddr = (void *)(sdata->howl_spuAddrs[shortSample->spuIndex].spuAddr << 3);
+		attr->spuStartAddr = P32_GET(struct SpuAddrEntry *, sdata->howl_spuAddrs)[shortSample->spuIndex].spuAddr << 3;
 
 		// audio ADSR
 		attr->ad = 0x80ff;
@@ -139,9 +139,9 @@ void cseq_opcode_from06and07(struct SongSeq *seq)
 
 	int sampleVol = CTR_MipsMulLo(CTR_MipsMulLo(sdata->vol_Music, sdata->songPool[songIndex].vol_Curr), seq->vol_Curr);
 
-	for (curr = (struct ChannelStats *)sdata->channelTaken.first; curr != NULL; curr = backupNext)
+	for (curr = (struct ChannelStats *)P32_GET(struct Item *, sdata->channelTaken.first); curr != NULL; curr = backupNext)
 	{
-		backupNext = curr->next;
+		backupNext = P32_GET(struct ChannelStats *, curr->next);
 
 		if (curr->type != HOWL_CHANNEL_TYPE_MUSIC)
 		{
@@ -182,7 +182,7 @@ void cseq_opcode05_noteon(struct SongSeq *seq)
 		return;
 	}
 
-	currNote = seq->currNote;
+	currNote = P32_GET(u8 *, seq->currNote);
 
 	howl_InitChannelAttr_Music(seq, &attr, currNote[1], currNote[2]);
 
@@ -218,7 +218,7 @@ void cseq_opcode05_noteon(struct SongSeq *seq)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8002a3a8-0x8002a3d4
 void cseq_opcode06(struct SongSeq *seq)
 {
-	u8 *note = seq->currNote;
+	u8 *note = P32_GET(u8 *, seq->currNote);
 	seq->vol_Curr = note[1];
 	cseq_opcode_from06and07(seq);
 }
@@ -226,7 +226,7 @@ void cseq_opcode06(struct SongSeq *seq)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8002a3d4-0x8002a400
 void cseq_opcode07(struct SongSeq *seq)
 {
-	u8 *note = seq->currNote;
+	u8 *note = P32_GET(u8 *, seq->currNote);
 	seq->LR = note[1];
 	cseq_opcode_from06and07(seq);
 }
@@ -235,12 +235,12 @@ void cseq_opcode07(struct SongSeq *seq)
 void cseq_opcode08(struct SongSeq *seq)
 {
 	struct ChannelStats *curr, *backupNext;
-	u8 *currNote = seq->currNote;
+	u8 *currNote = P32_GET(u8 *, seq->currNote);
 	int soundID = seq->soundID;
 
-	for (curr = (struct ChannelStats *)sdata->channelTaken.first; curr != NULL; curr = backupNext)
+	for (curr = (struct ChannelStats *)P32_GET(struct Item *, sdata->channelTaken.first); curr != NULL; curr = backupNext)
 	{
-		backupNext = curr->next;
+		backupNext = P32_GET(struct ChannelStats *, curr->next);
 
 		if (curr->type != HOWL_CHANNEL_TYPE_MUSIC)
 		{
@@ -264,7 +264,7 @@ void cseq_opcode08(struct SongSeq *seq)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8002a494-0x8002a4a8
 void cseq_opcode09(struct SongSeq *seq)
 {
-	u8 *currNote = seq->currNote;
+	u8 *currNote = P32_GET(u8 *, seq->currNote);
 	seq->instrumentID = currNote[1];
 }
 
@@ -275,12 +275,12 @@ void cseq_opcode0a(struct SongSeq *seq)
 	struct ChannelStats *curr, *backupNext;
 	int soundID = seq->soundID;
 
-	u8 *currNote = seq->currNote;
+	u8 *currNote = P32_GET(u8 *, seq->currNote);
 	seq->distort = currNote[1];
 
-	for (curr = (struct ChannelStats *)sdata->channelTaken.first; curr != NULL; curr = backupNext)
+	for (curr = (struct ChannelStats *)P32_GET(struct Item *, sdata->channelTaken.first); curr != NULL; curr = backupNext)
 	{
-		backupNext = curr->next;
+		backupNext = P32_GET(struct ChannelStats *, curr->next);
 
 		if (curr->type != HOWL_CHANNEL_TYPE_MUSIC)
 		{
@@ -298,7 +298,7 @@ void cseq_opcode0a(struct SongSeq *seq)
 		// instrument
 		if ((seq->flags & 4) == 0)
 		{
-			struct SampleInstrument *longSample = &sdata->ptrCseqLongSamples[seq->instrumentID];
+			struct SampleInstrument *longSample = &P32_GET(struct SampleInstrument *, sdata->ptrCseqLongSamples)[seq->instrumentID];
 
 			pitch = howl_InstrumentPitch(longSample->basePitch, index, seq->distort);
 		}
@@ -306,7 +306,7 @@ void cseq_opcode0a(struct SongSeq *seq)
 		// drums
 		else
 		{
-			struct SampleDrums *shortSample = &sdata->ptrCseqShortSamples[index];
+			struct SampleDrums *shortSample = &P32_GET(struct SampleDrums *, sdata->ptrCseqShortSamples)[index];
 
 			if (seq->distort == HOWL_SFX_DISTORTION_NONE)
 			{

@@ -9,31 +9,31 @@ void RB_Minecart_CheckColl(struct Instance *minecartInst, struct Thread *minecar
 {
 	struct Driver *hitDriver;
 	struct Instance *hitInst;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// check players
-	hitInst = (struct Instance *)LinkedCollide_Radius(minecartInst, minecartTh, gGT->threadBuckets[PLAYER].thread, 0x10000);
+	hitInst = (struct Instance *)LinkedCollide_Radius(minecartInst, minecartTh, P32_GET(struct Thread *, gGT->threadBuckets[PLAYER].thread), 0x10000);
 
 	if (hitInst == 0)
 	{
 		// check robots
-		hitInst = (struct Instance *)LinkedCollide_Radius(minecartInst, minecartTh, gGT->threadBuckets[ROBOT].thread, 0x10000);
+		hitInst = (struct Instance *)LinkedCollide_Radius(minecartInst, minecartTh, P32_GET(struct Thread *, gGT->threadBuckets[ROBOT].thread), 0x10000);
 	}
 
 	if (hitInst != 0)
 	{
 		// get driver from instance
-		hitDriver = (struct Driver *)hitInst->thread->object;
+		hitDriver = (struct Driver *)P32_GET(void *, P32_GET(struct Thread *, hitInst->thread)->object);
 
 		// attempt to harm driver (squish or spin-out)
-		RB_Hazard_HurtDriver(hitDriver, (minecartInst->model->id == DYNAMIC_SKUNK) ? 1 : 3, 0, 0);
+		RB_Hazard_HurtDriver(hitDriver, (P32_GET(struct Model *, minecartInst->model)->id == DYNAMIC_SKUNK) ? 1 : 3, 0, 0);
 	}
 }
 
 void RB_Minecart_NewPoint(struct Instance *minecartInst, struct Minecart *minecartObj, struct SpawnType2 *spawnType2)
 {
-	const SVec3 *start = &spawnType2->positions[minecartObj->posIndex - 1];
-	const SVec3 *end = &spawnType2->positions[minecartObj->posIndex];
+	const SVec3 *start = &P32_GET(SVec3 *, spawnType2->positions)[minecartObj->posIndex - 1];
+	const SVec3 *end = &P32_GET(SVec3 *, spawnType2->positions)[minecartObj->posIndex];
 
 	for (int i = 0; i < 3; i++)
 	{
@@ -63,9 +63,9 @@ void RB_Minecart_ThTick(struct Thread *t)
 
 	s16 i;
 
-	minecartInst = t->inst;
-	minecartObj = (struct Minecart *)t->object;
-	level = sdata->gGT->level1;
+	minecartInst = P32_GET(struct Instance *, t->inst);
+	minecartObj = (struct Minecart *)P32_GET(void *, t->object);
+	level = P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1);
 
 	// if animation is not over
 	if ((minecartInst->animFrame + 1) < INSTANCE_GetNumAnimFrames(minecartInst, 0))
@@ -87,7 +87,7 @@ void RB_Minecart_ThTick(struct Thread *t)
 	}
 
 	// path coordinates for minecarts
-	spawnType2 = &level->ptrSpawnType2[0];
+	spawnType2 = &P32_GET(struct SpawnType2 *, level->ptrSpawnType2)[0];
 	numCoords = spawnType2->numCoords;
 
 	// between two points
@@ -115,7 +115,7 @@ void RB_Minecart_ThTick(struct Thread *t)
 
 		RB_Minecart_NewPoint(minecartInst, minecartObj, spawnType2);
 
-		if ((minecartObj->posIndex == 1) && (minecartInst->model->id == DYNAMIC_MINE_CART))
+		if ((minecartObj->posIndex == 1) && (P32_GET(struct Model *, minecartInst->model)->id == DYNAMIC_MINE_CART))
 		{
 			for (i = 0; i < 3; i++)
 			{
@@ -155,7 +155,7 @@ void RB_Minecart_LInB(struct Instance *inst)
 	int minecartID;
 	int startIndex;
 
-	if (inst->thread != 0)
+	if (P32_GET(struct Thread *, inst->thread) != 0)
 	{
 		return;
 	}
@@ -173,14 +173,14 @@ void RB_Minecart_LInB(struct Instance *inst)
 	{
 		return;
 	}
-	inst->thread = t;
-	t->inst = inst;
+	P32_SET(inst->thread, t);
+	P32_SET(t->inst, inst);
 
 	// memset is faster than erasing the following
 	// betweenPoints_currFrame, rotDesired[2], soundIDCount,
 	// rotCurr[0], rotCurr[1], rotCurr[2]
 
-	minecartObj = ((struct Minecart *)t->object);
+	minecartObj = ((struct Minecart *)P32_GET(void *, t->object));
 	memset(minecartObj, 0, sizeof(struct Minecart));
 	minecartObj->betweenPoints_numFrames = (s16)FPS_DOUBLE(8);
 	minecartObj->rotSpeed = 0x20;
@@ -189,7 +189,7 @@ void RB_Minecart_LInB(struct Instance *inst)
 	inst->scale.y = 0x1000;
 	inst->scale.z = 0x1000;
 
-	if (inst->model->id == DYNAMIC_SKUNK)
+	if (P32_GET(struct Model *, inst->model)->id == DYNAMIC_SKUNK)
 	{
 		inst->scale.x = 0x2000;
 		inst->scale.y = 0x2000;
@@ -198,7 +198,7 @@ void RB_Minecart_LInB(struct Instance *inst)
 		minecartObj->rotSpeed = 0x18;
 	}
 
-	else if (inst->model->id == DYNAMIC_VONLABASS)
+	else if (P32_GET(struct Model *, inst->model)->id == DYNAMIC_VONLABASS)
 	{
 		inst->scale.x = 0x800;
 		inst->scale.y = 0x800;
@@ -208,7 +208,7 @@ void RB_Minecart_LInB(struct Instance *inst)
 	}
 
 	// path coordinates for minecarts
-	spawnType2 = &sdata->gGT->level1->ptrSpawnType2[0];
+	spawnType2 = &P32_GET(struct SpawnType2 *, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->ptrSpawnType2)[0];
 
 	// from instance
 	minecartID = inst->name[strlen(inst->name) - 1] - '0';

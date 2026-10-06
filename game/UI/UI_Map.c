@@ -98,16 +98,16 @@ void UI_Map_DrawMap(struct Icon *mapTop, struct Icon *mapBottom, s16 posX, s16 p
 		transparency = 0;
 	}
 
-	if (gGT->level1->ptrSpawnType1 != 0)
+	if (P32_GET(struct SpawnType1 *, P32_GET(struct Level *, gGT->level1)->ptrSpawnType1) != 0)
 	{
-		void **pointers = ST1_GETPOINTERS(gGT->level1->ptrSpawnType1);
-		mapMetadata = pointers[ST1_MAP];
+		P32(void *) *pointers = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *, gGT->level1)->ptrSpawnType1));
+		mapMetadata = P32_GET(void *, pointers[ST1_MAP]);
 	}
 
 	// position of the bottom margin of the primitive for the bottom half of the minimap
 	mapBottomHeight = mapBottom->texLayout.v2 - mapBottom->texLayout.v0;
 
-	p = (POLY_FT4 *)primMem->cursor;
+	p = (POLY_FT4 *)P32_GET(void *, primMem->cursor);
 
 	// if these conditions are met, then draw the top half of the minimap; otherwise, only draw the bottom half
 	// not sure when the game ever draws only the bottom half
@@ -146,7 +146,7 @@ void UI_Map_DrawMap(struct Icon *mapTop, struct Icon *mapBottom, s16 posX, s16 p
 	}
 	UI_Map_DrawMap_ExtraFunc(mapBottom, p, posX, 0, primMem, otMem, transparency);
 
-	primMem->cursor = p + 1;
+	P32_SET(primMem->cursor, p + 1);
 }
 
 void UI_Map_DrawMap_ExtraFunc(struct Icon *icon, POLY_FT4 *p, s16 posX, s16 empty, struct PrimMem *primMem, uint32_t *otMem, u32 transparency)
@@ -168,10 +168,10 @@ void UI_Map_DrawMap_ExtraFunc(struct Icon *icon, POLY_FT4 *p, s16 posX, s16 empt
 
 	// In-race map coordinates are projected around iconStartX.  Scale the
 	// map around that same origin so its route icons remain registered.
-	if (((sdata->gGT->gameMode1 & MAIN_MENU) == 0) && (sdata->gGT->level1 != NULL) && (sdata->gGT->level1->ptrSpawnType1 != NULL))
+	if (((P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 & MAIN_MENU) == 0) && (P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1) != NULL) && (P32_GET(struct SpawnType1 *, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->ptrSpawnType1) != NULL))
 	{
-		void **pointers = ST1_GETPOINTERS(sdata->gGT->level1->ptrSpawnType1);
-		struct UIMap *map = pointers[ST1_MAP];
+		P32(void *) *pointers = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->ptrSpawnType1));
+		struct UIMap *map = P32_GET(void *, pointers[ST1_MAP]);
 		if (map != NULL)
 		{
 			mapOffsetX = NativeMinimap_GetAnchorOffsetX(map);
@@ -262,7 +262,7 @@ void UI_Map_GetIconPos(struct UIMap *map, int *posX, int *posY)
 	addX = CTR_WIDESCREEN_SCALE_X(addX);
 #endif
 
-	if (sdata->gGT->numPlyrCurrGame == 3)
+	if (P32_GET(struct GameTracker *, sdata->gGT)->numPlyrCurrGame == 3)
 	{
 		addX -= UI_MAP_3P_OFFSET_X;
 		addY += UI_MAP_3P_OFFSET_Y;
@@ -285,7 +285,7 @@ void UI_Map_GetIconPosPrecise(const struct UIMap *map, const s32 worldPos[3], fl
 #if CTR_NATIVE_WIDESCREEN
 	addX *= NativeAspect_GetScaleX();
 #endif
-	if (sdata->gGT->numPlyrCurrGame == 3)
+	if (P32_GET(struct GameTracker *, sdata->gGT)->numPlyrCurrGame == 3)
 	{
 		addX -= UI_MAP_3P_OFFSET_X;
 		addY += UI_MAP_3P_OFFSET_Y;
@@ -311,7 +311,7 @@ void UI_Map_DrawAdvPlayer(struct UIMap *map, const s32 worldPos[3], int unused1,
 	UI_Map_GetIconPos(map, &posX, &posY);
 
 	arrowColor = &data.playerIconAdvMap.vertCol1[0];
-	if ((FPS_HALF(sdata->gGT->timer) & 2) != 0)
+	if ((FPS_HALF(P32_GET(struct GameTracker *, sdata->gGT)->timer) & 2) != 0)
 	{
 		arrowColor = &data.playerIconAdvMap.vertCol2[0];
 	}
@@ -343,7 +343,7 @@ void UI_Map_DrawRawIcon(struct UIMap *map, const s32 worldPos[3], int iconID, in
 	int posX;
 	int posY;
 	u32 *ptrColor;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	(void)unused;
 
@@ -352,14 +352,14 @@ void UI_Map_DrawRawIcon(struct UIMap *map, const s32 worldPos[3], int iconID, in
 
 	UI_Map_GetIconPos(map, &posX, &posY);
 
-	ptrColor = data.ptrColor[colorID];
+	ptrColor = P32_GET(u32 *, data.ptrColor[colorID]);
 
-	struct Icon **iconPtrArray = ICONGROUP_GETICONS(sdata->gGT->iconGroup[UI_MAP_ICON_GROUP]);
+	P32(struct Icon *) *iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, P32_GET(struct GameTracker *, sdata->gGT)->iconGroup[UI_MAP_ICON_GROUP]));
 
 #if defined(CTR_NATIVE)
-	POLY_GT4 *p = gGT->backBuffer->primMem.cursor;
+	POLY_GT4 *p = P32_GET(void *, P32_GET(struct DB *, gGT->backBuffer)->primMem.cursor);
 #endif
-	DecalHUD_DrawPolyGT4(iconPtrArray[iconID], posX, posY, &gGT->backBuffer->primMem, gGT->pushBuffer_UI.ptrOT, ptrColor[0], ptrColor[1], ptrColor[2],
+	DecalHUD_DrawPolyGT4(P32_GET(struct Icon *, iconPtrArray[iconID]), posX, posY, &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), ptrColor[0], ptrColor[1], ptrColor[2],
 	                     ptrColor[3], 0, (int)scale);
 #if defined(CTR_NATIVE)
 	if ((NativeAspect_IsActive() || (gNativePreciseMinimapEnabled && NATIVE_PGXP_SUPPORTED)) && gGT->backBuffer->primMem.cursor == p + 1)
@@ -404,9 +404,9 @@ void UI_Map_DrawDrivers(struct UIMap *map, struct Thread *bucket, s16 *driverIco
 	int kartColor;
 	int iconID;
 	struct Driver *d;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
-	for (/* bucket */; bucket != 0; bucket = bucket->siblingThread, *driverIconCounter = *driverIconCounter + 1)
+	for (/* bucket */; bucket != 0; bucket = P32_GET(struct Thread *, bucket->siblingThread), *driverIconCounter = *driverIconCounter + 1)
 	{
 		// Retail hides race-map driver markers in 2P/4P. Adhoc renders a
 		// single fullscreen 1P presentation while retaining 2P simulation.
@@ -421,7 +421,7 @@ void UI_Map_DrawDrivers(struct UIMap *map, struct Thread *bucket, s16 *driverIco
 		}
 
 		// Player structure
-		d = bucket->object;
+		d = P32_GET(void *, bucket->object);
 
 		// characterID + 5
 		// corresponds with ptrColors
@@ -446,7 +446,7 @@ void UI_Map_DrawDrivers(struct UIMap *map, struct Thread *bucket, s16 *driverIco
 			if ((gGT->gameMode1 & ADVENTURE_ARENA) != 0)
 			{
 				// Draw dot for Player on 2D Adv Map
-				UI_Map_DrawAdvPlayer(map, &bucket->inst->matrix.t[0], UI_MAP_PLAYER_ICON_HUMAN, kartColor,
+				UI_Map_DrawAdvPlayer(map, &P32_GET(struct Instance *, bucket->inst)->matrix.t[0], UI_MAP_PLAYER_ICON_HUMAN, kartColor,
 				                     (d->rotCurr.y + UI_MAP_ARROW_ROT_FLIP) | UI_MAP_ARROW_ROT_FLAG, UI_MAP_ADV_ARROW_SCALE);
 
 				continue;
@@ -484,11 +484,11 @@ void UI_Map_DrawGhosts(struct UIMap *map, struct Thread *bucket)
 {
 	int color;
 	struct Driver *d;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
-	for (/* bucket */; bucket != 0; bucket = bucket->siblingThread)
+	for (/* bucket */; bucket != 0; bucket = P32_GET(struct Thread *, bucket->siblingThread))
 	{
-		d = bucket->object;
+		d = P32_GET(void *, bucket->object);
 
 		// if ghost not initialized
 		if (d->ghostBoolInit == 0)
@@ -560,13 +560,13 @@ void UI_Map_DrawTracking(struct UIMap *map, struct Thread *bucket)
 	struct TrackerWeapon *tw;
 	struct Driver *d;
 
-	for (/* bucket */; bucket != 0; bucket = bucket->siblingThread)
+	for (/* bucket */; bucket != 0; bucket = P32_GET(struct Thread *, bucket->siblingThread))
 	{
 		// thread -> instance
-		inst = bucket->inst;
+		inst = P32_GET(struct Instance *, bucket->inst);
 
 		// instance -> model -> modelID != warpball
-		if (inst->model->id != DYNAMIC_WARPBALL)
+		if (P32_GET(struct Model *, inst->model)->id != DYNAMIC_WARPBALL)
 		{
 			continue;
 		}
@@ -586,8 +586,8 @@ void UI_Map_DrawTracking(struct UIMap *map, struct Thread *bucket)
 		}
 
 		// driver target
-		tw = (struct TrackerWeapon *)inst->thread->object;
-		d = tw->driverTarget;
+		tw = (struct TrackerWeapon *)P32_GET(void *, P32_GET(struct Thread *, inst->thread)->object);
+		d = P32_GET(struct Driver *, tw->driverTarget);
 
 		// check if target exists
 		if (d == 0)
@@ -599,7 +599,7 @@ void UI_Map_DrawTracking(struct UIMap *map, struct Thread *bucket)
 
 		// flicker
 		targetColor = CRASH_BLUE;
-		if ((FPS_HALF(sdata->gGT->timer) & 1) != 0)
+		if ((FPS_HALF(P32_GET(struct GameTracker *, sdata->gGT)->timer) & 1) != 0)
 		{
 			targetColor = CORTEX_RED;
 		}

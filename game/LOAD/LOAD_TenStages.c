@@ -4,6 +4,10 @@
 #include "platform/native_adhoc.h"
 #endif
 
+#if defined(CTR_NATIVE) && defined(CTR_INTERNAL)
+#include <platform/native_replay_scheduler.h>
+#endif
+
 #if defined(CTR_NATIVE)
 #include "platform/native_minimap.h"
 void (*mainMenuInit[])() = {MM_JumpTo_Title_FirstTime, MM_JumpTo_Characters, MM_JumpTo_TrackSelect, MM_JumpTo_BattleSetup, CS_Garage_Init, MM_JumpTo_Scrapbook, MM_NativeBossFight_JumpToBossSelect};
@@ -13,6 +17,20 @@ void (*mainMenuInit[])() = {MM_JumpTo_Title_FirstTime, MM_JumpTo_Characters, MM_
 
 #ifdef CTR_NATIVE
 int gNativeBootSkipRequested = 0;
+
+// Start skips the boot intro. The intro loops poll live input between replay
+// frames (before frame 0, or several times within one), which replays cannot
+// reproduce, so the intro always plays in full while a replay records or plays.
+int NativeBootSkip_StartPressed(void)
+{
+#if defined(CTR_INTERNAL)
+	if (NativeReplayScheduler_Active())
+	{
+		return 0;
+	}
+#endif
+	return Platform_InputStartPressed();
+}
 
 enum
 {
@@ -92,7 +110,7 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 				while (((sdata->songPool[0].flags & 3) == 1) && (sdata->songPool[0].timeSpentPlaying < LOAD_NATIVE_NDBOX_INTRO_SONG_SYNC_TIME))
 				{
 					VSync(0);
-					if (Platform_InputStartPressed() != 0)
+					if (NativeBootSkip_StartPressed() != 0)
 					{
 						gNativeBootSkipRequested = 1;
 						break;
@@ -119,13 +137,13 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 			MEMPACK_PopToState(sdata->bookmarkID);
 		}
 
-		gGT->level1 = 0;
-		gGT->level2 = 0;
+		P32_SET(gGT->level1, 0);
+		P32_SET(gGT->level2, 0);
 #if defined(__vita__)
 		int nativeAdhocRacePrepared = NativeAdhoc_EnforcePreparedRaceConfig(gGT);
 #endif
 		gGT->numPlyrCurrGame = gGT->numPlyrNextGame;
-		strcpy(gGT->levelName, data.metaDataLEV[levelID].name_Debug);
+		strcpy(gGT->levelName, P32_GET(char *, data.metaDataLEV[levelID].name_Debug));
 
 		// pop back here for every load, after first load,
 		// this permanently reserves LNG, bigfile header, etc
@@ -139,8 +157,8 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 		gGT->renderFlags &= RENDER_FLAG_CHECKERED_FLAG;
 		gGT->overlayTransition = 0;
 		gGT->Debug_ToggleNormalSpawn = 1;
-		gGT->visMem1 = 0;
-		gGT->visMem2 = 0;
+		P32_SET(gGT->visMem1, 0);
+		P32_SET(gGT->visMem2, 0);
 
 		// Required for Scrapbook "Press Start",
 		// may also be required for other edge-cases
@@ -352,7 +370,7 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 		// Clear driver extras
 		for (int i = 0; i < LOAD_DRIVER_MODEL_EXTRA_COUNT; i++)
 		{
-			data.driverModelExtras[i].fileBase = NULL;
+			P32_SET(data.driverModelExtras[i].fileBase, NULL);
 		}
 
 		// NOTE(aalhendi): Retail gates stage advancement until the driver MPK callback sets ptrMPK.
@@ -365,10 +383,10 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 		// clear and reset
 		LibraryOfModels_Clear(gGT);
 
-		sdata->PLYROBJECTLIST = (int **)((u32)sdata->ptrMPK + 4);
+		P32_SET(sdata->PLYROBJECTLIST, (int **)(P32_DEC(char *, sdata->ptrMPK) + 4));
 		if (sdata->ptrMPK == 0)
 		{
-			sdata->PLYROBJECTLIST = 0;
+			P32_SET(sdata->PLYROBJECTLIST, 0);
 		}
 
 		LOAD_GlobalModelPtrs_MPK();
@@ -377,11 +395,11 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 		gGT->mpkIcons = 0;
 		if (sdata->ptrMPK != 0)
 		{
-			gGT->mpkIcons = *(int *)sdata->ptrMPK;
+			gGT->mpkIcons = *P32_DEC(u32 *, sdata->ptrMPK);
 
 			if (gGT->mpkIcons != 0)
 			{
-				DecalGlobal_Store(gGT, (struct LevTexLookup *)gGT->mpkIcons);
+				DecalGlobal_Store(gGT, P32_DEC(struct LevTexLookup *, gGT->mpkIcons));
 			}
 		}
 
@@ -414,9 +432,9 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 		// NOTE(aalhendi): ASM-verified NTSC-U 926 0x80033f1c-0x80033f44; retail converts driver DRAM file headers to model payload pointers here.
 		for (int i = 0; i < LOAD_DRIVER_MODEL_EXTRA_COUNT; i++)
 		{
-			if (data.driverModelExtras[i].fileBase != NULL)
+			if (P32_GET(void *, data.driverModelExtras[i].fileBase) != NULL)
 			{
-				data.driverModelExtras[i].model = (struct Model *)((u8 *)data.driverModelExtras[i].fileBase + LOAD_MODEL_FILE_HEADER_BYTES);
+				P32_SET(data.driverModelExtras[i].model, (struct Model *)((u8 *)P32_GET(void *, data.driverModelExtras[i].fileBase) + LOAD_MODEL_FILE_HEADER_BYTES));
 			}
 		}
 
@@ -443,7 +461,7 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 
 			// Allocate room for LEV swapping
 			u8 *hubAlloc = MEMPACK_AllocMem(firstSubpackSize + secondSubpackSize); // "HUB ALLOC"
-			sdata->ptrHubAlloc = hubAlloc;
+			P32_SET(sdata->ptrHubAlloc, hubAlloc);
 
 			// Change active allocation system to #2
 			// pack = [hubAlloc, hubAlloc+size1]
@@ -487,7 +505,7 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 			MEMPACK_SwapPacks(LOAD_MAIN_PACK_INDEX);
 
 			sdata->PatchMem_Size = MEMPACK_GetFreeBytes();
-			sdata->PatchMem_Ptr = MEMPACK_AllocHighMem(sdata->PatchMem_Size); //, "Patch Table Memory");
+			P32_SET(sdata->PatchMem_Ptr, MEMPACK_AllocHighMem(sdata->PatchMem_Size)); //, "Patch Table Memory");
 
 			// For Oxide-Intro and Credits, set active pack
 			MEMPACK_SwapPacks(gGT->activeMempackIndex);
@@ -506,24 +524,24 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 		if (((u32)(levelID - GEM_STONE_VALLEY) < LOAD_PTR_MAP_ADV_LEVEL_COUNT) || ((u32)(levelID - CREDITS_CRASH) < LOAD_PTR_MAP_CREDIT_LEVEL_COUNT))
 		{
 			// add PTR file to loading queue
-			LOAD_AppendQueue(bigfile, LT_SETADDR, LOAD_GetBigfileIndex(gGT->levelID, sdata->levelLOD, LVI_PTR), sdata->PatchMem_Ptr, LOAD_Callback_PatchMem);
+			LOAD_AppendQueue(bigfile, LT_SETADDR, LOAD_GetBigfileIndex(gGT->levelID, sdata->levelLOD, LVI_PTR), P32_GET(void *, sdata->PatchMem_Ptr), LOAD_Callback_PatchMem);
 		}
 		break;
 	}
 	case 7:
 	{
 		// get level pointer
-		struct Level *lev = sdata->ptrLevelFile;
+		struct Level *lev = P32_GET(struct Level *, sdata->ptrLevelFile);
 
-		gGT->level1 = lev;
-		gGT->visMem1 = lev->visMem;
+		P32_SET(gGT->level1, lev);
+		P32_SET(gGT->visMem1, P32_GET(struct VisMem *, lev->visMem));
 #if defined(CTR_NATIVE)
 		NativeReverseTrack_ApplyToLevel(lev);
 #endif
 
 		if (lev != 0)
 		{
-			DecalGlobal_Store(gGT, lev->levTexLookup);
+			DecalGlobal_Store(gGT, P32_GET(struct LevTexLookup *, lev->levTexLookup));
 		}
 
 		DebugFont_Init(gGT);
@@ -531,24 +549,24 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 		// if level is not nullptr
 		if (lev != 0)
 		{
-			LibraryOfModels_Store(gGT, lev->numModels, lev->ptrModelsPtrArray);
+			LibraryOfModels_Store(gGT, lev->numModels, P32_GET(P32(struct Model *) *, lev->ptrModelsPtrArray));
 
-			gGT->ptrCircle = (u32)DecalGlobal_FindInLEV(lev, rdata.s_circle);
-			gGT->ptrClod = (u32)DecalGlobal_FindInLEV(lev, rdata.s_clod);
-			gGT->ptrDustpuff = (u32)DecalGlobal_FindInLEV(lev, rdata.s_dustpuff);
-			gGT->ptrSmoking = (u32)DecalGlobal_FindInLEV(lev, rdata.s_smokering); // "Smoke Ring"
-			gGT->ptrSparkle = (u32)DecalGlobal_FindInLEV(lev, rdata.s_sparkle);
+			gGT->ptrCircle = P32_ENC(DecalGlobal_FindInLEV(lev, rdata.s_circle));
+			gGT->ptrClod = P32_ENC(DecalGlobal_FindInLEV(lev, rdata.s_clod));
+			gGT->ptrDustpuff = P32_ENC(DecalGlobal_FindInLEV(lev, rdata.s_dustpuff));
+			gGT->ptrSmoking = P32_ENC(DecalGlobal_FindInLEV(lev, rdata.s_smokering)); // "Smoke Ring"
+			gGT->ptrSparkle = P32_ENC(DecalGlobal_FindInLEV(lev, rdata.s_sparkle));
 		}
 
 		// if linked list of icons exists
 		if (gGT->mpkIcons != 0)
 		{
-			u32 *mpkIconList = (u32 *)*(u32 *)(gGT->mpkIcons + 4);
+			u32 *mpkIconList = P32_DEC(u32 *, *P32_DEC(u32 *, gGT->mpkIcons + 4));
 
-			gGT->trafficLightIcon[0] = (struct Icon *)DecalGlobal_FindInMPK(mpkIconList, rdata.s_lightredoff);
-			gGT->trafficLightIcon[1] = (struct Icon *)DecalGlobal_FindInMPK(mpkIconList, rdata.s_lightredon);
-			gGT->trafficLightIcon[2] = (struct Icon *)DecalGlobal_FindInMPK(mpkIconList, rdata.s_lightgreenoff);
-			gGT->trafficLightIcon[3] = (struct Icon *)DecalGlobal_FindInMPK(mpkIconList, rdata.s_lightgreenon);
+			P32_SET(gGT->trafficLightIcon[0], (struct Icon *)DecalGlobal_FindInMPK(mpkIconList, rdata.s_lightredoff));
+			P32_SET(gGT->trafficLightIcon[1], (struct Icon *)DecalGlobal_FindInMPK(mpkIconList, rdata.s_lightredon));
+			P32_SET(gGT->trafficLightIcon[2], (struct Icon *)DecalGlobal_FindInMPK(mpkIconList, rdata.s_lightgreenoff));
+			P32_SET(gGT->trafficLightIcon[3], (struct Icon *)DecalGlobal_FindInMPK(mpkIconList, rdata.s_lightgreenon));
 		}
 
 		gGT->gameMode1_prevFrame = 1;
@@ -574,10 +592,10 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 		// that does NOT overwrite the hub VRAM
 		int podiumFileVariant = LOAD_GetAdvPackIndex() - 1;
 
-		struct Model **podiumModels = &data.podiumModel_firstPlace;
+		P32(struct Model *) *podiumModels = &data.podiumModel_firstPlace;
 		for (int i = LOAD_PODIUM_LAST_MODEL_SLOT; i >= 0; i--)
 		{
-			podiumModels[i] = NULL;
+			P32_SET(podiumModels[i], NULL);
 		}
 
 		// NOTE(aalhendi): Retail gates stage advancement until
@@ -589,7 +607,7 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 
 		int fileIndex;
 		u8 *ptrIndexArr = &gGT->podium_modelIndex_First;
-		struct Model **ptrModelPtrArr = podiumModels;
+		P32(struct Model *) *ptrModelPtrArr = podiumModels;
 		void (*setPtrCb)(struct LoadQueueSlot *) = LOAD_QUEUE_CALLBACK_SET_POINTER;
 
 		// podium first place
@@ -611,7 +629,7 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 			}
 
 #if defined(CTR_NATIVE)
-			if (!NativeCustomRacer_LoadPodiumModelNow(0, ptrIndexArr[0], (void **)&ptrModelPtrArr[0]))
+			if (!NativeCustomRacer_LoadPodiumModelNow(0, ptrIndexArr[0], (P32(void *) *)&ptrModelPtrArr[0]))
 #endif
 				LOAD_AppendQueue(bigfile, LT_GETADDR, fileIndex, &ptrModelPtrArr[0], setPtrCb);
 		}
@@ -621,7 +639,7 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 		{
 			fileIndex = BI_DANCEMODELLOSE + podiumFileVariant + (ptrIndexArr[1] - STATIC_CRASHDANCE) * LOAD_PODIUM_MODEL_FILE_STRIDE;
 #if defined(CTR_NATIVE)
-			if (!NativeCustomRacer_LoadPodiumModelNow(1, ptrIndexArr[1], (void **)&ptrModelPtrArr[1]))
+			if (!NativeCustomRacer_LoadPodiumModelNow(1, ptrIndexArr[1], (P32(void *) *)&ptrModelPtrArr[1]))
 #endif
 				LOAD_AppendQueue(bigfile, LT_GETADDR, fileIndex, &ptrModelPtrArr[1], setPtrCb);
 		}
@@ -631,7 +649,7 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 		{
 			fileIndex = BI_DANCEMODELLOSE + podiumFileVariant + (ptrIndexArr[2] - STATIC_CRASHDANCE) * LOAD_PODIUM_MODEL_FILE_STRIDE;
 #if defined(CTR_NATIVE)
-			if (!NativeCustomRacer_LoadPodiumModelNow(2, ptrIndexArr[2], (void **)&ptrModelPtrArr[2]))
+			if (!NativeCustomRacer_LoadPodiumModelNow(2, ptrIndexArr[2], (P32(void *) *)&ptrModelPtrArr[2]))
 #endif
 				LOAD_AppendQueue(bigfile, LT_GETADDR, fileIndex, &ptrModelPtrArr[2], setPtrCb);
 		}
@@ -662,11 +680,11 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 		if (((gGT->gameMode1 & ADVENTURE_ARENA) != 0) && (gGT->podiumRewardID != NOFUNC) // 0
 		)
 		{
-			struct Model **modelPtrArr = &data.podiumModel_firstPlace;
+			P32(struct Model *) *modelPtrArr = &data.podiumModel_firstPlace;
 
 			for (int i = 0; i < LOAD_PODIUM_MODEL_SLOT_COUNT; i++)
 			{
-				struct Model *m = modelPtrArr[i];
+				struct Model *m = P32_GET(struct Model *, modelPtrArr[i]);
 
 				if (m == 0)
 				{
@@ -676,7 +694,7 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 				if (i < LOAD_PODIUM_MODELS_WITH_FILE_HEADER)
 				{
 					m = (struct Model *)((u8 *)m + LOAD_MODEL_FILE_HEADER_BYTES);
-					modelPtrArr[i] = m;
+					P32_SET(modelPtrArr[i], m);
 				}
 
 				if (m->id == -1)
@@ -684,7 +702,7 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 					continue;
 				}
 
-				gGT->modelPtr[m->id] = m;
+				P32_SET(gGT->modelPtr[m->id], m);
 			}
 
 #if defined(CTR_NATIVE)

@@ -8,6 +8,7 @@
 #include <stdlib.h>
 
 // Exercise the actual solver without a renderer or disc image.
+#include "../platform/native_ptr32.c"
 #include "../platform/native_physics.c"
 #include "../game/Vehicle/VehPhysSmoothed.c"
 #include "../game/Vehicle/VehSteeringSmoothed.c"
@@ -136,6 +137,9 @@ static void near(double a, double b)
 {
 	assert(fabs(a - b) < 0.000001);
 }
+
+// Objects whose address is stored in a game pointer field must be static: on
+// 64-bit builds those fields are CtrPtr32 handles, which cannot reach the stack.
 
 static void test_frame_rates(void)
 {
@@ -682,11 +686,12 @@ static void test_slope_contact_pushback(void)
 int main(void)
 {
 	struct Driver d = {0}, other = {0};
-	struct GameTracker gt = {0};
-	struct Terrain terrain = {0};
-	d.terrainMeta1 = d.terrainMeta2 = &terrain;
+	static struct GameTracker gt;
+	static struct Terrain terrain;
+	P32_SET(d.terrainMeta1, &terrain);
+	P32_SET(d.terrainMeta2, &terrain);
 	terrain.groundFrictionScale = terrain.speedMultiplier = terrain.slowUntilSpeed = 256;
-	sdata->gGT = &gt;
+	P32_SET(sdata->gGT, &gt);
 	gt.elapsedTimeMS = 16;
 	d.matrixMovingDir.m[0][0] = d.matrixMovingDir.m[1][1] = d.matrixMovingDir.m[2][2] = 4096;
 	assert(gNativeSmoothedPhysicsEnabled == 0);
@@ -736,13 +741,13 @@ int main(void)
 	NativePhysics_Gravity(&d, &d.velocity);
 	near(NativePhysics_ReadVelocity(&d).y, -3);
 	// Low-gravity surfaces apply the original 41% rule without truncation.
-	struct QuadBlock quad = {0};
+	static struct QuadBlock quad;
 	quad.quadFlags = 2;
-	d.underDriver = &quad;
+	P32_SET(d.underDriver, &quad);
 	NativePhysics_WriteVelocity(&d, (NativePhysicsVec){0, 0, 0});
 	NativePhysics_Gravity(&d, &d.velocity);
 	near(NativePhysics_ReadVelocity(&d).y, -0.615);
-	d.underDriver = NULL;
+	P32_SET(d.underDriver, NULL);
 	// Ground friction approaches zero without losing its half-unit step.
 	d.actionsFlagSetPrevFrame = ACTION_TOUCH_GROUND;
 	d.const_NoPedalFriction_Forward = d.const_NoPedalFriction_Perpendicular = 3;
@@ -763,8 +768,8 @@ int main(void)
 	NativePhysics_JumpAndFriction(&d);
 	near(NativePhysics_GetSpeed(&d), 101);
 	// A forced jump applies the authored impulse and original jump flags.
-	struct Level level = {0};
-	gt.level1 = &level;
+	static struct Level level;
+	P32_SET(gt.level1, &level);
 	d.jump_ForcedMS = 1;
 	d.jump_InitialVelY = 1001;
 	d.const_JumpForce = 1001;

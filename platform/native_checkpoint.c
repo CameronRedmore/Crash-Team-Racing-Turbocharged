@@ -120,17 +120,17 @@ internal u32 NativeCheckpoint_Align4(u32 value)
 	return (value + 3u) & ~3u;
 }
 
+// Checkpoint "addresses" are what retail pointer slots hold: raw addresses on
+// 32-bit builds and CtrPtr32 handles on 64-bit builds. Handles are offsets
+// within the image, so they also stay stable when the image moves.
 internal b32 NativeCheckpoint_PtrToU32(const void *ptr, u32 *out)
 {
-	uintptr_t value = (uintptr_t)ptr;
-
-	if ((ptr == NULL) || (out == NULL) || (value > 0xffffffffu))
+	if ((ptr == NULL) || (out == NULL))
 	{
 		return 0;
 	}
 
-	*out = (u32)value;
-	return 1;
+	return P32_TRY_ENC(ptr, out);
 }
 
 internal b32 NativeCheckpoint_ReadU32Slot(const void *slot, u32 *out)
@@ -197,7 +197,7 @@ internal int NativeCheckpoint_GetActiveMempackIndex(void)
 
 	for (i = 0; i < 4; i++)
 	{
-		if (sdata_static.PtrMempack == &sdata_static.mempack[i])
+		if (P32_GET(struct Mempack *, sdata_static.PtrMempack) == &sdata_static.mempack[i])
 		{
 			return i;
 		}
@@ -448,7 +448,7 @@ internal void *NativeCheckpoint_GetAddressFromRangeOffset(const struct NativeChe
 		return NULL;
 	}
 
-	return (void *)(uintptr_t)(range->start + offset);
+	return P32_DEC(void *, range->start + offset);
 }
 
 internal int NativeCheckpoint_RelocateAddress(const struct NativeCheckpointHeader *oldHeader, const struct NativeCheckpointHeader *liveHeader, u32 oldAddress,
@@ -672,7 +672,7 @@ internal void NativeCheckpoint_RelocateJitPool(const struct NativeCheckpointHead
 	NativeCheckpoint_RelocateLinkedList(oldHeader, liveHeader, &pool->taken);
 	NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &pool->ptrPoolData);
 
-	if ((pool->ptrPoolData == NULL) || (pool->maxItems <= 0) || (pool->itemSize <= 0))
+	if ((P32_GET(void *, pool->ptrPoolData) == NULL) || (pool->maxItems <= 0) || (pool->itemSize <= 0))
 	{
 		return;
 	}
@@ -683,7 +683,7 @@ internal void NativeCheckpoint_RelocateJitPool(const struct NativeCheckpointHead
 		return;
 	}
 
-	currSlot = (uintptr_t)pool->ptrPoolData;
+	currSlot = (uintptr_t)P32_GET(void *, pool->ptrPoolData);
 	for (int itemIndex = 0; itemIndex < pool->maxItems; itemIndex++)
 	{
 		NativeCheckpoint_RelocateItemLinks(oldHeader, liveHeader, (struct Item *)currSlot);
@@ -1102,11 +1102,11 @@ internal void NativeCheckpoint_RelocateSelectProfileLoadSaveObj(const struct Nat
 	NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &obj->thread);
 	NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &obj->icons);
 
-	if (NativeCheckpoint_IsLivePointer(liveHeader, obj->icons))
+	if (NativeCheckpoint_IsLivePointer(liveHeader, P32_GET(struct SelectProfileLoadSaveIcon *, obj->icons)))
 	{
 		for (u32 i = 0; i < 12; i++)
 		{
-			NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &obj->icons[i].inst);
+			NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &P32_GET(struct SelectProfileLoadSaveIcon *, obj->icons)[i].inst);
 		}
 	}
 }
@@ -1114,95 +1114,95 @@ internal void NativeCheckpoint_RelocateSelectProfileLoadSaveObj(const struct Nat
 internal void NativeCheckpoint_RelocateThreadObject(const struct NativeCheckpointHeader *oldHeader, const struct NativeCheckpointHeader *liveHeader,
                                                     struct Thread *thread)
 {
-	if ((thread == NULL) || (thread->object == NULL))
+	if ((thread == NULL) || (P32_GET(void *, thread->object) == NULL))
 	{
 		return;
 	}
 
-	if (thread->funcThTick == GhostReplay_ThTick)
+	if (P32_GET(ThreadFunc, thread->funcThTick) == GhostReplay_ThTick)
 	{
-		NativeCheckpoint_RelocateDriver(oldHeader, liveHeader, (struct Driver *)thread->object);
+		NativeCheckpoint_RelocateDriver(oldHeader, liveHeader, (struct Driver *)P32_GET(void *, thread->object));
 		return;
 	}
 
-	if (thread->funcThTick == VehTalkMask_ThTick)
+	if (P32_GET(ThreadFunc, thread->funcThTick) == VehTalkMask_ThTick)
 	{
-		NativeCheckpoint_RelocateMaskHint(oldHeader, liveHeader, (struct MaskHint *)thread->object);
+		NativeCheckpoint_RelocateMaskHint(oldHeader, liveHeader, (struct MaskHint *)P32_GET(void *, thread->object));
 	}
-	else if ((thread->funcThTick == RB_MaskWeapon_ThTick) || (thread->funcThTick == RB_MaskWeapon_FadeAway))
+	else if ((P32_GET(ThreadFunc, thread->funcThTick) == RB_MaskWeapon_ThTick) || (P32_GET(ThreadFunc, thread->funcThTick) == RB_MaskWeapon_FadeAway))
 	{
-		NativeCheckpoint_RelocateMaskHeadWeapon(oldHeader, liveHeader, (struct MaskHeadWeapon *)thread->object);
+		NativeCheckpoint_RelocateMaskHeadWeapon(oldHeader, liveHeader, (struct MaskHeadWeapon *)P32_GET(void *, thread->object));
 	}
-	else if ((thread->funcThTick == RB_MovingExplosive_ThTick) || (thread->funcThTick == RB_Warpball_ThTick) || (thread->funcThTick == RB_Warpball_FadeAway) ||
-	         (thread->funcThTick == RB_Warpball_TurnAround))
+	else if ((P32_GET(ThreadFunc, thread->funcThTick) == RB_MovingExplosive_ThTick) || (P32_GET(ThreadFunc, thread->funcThTick) == RB_Warpball_ThTick) || (P32_GET(ThreadFunc, thread->funcThTick) == RB_Warpball_FadeAway) ||
+	         (P32_GET(ThreadFunc, thread->funcThTick) == RB_Warpball_TurnAround))
 	{
-		NativeCheckpoint_RelocateTrackerWeapon(oldHeader, liveHeader, (struct TrackerWeapon *)thread->object);
+		NativeCheckpoint_RelocateTrackerWeapon(oldHeader, liveHeader, (struct TrackerWeapon *)P32_GET(void *, thread->object));
 	}
-	else if ((thread->funcThTick == RB_GenericMine_ThTick) || (thread->funcThTick == RB_TNT_ThTick_ThrowOffHead) ||
-	         (thread->funcThTick == RB_TNT_ThTick_SitOnHead) || (thread->funcThTick == RB_TNT_ThTick_ThrowOnHead) ||
-	         (thread->funcThTick == RB_Potion_ThTick_InAir))
+	else if ((P32_GET(ThreadFunc, thread->funcThTick) == RB_GenericMine_ThTick) || (P32_GET(ThreadFunc, thread->funcThTick) == RB_TNT_ThTick_ThrowOffHead) ||
+	         (P32_GET(ThreadFunc, thread->funcThTick) == RB_TNT_ThTick_SitOnHead) || (P32_GET(ThreadFunc, thread->funcThTick) == RB_TNT_ThTick_ThrowOnHead) ||
+	         (P32_GET(ThreadFunc, thread->funcThTick) == RB_Potion_ThTick_InAir))
 	{
-		NativeCheckpoint_RelocateMineWeapon(oldHeader, liveHeader, (struct MineWeapon *)thread->object);
+		NativeCheckpoint_RelocateMineWeapon(oldHeader, liveHeader, (struct MineWeapon *)P32_GET(void *, thread->object));
 	}
-	else if ((thread->funcThTick == RB_RainCloud_ThTick) || (thread->funcThTick == RB_RainCloud_FadeAway))
+	else if ((P32_GET(ThreadFunc, thread->funcThTick) == RB_RainCloud_ThTick) || (P32_GET(ThreadFunc, thread->funcThTick) == RB_RainCloud_FadeAway))
 	{
-		NativeCheckpoint_RelocateRainCloud(oldHeader, liveHeader, (struct RainCloud *)thread->object);
+		NativeCheckpoint_RelocateRainCloud(oldHeader, liveHeader, (struct RainCloud *)P32_GET(void *, thread->object));
 	}
-	else if ((thread->funcThTick == RB_ShieldDark_ThTick_Grow) || (thread->funcThTick == RB_ShieldDark_ThTick_Pop))
+	else if ((P32_GET(ThreadFunc, thread->funcThTick) == RB_ShieldDark_ThTick_Grow) || (P32_GET(ThreadFunc, thread->funcThTick) == RB_ShieldDark_ThTick_Pop))
 	{
-		NativeCheckpoint_RelocateShield(oldHeader, liveHeader, (struct Shield *)thread->object);
+		NativeCheckpoint_RelocateShield(oldHeader, liveHeader, (struct Shield *)P32_GET(void *, thread->object));
 	}
-	else if (thread->funcThTick == RB_Baron_ThTick)
+	else if (P32_GET(ThreadFunc, thread->funcThTick) == RB_Baron_ThTick)
 	{
-		NativeCheckpoint_RelocateBaron(oldHeader, liveHeader, (struct Baron *)thread->object);
+		NativeCheckpoint_RelocateBaron(oldHeader, liveHeader, (struct Baron *)P32_GET(void *, thread->object));
 	}
-	else if (thread->funcThTick == RB_Follower_ThTick)
+	else if (P32_GET(ThreadFunc, thread->funcThTick) == RB_Follower_ThTick)
 	{
-		NativeCheckpoint_RelocateFollower(oldHeader, liveHeader, (struct Follower *)thread->object);
+		NativeCheckpoint_RelocateFollower(oldHeader, liveHeader, (struct Follower *)P32_GET(void *, thread->object));
 	}
-	else if (thread->funcThTick == RB_Fruit_ThTick)
+	else if (P32_GET(ThreadFunc, thread->funcThTick) == RB_Fruit_ThTick)
 	{
-		NativeCheckpoint_RelocateFruit(oldHeader, liveHeader, (struct Fruit *)thread->object);
+		NativeCheckpoint_RelocateFruit(oldHeader, liveHeader, (struct Fruit *)P32_GET(void *, thread->object));
 	}
-	else if (thread->funcThTick == RB_Spider_ThTick)
+	else if (P32_GET(ThreadFunc, thread->funcThTick) == RB_Spider_ThTick)
 	{
-		NativeCheckpoint_RelocateSpider(oldHeader, liveHeader, (struct Spider *)thread->object);
+		NativeCheckpoint_RelocateSpider(oldHeader, liveHeader, (struct Spider *)P32_GET(void *, thread->object));
 	}
-	else if (thread->funcThTick == VehTurbo_ThTick)
+	else if (P32_GET(ThreadFunc, thread->funcThTick) == VehTurbo_ThTick)
 	{
-		NativeCheckpoint_RelocateTurbo(oldHeader, liveHeader, (struct Turbo *)thread->object);
+		NativeCheckpoint_RelocateTurbo(oldHeader, liveHeader, (struct Turbo *)P32_GET(void *, thread->object));
 	}
-	else if (thread->funcThTick == RB_Blowup_ThTick)
+	else if (P32_GET(ThreadFunc, thread->funcThTick) == RB_Blowup_ThTick)
 	{
-		NativeCheckpoint_RelocateBlowupSlots(oldHeader, liveHeader, (s32 *)thread->object);
+		NativeCheckpoint_RelocateBlowupSlots(oldHeader, liveHeader, (s32 *)P32_GET(void *, thread->object));
 	}
-	else if (thread->funcThTick == RB_Burst_ThTick)
+	else if (P32_GET(ThreadFunc, thread->funcThTick) == RB_Burst_ThTick)
 	{
-		NativeCheckpoint_RelocateBurstSlots(oldHeader, liveHeader, (s32 *)thread->object);
+		NativeCheckpoint_RelocateBurstSlots(oldHeader, liveHeader, (s32 *)P32_GET(void *, thread->object));
 	}
-	else if (thread->funcThTick == AH_Garage_ThTick)
+	else if (P32_GET(ThreadFunc, thread->funcThTick) == AH_Garage_ThTick)
 	{
-		NativeCheckpoint_RelocateBossGarageDoor(oldHeader, liveHeader, (struct BossGarageDoor *)thread->object);
+		NativeCheckpoint_RelocateBossGarageDoor(oldHeader, liveHeader, (struct BossGarageDoor *)P32_GET(void *, thread->object));
 	}
-	else if (thread->funcThTick == AH_Door_ThTick)
+	else if (P32_GET(ThreadFunc, thread->funcThTick) == AH_Door_ThTick)
 	{
-		NativeCheckpoint_RelocateWoodDoor(oldHeader, liveHeader, (struct WoodDoor *)thread->object);
+		NativeCheckpoint_RelocateWoodDoor(oldHeader, liveHeader, (struct WoodDoor *)P32_GET(void *, thread->object));
 	}
-	else if (thread->funcThTick == AH_WarpPad_ThTick)
+	else if (P32_GET(ThreadFunc, thread->funcThTick) == AH_WarpPad_ThTick)
 	{
-		NativeCheckpoint_RelocateWarpPad(oldHeader, liveHeader, (struct WarpPad *)thread->object);
+		NativeCheckpoint_RelocateWarpPad(oldHeader, liveHeader, (struct WarpPad *)P32_GET(void *, thread->object));
 	}
-	else if (thread->funcThTick == AH_SaveObj_ThTick)
+	else if (P32_GET(ThreadFunc, thread->funcThTick) == AH_SaveObj_ThTick)
 	{
-		NativeCheckpoint_RelocateSaveObj(oldHeader, liveHeader, (struct SaveObj *)thread->object);
+		NativeCheckpoint_RelocateSaveObj(oldHeader, liveHeader, (struct SaveObj *)P32_GET(void *, thread->object));
 	}
-	else if (thread->funcThTick == CS_Thread_ThTick)
+	else if (P32_GET(ThreadFunc, thread->funcThTick) == CS_Thread_ThTick)
 	{
-		NativeCheckpoint_RelocateCutsceneObj(oldHeader, liveHeader, (struct CutsceneObj *)thread->object);
+		NativeCheckpoint_RelocateCutsceneObj(oldHeader, liveHeader, (struct CutsceneObj *)P32_GET(void *, thread->object));
 	}
-	else if (thread->funcThTick == SelectProfile_ThTick)
+	else if (P32_GET(ThreadFunc, thread->funcThTick) == SelectProfile_ThTick)
 	{
-		NativeCheckpoint_RelocateSelectProfileLoadSaveObj(oldHeader, liveHeader, (struct SelectProfileLoadSaveObj *)thread->object);
+		NativeCheckpoint_RelocateSelectProfileLoadSaveObj(oldHeader, liveHeader, (struct SelectProfileLoadSaveObj *)P32_GET(void *, thread->object));
 	}
 }
 
@@ -1217,10 +1217,10 @@ internal void NativeCheckpoint_RelocateThreadsInPool(const struct NativeCheckpoi
 		return;
 	}
 
-	item = pool->taken.first;
+	item = P32_GET(struct Item *, pool->taken.first);
 	while ((item != NULL) && (guard++ < pool->maxItems))
 	{
-		struct Item *next = item->next;
+		struct Item *next = P32_GET(struct Item *, item->next);
 		NativeCheckpoint_RelocateThread(oldHeader, liveHeader, (struct Thread *)item);
 		item = next;
 	}
@@ -1237,10 +1237,10 @@ internal void NativeCheckpoint_RelocateThreadObjectsInPool(const struct NativeCh
 		return;
 	}
 
-	item = pool->taken.first;
+	item = P32_GET(struct Item *, pool->taken.first);
 	while ((item != NULL) && (guard++ < pool->maxItems))
 	{
-		struct Item *next = item->next;
+		struct Item *next = P32_GET(struct Item *, item->next);
 		NativeCheckpoint_RelocateThreadObject(oldHeader, liveHeader, (struct Thread *)item);
 		item = next;
 	}
@@ -1257,10 +1257,10 @@ internal void NativeCheckpoint_RelocateInstancesInPool(const struct NativeCheckp
 		return;
 	}
 
-	item = pool->taken.first;
+	item = P32_GET(struct Item *, pool->taken.first);
 	while ((item != NULL) && (guard++ < pool->maxItems))
 	{
-		struct Item *next = item->next;
+		struct Item *next = P32_GET(struct Item *, item->next);
 		NativeCheckpoint_RelocateInstance(oldHeader, liveHeader, (struct Instance *)item, numPlayers);
 		item = next;
 	}
@@ -1277,10 +1277,10 @@ internal void NativeCheckpoint_RelocateRainPool(const struct NativeCheckpointHea
 		return;
 	}
 
-	item = pool->taken.first;
+	item = P32_GET(struct Item *, pool->taken.first);
 	while ((item != NULL) && (guard++ < pool->maxItems))
 	{
-		struct Item *next = item->next;
+		struct Item *next = P32_GET(struct Item *, item->next);
 		NativeCheckpoint_RelocateRainLocal(oldHeader, liveHeader, (struct RainLocal *)item);
 		item = next;
 	}
@@ -1306,7 +1306,7 @@ internal void NativeCheckpoint_RelocateParticleList(const struct NativeCheckpoin
 
 	while ((particle != NULL) && (guard++ < maxParticles))
 	{
-		struct Particle *next = particle->next;
+		struct Particle *next = P32_GET(struct Particle *, particle->next);
 		NativeCheckpoint_RelocateParticle(oldHeader, liveHeader, particle);
 		particle = next;
 	}
@@ -1452,11 +1452,11 @@ internal void NativeCheckpoint_RelocateLanguagePointers(const struct NativeCheck
 	NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &sdata_static.lngStrings);
 
 	if ((sdata_static.numLngStrings > 0) && ((u32)sdata_static.numLngStrings <= NATIVE_CHECKPOINT_LNG_STRING_CAP) &&
-	    NativeCheckpoint_IsLivePointer(liveHeader, sdata_static.lngStrings))
+	    NativeCheckpoint_IsLivePointer(liveHeader, P32_GET(P32(char *) *, sdata_static.lngStrings)))
 	{
 		for (s32 i = 0; i < sdata_static.numLngStrings; i++)
 		{
-			NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &sdata_static.lngStrings[i]);
+			NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &P32_GET(P32(char *) *, sdata_static.lngStrings)[i]);
 		}
 	}
 }
@@ -1647,9 +1647,9 @@ internal void NativeCheckpoint_RelocateD230Pointers(const struct NativeCheckpoin
 	}
 
 	NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &D230.titleObj);
-	if (NativeCheckpoint_IsLivePointer(liveHeader, D230.titleObj))
+	if (NativeCheckpoint_IsLivePointer(liveHeader, P32_GET(struct Title *, D230.titleObj)))
 	{
-		NativeCheckpoint_RelocateTitle(oldHeader, liveHeader, D230.titleObj);
+		NativeCheckpoint_RelocateTitle(oldHeader, liveHeader, P32_GET(struct Title *, D230.titleObj));
 	}
 
 	NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &D230.activeCharacterSelectWindowPos);
@@ -1695,9 +1695,9 @@ internal void NativeCheckpoint_RelocateD232Pointers(const struct NativeCheckpoin
 
 	NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &D232.ptrPauseObject);
 	NativeCheckpoint_RelocateAdventurePauseObject(oldHeader, liveHeader, &D232.pauseObject);
-	if ((D232.ptrPauseObject != &D232.pauseObject) && NativeCheckpoint_IsLivePointer(liveHeader, D232.ptrPauseObject))
+	if ((P32_GET(struct PauseObject *, D232.ptrPauseObject) != &D232.pauseObject) && NativeCheckpoint_IsLivePointer(liveHeader, P32_GET(struct PauseObject *, D232.ptrPauseObject)))
 	{
-		NativeCheckpoint_RelocateAdventurePauseObject(oldHeader, liveHeader, D232.ptrPauseObject);
+		NativeCheckpoint_RelocateAdventurePauseObject(oldHeader, liveHeader, P32_GET(struct PauseObject *, D232.ptrPauseObject));
 	}
 }
 
@@ -1741,11 +1741,11 @@ internal void NativeCheckpoint_RelocateCreditsPointers(const struct NativeCheckp
 	NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &creditsBSS.ptrStrings);
 
 	if ((creditsBSS.numStrings > 0) && ((u32)creditsBSS.numStrings <= NATIVE_CHECKPOINT_CREDITS_STRING_CAP) &&
-	    NativeCheckpoint_IsLivePointer(liveHeader, creditsBSS.ptrStrings))
+	    NativeCheckpoint_IsLivePointer(liveHeader, P32_GET(P32(char *) *, creditsBSS.ptrStrings)))
 	{
 		for (s32 i = 0; i < creditsBSS.numStrings; i++)
 		{
-			NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &creditsBSS.ptrStrings[i]);
+			NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &P32_GET(P32(char *) *, creditsBSS.ptrStrings)[i]);
 		}
 	}
 
@@ -1829,8 +1829,8 @@ internal void NativeCheckpoint_RelocateGameTrackerPointers(const struct NativeCh
 	NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &gGT->ptrRenderBucketInstance);
 	NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &gGT->particleList_ordinary);
 	NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &gGT->particleList_heatWarp);
-	NativeCheckpoint_RelocateParticleList(oldHeader, liveHeader, gGT->particleList_ordinary, gGT->JitPools.particle.maxItems);
-	NativeCheckpoint_RelocateParticleList(oldHeader, liveHeader, gGT->particleList_heatWarp, gGT->JitPools.particle.maxItems);
+	NativeCheckpoint_RelocateParticleList(oldHeader, liveHeader, P32_GET(struct Particle *, gGT->particleList_ordinary), gGT->JitPools.particle.maxItems);
+	NativeCheckpoint_RelocateParticleList(oldHeader, liveHeader, P32_GET(struct Particle *, gGT->particleList_heatWarp), gGT->JitPools.particle.maxItems);
 	for (u32 i = 0; i < len(gGT->trafficLightIcon); i++)
 	{
 		NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &gGT->trafficLightIcon[i]);
@@ -1858,7 +1858,7 @@ internal void NativeCheckpoint_RelocateGameTrackerPointers(const struct NativeCh
 	NativeCheckpoint_RelocateThreadObjectsInPool(oldHeader, liveHeader, &gGT->JitPools.thread);
 	for (u32 i = 0; i < len(gGT->drivers); i++)
 	{
-		NativeCheckpoint_RelocateDriver(oldHeader, liveHeader, gGT->drivers[i]);
+		NativeCheckpoint_RelocateDriver(oldHeader, liveHeader, P32_GET(struct Driver *, gGT->drivers[i]));
 	}
 }
 

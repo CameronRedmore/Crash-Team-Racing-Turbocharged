@@ -8,7 +8,7 @@ void MainRaceTrack_StartLoad(s16 levelID)
 	// destroy "most" fx, let menu fx play to end
 	howl_StopAudio(1, 0, 0);
 
-	ElimBG_Deactivate(sdata->gGT);
+	ElimBG_Deactivate(P32_GET(struct GameTracker *, sdata->gGT));
 
 	LOAD_LevelFile(levelID);
 	return;
@@ -21,7 +21,7 @@ void MainRaceTrack_RequestLoad(s16 levelID)
 	levelID = NativeReverseTrack_ResolveLoadLevel(levelID);
 #endif
 	// Turn off HUD
-	sdata->gGT->hudFlags &= HUD_FLAG_CLEAR_RACE_HUD_MASK;
+	P32_GET(struct GameTracker *, sdata->gGT)->hudFlags &= HUD_FLAG_CLEAR_RACE_HUD_MASK;
 
 	if (RaceFlag_IsFullyOffScreen())
 	{

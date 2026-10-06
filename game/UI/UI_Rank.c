@@ -72,8 +72,8 @@ CTR_STATIC_ASSERT(UI_RANK_TRACK_CHECKPOINT_COUNT_LIMIT == 0xff);
 
 internal int UI_Rank_GetDamageColor(int driverIndex)
 {
-	struct GameTracker *gGT = sdata->gGT;
-	struct Driver *d = gGT->drivers[driverIndex];
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct Driver *d = P32_GET(struct Driver *, gGT->drivers[driverIndex]);
 
 	int damageTimer = d->damageColorTimer;
 
@@ -128,7 +128,7 @@ void UI_DrawRankedDrivers(void)
 	int driverIndex;
 	u32 damageColor;
 
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	int numPlyr = gGT->numPlyrCurrGame;
 	int adhocVsSingleView = 0;
 #if defined(__vita__)
@@ -157,9 +157,9 @@ void UI_DrawRankedDrivers(void)
 				// Retail reads driverRank before its later null check; if the
 				// slot is empty, PS1 low RAM is still readable, but native
 				// must skip it before dereferencing a null driver pointer.
-				if (gGT->drivers[driverIndex] != NULL)
+				if (P32_GET(struct Driver *, gGT->drivers[driverIndex]) != NULL)
 				{
-					data.rankIconsDesired[driverIndex] = gGT->drivers[driverIndex]->driverRank;
+					data.rankIconsDesired[driverIndex] = P32_GET(struct Driver *, gGT->drivers[driverIndex])->driverRank;
 				}
 #else
 				data.rankIconsDesired[driverIndex] = gGT->drivers[driverIndex]->driverRank;
@@ -167,9 +167,9 @@ void UI_DrawRankedDrivers(void)
 			}
 
 			// if player structure pointer is not nullptr
-			if ((gGT->drivers[driverIndex] != 0) &&
+			if ((P32_GET(struct Driver *, gGT->drivers[driverIndex]) != 0) &&
 
-			    ((gGT->drivers[driverIndex]->actionsFlagSet & ACTION_RACE_FINISHED) != 0))
+			    ((P32_GET(struct Driver *, gGT->drivers[driverIndex])->actionsFlagSet & ACTION_RACE_FINISHED) != 0))
 			{
 				// count how many racers have finished
 				numRacersFinished++;
@@ -215,7 +215,7 @@ void UI_DrawRankedDrivers(void)
 
 			if (
 			    // if player structure pointer is not nullptr
-			    (gGT->drivers[driverIndex] != 0) &&
+			    (P32_GET(struct Driver *, gGT->drivers[driverIndex]) != 0) &&
 
 			    // if you haven't gotten to the last driver
 			    ((*des + 1) < UI_RANK_DRIVER_COUNT_PLUS_ONE))
@@ -265,11 +265,11 @@ void UI_DrawRankedDrivers(void)
 
 				UI_DrawDriverIconForDriver(driverIndex,
 
-				    gGT->ptrIcons[data.MetaDataCharacters[data.characterIDs[driverIndex]].iconID],
+				    P32_GET(struct Icon *, gGT->ptrIcons[data.MetaDataCharacters[data.characterIDs[driverIndex]].iconID]),
 
-				    pos.x, pos.y, &gGT->backBuffer->primMem,
+				    pos.x, pos.y, &P32_GET(struct DB *, gGT->backBuffer)->primMem,
 
-				    gGT->pushBuffer_UI.ptrOT,
+				    P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT),
 
 				    1, iconScale, damageColor);
 
@@ -307,11 +307,11 @@ void UI_DrawRankedDrivers(void)
 
 			if (
 			    // if racer is in first lap and
-			    (gGT->drivers[driverIndex]->lapIndex == 0) &&
+			    (P32_GET(struct Driver *, gGT->drivers[driverIndex])->lapIndex == 0) &&
 
 			    // racer crossed the startline backwards
 			    // this is when race starts and you're behind the finish line
-			    ((gGT->drivers[driverIndex]->actionsFlagSet & ACTION_BEHIND_START_LINE) != 0))
+			    ((P32_GET(struct Driver *, gGT->drivers[driverIndex])->actionsFlagSet & ACTION_BEHIND_START_LINE) != 0))
 			{
 			TrackIconAtStart:
 				// icon posX is zero,
@@ -321,8 +321,8 @@ void UI_DrawRankedDrivers(void)
 			else
 			{
 				// length of track
-				int trackLength = gGT->level1->ptr_restart_points[0].distToFinish * UI_RANK_TRACK_DISTANCE_SCALE;
-				int driverProgress = trackLength - gGT->drivers[driverIndex]->distanceToFinish_curr;
+				int trackLength = P32_GET(struct CheckpointNode *, P32_GET(struct Level *, gGT->level1)->ptr_restart_points)[0].distToFinish * UI_RANK_TRACK_DISTANCE_SCALE;
+				int driverProgress = trackLength - P32_GET(struct Driver *, gGT->drivers[driverIndex])->distanceToFinish_curr;
 				int trackScreenUnit = trackLength / UI_RANK_TRACK_SCREEN_DIVISOR;
 
 				// divide distanceToFinish by screen width
@@ -379,8 +379,8 @@ void UI_DrawRankedDrivers(void)
 			int posY = UI_RANK_TRACK_ICON_POS_Y;
 
 			UI_DrawDriverIconGT4ForDriver(driverIndex,
-			    gGT->ptrIcons[data.MetaDataCharacters[data.characterIDs[driverIndex]].iconID],
-			    posX, posY, &gGT->backBuffer->primMem, gGT->pushBuffer_UI.ptrOT,
+			    P32_GET(struct Icon *, gGT->ptrIcons[data.MetaDataCharacters[data.characterIDs[driverIndex]].iconID]),
+			    posX, posY, &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT),
 			    damageColor, damageColor, damageColor, damageColor,
 			    TRANS_50_DECAL, UI_RANK_TRACK_ICON_SCALE);
 
@@ -388,25 +388,25 @@ void UI_DrawRankedDrivers(void)
 			trackIconX = trackIconX + 1;
 		}
 
-		for (struct Thread *warpballThread = gGT->threadBuckets[TRACKING].thread; warpballThread != 0; warpballThread = warpballThread->siblingThread)
+		for (struct Thread *warpballThread = P32_GET(struct Thread *, gGT->threadBuckets[TRACKING].thread); warpballThread != 0; warpballThread = P32_GET(struct Thread *, warpballThread->siblingThread))
 		{
 			// Get Instance from Thread
-			struct Instance *warpballInst = warpballThread->inst;
+			struct Instance *warpballInst = P32_GET(struct Instance *, warpballThread->inst);
 
 			// if not warpball, skip
-			if (warpballInst->model->id != DYNAMIC_WARPBALL)
+			if (P32_GET(struct Model *, warpballInst->model)->id != DYNAMIC_WARPBALL)
 			{
 				continue;
 			}
 
 			// pointer to path data
-			struct CheckpointNode *cn = gGT->level1->ptr_restart_points;
+			struct CheckpointNode *cn = P32_GET(struct CheckpointNode *, P32_GET(struct Level *, gGT->level1)->ptr_restart_points);
 
-			struct TrackerWeapon *tw = warpballInst->thread->object;
+			struct TrackerWeapon *tw = P32_GET(void *, P32_GET(struct Thread *, warpballInst->thread)->object);
 
-			int checkpointIndex = ((intptr_t)tw->ptrNodeCurr - (intptr_t)cn) / (s32)sizeof(struct CheckpointNode);
+			int checkpointIndex = ((intptr_t)P32_GET(struct CheckpointNode *, tw->ptrNodeCurr) - (intptr_t)cn) / (s32)sizeof(struct CheckpointNode);
 
-			if (((u32)(gGT->level1->cnt_restart_points - 1) >= UI_RANK_TRACK_CHECKPOINT_COUNT_LIMIT) || (checkpointIndex < 0))
+			if (((u32)(P32_GET(struct Level *, gGT->level1)->cnt_restart_points - 1) >= UI_RANK_TRACK_CHECKPOINT_COUNT_LIMIT) || (checkpointIndex < 0))
 			{
 				continue;
 			}
@@ -436,7 +436,7 @@ void UI_DrawRankedDrivers(void)
 			int projectedDistance = CTR_GteReadMAC1();
 
 			int trackProgress = cn1->distToFinish * UI_RANK_TRACK_DISTANCE_SCALE + (projectedDistance >> UI_RANK_TRACK_WARPBALL_PROGRESS_SHIFT);
-			int trackLength = gGT->level1->ptr_restart_points[0].distToFinish * UI_RANK_TRACK_DISTANCE_SCALE;
+			int trackLength = P32_GET(struct CheckpointNode *, P32_GET(struct Level *, gGT->level1)->ptr_restart_points)[0].distToFinish * UI_RANK_TRACK_DISTANCE_SCALE;
 			int wrappedProgress = trackProgress % trackLength;
 			if (wrappedProgress == 0)
 			{
@@ -461,13 +461,13 @@ void UI_DrawRankedDrivers(void)
 
 			DecalHUD_DrawWeapon(
 			    // warpball icon
-			    gGT->ptrIcons[UI_RANK_TRACK_WARPBALL_ICON], posX, posY,
+			    P32_GET(struct Icon *, gGT->ptrIcons[UI_RANK_TRACK_WARPBALL_ICON]), posX, posY,
 
 			    // pointer to PrimMem struct
-			    &gGT->backBuffer->primMem,
+			    &P32_GET(struct DB *, gGT->backBuffer)->primMem,
 
 			    // pointer to OT memory
-			    gGT->pushBuffer_UI.ptrOT,
+			    P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT),
 
 			    TRANS_50_DECAL, UI_RANK_TRACK_WARPBALL_SCALE, 1);
 		}

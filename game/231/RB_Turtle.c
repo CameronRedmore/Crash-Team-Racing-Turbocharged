@@ -8,8 +8,8 @@ void RB_Turtle_ThTick(struct Thread *t)
 	struct Instance *turtleInst;
 	int currTimer;
 
-	turtleObj = t->object;
-	turtleInst = t->inst;
+	turtleObj = P32_GET(void *, t->object);
+	turtleInst = P32_GET(struct Instance *, t->inst);
 
 	if (turtleObj->direction == TURTLE_DIRECTION_RISING)
 	{
@@ -22,7 +22,7 @@ void RB_Turtle_ThTick(struct Thread *t)
 		if (currTimer < 0x3c0)
 		{
 			// increment
-			currTimer += sdata->gGT->elapsedTimeMS;
+			currTimer += P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS;
 
 			// set
 			turtleObj->timer = currTimer;
@@ -81,7 +81,7 @@ void RB_Turtle_ThTick(struct Thread *t)
 		if (currTimer < 0x3c0)
 		{
 			// increment
-			currTimer += sdata->gGT->elapsedTimeMS;
+			currTimer += P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS;
 
 			// set
 			turtleObj->timer = currTimer;
@@ -131,7 +131,7 @@ int RB_Turtle_LInC(struct Instance *inst, struct Thread *driverTh, struct Scratc
 	int jumpType;
 	struct Driver *driver;
 
-	driver = driverTh->object;
+	driver = P32_GET(void *, driverTh->object);
 
 	// absolute value
 	speed = driver->speedApprox;
@@ -145,7 +145,7 @@ int RB_Turtle_LInC(struct Instance *inst, struct Thread *driverTh, struct Scratc
 		// small jump
 		jumpType = FORCED_JUMP_LOW;
 
-		if (((struct Turtle *)inst->thread->object)->state != TURTLE_STATE_FULLY_DOWN)
+		if (((struct Turtle *)P32_GET(void *, P32_GET(struct Thread *, inst->thread)->object))->state != TURTLE_STATE_FULLY_DOWN)
 		{
 			// big jump
 			jumpType = FORCED_JUMP_HIGH;
@@ -168,7 +168,7 @@ void RB_Turtle_LInB(struct Instance *inst)
 
 	inst->flags |= SPLIT_LINE;
 
-	if (inst->thread != 0)
+	if (P32_GET(struct Thread *, inst->thread) != 0)
 	{
 		return;
 	}
@@ -186,8 +186,8 @@ void RB_Turtle_LInB(struct Instance *inst)
 	{
 		return;
 	}
-	inst->thread = t;
-	t->inst = inst;
+	P32_SET(inst->thread, t);
+	P32_SET(t->inst, inst);
 
 	inst->scale.x = 0x1000;
 	inst->scale.y = 0x1000;
@@ -195,7 +195,7 @@ void RB_Turtle_LInB(struct Instance *inst)
 
 	turtleID = inst->name[strlen(inst->name) - 1] - '0';
 
-	turtleObj = ((struct Turtle *)t->object);
+	turtleObj = ((struct Turtle *)P32_GET(void *, t->object));
 	turtleObj->turtleID = turtleID;
 	turtleObj->timer = 0;
 	turtleObj->direction = TURTLE_DIRECTION_FALLING;

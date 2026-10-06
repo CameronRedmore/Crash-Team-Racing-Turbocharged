@@ -53,6 +53,125 @@ static struct NativeReplaySchedulerFrameInfo MainReplayScheduler_FrameInfo(struc
 
 	return info;
 }
+
+static u32 MainReplayTrace_Hash(u32 hash, s32 value)
+{
+	u32 bits = (u32)value;
+	int i;
+
+	for (i = 0; i < 4; i++)
+	{
+		hash ^= (bits >> (i * 8)) & 0xffu;
+		hash *= 16777619u;
+	}
+	return hash;
+}
+
+// Hashes the pointer-free state of every thread in a bucket. Pointer fields are skipped
+// because they hold raw addresses on 32-bit builds and handles on 64-bit builds.
+// hashes[0] covers thread fields, hashes[1] instance flags, hashes[2] instance matrices and
+// hashes[3] thread model indices.
+static void MainReplayTrace_HashBucket(struct GameTracker *gGT, struct Thread *th, int *count, u32 hashes[4])
+{
+	const char *instPool = P32_GET(const char *, gGT->JitPools.instance.ptrPoolData);
+	const char *instPoolEnd = instPool + gGT->JitPools.instance.poolSize;
+	struct Thread *stack[64];
+	int depth = 0;
+
+	hashes[0] = hashes[1] = hashes[2] = hashes[3] = 2166136261u;
+
+	while ((th != NULL) || (depth > 0))
+	{
+		struct Instance *inst;
+		int i;
+
+		if (th == NULL)
+		{
+			th = stack[--depth];
+		}
+
+		*count += 1;
+		hashes[0] = MainReplayTrace_Hash(hashes[0], (s32)th->flags);
+		hashes[0] = MainReplayTrace_Hash(hashes[0], th->cooldownFrameCount);
+		// Some threads (saveobj) never set modelIndex and keep stale pool bytes, which can
+		// be part of an old pointer slot, so it gets its own hash.
+		hashes[3] = MainReplayTrace_Hash(hashes[3], th->modelIndex);
+
+		// The camera thread's inst slot points at non-instance data.
+		inst = P32_GET(struct Instance *, th->inst);
+		if ((inst != NULL) && ((const char *)inst >= instPool) && ((const char *)inst < instPoolEnd))
+		{
+			hashes[1] = MainReplayTrace_Hash(hashes[1], (s32)inst->flags);
+			for (i = 0; i < 9; i++)
+			{
+				hashes[2] = MainReplayTrace_Hash(hashes[2], inst->matrix.m[i / 3][i % 3]);
+			}
+			for (i = 0; i < 3; i++)
+			{
+				hashes[2] = MainReplayTrace_Hash(hashes[2], inst->matrix.t[i]);
+			}
+		}
+
+		if ((P32_GET(struct Thread *, th->childThread) != NULL) && (depth < (int)(sizeof(stack) / sizeof(stack[0]))))
+		{
+			stack[depth++] = P32_GET(struct Thread *, th->childThread);
+		}
+		th = P32_GET(struct Thread *, th->siblingThread);
+	}
+}
+
+static void MainReplayTrace_Frame(struct GameTracker *gGT, const struct NativeReplaySchedulerFrameInfo *info)
+{
+	char line[4096];
+	int len;
+	int i;
+
+	if (!NativeReplayScheduler_TraceEnabled())
+	{
+		return;
+	}
+
+	len = snprintf(line, sizeof(line), "t=%d c=%d lev=%d st=%d ld=%d rng=%08x,%08x,%08x,%08x,%08x,%08x", info->timer, info->frameCounter, info->levelID,
+	               info->mainGameState, info->loadingStage, info->mixRandomNumber, info->audioRNG, info->deadcoed0, info->deadcoed1, info->advRng0,
+	               info->advRng1);
+
+	// Thread buckets and driver slots are stale while a level loads.
+	if (info->loadingStage != -1)
+	{
+		NativeReplayScheduler_TraceFrame(line);
+		return;
+	}
+
+	for (i = 0; i < 8; i++)
+	{
+		struct Driver *d = P32_GET(struct Driver *, gGT->drivers[i]);
+
+		if ((d == NULL) || (len >= (int)sizeof(line)))
+		{
+			continue;
+		}
+		len += snprintf(line + len, sizeof(line) - (size_t)len, " d%d=%d,%d,%d,%d,%d,%d,%x,%d,%d,%d,%d,%d,%d,%d", i, d->posCurr.x, d->posCurr.y,
+		                d->posCurr.z, d->rotCurr.x, d->rotCurr.y, d->rotCurr.z, (unsigned int)d->actionsFlagSet, d->kartState, d->speed,
+		                d->speedApprox, d->reserves, d->numWumpas, d->heldItemID, d->driverRank);
+	}
+
+	for (i = 0; i < NUM_BUCKETS; i++)
+	{
+		int count = 0;
+		u32 hashes[4];
+
+		MainReplayTrace_HashBucket(gGT, P32_GET(struct Thread *, gGT->threadBuckets[i].thread), &count, hashes);
+
+		if (len >= (int)sizeof(line))
+		{
+			break;
+		}
+		len += snprintf(line + len, sizeof(line) - (size_t)len, " b%d=%d:%08x:%08x:%08x:%08x", i, count, (unsigned int)hashes[0],
+		                (unsigned int)hashes[1], (unsigned int)hashes[2], (unsigned int)hashes[3]);
+	}
+
+	NativeReplayScheduler_TraceFrame(line);
+}
 #endif
 
 // NOTE(aalhendi): PSX path ASM-verified NTSC-U 926 0x8003c58c-0x8003cf7c.
@@ -72,10 +191,10 @@ u32 main(void)
 	u32 uVar12;
 
 	struct GameTracker *gGT;
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	struct GamepadSystem *gGS;
-	gGS = sdata->gGamepads;
+	gGS = P32_GET(struct GamepadSystem *, sdata->gGamepads);
 
 #ifdef CTR_NATIVE
 	int nativeAdhocRunSimulation = 1;
@@ -252,7 +371,7 @@ u32 main(void)
 
 			// ignore threads, because we PopState,
 			// so the threadpool will reset anyway
-			LevInstDef_RePack(gGT->level1->ptr_mesh_info, 0);
+			LevInstDef_RePack(P32_GET(struct mesh_info *, P32_GET(struct Level *, gGT->level1)->ptr_mesh_info), 0);
 
 			sdata->mainGameState = 1;
 			break;
@@ -351,7 +470,7 @@ u32 main(void)
 				// if something is being loaded
 				else
 				{
-					sdata->Loading.stage = LOAD_TenStages(gGT, iVar8, sdata->ptrBigfile1);
+					sdata->Loading.stage = LOAD_TenStages(gGT, iVar8, P32_GET(struct BigHeader *, sdata->ptrBigfile1));
 
 					// If just finished loading stage 9
 					if (sdata->Loading.stage == LOAD_FINISHED)
@@ -424,8 +543,8 @@ u32 main(void)
 							return 0;
 						}
 						NativeSaveState_BeginFrame();
-						gGT = sdata->gGT;
-						gGS = sdata->gGamepads;
+						gGT = P32_GET(struct GameTracker *, sdata->gGT);
+						gGS = P32_GET(struct GamepadSystem *, sdata->gGamepads);
 						nativeReplayFrameActive = 1;
 					}
 #endif
@@ -517,7 +636,7 @@ u32 main(void)
 							uVar12 = 100;
 						}
 
-						DecalFont_DrawMultiLine(sdata->lngStrings[LNG_DEMO_MODE_PRESS_ANY_BUTTON_TO_EXIT], 0x100, uVar12, 0x200, 2, 0xffff8000);
+						DecalFont_DrawMultiLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_DEMO_MODE_PRESS_ANY_BUTTON_TO_EXIT]), 0x100, uVar12, 0x200, 2, 0xffff8000);
 					}
 
 					if ((gGT->gameMode1 & LOADING) == 0
@@ -583,6 +702,7 @@ u32 main(void)
 			{
 				struct NativeReplaySchedulerFrameInfo replayFrameInfo = MainReplayScheduler_FrameInfo(gGT);
 
+				MainReplayTrace_Frame(gGT, &replayFrameInfo);
 				if (NativeReplayScheduler_EndFrame(&replayFrameInfo) != 0)
 				{
 					return 0;
@@ -637,10 +757,10 @@ void StateZero()
 	u32 vramSize;
 
 	struct GameTracker *gGT;
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	struct GamepadSystem *gGS;
-	gGS = sdata->gGamepads;
+	gGS = P32_GET(struct GamepadSystem *, sdata->gGamepads);
 
 	memset(gGT, 0, sizeof(*gGT));
 
@@ -720,7 +840,7 @@ void StateZero()
 #endif
 
 	// Get CD Position fo BIGFILE
-	sdata->ptrBigfile1 = LOAD_ReadDirectory(BIGPATH);
+	P32_SET(sdata->ptrBigfile1, LOAD_ReadDirectory(BIGPATH));
 
 // Defrag to save heap space,
 // required because MEMPACK_Init moves heap
@@ -744,11 +864,11 @@ void StateZero()
 #ifdef CTR_NATIVE
 	// Load PAL English on native so the boot language selector can use the
 	// localized language-name strings shared by the PAL language files.
-	LOAD_LangFile((int)sdata->ptrBigfile1, cfg_language);
+	LOAD_LangFile(P32_GET(struct BigHeader *, sdata->ptrBigfile1), cfg_language);
 #else
 	// English=1
 	// PAL SCES02105 calls it multiple times
-	LOAD_LangFile((int)sdata->ptrBigfile1, 1);
+	LOAD_LangFile(P32_GET(struct BigHeader *, sdata->ptrBigfile1), 1);
 #endif
 	GAMEPROG_NewGame_OnBoot();
 	gGT->overlayIndex_null_notUsed = 0;
@@ -767,7 +887,7 @@ void StateZero()
 	Vector_BakeMatrixTable();
 
 	gGT->swapchainIndex = 0;
-	gGT->backBuffer = &gGT->db[0];
+	P32_SET(gGT->backBuffer, &gGT->db[0]);
 
 	gGT->overlayIndex_EndOfRace = 0xff;
 	gGT->overlayIndex_LOD = OVERLAY_INDEX_NONE;
@@ -778,7 +898,7 @@ void StateZero()
 	DrawSync(0);
 
 	// Load Intro TIM for "SCEA Presents" from VRAM file
-	LOAD_VramFile(sdata->ptrBigfile1, 0x1fd, NULL, &vramSize, -1);
+	LOAD_VramFile(P32_GET(struct BigHeader *, sdata->ptrBigfile1), 0x1fd, NULL, &vramSize, -1);
 	MainInit_VRAMDisplay();
 
 	// \SOUNDS\KART.HWL;1
@@ -803,7 +923,7 @@ void StateZero()
 		// NOTE(aalhendi): Retail hardware interrupts keep XA/audio moving while
 		// this loop spins. Native owns VBlank in VSync(), so pump it here.
 		VSync(0);
-		if ((gNativeBootSkipRequested == 0) && (Platform_InputStartPressed() != 0))
+		if ((gNativeBootSkipRequested == 0) && (NativeBootSkip_StartPressed() != 0))
 		{
 			gNativeBootSkipRequested = 1;
 			CDSYS_XAPauseRequest();
@@ -816,7 +936,7 @@ void StateZero()
 
 	// This loads UI textures (shared.vrm)
 	// This includes traffic lights, font, and more
-	LOAD_VramFile(sdata->ptrBigfile1, 0x102, NULL, &vramSize, -1);
+	LOAD_VramFile(P32_GET(struct BigHeader *, sdata->ptrBigfile1), 0x102, NULL, &vramSize, -1);
 
 	sdata->mainGameState = 3;
 

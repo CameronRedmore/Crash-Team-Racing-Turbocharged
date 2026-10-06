@@ -38,9 +38,9 @@ static inline void FLARE_WriteColors(POLY_GT4 *poly)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80024c4c-0x80025138.
 void FLARE_ThTick(struct Thread *th)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	struct PushBuffer *pb = &gGT->pushBuffer[0];
-	s32 *flare = th->object;
+	s32 *flare = P32_GET(void *, th->object);
 	s32 timer = flare[0];
 
 	flare[0] = timer + 1;
@@ -52,8 +52,8 @@ void FLARE_ThTick(struct Thread *th)
 		return;
 	}
 
-	POLY_GT4 *prim = gGT->backBuffer->primMem.cursor;
-	if ((char *)(prim + 4) >= (char *)gGT->backBuffer->primMem.guardEnd)
+	POLY_GT4 *prim = P32_GET(void *, P32_GET(struct DB *, gGT->backBuffer)->primMem.cursor);
+	if ((char *)(prim + 4) >= (char *)P32_GET(void *, P32_GET(struct DB *, gGT->backBuffer)->primMem.guardEnd))
 	{
 		return;
 	}
@@ -119,7 +119,7 @@ void FLARE_ThTick(struct Thread *th)
 	CTC2(0, 3);
 	CTC2(scale, 4);
 
-	struct Icon *icon = gGT->ptrIcons[0x87];
+	struct Icon *icon = P32_GET(struct Icon *, gGT->ptrIcons[0x87]);
 	if (icon == NULL)
 	{
 		return;
@@ -175,7 +175,7 @@ void FLARE_ThTick(struct Thread *th)
 		depth = 0x3ff;
 	}
 
-	uint32_t *ot = &pb->ptrOT[depth];
+	uint32_t *ot = &P32_GET(uint32_t *, pb->ptrOT)[depth];
 #if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
 	if (NATIVE_DRAW3D_ACTIVE())
 	{
@@ -222,7 +222,7 @@ void FLARE_ThTick(struct Thread *th)
 			DR_PSYX_DRAW3D *marker = (DR_PSYX_DRAW3D *)prim;
 			NativeDraw3D_SetMarker(marker, layer);
 			AddPrim(ot, marker);
-			gGT->backBuffer->primMem.cursor = marker + 1;
+			P32_SET(P32_GET(struct DB *, gGT->backBuffer)->primMem.cursor, marker + 1);
 			return;
 		}
 	}
@@ -233,7 +233,7 @@ void FLARE_ThTick(struct Thread *th)
 	p3->tag = CtrGpu_PackOTTag(*ot, 0x0c000000);
 	*ot = CtrGpu_PrimToOTLink24(p0);
 
-	gGT->backBuffer->primMem.cursor = prim + 4;
+	P32_SET(P32_GET(struct DB *, gGT->backBuffer)->primMem.cursor, prim + 4);
 }
 
 
@@ -248,7 +248,7 @@ void FLARE_Init(s16 *pos)
 	if (th != NULL)
 	{
 		// Get the pointer to flare, attached to the thread
-		int *flare = th->object;
+		int *flare = P32_GET(void *, th->object);
 		*flare = 0; // frameCount = 0
 		memcpy(&flare[1], pos, 2 * sizeof(int));
 	}

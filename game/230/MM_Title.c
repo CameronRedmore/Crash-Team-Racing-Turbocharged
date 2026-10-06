@@ -3,7 +3,7 @@
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800abcac-0x800ac178.
 void MM_Title_MenuUpdate(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	u16 seenDemo;
 	s16 cutsceneLev;
 
@@ -141,7 +141,7 @@ void MM_Title_MenuUpdate(void)
 	case MM_EXIT_ROUTE_ADV_LOAD:
 
 		// Go to save/load
-		sdata->ptrDesiredMenu = &data.menuFourAdvProfiles;
+		P32_SET(sdata->ptrDesiredMenu, &data.menuFourAdvProfiles);
 
 		SelectProfile_ToggleMode(SELECT_PROFILE_SCREEN_ADV_LOAD);
 		break;
@@ -153,7 +153,7 @@ void MM_Title_MenuUpdate(void)
 		if (!NativeAutoSave_QuickLoad())
 		{
 			// autosave vanished, fall back to the load screen
-			sdata->ptrDesiredMenu = &data.menuFourAdvProfiles;
+			P32_SET(sdata->ptrDesiredMenu, &data.menuFourAdvProfiles);
 			SelectProfile_ToggleMode(SELECT_PROFILE_SCREEN_ADV_LOAD);
 		}
 		break;
@@ -165,14 +165,14 @@ void MM_Title_MenuUpdate(void)
 		MM_Title_KillThread();
 
 		// return to character selection
-		sdata->ptrDesiredMenu = &D230.menuCharacterSelect;
+		P32_SET(sdata->ptrDesiredMenu, &D230.menuCharacterSelect);
 
 		MM_Characters_RestoreIDs();
 		break;
 
 	case MM_EXIT_ROUTE_GHOST_REPLAY:
 		MM_Title_KillThread();
-		sdata->ptrDesiredMenu = &D230.menuTrackSelect;
+		P32_SET(sdata->ptrDesiredMenu, &D230.menuTrackSelect);
 		MM_TrackSelect_Init();
 		break;
 
@@ -182,7 +182,7 @@ void MM_Title_MenuUpdate(void)
 		MM_HighScore_Init();
 
 		// Go to high score menu
-		sdata->ptrDesiredMenu = &D230.menuHighScores;
+		P32_SET(sdata->ptrDesiredMenu, &D230.menuHighScores);
 		break;
 
 	// demo mode
@@ -281,8 +281,8 @@ END_FUNCTION:
 // NOTE(aalhendi): ASM-verified against NTSC-U 926 overlay 230 0x800ac94c-0x800ac9fc.
 void MM_Title_KillThread(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
-	struct Title *title = D230.titleObj;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct Title *title = P32_GET(struct Title *, D230.titleObj);
 
 	if (                     // if "title" object exists
 	    (title != NULL) && ( // if you are in main menu
@@ -291,11 +291,11 @@ void MM_Title_KillThread(void)
 		// destroy title instances
 		for (s32 instanceIndex = 0; instanceIndex < TITLE_INSTANCE_COUNT; instanceIndex++)
 		{
-			INSTANCE_Death(title->i[instanceIndex]);
+			INSTANCE_Death(P32_GET(struct Instance *, title->i[instanceIndex]));
 		}
 
-		title->t->flags |= THREAD_FLAG_DEAD;
-		D230.titleObj = NULL;
+		P32_GET(struct Thread *, title->t)->flags |= THREAD_FLAG_DEAD;
+		P32_SET(D230.titleObj, NULL);
 
 		// CameraDC, it must be zero to follow you
 		gGT->cameraDC[0].transitionTo.rot.x = 0;
@@ -306,15 +306,15 @@ void MM_Title_KillThread(void)
 // NOTE(aalhendi): ASM-verified against NTSC-U 926 overlay 230 0x800ac178-0x800ac1f0.
 void MM_Title_SetTrophyDPP(void)
 {
-	struct Title *title = D230.titleObj;
+	struct Title *title = P32_GET(struct Title *, D230.titleObj);
 
 	if (title == NULL)
 	{
 		return;
 	}
 
-	struct InstDrawPerPlayer *idpp1 = INST_GETIDPP(title->i[1]); // "title"
-	struct InstDrawPerPlayer *idpp2 = INST_GETIDPP(title->i[2]); // another "title"
+	struct InstDrawPerPlayer *idpp1 = INST_GETIDPP(P32_GET(struct Instance *, title->i[1])); // "title"
+	struct InstDrawPerPlayer *idpp2 = INST_GETIDPP(P32_GET(struct Instance *, title->i[2])); // another "title"
 
 	u32 secondaryFlags = idpp2->instFlags;
 	if ((secondaryFlags & PUSHBUFFER_EXISTS) != 0)
@@ -341,9 +341,9 @@ void MM_Title_CameraMove(struct Title *title, s32 frameIndex)
 	// of the screen, to the left of the screen, over the course of 15 frames
 	s32 result = RaceFlag_MoveModels(D230.titleIntroFrame - FPS_DOUBLE(TITLE_INTRO_MENU_READY_FRAME), FPS_DOUBLE(TITLE_CAMERA_MOVE_FRAMES));
 
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
-	const struct TitleCameraPathFrame *cameraFrame = &D230.titleIntroCameraPath[FPS_HALF(frameIndex)];
+	const struct TitleCameraPathFrame *cameraFrame = &P32_GET(struct TitleCameraPathFrame *, D230.titleIntroCameraPath)[FPS_HALF(frameIndex)];
 
 	for (s32 axisIndex = 0; axisIndex < 3; axisIndex++)
 	{
@@ -366,7 +366,7 @@ static void MM_Title_RotMatrixMul(MATRIX *matrix, const SVec3 *input, VECTOR *ma
 
 static void MM_Title_UpdateTrophySpecLight(struct Instance *titleInst)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	struct PushBuffer *pb = &gGT->pushBuffer[0];
 	struct InstDrawPerPlayer *idpp = INST_GETIDPP(titleInst);
 	MATRIX matrix;
@@ -433,13 +433,13 @@ void MM_Title_ThTick(struct Thread *title)
 	}
 
 	// copy pointer to title object
-	struct Title *ptrTitle = (struct Title *)title->object;
+	struct Title *ptrTitle = (struct Title *)P32_GET(void *, title->object);
 
 	// loop through title instances
 	for (s32 instanceIndex = 0; instanceIndex < TITLE_INSTANCE_COUNT; instanceIndex++)
 	{
 		// current instance
-		struct Instance *titleInst = ptrTitle->i[instanceIndex];
+		struct Instance *titleInst = P32_GET(struct Instance *, ptrTitle->i[instanceIndex]);
 
 		titleInst->flags &= ~HIDE_MODEL;
 
@@ -513,11 +513,11 @@ void MM_Title_ThTick(struct Thread *title)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800ac6dc-0x800ac92c.
 void MM_Title_Init(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	if (
 	    // if "title" object is nullptr
-	    (D230.titleObj == NULL) &&
+	    (P32_GET(struct Title *, D230.titleObj) == NULL) &&
 
 	    // if you are in main menu
 	    ((gGT->gameMode1 & MAIN_MENU) != 0) &&
@@ -526,38 +526,38 @@ void MM_Title_Init(void)
 	    (D230.titleMenuState != TITLE_MENU_STATE_EXITING) &&
 
 	    // model ptr (Title blue Ring)
-	    (gGT->modelPtr[STATIC_RINGTOP] != 0) &&
+	    (P32_GET(struct Model *, gGT->modelPtr[STATIC_RINGTOP]) != 0) &&
 
 	    // IntroCam ptr exists
-	    (gGT->level1->ptrSpawnType1->count > 2))
+	    (P32_GET(struct SpawnType1 *, P32_GET(struct Level *, gGT->level1)->ptrSpawnType1)->count > 2))
 	{
 		// freecam mode
 		gGT->cameraDC[0].cameraMode = CAMERA_MODE_FREECAM;
 
 		gGT->pushBuffer[0].distanceToScreen_CURR = TITLE_INTRO_DISTANCE_TO_SCREEN;
 
-		void **pointers = ST1_GETPOINTERS(gGT->level1->ptrSpawnType1);
+		P32(void *) *pointers = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *, gGT->level1)->ptrSpawnType1));
 
 		// pointer to Intro Cam, to view Crash holding Trophy in main menu
-		D230.titleIntroCameraPath = pointers[ST1_CAMERA_PATH];
+		P32_SET(D230.titleIntroCameraPath, P32_GET(void *, pointers[ST1_CAMERA_PATH]));
 
 		struct Thread *t = PROC_BirthWithObject(SIZE_RELATIVE_POOL_BUCKET(sizeof(struct Title), NONE, MEDIUM, OTHER), MM_Title_ThTick, 0, 0);
 
-		struct Title *title = t->object;
+		struct Title *title = P32_GET(void *, t->object);
 
-		D230.titleObj = title;
+		P32_SET(D230.titleObj, title);
 
 		memset(title, 0, sizeof(*title));
 
-		title->t = t;
+		P32_SET(title->t, t);
 
 		// create title instances
 		for (s32 instanceIndex = 0; instanceIndex < TITLE_INSTANCE_COUNT; instanceIndex++)
 		{
-			struct Instance *inst = INSTANCE_Birth3D(gGT->modelPtr[D230.titleInstances[instanceIndex].modelID], 0, t);
+			struct Instance *inst = INSTANCE_Birth3D(P32_GET(struct Model *, gGT->modelPtr[D230.titleInstances[instanceIndex].modelID]), 0, t);
 
 			// store instance
-			title->i[instanceIndex] = inst;
+			P32_SET(title->i[instanceIndex], inst);
 
 			if (D230.titleInstances[instanceIndex].isTrophy)
 			{
@@ -579,7 +579,7 @@ void MM_Title_Init(void)
 			struct InstDrawPerPlayer *idpp = INST_GETIDPP(inst);
 			for (s32 playerIndex = 1; playerIndex < gGT->numPlyrCurrGame; playerIndex++)
 			{
-				idpp[playerIndex].pushBuffer = 0;
+				P32_SET(idpp[playerIndex].pushBuffer, 0);
 			}
 		}
 
@@ -590,7 +590,7 @@ void MM_Title_Init(void)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800ac92c-0x800ac94c.
 void MM_Title_CameraReset(void)
 {
-	struct Title *title = D230.titleObj;
+	struct Title *title = P32_GET(struct Title *, D230.titleObj);
 
 	if (title == NULL)
 	{

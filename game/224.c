@@ -45,8 +45,8 @@ void TT_EndEvent_DrawMenu(void)
 	s32 startX;
 	s16 endX;
 	SVec2 pos;
-	struct GameTracker *gGT = sdata->gGT;
-	char **lngStrings = sdata->lngStrings;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	P32(char *) *lngStrings = P32_GET(P32(char *) *, sdata->lngStrings);
 	u32 gameModeEnd = gGT->gameModeEnd;
 
 	sdata->flags_timeTrialEndOfRace |= TT_CLOCK_DISPLAY_FLAG;
@@ -95,7 +95,7 @@ void TT_EndEvent_DrawMenu(void)
 		// draw race clock in top-left corner
 		UI_Lerp2D_Linear(pos.v, 0x14, 8, endX, 8, elapsedFrames, FPS_DOUBLE(TT_LERP_FRAMES));
 
-		UI_DrawRaceClock(pos.x, pos.y, UI_RACE_CLOCK_SHOW_CURRENT_TIME, gGT->drivers[0]);
+		UI_DrawRaceClock(pos.x, pos.y, UI_RACE_CLOCK_SHOW_CURRENT_TIME, P32_GET(struct Driver *, gGT->drivers[0]));
 
 		return;
 	}
@@ -127,7 +127,7 @@ void TT_EndEvent_DrawMenu(void)
 		{
 			UI_Lerp2D_Linear(pos.v, 0x264, 122, 0x100, 122, elapsedFrames, FPS_DOUBLE(TT_LERP_FRAMES));
 
-			DecalFont_DrawLine(lngStrings[LNG_NEW_HIGH_SCORE], pos.x, pos.y, FONT_BIG, textColor);
+			DecalFont_DrawLine(P32_GET(char *, lngStrings[LNG_NEW_HIGH_SCORE]), pos.x, pos.y, FONT_BIG, textColor);
 
 			// Total time should flash
 			sdata->flags_timeTrialEndOfRace |= TT_TOTAL_TIME_FLASH_FLAG;
@@ -144,7 +144,7 @@ void TT_EndEvent_DrawMenu(void)
 		{
 			UI_Lerp2D_Linear(pos.v, -0x64, 142, 0x100, 142, elapsedFrames, FPS_DOUBLE(TT_LERP_FRAMES));
 
-			DecalFont_DrawLine(lngStrings[LNG_NEW_BEST_LAP], pos.x, pos.y, FONT_BIG, textColor);
+			DecalFont_DrawLine(P32_GET(char *, lngStrings[LNG_NEW_BEST_LAP]), pos.x, pos.y, FONT_BIG, textColor);
 
 			if ((u32)gGT->lapIndexNewBest < 3)
 			{
@@ -169,17 +169,17 @@ void TT_EndEvent_DrawMenu(void)
 			char *nTropyString;
 			if ((gameModeEnd & NTROPY_JUST_OPENED) != 0)
 			{
-				nTropyString = lngStrings[LNG_N_TROPY_OPENED];
+				nTropyString = P32_GET(char *, lngStrings[LNG_N_TROPY_OPENED]);
 			}
 			else
 			{
-				nTropyString = lngStrings[LNG_N_TROPY_BEATEN];
+				nTropyString = P32_GET(char *, lngStrings[LNG_N_TROPY_BEATEN]);
 			}
 
 			DecalFont_DrawLine(nTropyString, pos.x, pos.y, FONT_BIG, textColor);
 		}
 
-		DecalFont_DrawLine(lngStrings[LNG_PRESS_TO_CONTINUE], 0x100, 0xbe, FONT_BIG, 0xffff8000);
+		DecalFont_DrawLine(P32_GET(char *, lngStrings[LNG_PRESS_TO_CONTINUE]), 0x100, 0xbe, FONT_BIG, 0xffff8000);
 
 		// If you press Cross or Circle
 		if ((sdata->AnyPlayerTap & TT_CONFIRM_BUTTON_MASK) != 0)
@@ -242,7 +242,7 @@ void TT_EndEvent_DrawMenu(void)
 
 			TT_EndEvent_DisplayTime(pos.x, pos.y, sdata->flags_timeTrialEndOfRace);
 
-			DecalFont_DrawLine(lngStrings[LNG_PRESS_TO_CONTINUE], 0x100, 0xbe, FONT_BIG, 0xffff8000);
+			DecalFont_DrawLine(P32_GET(char *, lngStrings[LNG_PRESS_TO_CONTINUE]), 0x100, 0xbe, FONT_BIG, 0xffff8000);
 
 			// ==== Pause Timer until Press X =======
 			// Cross or Circle, or if timer drags on too long
@@ -288,28 +288,28 @@ void TT_EndEvent_DisplayTime(int paramX, s16 paramY, u32 raceClockFlags)
 	SVec2 pos;
 	RECT rectangle;
 
-	struct GameTracker *gGT = sdata->gGT;
-	struct Driver *d = gGT->drivers[0];
-	s16 startTextWidth = DecalFont_GetLineWidth(sdata->lngStrings[LNG_TOTAL], FONT_BIG);
-	s16 endTextWidth = DecalFont_GetLineWidth(sdata->lngStrings[LNG_TOTAL], FONT_BIG);
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct Driver *d = P32_GET(struct Driver *, gGT->drivers[0]);
+	s16 startTextWidth = DecalFont_GetLineWidth(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_TOTAL]), FONT_BIG);
+	s16 endTextWidth = DecalFont_GetLineWidth(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_TOTAL]), FONT_BIG);
 
 	// === Naughty Dog Bug ===
 	// Start and End is the same
 	UI_Lerp2D_Linear(pos.v, (paramX - (0x88 - startTextWidth) / 2), paramY, (paramX - (0x88 - endTextWidth) / 2), paramY, sdata->framesSinceRaceEnded,
 	                 FPS_DOUBLE(TT_LERP_FRAMES));
 
-	DecalFont_DrawLine(sdata->lngStrings[LNG_YOUR_TIME], paramX, ((u32)pos.y - 0x4c), FONT_BIG, (JUSTIFY_CENTER | ORANGE));
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_YOUR_TIME]), paramX, ((u32)pos.y - 0x4c), FONT_BIG, (JUSTIFY_CENTER | ORANGE));
 
 	UI_DrawRaceClock(pos.x, pos.y, raceClockFlags, d);
 
-	rectangle.x = (pos.x - DecalFont_GetLineWidth(sdata->lngStrings[LNG_TOTAL], FONT_BIG)) - 6;
+	rectangle.x = (pos.x - DecalFont_GetLineWidth(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_TOTAL]), FONT_BIG)) - 6;
 	rectangle.y = pos.y - 0x50;
 
-	rectangle.w = DecalFont_GetLineWidth(sdata->lngStrings[LNG_TOTAL], FONT_BIG) + 0x94;
+	rectangle.w = DecalFont_GetLineWidth(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_TOTAL]), FONT_BIG) + 0x94;
 	rectangle.h = 99;
 
 	// Draw 2D Menu rectangle background
-	RECTMENU_DrawInnerRect(&rectangle, 4, gGT->backBuffer->otMem.uiOT);
+	RECTMENU_DrawInnerRect(&rectangle, 4, P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT));
 
 	return;
 }
@@ -325,8 +325,8 @@ void TT_EndEvent_DrawHighScore(s16 startX, int startY, s16 scoreMode)
 	SVec2 pos;
 	RECT box;
 
-	struct GameTracker *gGT = sdata->gGT;
-	struct Driver *d = gGT->drivers[0];
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct Driver *d = P32_GET(struct Driver *, gGT->drivers[0]);
 	s16 timeboxX = startX - 0x1f;
 	u16 rowOffsetY = 0;
 
@@ -344,7 +344,7 @@ void TT_EndEvent_DrawHighScore(s16 startX, int startY, s16 scoreMode)
 	// interpolate fly-in
 	UI_Lerp2D_Linear(pos.v, startX, startY, startX, startY, sdata->framesSinceRaceEnded, FPS_DOUBLE(TT_LERP_FRAMES));
 
-	DecalFont_DrawLine(sdata->lngStrings[LNG_BEST_TIMES], pos.x, pos.y, FONT_BIG, 0xffff8000);
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_BEST_TIMES]), pos.x, pos.y, FONT_BIG, 0xffff8000);
 
 	// Draw icon, name, and time of the
 	// 5 best times in Time Trial
@@ -376,8 +376,8 @@ void TT_EndEvent_DrawHighScore(s16 startX, int startY, s16 scoreMode)
 		DecalFont_DrawLine((char *)&s_rankString224, startX - 0x32, timeboxY - 1, FONT_SMALL, WHITE);
 
 		// Draw Character Icon
-		RECTMENU_DrawPolyGT4(gGT->ptrIcons[data.MetaDataCharacters[scoreEntries[scoreEntryIndex].characterID].iconID], startX - 0x52, timeboxY,
-		                     &gGT->backBuffer->primMem, gGT->pushBuffer_UI.ptrOT,
+		RECTMENU_DrawPolyGT4(P32_GET(struct Icon *, gGT->ptrIcons[data.MetaDataCharacters[scoreEntries[scoreEntryIndex].characterID].iconID]), startX - 0x52, timeboxY,
+		                     &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT),
 		                     // color of each corner
 		                     TT_HIGH_SCORE_ICON_COLOR, TT_HIGH_SCORE_ICON_COLOR, TT_HIGH_SCORE_ICON_COLOR, TT_HIGH_SCORE_ICON_COLOR,
 		                     TT_HIGH_SCORE_ICON_TRANSPARENCY, TT_HIGH_SCORE_ICON_SCALE);
@@ -397,7 +397,7 @@ void TT_EndEvent_DrawHighScore(s16 startX, int startY, s16 scoreMode)
 			box.h = 0x1a;
 
 			// Draw a rectangle to highlight your time on the "Best Times" list
-			CTR_Box_DrawClearBox(&box, &sdata->menuRowHighlight_Normal, TRANS_50_DECAL, gGT->pushBuffer_UI.ptrOT);
+			CTR_Box_DrawClearBox(&box, &sdata->menuRowHighlight_Normal, TRANS_50_DECAL, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT));
 		}
 		rowOffsetY += TT_HIGH_SCORE_ROW_SPACING;
 	}
@@ -407,7 +407,7 @@ void TT_EndEvent_DrawHighScore(s16 startX, int startY, s16 scoreMode)
 		// Change the way text flickers
 		timeColor = 0xffff8000;
 
-		DecalFont_DrawLine(sdata->lngStrings[LNG_BEST_LAP], startX, startY + 0x95, FONT_BIG, timeColor);
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_BEST_LAP]), startX, startY + 0x95, FONT_BIG, timeColor);
 
 		// If you got a new best lap
 		if (((gGT->gameModeEnd & NEW_BEST_LAP) != 0) && ((FPS_HALF(gGT->timer) & TT_HIGH_SCORE_FLASH_TIMER_BIT) != 0))
@@ -419,7 +419,7 @@ void TT_EndEvent_DrawHighScore(s16 startX, int startY, s16 scoreMode)
 	}
 	else
 	{
-		DecalFont_DrawLine(sdata->lngStrings[LNG_YOUR_TIME], startX, startY + 0x95, FONT_BIG, 0xffff8000);
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_YOUR_TIME]), startX, startY + 0x95, FONT_BIG, 0xffff8000);
 
 		timeString = RECTMENU_DrawTime(d->timeElapsedInRace);
 		timeColor = 0xffff8000;
@@ -434,7 +434,7 @@ void TT_EndEvent_DrawHighScore(s16 startX, int startY, s16 scoreMode)
 	box.h = 0xb4;
 
 	// Draw 2D Menu rectangle background
-	RECTMENU_DrawInnerRect(&box, 4, gGT->backBuffer->otMem.uiOT);
+	RECTMENU_DrawInnerRect(&box, 4, P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT));
 }
 
 struct MenuRow rowsWithSave[6] = {
@@ -546,12 +546,19 @@ struct RectMenu menu224 = {
     .unk1 = 0,
 
     .state = RECTMENU_STATE_SMALL_EXEC_CENTERED,
-    .rows = rowsWithSave,
-    .funcPtr = UI_RaceEnd_MenuProc,
+    .rows = P32_DEFER(rowsWithSave),
+    .funcPtr = P32_DEFER(UI_RaceEnd_MenuProc),
     .drawStyle = 4,
 
     // rest of variables all default zero
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(menu224)
+{
+	P32_SET(menu224.rows, rowsWithSave);
+	P32_SET(menu224.funcPtr, UI_RaceEnd_MenuProc);
+}
+#endif
 
 struct RectMenu menu224NoSave = {
     .stringIndexTitle = RECTMENU_STRING_NONE,
@@ -561,12 +568,19 @@ struct RectMenu menu224NoSave = {
     .unk1 = 0,
 
     .state = RECTMENU_STATE_SMALL_EXEC_CENTERED,
-    .rows = rowsNoSave,
-    .funcPtr = UI_RaceEnd_MenuProc,
+    .rows = P32_DEFER(rowsNoSave),
+    .funcPtr = P32_DEFER(UI_RaceEnd_MenuProc),
     .drawStyle = 4,
 
     // rest of variables all default zero
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(menu224NoSave)
+{
+	P32_SET(menu224NoSave.rows, rowsNoSave);
+	P32_SET(menu224NoSave.funcPtr, UI_RaceEnd_MenuProc);
+}
+#endif
 struct MenuRow rowsGhostReplay[4] = {
     {
         .stringIndex = LNG_RESTART,
@@ -603,10 +617,17 @@ struct RectMenu menu224GhostReplay = {
     .posY_curr = 0xA0,
     .unk1 = 0,
     .state = RECTMENU_STATE_SMALL_EXEC_CENTERED,
-    .rows = rowsGhostReplay,
-    .funcPtr = UI_RaceEnd_MenuProc,
+    .rows = P32_DEFER(rowsGhostReplay),
+    .funcPtr = P32_DEFER(UI_RaceEnd_MenuProc),
     .drawStyle = 4,
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(menu224GhostReplay)
+{
+	P32_SET(menu224GhostReplay.rows, rowsGhostReplay);
+	P32_SET(menu224GhostReplay.funcPtr, UI_RaceEnd_MenuProc);
+}
+#endif
 
 struct MenuRow rowsLeaderboardGhostReplay[5] = {
     {
@@ -651,7 +672,14 @@ struct RectMenu menu224LeaderboardGhostReplay = {
     .posY_curr = 0xA0,
     .unk1 = 0,
     .state = RECTMENU_STATE_SMALL_EXEC_CENTERED,
-    .rows = rowsLeaderboardGhostReplay,
-    .funcPtr = UI_RaceEnd_MenuProc,
+    .rows = P32_DEFER(rowsLeaderboardGhostReplay),
+    .funcPtr = P32_DEFER(UI_RaceEnd_MenuProc),
     .drawStyle = 4,
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(menu224LeaderboardGhostReplay)
+{
+	P32_SET(menu224LeaderboardGhostReplay.rows, rowsLeaderboardGhostReplay);
+	P32_SET(menu224LeaderboardGhostReplay.funcPtr, UI_RaceEnd_MenuProc);
+}
+#endif

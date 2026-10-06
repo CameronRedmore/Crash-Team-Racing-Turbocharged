@@ -92,8 +92,8 @@ struct QuipStr
 
 struct QuipMeta
 {
-	struct QuipStr *ptrQuipStrCurr;
-	struct QuipStr *ptrQuipStrNext;
+	P32(struct QuipStr *) ptrQuipStrCurr;
+	P32(struct QuipStr *) ptrQuipStrNext;
 	s16 conditionType;
 	s16 flags;
 	int threshold;

@@ -10,12 +10,12 @@ void MainGameEnd_SoloRaceGetReward(int subtractTimeCrateBonus)
 {
 	if (gNativeGhostReplayMode != 0)
 	{
-		sdata->gGT->newHighScoreIndex = -1;
+		P32_GET(struct GameTracker *, sdata->gGT)->newHighScoreIndex = -1;
 		return;
 	}
-	struct GameTracker *gGT = sdata->gGT;
-	struct Driver *driver = gGT->drivers[0];
-	struct Driver *player = gGT->threadBuckets[PLAYER].thread->object;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct Driver *driver = P32_GET(struct Driver *, gGT->drivers[0]);
+	struct Driver *player = P32_GET(void *, P32_GET(struct Thread *, gGT->threadBuckets[PLAYER].thread)->object);
 
 	gGT->newHighScoreIndex = -1;
 	gGT->gameModeEnd &= 0x7bffffff;
@@ -44,7 +44,7 @@ void MainGameEnd_SoloRaceGetReward(int subtractTimeCrateBonus)
 	{
 		for (s16 i = 0; i < 5; i++)
 		{
-			if (raceTime < (s32)sdata->ptrActiveHighScoreEntry[i + 1].time)
+			if (raceTime < (s32)P32_GET(struct HighScoreEntry *, sdata->ptrActiveHighScoreEntry)[i + 1].time)
 			{
 				gGT->newHighScoreIndex = i;
 				gGT->gameModeEnd |= 0x88000000;
@@ -53,7 +53,7 @@ void MainGameEnd_SoloRaceGetReward(int subtractTimeCrateBonus)
 		}
 	}
 
-	gGT->bestLapTime = sdata->ptrActiveHighScoreEntry[0].time;
+	gGT->bestLapTime = P32_GET(struct HighScoreEntry *, sdata->ptrActiveHighScoreEntry)[0].time;
 
 	if (!recordsDisabled)
 	{
@@ -149,8 +149,8 @@ void MainGameEnd_SoloRaceSaveHighScore(void)
 	{
 		return;
 	}
-	struct GameTracker *gGT = sdata->gGT;
-	struct Driver *player = gGT->drivers[0];
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct Driver *player = P32_GET(struct Driver *, gGT->drivers[0]);
 
 #if defined(CTR_NATIVE)
 	if (NativeCheat_DisablesRecords())
@@ -174,7 +174,7 @@ void MainGameEnd_SoloRaceSaveHighScore(void)
 
 	gGT->gameModeEnd = gameModeEnd | HIGH_SCORE_SAVED;
 
-	struct HighScoreEntry *entry = sdata->ptrActiveHighScoreEntry;
+	struct HighScoreEntry *entry = P32_GET(struct HighScoreEntry *, sdata->ptrActiveHighScoreEntry);
 
 	if ((gameModeEnd & NEW_BEST_LAP) != 0)
 	{
@@ -209,7 +209,7 @@ void MainGameEnd_SoloRaceSaveHighScore(void)
 		return;
 	}
 
-	entry = &sdata->ptrActiveHighScoreEntry[highScoreIndex + 1];
+	entry = &P32_GET(struct HighScoreEntry *, sdata->ptrActiveHighScoreEntry)[highScoreIndex + 1];
 
 	if (highScoreIndex < 4)
 	{
@@ -290,7 +290,7 @@ static void MainGameEnd_RecordNonBattleStandings(struct GameTracker *gGT)
 {
 	for (int i = 0; i < gGT->numPlyrCurrGame; i++)
 	{
-		struct Driver *driver = gGT->drivers[i];
+		struct Driver *driver = P32_GET(struct Driver *, gGT->drivers[i]);
 
 		int rank = driver->driverRank;
 
@@ -370,7 +370,7 @@ static void MainGameEnd_UpdateBattleWinners_PointLimit(struct GameTracker *gGT)
 {
 	for (int i = 0; i < 4; i++)
 	{
-		struct Driver *driver = gGT->drivers[i];
+		struct Driver *driver = P32_GET(struct Driver *, gGT->drivers[i]);
 
 		if ((driver != NULL) && (gGT->battleSetup.finishedRankOfEachTeam[driver->BattleHUD.teamID] == 0))
 		{
@@ -389,7 +389,7 @@ static void MainGameEnd_UpdateBattlePointLimit(struct GameTracker *gGT)
 
 static int MainGameEnd_BattleLifeSlotNumLives(struct GameTracker *gGT, int slot)
 {
-	struct Driver *driver = gGT->drivers[slot];
+	struct Driver *driver = P32_GET(struct Driver *, gGT->drivers[slot]);
 
 #if defined(CTR_NATIVE)
 	// NOTE(aalhendi): Retail NULL slots read low mirrored RAM instead of
@@ -405,7 +405,7 @@ static int MainGameEnd_BattleLifeSlotNumLives(struct GameTracker *gGT, int slot)
 
 static int MainGameEnd_BattleLifeSlotTeam(struct GameTracker *gGT, int slot)
 {
-	struct Driver *driver = gGT->drivers[slot];
+	struct Driver *driver = P32_GET(struct Driver *, gGT->drivers[slot]);
 
 #if defined(CTR_NATIVE)
 	// NOTE(aalhendi): Preserve the same low-RAM NULL-slot quirk for retail's
@@ -425,7 +425,7 @@ static void MainGameEnd_MarkBattleTeamSlotsUsed(struct GameTracker *gGT, int rep
 
 	for (int i = 0; i < gGT->numPlyrCurrGame; i++)
 	{
-		struct Driver *driver = gGT->drivers[i];
+		struct Driver *driver = P32_GET(struct Driver *, gGT->drivers[i]);
 
 		if (driver->BattleHUD.teamID == team)
 		{
@@ -501,7 +501,7 @@ static void MainGameEnd_UpdateBattleLifeLimit(struct GameTracker *gGT)
 		for (int i = 0; i < numTies + 1; i++)
 		{
 			int representativeSlot = tiedSlots[i];
-			struct Driver *driver = gGT->drivers[representativeSlot];
+			struct Driver *driver = P32_GET(struct Driver *, gGT->drivers[representativeSlot]);
 			int team = MainGameEnd_BattleLifeSlotTeam(gGT, representativeSlot);
 
 			gGT->standingsPoints[team * 3 + rank]++;
@@ -573,12 +573,12 @@ static void MainGameEnd_UpdateStandingsOrder(struct GameTracker *gGT)
 
 static void MainGameEnd_FinalizeDriverClocks(struct GameTracker *gGT)
 {
-	struct Thread *thread = gGT->threadBuckets[PLAYER].thread;
+	struct Thread *thread = P32_GET(struct Thread *, gGT->threadBuckets[PLAYER].thread);
 
 	while (thread != NULL)
 	{
-		UI_RaceEnd_GetDriverClock(thread->object);
-		thread = thread->siblingThread;
+		UI_RaceEnd_GetDriverClock(P32_GET(void *, thread->object));
+		thread = P32_GET(struct Thread *, thread->siblingThread);
 	}
 }
 
@@ -612,16 +612,16 @@ static void MainGameEnd_CheckTimeTrialGhost(struct GameTracker *gGT, struct Driv
 			}
 
 			if ((sdata->boolReplayHumanGhost != 0) &&
-			    ((sdata->boolGhostTooBigToSave != 0) || (sdata->ptrGhostTapePlaying == NULL) ||
-			     (raceTime >= sdata->ptrGhostTapePlaying->timeElapsedInRace)))
+			    ((sdata->boolGhostTooBigToSave != 0) || (P32_GET(struct GhostHeader *, sdata->ptrGhostTapePlaying) == NULL) ||
+			     (raceTime >= P32_GET(struct GhostHeader *, sdata->ptrGhostTapePlaying)->timeElapsedInRace)))
 			{
 				return;
 			}
 
 			GhostTape_End();
-			if (sdata->GhostRecording.ptrGhost != NULL)
+			if (P32_GET(struct GhostHeader *, sdata->GhostRecording.ptrGhost) != NULL)
 			{
-				sdata->GhostRecording.ptrGhost->timeElapsedInRace = raceTime;
+				P32_GET(struct GhostHeader *, sdata->GhostRecording.ptrGhost)->timeElapsedInRace = raceTime;
 			}
 			gGT->gameModeEnd |= PLAYER_GHOST_BEAT;
 			return;
@@ -632,7 +632,7 @@ static void MainGameEnd_CheckTimeTrialGhost(struct GameTracker *gGT, struct Driv
 	}
 
 	if ((sdata->boolReplayHumanGhost != 0) &&
-	    ((sdata->boolGhostTooBigToSave != 0) || (player->timeElapsedInRace >= sdata->ptrGhostTapePlaying->timeElapsedInRace)))
+	    ((sdata->boolGhostTooBigToSave != 0) || (player->timeElapsedInRace >= P32_GET(struct GhostHeader *, sdata->ptrGhostTapePlaying)->timeElapsedInRace)))
 	{
 		return;
 	}
@@ -643,14 +643,14 @@ static void MainGameEnd_CheckTimeTrialGhost(struct GameTracker *gGT, struct Driv
 
 void MainGameEnd_Initialize(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
-	struct Driver *player = gGT->drivers[0];
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct Driver *player = P32_GET(struct Driver *, gGT->drivers[0]);
 
 	if ((gGT->gameMode1 & END_OF_RACE) == 0)
 	{
 		for (int i = 0; i < 8; i++)
 		{
-			struct Driver *driver = gGT->drivers[i];
+			struct Driver *driver = P32_GET(struct Driver *, gGT->drivers[i]);
 
 			if (driver != NULL)
 			{

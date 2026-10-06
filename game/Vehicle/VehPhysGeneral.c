@@ -85,7 +85,7 @@ void VehPhysGeneral_PhysAngular(struct Thread *thread, struct Driver *driver)
 
 	PhysLerpRot(driver, 0);
 
-	elapsedTimeMS = sdata->gGT->elapsedTimeMS;
+	elapsedTimeMS = P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS;
 	actionsFlagSet = driver->actionsFlagSet;
 	forwardDir = driver->forwardDir;
 	simpTurnState = driver->simpTurnState;
@@ -125,7 +125,7 @@ void VehPhysGeneral_PhysAngular(struct Thread *thread, struct Driver *driver)
 	{
 		rotCurrW_interp = VehCalc_MapToRange(speedApprox, VEH_PHYS_ANGULAR_STICK_MIN_SPEED, VEH_PHYS_ANGULAR_STEER_SPEED_THRESHOLD, 0, rotCurrW_interp);
 	}
-	terrain = driver->terrainMeta1;
+	terrain = P32_GET(struct Terrain *, driver->terrainMeta1);
 	rotCurrW_original = (int)driver->rotationSpinRate;
 	if (rotCurrW_interp == 0)
 	{
@@ -134,7 +134,7 @@ void VehPhysGeneral_PhysAngular(struct Thread *thread, struct Driver *driver)
 		                  terrain->turnResponseScale),
 		    8);
 
-		rotCurrW_interp = VehCalc_InterpBySpeed(rotCurrW_original, CTR_FRAME_STEP(rate, sdata->gGT->timer), 0);
+		rotCurrW_interp = VehCalc_InterpBySpeed(rotCurrW_original, CTR_FRAME_STEP(rate, P32_GET(struct GameTracker *, sdata->gGT)->timer), 0);
 
 		forwardDir = (s16)rotCurrW_interp;
 	}
@@ -270,7 +270,7 @@ void VehPhysGeneral_PhysAngular(struct Thread *thread, struct Driver *driver)
 	// spins camera from side of driver, to back of driver,
 	// when the drifting ends. "LerpToForwards"
 #if CTR_NATIVE_60FPS
-	if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+	if (CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer))
 #endif
 	driver->turnAngleLerpVel = VehPhysGeneral_LerpToForwards(driver, (int)driftAngleCurr_og, (int)forwardDir, classSpeed_halved);
 
@@ -390,7 +390,7 @@ LAB_80060284:
 		{
 			rotCurrW_interp = CTR_MipsNegLo(rotCurrW_original);
 		}
-		rotCurrW_interp = VehCalc_InterpBySpeed(turnResistMax, CTR_FRAME_STEP(rotCurrW_interp, sdata->gGT->timer), 0);
+		rotCurrW_interp = VehCalc_InterpBySpeed(turnResistMax, CTR_FRAME_STEP(rotCurrW_interp, P32_GET(struct GameTracker *, sdata->gGT)->timer), 0);
 		forwardDir = (s16)rotCurrW_interp;
 	}
 	else
@@ -645,7 +645,7 @@ void VehPhysGeneral_JumpAndFriction(struct Thread *t, struct Driver *d)
 	}
 	else if (d->baseSpeed != 0)
 	{
-		if (((d->terrainMeta1->flags & TERRAIN_FLAG_ACCEL_WHILE_REVERSE_SLIDING) == 0) || (d->baseSpeed < 1) || (d->speedApprox >= 0))
+		if (((P32_GET(struct Terrain *, d->terrainMeta1)->flags & TERRAIN_FLAG_ACCEL_WHILE_REVERSE_SLIDING) == 0) || (d->baseSpeed < 1) || (d->speedApprox >= 0))
 		{
 			int speedApprox = d->speedApprox;
 			int absSpeedApprox = VehPhysGeneral_Jump_Abs(speedApprox);
@@ -666,7 +666,7 @@ void VehPhysGeneral_JumpAndFriction(struct Thread *t, struct Driver *d)
 				acceleration = d->const_Accel_Reserves;
 			}
 
-			int slowUntilSpeed = d->terrainMeta1->slowUntilSpeed;
+			int slowUntilSpeed = P32_GET(struct Terrain *, d->terrainMeta1)->slowUntilSpeed;
 			if ((slowUntilSpeed != VEH_PHYS_JUMP_TERRAIN_SCALE_NEUTRAL) && ((d->actionsFlagSet & ACTION_MASK_WEAPON) == 0))
 			{
 				acceleration = CTR_MipsSra(CTR_MipsMulLo(slowUntilSpeed, acceleration), VEH_PHYS_JUMP_SPEED_FIXED_SHIFT);
@@ -680,7 +680,7 @@ void VehPhysGeneral_JumpAndFriction(struct Thread *t, struct Driver *d)
 
 PROCESS_ACCEL:
 {
-	int forwardImpulse = CTR_MipsSra(CTR_MipsMulLo(acceleration, sdata->gGT->elapsedTimeMS), 5);
+	int forwardImpulse = CTR_MipsSra(CTR_MipsMulLo(acceleration, P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS), 5);
 	Vec3 rotated = VehPhysGeneral_Jump_RotateLoadedVector(0, 0, (s16)forwardImpulse);
 
 	if (d->baseSpeed < 0)
@@ -775,7 +775,7 @@ CHECK_FOR_ANY_JUMP:
 		{
 			if ((d->actionsFlagSet & ACTION_TOUCH_GROUND) != 0)
 			{
-				if ((d->underDriver != NULL) && (d->underDriver->mulNormVecY != 0))
+				if ((P32_GET(struct QuadBlock *, d->underDriver) != NULL) && (P32_GET(struct QuadBlock *, d->underDriver)->mulNormVecY != 0))
 				{
 					int speedApprox = d->speedApprox;
 					if (speedApprox < 0)
@@ -783,14 +783,14 @@ CHECK_FOR_ANY_JUMP:
 						speedApprox = VehPhysGeneral_Jump_Abs(speedApprox);
 					}
 
-					s16 antiGravVelY = (s16)CTR_MipsSra(CTR_MipsMulLo(d->underDriver->mulNormVecY, speedApprox), 8);
+					s16 antiGravVelY = (s16)CTR_MipsSra(CTR_MipsMulLo(P32_GET(struct QuadBlock *, d->underDriver)->mulNormVecY, speedApprox), 8);
 					Vec3 rotated = VehPhysGeneral_Jump_RotateLoadedVector(0, antiGravVelY, 0);
 
 					// Authored adhesion is a force per retail frame. Scale after
 					// rotation to retain the retail impulse and signed rounding.
-					movement.x = CTR_MipsAddLo(movement.x, CTR_FRAME_STEP(rotated.x, sdata->gGT->timer));
-					movement.y = CTR_MipsAddLo(movement.y, CTR_FRAME_STEP(rotated.y, sdata->gGT->timer));
-					movement.z = CTR_MipsAddLo(movement.z, CTR_FRAME_STEP(rotated.z, sdata->gGT->timer));
+					movement.x = CTR_MipsAddLo(movement.x, CTR_FRAME_STEP(rotated.x, P32_GET(struct GameTracker *, sdata->gGT)->timer));
+					movement.y = CTR_MipsAddLo(movement.y, CTR_FRAME_STEP(rotated.y, P32_GET(struct GameTracker *, sdata->gGT)->timer));
+					movement.z = CTR_MipsAddLo(movement.z, CTR_FRAME_STEP(rotated.z, P32_GET(struct GameTracker *, sdata->gGT)->timer));
 				}
 			}
 
@@ -867,7 +867,7 @@ PROCESS_JUMP:
 	    (u32)CTR_MipsSra(CTR_MipsAddLo(jumpVelYSquared, CTR_MipsMulLo(d->jump_InitialVelY, d->jump_InitialVelY)), VEH_PHYS_JUMP_SPEED_FIXED_SHIFT),
 	    VEH_PHYS_JUMP_SPEED_FIXED_SHIFT);
 
-	int maxVerticalSpeed = sdata->gGT->level1->jumpVerticalSpeedCap << VEH_PHYS_JUMP_SPEED_FIXED_SHIFT;
+	int maxVerticalSpeed = P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->jumpVerticalSpeedCap << VEH_PHYS_JUMP_SPEED_FIXED_SHIFT;
 	if (maxVerticalSpeed == 0)
 	{
 		maxVerticalSpeed = VEH_PHYS_JUMP_VERTICAL_SPEED_DEFAULT;
@@ -912,7 +912,7 @@ NOT_JUMPING:
 		{
 			d->speedometerNeedleValue =
 			    (s16)((u32)CTR_MipsAddLo(CTR_MipsMulLo(d->speedometerNeedleValue, VEH_PHYS_JUMP_SPEEDOMETER_BLEND_OLD),
-			                             CTR_MipsMulLo(sdata->gGT->timer & VEH_PHYS_JUMP_SPEEDOMETER_TIMER_MASK, VEH_PHYS_JUMP_SPEEDOMETER_TIMER_SCALE)) >>
+			                             CTR_MipsMulLo(P32_GET(struct GameTracker *, sdata->gGT)->timer & VEH_PHYS_JUMP_SPEEDOMETER_TIMER_MASK, VEH_PHYS_JUMP_SPEEDOMETER_TIMER_SCALE)) >>
 			          VEH_PHYS_JUMP_SPEEDOMETER_BLEND_SHIFT);
 		}
 	}
@@ -983,7 +983,7 @@ CTR_STATIC_ASSERT(ITEMSET_THREE_MISSILES_HELD_LIMIT == 2);
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80060f0c-0x80061488.
 void VehPhysGeneral_SetHeldItem(struct Driver *driver)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	int itemSet = ITEMSET_Invalid;
 
@@ -1350,7 +1350,7 @@ int VehPhysGeneral_GetBaseSpeed(struct Driver *driver)
 
 	int subtract = 0;
 
-	if (driver->instTntRecv != 0)
+	if (P32_GET(struct Instance *, driver->instTntRecv) != 0)
 	{
 		subtract = CTR_MipsSra(driver->const_DamagedSpeed, VEH_BASE_SPEED_DAMAGE_HALF_SHIFT);
 	}

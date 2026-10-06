@@ -60,9 +60,9 @@ void howl_PlayAudio_Update()
 			sdata->criticalSectionCount = 0;
 		}
 
-		for (curr = (struct ChannelStats *)sdata->channelTaken.first; curr != NULL; curr = backupNext)
+		for (curr = (struct ChannelStats *)P32_GET(struct Item *, sdata->channelTaken.first); curr != NULL; curr = backupNext)
 		{
-			backupNext = curr->next;
+			backupNext = P32_GET(struct ChannelStats *, curr->next);
 
 			// if sound has no timer (plays inf)
 			statFlags = curr->flags;
@@ -112,7 +112,7 @@ void howl_InitChannelAttr_EngineFX(struct EngineFX *engineFX, struct ChannelAttr
 	attr->ad = 0x80ff;
 	attr->sr = 0x1fc2;
 
-	attr->spuStartAddr = (void *)(sdata->howl_spuAddrs[engineFX->spuIndex].spuAddr << 3);
+	attr->spuStartAddr = P32_GET(struct SpuAddrEntry *, sdata->howl_spuAddrs)[engineFX->spuIndex].spuAddr << 3;
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8002c424-0x8002c510
@@ -142,7 +142,7 @@ void howl_InitChannelAttr_OtherFX(struct OtherFX *otherFX, struct ChannelAttr *a
 	attr->ad = 0x80ff;
 	attr->sr = 0x1fc2;
 
-	attr->spuStartAddr = (void *)(sdata->howl_spuAddrs[otherFX->spuIndex].spuAddr << 3);
+	attr->spuStartAddr = P32_GET(struct SpuAddrEntry *, sdata->howl_spuAddrs)[otherFX->spuIndex].spuAddr << 3;
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8002c510-0x8002c64c
@@ -165,9 +165,9 @@ void howl_PauseAudio()
 	CseqMusic_Pause();
 
 	Smart_EnterCriticalSection();
-	for (curr = (struct ChannelStats *)sdata->channelTaken.first; curr != NULL; curr = backupNext)
+	for (curr = (struct ChannelStats *)P32_GET(struct Item *, sdata->channelTaken.first); curr != NULL; curr = backupNext)
 	{
-		backupNext = curr->next;
+		backupNext = P32_GET(struct ChannelStats *, curr->next);
 
 		ptrFlag = &sdata->ChannelUpdateFlags[curr->channelID];
 		*ptrFlag |= 1;
@@ -206,7 +206,7 @@ void howl_UnPauseChannel(struct ChannelStats *stats)
 
 	if (type == HOWL_CHANNEL_TYPE_ENGINE_FX)
 	{
-		howl_InitChannelAttr_EngineFX(&sdata->howl_metaEngineFX[soundID], &attr, stats->vol, stats->LR, stats->distort);
+		howl_InitChannelAttr_EngineFX(&P32_GET(struct EngineFX *, sdata->howl_metaEngineFX)[soundID], &attr, stats->vol, stats->LR, stats->distort);
 	}
 
 	else if (type == HOWL_CHANNEL_TYPE_OTHER_FX)
@@ -216,7 +216,7 @@ void howl_UnPauseChannel(struct ChannelStats *stats)
 		    !NativeCustomRacer_InitSampledVoiceChannelAttr((int)stats->unk2 - 1, soundID, &attr, stats->vol, stats->LR, stats->distort))
 #endif
 		{
-			howl_InitChannelAttr_OtherFX(&sdata->howl_metaOtherFX[soundID], &attr, stats->vol, stats->LR, stats->distort);
+			howl_InitChannelAttr_OtherFX(&P32_GET(struct OtherFX *, sdata->howl_metaOtherFX)[soundID], &attr, stats->vol, stats->LR, stats->distort);
 		}
 	}
 
@@ -253,7 +253,7 @@ void howl_UnPauseAudio()
 	pausedStats = &sdata->channelStatsCurr[0];
 
 	Smart_EnterCriticalSection();
-	for (i = 0, curr = (struct ChannelStats *)sdata->channelFree.first; i < sdata->numBackup_ChannelStats; i++, curr = backupNext)
+	for (i = 0, curr = (struct ChannelStats *)P32_GET(struct Item *, sdata->channelFree.first); i < sdata->numBackup_ChannelStats; i++, curr = backupNext)
 	{
 		if (curr == NULL)
 		{
@@ -261,8 +261,8 @@ void howl_UnPauseAudio()
 		}
 
 		backupID = curr->channelID;
-		backupPrev = curr->prev;
-		backupNext = curr->next;
+		backupPrev = P32_GET(struct ChannelStats *, curr->prev);
+		backupNext = P32_GET(struct ChannelStats *, curr->next);
 
 		int *src = (int *)pausedStats++;
 		int *dest = (int *)curr;
@@ -277,8 +277,8 @@ void howl_UnPauseAudio()
 		dest[6] = src[6];
 		dest[7] = src[7];
 
-		curr->next = backupNext;
-		curr->prev = backupPrev;
+		P32_SET(curr->next, backupNext);
+		P32_SET(curr->prev, backupPrev);
 		curr->channelID = backupID;
 
 		LIST_RemoveMember(&sdata->channelFree, (struct Item *)curr);

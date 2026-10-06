@@ -15,8 +15,8 @@ struct sData sdata_static = {.langBufferSize = 0x3F04,
                              .arcade_difficultyParams = (s16 *)0x8008da48,
                              .cup_difficultyParams = (s16 *)0x8008da64,
 #else
-                             .arcade_difficultyParams = &sdata_static.arcadeDiff[0],
-                             .cup_difficultyParams = &sdata_static.cupDiff[0],
+                             .arcade_difficultyParams = P32_DEFER(&sdata_static.arcadeDiff[0]),
+                             .cup_difficultyParams = P32_DEFER(&sdata_static.cupDiff[0]),
 #endif
 
                              .driver_pathIndexIDs = {0, -1, -1, 2, 0, -1, -1, 2},
@@ -98,7 +98,7 @@ struct sData sdata_static = {.langBufferSize = 0x3F04,
                              .advHubSongSet =
                                  {
                                      .numSeqs = 0x14,
-                                     .ptrSongSetBits = &data.advHubSongSetBytes[0],
+                                     .ptrSongSetBits = P32_DEFER(&data.advHubSongSetBytes[0]),
                                  },
 
                              .reverbModeBossID = {3, 1, 1, 0, 3, 3,
@@ -238,8 +238,8 @@ struct sData sdata_static = {.langBufferSize = 0x3F04,
                              .gGT = (struct GameTracker *)0x80096b20,
                              .gGamepads = (struct GamepadSystem *)0x80096804,
 #else
-                             .gGT = &sdata_static.gameTracker,
-                             .gGamepads = &sdata_static.gamepadSystem,
+                             .gGT = P32_DEFER(&sdata_static.gameTracker),
+                             .gGamepads = P32_DEFER(&sdata_static.gamepadSystem),
 #endif
 
                              .vsyncTillFlip = 0,
@@ -314,7 +314,7 @@ struct sData sdata_static = {.langBufferSize = 0x3F04,
 #if NO_BSS
                              .PtrMempack = (struct Mempack *)0x800990E4,
 #else
-                             .PtrMempack = &sdata_static.mempack[0],
+                             .PtrMempack = P32_DEFER(&sdata_static.mempack[0]),
 #endif
 
                              .randomNumber = 100,
@@ -351,8 +351,8 @@ struct sData sdata_static = {.langBufferSize = 0x3F04,
                              .ptrToMemcardBuffer1 = (void *)0x800992e4,
                              .ptrToMemcardBuffer2 = (void *)0x800992e4,
 #elif defined(__GNUC__)
-                             .ptrToMemcardBuffer1 = &memcardBytes[0],
-                             .ptrToMemcardBuffer2 = &memcardBytes[0],
+                             .ptrToMemcardBuffer1 = P32_DEFER(&memcardBytes[0]),
+                             .ptrToMemcardBuffer2 = P32_DEFER(&memcardBytes[0]),
 #else
                              .ptrToMemcardBuffer1 = &sdata_static.memcardBytes[0],
                              .ptrToMemcardBuffer2 = &sdata_static.memcardBytes[0],
@@ -466,3 +466,16 @@ struct sData sdata_static = {.langBufferSize = 0x3F04,
 
                              .boolIsMaskThreadAlive = 0,
                              .s_head = "head"};
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(sdata_static)
+{
+	P32_SET(sdata_static.arcade_difficultyParams, &sdata_static.arcadeDiff[0]);
+	P32_SET(sdata_static.cup_difficultyParams, &sdata_static.cupDiff[0]);
+	P32_SET(sdata_static.advHubSongSet.ptrSongSetBits, &data.advHubSongSetBytes[0]);
+	P32_SET(sdata_static.gGT, &sdata_static.gameTracker);
+	P32_SET(sdata_static.gGamepads, &sdata_static.gamepadSystem);
+	P32_SET(sdata_static.PtrMempack, &sdata_static.mempack[0]);
+	P32_SET(sdata_static.ptrToMemcardBuffer1, &memcardBytes[0]);
+	P32_SET(sdata_static.ptrToMemcardBuffer2, &memcardBytes[0]);
+}
+#endif

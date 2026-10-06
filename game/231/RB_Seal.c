@@ -14,16 +14,16 @@ void Seal_CheckColl(struct Instance *sealInst, struct Thread *sealTh, int damage
 	b32 boolHurt;
 	u8 kartStatePrev;
 
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// check players
-	hitInst = (struct Instance *)LinkedCollide_Radius(sealInst, sealTh, gGT->threadBuckets[PLAYER].thread, radius);
+	hitInst = (struct Instance *)LinkedCollide_Radius(sealInst, sealTh, P32_GET(struct Thread *, gGT->threadBuckets[PLAYER].thread), radius);
 
 	// if hit a player
 	if (hitInst != 0)
 	{
 		// get driver from instance
-		hitDriver = (struct Driver *)hitInst->thread->object;
+		hitDriver = (struct Driver *)P32_GET(void *, P32_GET(struct Thread *, hitInst->thread)->object);
 
 		// backup
 		kartStatePrev = hitDriver->kartState;
@@ -56,13 +56,13 @@ void Seal_CheckColl(struct Instance *sealInst, struct Thread *sealTh, int damage
 	}
 
 	// check robots
-	hitInst = (struct Instance *)LinkedCollide_Radius(sealInst, sealTh, gGT->threadBuckets[ROBOT].thread, radius);
+	hitInst = (struct Instance *)LinkedCollide_Radius(sealInst, sealTh, P32_GET(struct Thread *, gGT->threadBuckets[ROBOT].thread), radius);
 
 	// if hit a robot
 	if (hitInst != 0)
 	{
 		// get driver from instance
-		hitDriver = (struct Driver *)hitInst->thread->object;
+		hitDriver = (struct Driver *)P32_GET(void *, P32_GET(struct Thread *, hitInst->thread)->object);
 
 		// attempt to harm driver (spin out)
 		RB_Hazard_HurtDriver(hitDriver, damage, 0, 0);
@@ -72,14 +72,14 @@ void Seal_CheckColl(struct Instance *sealInst, struct Thread *sealTh, int damage
 	}
 
 	// check mines
-	hitInst = (struct Instance *)LinkedCollide_Radius(sealInst, sealTh, gGT->threadBuckets[MINE].thread, radius);
+	hitInst = (struct Instance *)LinkedCollide_Radius(sealInst, sealTh, P32_GET(struct Thread *, gGT->threadBuckets[MINE].thread), radius);
 
 	// if hit a mine
 	if (hitInst != 0)
 	{
 		// all mine ThCollide functions only take one parameter,
 		// all other ThCollide functions are erased due to redundancy
-		((ThreadSimpleCollideFunc)hitInst->thread->funcThCollide)(hitInst->thread);
+		((ThreadSimpleCollideFunc)P32_GET(void *, P32_GET(struct Thread *, hitInst->thread)->funcThCollide))(P32_GET(struct Thread *, hitInst->thread));
 
 		// dont check other bucket
 		return;
@@ -100,8 +100,8 @@ void RB_Seal_ThTick_TurnAround(struct Thread *t)
 	struct Instance *sealInst;
 	struct Seal *sealObj;
 
-	sealInst = t->inst;
-	sealObj = (struct Seal *)t->object;
+	sealInst = P32_GET(struct Instance *, t->inst);
+	sealObj = (struct Seal *)P32_GET(void *, t->object);
 
 	// if animation is not over
 	if ((sealInst->animFrame + 2) < INSTANCE_GetNumAnimFrames(sealInst, 0))
@@ -162,8 +162,8 @@ void RB_Seal_ThTick_Move(struct Thread *t)
 	struct Seal *sealObj;
 	int i;
 
-	sealInst = t->inst;
-	sealObj = (struct Seal *)t->object;
+	sealInst = P32_GET(struct Instance *, t->inst);
+	sealObj = (struct Seal *)P32_GET(void *, t->object);
 	int moveFrames = FPS_DOUBLE(0x2d);
 
 	// if animation is not over
@@ -243,7 +243,7 @@ void RB_Seal_LInB(struct Instance *inst)
 	struct InstDef *instDef;
 	struct Thread *t;
 
-	if (inst->thread != 0)
+	if (P32_GET(struct Thread *, inst->thread) != 0)
 	{
 		return;
 	}
@@ -261,25 +261,25 @@ void RB_Seal_LInB(struct Instance *inst)
 	{
 		return;
 	}
-	inst->thread = t;
-	t->inst = inst;
-	t->funcThCollide = (void *)RB_Seal_ThCollide;
+	P32_SET(inst->thread, t);
+	P32_SET(t->inst, inst);
+	P32_SET(t->funcThCollide, (void *)RB_Seal_ThCollide);
 
 	inst->scale.x = 0x2000;
 	inst->scale.y = 0x2000;
 	inst->scale.z = 0x2000;
 
-	sealObj = ((struct Seal *)t->object);
+	sealObj = ((struct Seal *)P32_GET(void *, t->object));
 	sealObj->distFromSpawn = 0;
 	sealObj->direction = 1;
 	sealObj->sealID = inst->name[strlen(inst->name) - 1] - '0';
 
-	if (sdata->gGT->level1->numSpawnType2 != 0)
+	if (P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->numSpawnType2 != 0)
 	{
-		spawnType2 = &sdata->gGT->level1->ptrSpawnType2[sealObj->sealID];
+		spawnType2 = &P32_GET(struct SpawnType2 *, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->ptrSpawnType2)[sealObj->sealID];
 
-		sealObj->spawnPos = spawnType2->positions[0];
-		sealObj->endPos = spawnType2->positions[1];
+		sealObj->spawnPos = P32_GET(SVec3 *, spawnType2->positions)[0];
+		sealObj->endPos = P32_GET(SVec3 *, spawnType2->positions)[1];
 	}
 
 	// distance between points
@@ -289,7 +289,7 @@ void RB_Seal_LInB(struct Instance *inst)
 	}
 
 	// rotCurr
-	instDef = inst->instDef;
+	instDef = P32_GET(struct InstDef *, inst->instDef);
 	sealObj->rotCurr.x = instDef->rot.x;
 	sealObj->rotCurr.y = instDef->rot.y;
 	sealObj->rotCurr.z = instDef->rot.z;

@@ -48,7 +48,7 @@ static char *SelectProfile_NativeGhostFormatText(int ghostFps, int ghostMode)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80047da8-0x80047dfc.
 void SelectProfile_QueueLoadHub_MenuProc(struct RectMenu *menu)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// NOTE(aalhendi): Retail stores 0x27 before LOAD_LevelFile records prevLEV.
 	gGT->levelID = MAIN_MENU_LEVEL;
@@ -66,7 +66,7 @@ void SelectProfile_ThTick(struct Thread *t)
 	struct SelectProfileLoadSaveObj *obj;
 	int i;
 
-	obj = (struct SelectProfileLoadSaveObj *)t->object;
+	obj = (struct SelectProfileLoadSaveObj *)P32_GET(void *, t->object);
 	for (i = 0; i <
 #if defined(CTR_NATIVE)
 	     15
@@ -78,13 +78,13 @@ void SelectProfile_ThTick(struct Thread *t)
 		int slot = i % 3;
 		struct SelectProfileLoadSaveIcon *activeIcon;
 #if defined(CTR_NATIVE)
-		activeIcon = (i >= 12) ? &s_autoSaveIcons[i - 12] : &obj->icons[i];
+		activeIcon = (i >= 12) ? &s_autoSaveIcons[i - 12] : &P32_GET(struct SelectProfileLoadSaveIcon *, obj->icons)[i];
 #else
 		activeIcon = &obj->icons[i];
 #endif
-		struct Instance *inst = activeIcon->inst;
+		struct Instance *inst = P32_GET(struct Instance *, activeIcon->inst);
 
-		activeIcon->rot.y = (s16)(activeIcon->rot.y + CTR_FRAME_STEP(sdata->LoadSave_SpinRateY[slot], sdata->gGT->timer));
+		activeIcon->rot.y = (s16)(activeIcon->rot.y + CTR_FRAME_STEP(sdata->LoadSave_SpinRateY[slot], P32_GET(struct GameTracker *, sdata->gGT)->timer));
 
 #if defined(CTR_NATIVE)
 		// NOTE(aalhendi): Menu-storage can keep this thread alive when the
@@ -153,11 +153,11 @@ static void SelectProfile_DrawAdvProfile_UpdateIcon(struct SelectProfileLoadSave
 {
 	struct SelectProfileLoadSaveIcon *icon;
 #if defined(CTR_NATIVE)
-	icon = (index >= 12) ? &s_autoSaveIcons[index - 12] : &obj->icons[index];
+	icon = (index >= 12) ? &s_autoSaveIcons[index - 12] : &P32_GET(struct SelectProfileLoadSaveIcon *, obj->icons)[index];
 #else
 	icon = &obj->icons[index];
 #endif
-	struct Instance *inst = icon->inst;
+	struct Instance *inst = P32_GET(struct Instance *, icon->inst);
 
 #if defined(CTR_NATIVE)
 	if (inst == NULL)
@@ -175,7 +175,7 @@ static void SelectProfile_DrawAdvProfile_UpdateIcon(struct SelectProfileLoadSave
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80047ff8-0x800485a8.
 void SelectProfile_DrawAdvProfile(struct AdvProgress *adv, int posX, int posY, s16 isHighlighted, s16 slotIndex, u16 menuFlag)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	RECT profileRect;
 
 	int iconColor;
@@ -206,16 +206,16 @@ void SelectProfile_DrawAdvProfile(struct AdvProgress *adv, int posX, int posY, s
 
 	if (adv->characterID < 0)
 	{
-		DecalFont_DrawLine(sdata->lngStrings[LNG_EMPTY], posX + 0x6c, posY + 0x17, FONT_BIG, emptyColor | 0xffff8000);
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_EMPTY]), posX + 0x6c, posY + 0x17, FONT_BIG, emptyColor | 0xffff8000);
 	}
 	else
 	{
 		int profileTextColor = numberColor | 0x4000;
 		int characterID = adv->characterID;
 		int iconID = data.MetaDataCharacters[characterID].iconID;
-		struct SelectProfileLoadSaveObj *obj = (struct SelectProfileLoadSaveObj *)sdata->ptrLoadSaveObj;
+		struct SelectProfileLoadSaveObj *obj = P32_DEC(struct SelectProfileLoadSaveObj *, sdata->ptrLoadSaveObj);
 
-		RECTMENU_DrawPolyGT4(gGT->ptrIcons[iconID], posX + 10, posY + 6, &gGT->backBuffer->primMem, gGT->pushBuffer_UI.ptrOT, iconColor, iconColor, iconColor,
+		RECTMENU_DrawPolyGT4(P32_GET(struct Icon *, gGT->ptrIcons[iconID]), posX + 10, posY + 6, &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), iconColor, iconColor, iconColor,
 		                     iconColor, 1, 0x1000);
 
 #if defined(CTR_NATIVE)
@@ -265,10 +265,10 @@ void SelectProfile_DrawAdvProfile(struct AdvProgress *adv, int posX, int posY, s
 		highlightRect.w = 0xd0;
 		highlightRect.h = 0x35;
 
-		CTR_Box_DrawClearBox(&highlightRect, highlightColor, 1, &gGT->backBuffer->otMem.uiOT[3]);
+		CTR_Box_DrawClearBox(&highlightRect, highlightColor, 1, &P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT)[3]);
 	}
 
-	RECTMENU_DrawInnerRect(&profileRect, (s16)menuFlag, &gGT->backBuffer->otMem.uiOT[3]);
+	RECTMENU_DrawInnerRect(&profileRect, (s16)menuFlag, &P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT)[3]);
 }
 
 
@@ -276,7 +276,7 @@ void SelectProfile_DrawAdvProfile(struct AdvProgress *adv, int posX, int posY, s
 void SelectProfile_GetTrackID()
 {
 	data.menuGreenLoadSave.rowSelected = 1;
-	sdata->advProgress.HubLevYouSavedOn = sdata->gGT->levelID;
+	sdata->advProgress.HubLevYouSavedOn = P32_GET(struct GameTracker *, sdata->gGT)->levelID;
 }
 
 
@@ -310,7 +310,7 @@ void SelectProfile_Init(u16 flags)
 	struct Thread *t;
 	int i;
 
-	obj = (struct SelectProfileLoadSaveObj *)sdata->ptrLoadSaveObj;
+	obj = P32_DEC(struct SelectProfileLoadSaveObj *, sdata->ptrLoadSaveObj);
 
 	if (obj == NULL)
 	{
@@ -325,20 +325,20 @@ void SelectProfile_Init(u16 flags)
 		// NOTE(aalhendi): Native low-RAM audit candidate only. Retail writes
 		// through this allocation result before its later null check; keep
 		// unpatched until a valid menu repro proves the allocation can fail.
-		obj = (struct SelectProfileLoadSaveObj *)t->object;
-		sdata->ptrLoadSaveObj = (int)obj;
-		obj->icons = &sdata->LoadSaveData[0];
-		memset(obj->icons, 0, sizeof(sdata->LoadSaveData));
+		obj = (struct SelectProfileLoadSaveObj *)P32_GET(void *, t->object);
+		sdata->ptrLoadSaveObj = (int)P32_ENC(obj);
+		P32_SET(obj->icons, &sdata->LoadSaveData[0]);
+		memset(P32_GET(struct SelectProfileLoadSaveIcon *, obj->icons), 0, sizeof(sdata->LoadSaveData));
 
 		if (obj == NULL)
 		{
 			return;
 		}
 
-		obj->thread = t;
+		P32_SET(obj->thread, t);
 	}
 
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	for (i = 0; i <
 #if defined(CTR_NATIVE)
 	     15
@@ -351,14 +351,14 @@ void SelectProfile_Init(u16 flags)
 		int slot;
 		struct SelectProfileLoadSaveIcon *activeIcon;
 #if defined(CTR_NATIVE)
-		activeIcon = (i >= 12) ? &s_autoSaveIcons[i - 12] : &obj->icons[i];
+		activeIcon = (i >= 12) ? &s_autoSaveIcons[i - 12] : &P32_GET(struct SelectProfileLoadSaveIcon *, obj->icons)[i];
 #else
 		activeIcon = &obj->icons[i];
 #endif
 
-		if (activeIcon->inst == NULL)
+		if (P32_GET(struct Instance *, activeIcon->inst) == NULL)
 		{
-			struct Model *model = gGT->modelPtr[data.MetaDataLoadSave[i % 12].modelID];
+			struct Model *model = P32_GET(struct Model *, gGT->modelPtr[data.MetaDataLoadSave[i % 12].modelID]);
 #ifdef CTR_NATIVE
 			char *instName = &s_SelectProfileInstName[0];
 #else
@@ -367,14 +367,14 @@ void SelectProfile_Init(u16 flags)
 
 			if (model != NULL)
 			{
-				inst = INSTANCE_Birth3D(model, instName, obj->thread);
+				inst = INSTANCE_Birth3D(model, instName, P32_GET(struct Thread *, obj->thread));
 
 				if (inst != NULL)
 				{
 					struct InstDrawPerPlayer *idpp;
 					int player;
 
-					activeIcon->inst = inst;
+					P32_SET(activeIcon->inst, inst);
 					slot = i % 3;
 
 					inst->flags |= HIDE_MODEL | SCREENSPACE_INSTANCE;
@@ -384,10 +384,10 @@ void SelectProfile_Init(u16 flags)
 					}
 
 					idpp = INST_GETIDPP(inst);
-					idpp[0].pushBuffer = &gGT->pushBuffer_UI;
+					P32_SET(idpp[0].pushBuffer, &gGT->pushBuffer_UI);
 					for (player = 1; player < gGT->numPlyrCurrGame; player++)
 					{
-						idpp[player].pushBuffer = NULL;
+						P32_SET(idpp[player].pushBuffer, NULL);
 					}
 
 					inst->colorRGBA = SelectProfile_LoadSave_Color(i % 12, flags);
@@ -404,7 +404,7 @@ void SelectProfile_Init(u16 flags)
 			}
 		}
 
-		inst = activeIcon->inst;
+		inst = P32_GET(struct Instance *, activeIcon->inst);
 		if (inst != NULL)
 		{
 			inst->flags |= HIDE_MODEL;
@@ -418,7 +418,7 @@ void SelectProfile_Destroy(void)
 {
 	struct SelectProfileLoadSaveObj *obj;
 
-	obj = (struct SelectProfileLoadSaveObj *)sdata->ptrLoadSaveObj;
+	obj = P32_DEC(struct SelectProfileLoadSaveObj *, sdata->ptrLoadSaveObj);
 	if (obj != NULL)
 	{
 		int i;
@@ -433,23 +433,23 @@ void SelectProfile_Destroy(void)
 		{
 			struct SelectProfileLoadSaveIcon *activeIcon;
 #if defined(CTR_NATIVE)
-			activeIcon = (i >= 12) ? &s_autoSaveIcons[i - 12] : &obj->icons[i];
+			activeIcon = (i >= 12) ? &s_autoSaveIcons[i - 12] : &P32_GET(struct SelectProfileLoadSaveIcon *, obj->icons)[i];
 #else
 			activeIcon = &obj->icons[i];
 #endif
-			if (activeIcon->inst != NULL)
+			if (P32_GET(struct Instance *, activeIcon->inst) != NULL)
 			{
-				INSTANCE_Death(activeIcon->inst);
+				INSTANCE_Death(P32_GET(struct Instance *, activeIcon->inst));
 #if defined(CTR_NATIVE)
-				activeIcon->inst = NULL;
+				P32_SET(activeIcon->inst, NULL);
 #endif
 			}
 		}
 
 #if defined(CTR_NATIVE)
-		obj->thread->funcThTick = NULL;
+		P32_SET(P32_GET(struct Thread *, obj->thread)->funcThTick, NULL);
 #endif
-		obj->thread->flags |= THREAD_FLAG_DEAD;
+		P32_GET(struct Thread *, obj->thread)->flags |= THREAD_FLAG_DEAD;
 		sdata->ptrLoadSaveObj = 0;
 	}
 }
@@ -470,7 +470,7 @@ void SelectProfile_AdvPickMode_MenuProc(struct RectMenu *menu)
 	if ((row >= 0) && (row < 3))
 	{
 		SelectProfile_ToggleMode((u16)menu->rowSelected | SELECT_PROFILE_SCREEN_GREEN_LOAD_SAVE);
-		sdata->ptrDesiredMenu = &data.menuFourAdvProfiles;
+		P32_SET(sdata->ptrDesiredMenu, &data.menuFourAdvProfiles);
 		return;
 	}
 
@@ -486,7 +486,7 @@ void SelectProfile_AdvPickMode_MenuProc(struct RectMenu *menu)
 void SelectProfile_DrawGhostProfile(struct GhostProfile *profile, int posX, int posY, u32 isHighlighted, int unused, u16 menuFlag, s16 isLoading,
                                     s16 isUnavailable)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	RECT profileRect;
 	RECT innerRect;
 
@@ -506,9 +506,9 @@ void SelectProfile_DrawGhostProfile(struct GhostProfile *profile, int posX, int 
 
 	if (isUnavailable != 0)
 	{
-		DecalFont_DrawLine(sdata->lngStrings[LNG_NOT_AVAILABLE], posX + 0x64, posY + 0x11, FONT_SMALL, 0xffff8016);
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_NOT_AVAILABLE]), posX + 0x64, posY + 0x11, FONT_SMALL, 0xffff8016);
 		Color redColor = {.self = (u32)sdata->redColor};
-		CTR_Box_DrawClearBox(&innerRect, &redColor, ADD_DECAL, gGT->backBuffer->otMem.uiOT);
+		CTR_Box_DrawClearBox(&innerRect, &redColor, ADD_DECAL, P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT));
 	}
 
 	if (profile != NULL)
@@ -532,7 +532,7 @@ void SelectProfile_DrawGhostProfile(struct GhostProfile *profile, int posX, int 
 		DecalFont_DrawLine(sdata->lngStrings[mdLev->name_LNG], posX + 0x64, posY + 0x1e, FONT_SMALL, 0xffff801d);
 #endif
 		DecalFont_DrawLine(RECTMENU_DrawTime(profile->trackTime), posX + 0x78, posY + 10, FONT_BIG, 0xffff8001);
-		RECTMENU_DrawPolyGT4(gGT->ptrIcons[iconID], posX + 8, posY + 5, &gGT->backBuffer->primMem, gGT->pushBuffer_UI.ptrOT, sdata->ghostIconColor,
+		RECTMENU_DrawPolyGT4(P32_GET(struct Icon *, gGT->ptrIcons[iconID]), posX + 8, posY + 5, &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), sdata->ghostIconColor,
 		                     sdata->ghostIconColor, sdata->ghostIconColor, sdata->ghostIconColor, TRANS_50_DECAL, 0x1000);
 	}
 	else
@@ -540,16 +540,16 @@ void SelectProfile_DrawGhostProfile(struct GhostProfile *profile, int posX, int 
 		int lngIndex = (isLoading != 0) ? 0x6c : 0xb5;
 		int color = (isLoading != 0) ? 0xffff8001 : 0xffff8003;
 
-		DecalFont_DrawLine(sdata->lngStrings[lngIndex], posX + 0x64, posY + 0x11, FONT_SMALL, color);
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[lngIndex]), posX + 0x64, posY + 0x11, FONT_SMALL, color);
 	}
 
 	if (isHighlighted != 0)
 	{
 		Color *highlight = ((menuFlag & SELECT_PROFILE_DRAW_STYLE_GREEN) != 0) ? &sdata->menuRowHighlight_Green : &sdata->menuRowHighlight_Normal;
-		CTR_Box_DrawClearBox(&innerRect, highlight, TRANS_50_DECAL, gGT->backBuffer->otMem.uiOT);
+		CTR_Box_DrawClearBox(&innerRect, highlight, TRANS_50_DECAL, P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT));
 	}
 
-	RECTMENU_DrawInnerRect(&profileRect, (s16)menuFlag, gGT->backBuffer->otMem.uiOT);
+	RECTMENU_DrawInnerRect(&profileRect, (s16)menuFlag, P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT));
 }
 
 
@@ -591,7 +591,7 @@ void SelectProfile_ToggleMode(u32 mode)
 	{
 		u16 trackID = ((mode & SELECT_PROFILE_ACTION_MASK) == SELECT_PROFILE_ACTION_SAVE)
 		                  ? NativeReverseTrack_GetCurrentLogicalTrackId()
-		                  : sdata->gGT->currLEV;
+		                  : P32_GET(struct GameTracker *, sdata->gGT)->currLEV;
 		RefreshCard_ActivateGhostProfilesForLEV(trackID);
 	}
 #if defined(CTR_NATIVE)
@@ -766,7 +766,7 @@ static s16 *SelectProfile_AllProfiles_TimerSaveComplete(void)
 
 static struct MemcardProfile *SelectProfile_MemcardProfile(void)
 {
-	return (struct MemcardProfile *)sdata->ptrToMemcardBuffer2;
+	return (struct MemcardProfile *)P32_GET(void *, sdata->ptrToMemcardBuffer2);
 }
 
 static int SelectProfile_IsGhostMode(void)
@@ -808,7 +808,7 @@ static void SelectProfile_CopyGameProgressToCard(void)
 
 static void SelectProfile_LoadAdvProfile(int slot)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	struct MemcardProfile *memcard = SelectProfile_MemcardProfile();
 
 	GAMEPROG_SyncGameAndCard(&memcard->gameProgress, &sdata->gameProgress);
@@ -840,8 +840,8 @@ static void SelectProfile_SaveAdvProfile(int slot)
 
 static void SelectProfile_StartGhostSave(struct RectMenu *menu)
 {
-	struct GameTracker *gGT = sdata->gGT;
-	struct Driver *driver = gGT->drivers[0];
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct Driver *driver = P32_GET(struct Driver *, gGT->drivers[0]);
 	int time = SELECT_PROFILE_DEFAULT_GHOST_TIME;
 
 	if (driver != NULL)
@@ -849,9 +849,9 @@ static void SelectProfile_StartGhostSave(struct RectMenu *menu)
 		time = driver->timeElapsedInRace;
 	}
 
-	if (sdata->GhostRecording.ptrGhost != NULL)
+	if (P32_GET(struct GhostHeader *, sdata->GhostRecording.ptrGhost) != NULL)
 	{
-		sdata->GhostRecording.ptrGhost->timeElapsedInRace = time;
+		P32_GET(struct GhostHeader *, sdata->GhostRecording.ptrGhost)->timeElapsedInRace = time;
 	}
 
 	char *ghostName = gGT->prevNameEntered;
@@ -962,7 +962,7 @@ static void SelectProfile_DrawGhostRows(struct RectMenu *menu, int rowCount, int
 
 	// NOTE(aalhendi): Retail tests the Adventure subtitle table here, but
 	// draws the Ghost subtitle table below.
-	subtitleVisible = strlen(sdata->lngStrings[data.lngStringsSaveLoadDelete[(sdata->memcardAction * 2) + 1]]) != 0;
+	subtitleVisible = strlen(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.lngStringsSaveLoadDelete[(sdata->memcardAction * 2) + 1]])) != 0;
 
 	if (rowCount < 7)
 	{
@@ -970,7 +970,7 @@ static void SelectProfile_DrawGhostRows(struct RectMenu *menu, int rowCount, int
 		yBase = 0x12;
 		if (sdata->memcardAction != SELECT_PROFILE_ACTION_SAVE)
 		{
-			DecalFont_DrawMultiLine(sdata->lngStrings[LNG_INSERT_ANY_MEMORY_CARD_WITH_GHOST_DATA_IN], 0x100, 0xbe, 0x1ce, FONT_SMALL, color | 0xffff8000);
+			DecalFont_DrawMultiLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_INSERT_ANY_MEMORY_CARD_WITH_GHOST_DATA_IN]), 0x100, 0xbe, 0x1ce, FONT_SMALL, color | 0xffff8000);
 		}
 	}
 	else
@@ -981,12 +981,12 @@ static void SelectProfile_DrawGhostRows(struct RectMenu *menu, int rowCount, int
 
 	titleEndY = yBase + lineGap;
 
-	DecalFont_DrawLine(sdata->lngStrings[data.lngIndex_LoadSave[sdata->memcardAction * 2]], 0x100, yBase, rowCount < 7 ? FONT_BIG : FONT_SMALL,
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.lngIndex_LoadSave[sdata->memcardAction * 2]]), 0x100, yBase, rowCount < 7 ? FONT_BIG : FONT_SMALL,
 	                   JUSTIFY_CENTER | color);
 
 	if (subtitleVisible != 0)
 	{
-		DecalFont_DrawLine(sdata->lngStrings[data.lngIndex_LoadSave[(sdata->memcardAction * 2) + 1]], 0x100, yBase + lineGap,
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.lngIndex_LoadSave[(sdata->memcardAction * 2) + 1]]), 0x100, yBase + lineGap,
 		                   rowCount < 7 ? FONT_BIG : FONT_SMALL, JUSTIFY_CENTER | color);
 		titleEndY += lineGap;
 	}
@@ -1023,7 +1023,7 @@ static void SelectProfile_DrawGhostRows(struct RectMenu *menu, int rowCount, int
 		// NOTE(aalhendi): Retail compares against GameTracker.currLEV
 		// (0x1eb0). Ghost selection happens before QueueLoadTrack, so
 		// levelID still refers to the previously loaded level.
-		if ((profile != NULL) && (profile->trackID != sdata->gGT->currLEV))
+		if ((profile != NULL) && (profile->trackID != P32_GET(struct GameTracker *, sdata->gGT)->currLEV))
 		{
 			isWrongTrack = sdata->memcardAction != SELECT_PROFILE_ACTION_SAVE;
 		}
@@ -1045,7 +1045,7 @@ static void SelectProfile_DrawGhostRows(struct RectMenu *menu, int rowCount, int
 static void SelectProfile_DrawAdvRows(struct RectMenu *menu, int color)
 {
 	int i;
-	int subtitleVisible = strlen(sdata->lngStrings[data.lngStringsSaveLoadDelete[(sdata->memcardAction * 2) + 1]]) != 0;
+	int subtitleVisible = strlen(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.lngStringsSaveLoadDelete[(sdata->memcardAction * 2) + 1]])) != 0;
 	struct MemcardProfile *memcard = SelectProfile_MemcardProfile();
 #if defined(CTR_NATIVE)
 	b32 autoSave = SelectProfile_AutoSaveRowVisible();
@@ -1056,23 +1056,23 @@ static void SelectProfile_DrawAdvRows(struct RectMenu *menu, int color)
 	if (autoSave)
 	{
 		// Compressed layout so a fifth, centered row fits in the 216 line screen.
-		DecalFont_DrawLine(sdata->lngStrings[data.lngStringsSaveLoadDelete[sdata->memcardAction * 2]], 0x100, subtitleVisible ? 2 : 6, FONT_BIG,
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.lngStringsSaveLoadDelete[sdata->memcardAction * 2]]), 0x100, subtitleVisible ? 2 : 6, FONT_BIG,
 		                   JUSTIFY_CENTER | color);
 
 		if (subtitleVisible != 0)
 		{
-			DecalFont_DrawLine(sdata->lngStrings[data.lngStringsSaveLoadDelete[(sdata->memcardAction * 2) + 1]], 0x100, 0x12, FONT_SMALL,
+			DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.lngStringsSaveLoadDelete[(sdata->memcardAction * 2) + 1]]), 0x100, 0x12, FONT_SMALL,
 			                   JUSTIFY_CENTER | color);
 		}
 	}
 	else
 	{
-		DecalFont_DrawLine(sdata->lngStrings[data.lngStringsSaveLoadDelete[sdata->memcardAction * 2]], 0x100, subtitleVisible ? 0x12 : 0x1a, FONT_BIG,
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.lngStringsSaveLoadDelete[sdata->memcardAction * 2]]), 0x100, subtitleVisible ? 0x12 : 0x1a, FONT_BIG,
 		                   JUSTIFY_CENTER | color);
 
 		if (subtitleVisible != 0)
 		{
-			DecalFont_DrawLine(sdata->lngStrings[data.lngStringsSaveLoadDelete[(sdata->memcardAction * 2) + 1]], 0x100, 0x22, FONT_BIG,
+			DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.lngStringsSaveLoadDelete[(sdata->memcardAction * 2) + 1]]), 0x100, 0x22, FONT_BIG,
 			                   JUSTIFY_CENTER | color);
 		}
 	}
@@ -1100,7 +1100,7 @@ static void SelectProfile_DrawAdvRows(struct RectMenu *menu, int color)
 
 	if ((sdata->memcardAction == SELECT_PROFILE_ACTION_SAVE) && (sdata->boolMemcardDataValid != 0))
 	{
-		DecalFont_DrawLine(sdata->lngStrings[LNG_DATA_ON_MEMORY_CARD_IS_OUT_OF_DATE], 0x100, 0xc3, FONT_SMALL, JUSTIFY_CENTER | RED);
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_DATA_ON_MEMORY_CARD_IS_OUT_OF_DATE]), 0x100, 0xc3, FONT_SMALL, JUSTIFY_CENTER | RED);
 	}
 }
 
@@ -1179,9 +1179,9 @@ static void SelectProfile_StartLoadGhost(struct RectMenu *menu, int rowCount)
 
 	if (isNoGhostRow)
 	{
-		if (sdata->ptrGhostTapePlaying != NULL)
+		if (P32_GET(struct GhostHeader *, sdata->ptrGhostTapePlaying) != NULL)
 		{
-			memset(sdata->ptrGhostTapePlaying, 0, 0x28);
+			memset(P32_GET(struct GhostHeader *, sdata->ptrGhostTapePlaying), 0, 0x28);
 		}
 
 		*SelectProfile_AllProfiles_ActionActive() = 1;
@@ -1208,18 +1208,18 @@ static void SelectProfile_StartLoadGhost(struct RectMenu *menu, int rowCount)
 
 		int ghostMode = RefreshCard_GetGhostProfileMode(menu->rowSelected);
 		NativeReverseTrack_SelectLogical(profile->trackID);
-		sdata->gGT->currLEV = profile->trackID;
-		sdata->gGT->gameMode1 &= ~(TIME_TRIAL | RELIC_RACE);
+		P32_GET(struct GameTracker *, sdata->gGT)->currLEV = profile->trackID;
+		P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 &= ~(TIME_TRIAL | RELIC_RACE);
 		if (ghostMode == NATIVE_GHOST_MODE_RELIC_RACE)
 		{
 			gNativeRelicRaceMode = 1;
 			gNativeRelicRaceResultTier = -1;
-			sdata->gGT->gameMode1 |= RELIC_RACE;
+			P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 |= RELIC_RACE;
 		}
 		else
 		{
 			gNativeRelicRaceMode = 0;
-			sdata->gGT->gameMode1 |= TIME_TRIAL;
+			P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 |= TIME_TRIAL;
 		}
 
 		sdata->ghostProfile_indexLoad = menu->rowSelected;
@@ -1232,7 +1232,7 @@ static void SelectProfile_StartLoadGhost(struct RectMenu *menu, int rowCount)
 
 	// NOTE(aalhendi): Retail uses currLEV here; levelID is not updated to the
 	// selected track until the queued load starts.
-	if ((sdata->ghostProfile_memcard[menu->rowSelected].trackID == sdata->gGT->currLEV) &&
+	if ((sdata->ghostProfile_memcard[menu->rowSelected].trackID == P32_GET(struct GameTracker *, sdata->gGT)->currLEV) &&
 	    RefreshCard_IsGhostProfileCompatible(menu->rowSelected))
 	{
 		sdata->ghostProfile_indexLoad = menu->rowSelected;
@@ -1419,7 +1419,7 @@ static void SelectProfile_DrawMemcardMessage(int screen, int color, int menuFlag
 
 	if ((*SelectProfile_AllProfiles_Mode() != SELECT_PROFILE_SCREEN_GHOST) && (screen == MC_SCREEN_ERROR_NODATA) && (sdata->boolMemcardDataValid != 0))
 	{
-		DecalFont_DrawLine(sdata->lngStrings[LNG_DATA_ON_MEMORY_CARD_IS_OUT_OF_DATE], 0x100, 0xc3, FONT_SMALL, JUSTIFY_CENTER | RED);
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_DATA_ON_MEMORY_CARD_IS_OUT_OF_DATE]), 0x100, 0xc3, FONT_SMALL, JUSTIFY_CENTER | RED);
 	}
 
 	if ((sdata->memcardAction == SELECT_PROFILE_ACTION_DELETE) && (firstString == 0xea))
@@ -1429,13 +1429,13 @@ static void SelectProfile_DrawMemcardMessage(int screen, int color, int menuFlag
 
 	if (multiLine == 0)
 	{
-		DecalFont_DrawLine(sdata->lngStrings[firstString], 0x108, 0x12, FONT_BIG, JUSTIFY_CENTER | color);
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[firstString]), 0x108, 0x12, FONT_BIG, JUSTIFY_CENTER | color);
 	}
 	else
 	{
 		for (i = 0; i < 9; i++)
 		{
-			char *line = sdata->lngStrings[firstString + i];
+			char *line = P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[firstString + i]);
 
 			if (strlen(line) != 0)
 			{
@@ -1453,7 +1453,7 @@ static void SelectProfile_DrawMemcardMessage(int screen, int color, int menuFlag
 		}
 	}
 
-	RECTMENU_DrawInnerRect((RECT *)&sdata->unk_BeforeTokenMenu[0], menuFlag, sdata->gGT->backBuffer->otMem.uiOT);
+	RECTMENU_DrawInnerRect((RECT *)&sdata->unk_BeforeTokenMenu[0], menuFlag, P32_GET(uint32_t *, P32_GET(struct DB *, P32_GET(struct GameTracker *, sdata->gGT)->backBuffer)->otMem.uiOT));
 }
 
 static void SelectProfile_DrawAll(struct RectMenu *menu, int rowCount, int savedGhostCount, b32 canChooseEmptySlot, int color, b32 doSave)
@@ -1540,7 +1540,7 @@ static void SelectProfile_DrawAll(struct RectMenu *menu, int rowCount, int saved
 		    (*SelectProfile_AllProfiles_TimerSaveComplete() != 0))
 		{
 			int saveColor = ((FPS_HALF(sdata->frameCounter) & 4) == 0) ? (JUSTIFY_CENTER | ORANGE) : (JUSTIFY_CENTER | WHITE);
-			DecalFont_DrawLine(sdata->lngStrings[LNG_SAVE_COMPLETED], 0x108, 0x64, FONT_BIG, saveColor);
+			DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_SAVE_COMPLETED]), 0x108, 0x64, FONT_BIG, saveColor);
 		}
 		else
 		{
@@ -1585,11 +1585,11 @@ static void SelectProfile_FinalizeGhost(struct RectMenu *menu)
 	{
 		if (NativeGhostInput_IsLeaderboardReplay())
 		{
-			sdata->ptrDesiredMenu = &menu224LeaderboardGhostReplay;
+			P32_SET(sdata->ptrDesiredMenu, &menu224LeaderboardGhostReplay);
 		}
 		else
 		{
-			sdata->ptrDesiredMenu = (*SelectProfile_AllProfiles_ExitToPrevious() != 0) ? &menu224 : &menu224NoSave;
+			P32_SET(sdata->ptrDesiredMenu, (*SelectProfile_AllProfiles_ExitToPrevious() != 0) ? &menu224 : &menu224NoSave);
 		}
 		return;
 	}
@@ -1601,25 +1601,25 @@ static void SelectProfile_FinalizeGhost(struct RectMenu *menu)
 			NativeGhostInput_ClearSelection();
 		}
 		GhostTape_Destroy();
-		sdata->ptrDesiredMenu = MM_TrackSelect_GetMenuPtr();
+		P32_SET(sdata->ptrDesiredMenu, MM_TrackSelect_GetMenuPtr());
 		MM_TrackSelect_Init();
 		return;
 	}
 
-	if ((sdata->ptrGhostTapePlaying != NULL) &&
+	if ((P32_GET(struct GhostHeader *, sdata->ptrGhostTapePlaying) != NULL) &&
 	    ((gNativeRelicRaceMode == 0) || (sdata->boolReplayHumanGhost != 0)))
 	{
-		data.characterIDs[1] = sdata->ptrGhostTapePlaying->characterID;
+		data.characterIDs[1] = P32_GET(struct GhostHeader *, sdata->ptrGhostTapePlaying)->characterID;
 	}
 
-	sdata->ptrDesiredMenu = QueueLoadTrack_GetMenuPtr();
+	P32_SET(sdata->ptrDesiredMenu, QueueLoadTrack_GetMenuPtr());
 	(void)menu;
 }
 
 static void SelectProfile_FinalizeAdventure(struct RectMenu *menu)
 {
 	int mode = *SelectProfile_AllProfiles_Mode();
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	if (mode == SELECT_PROFILE_SCREEN_GREEN_LOAD_SAVE)
 	{
@@ -1631,14 +1631,14 @@ static void SelectProfile_FinalizeAdventure(struct RectMenu *menu)
 		if ((*SelectProfile_AllProfiles_ExitToPrevious() == 0) && (sdata->memcardAction == SELECT_PROFILE_ACTION_LOAD))
 		{
 			GAMEPROG_AdvPercent(&sdata->advProgress);
-			sdata->ptrDesiredMenu = &data.menuQueueLoadHub;
+			P32_SET(sdata->ptrDesiredMenu, &data.menuQueueLoadHub);
 			// NOTE(aalhendi): Retail 0x8004a8a0-0x8004a8c4 queues through currLEV.
 			gGT->currLEV = sdata->advProgress.HubLevYouSavedOn;
 			data.menuGreenLoadSave.rowSelected = 3;
 		}
 		else
 		{
-			sdata->ptrDesiredMenu = &data.menuGreenLoadSave;
+			P32_SET(sdata->ptrDesiredMenu, &data.menuGreenLoadSave);
 			data.menuGreenLoadSave.rowSelected = 3;
 		}
 		return;
@@ -1648,7 +1648,7 @@ static void SelectProfile_FinalizeAdventure(struct RectMenu *menu)
 	{
 		if (*SelectProfile_AllProfiles_ExitToPrevious() != 0)
 		{
-			sdata->ptrDesiredMenu = &data.menuSubmitName;
+			P32_SET(sdata->ptrDesiredMenu, &data.menuSubmitName);
 			SubmitName_RestoreName(0);
 			return;
 		}
@@ -1657,7 +1657,7 @@ static void SelectProfile_FinalizeAdventure(struct RectMenu *menu)
 		// NOTE(aalhendi): Retail 0x8004a75c-0x8004a778 queues new Adventure through currLEV.
 		gGT->currLEV = N_SANITY_BEACH;
 		Garage_Leave();
-		sdata->ptrDesiredMenu = QueueLoadTrack_GetMenuPtr();
+		P32_SET(sdata->ptrDesiredMenu, QueueLoadTrack_GetMenuPtr());
 		return;
 	}
 
@@ -1685,7 +1685,7 @@ static void SelectProfile_FinalizeAdventure(struct RectMenu *menu)
 		}
 		memmove(gGT->prevNameEntered, sdata->advProgress.name, sizeof(gGT->prevNameEntered));
 		memmove(gGT->currNameEntered, sdata->advProgress.name, sizeof(gGT->currNameEntered));
-		sdata->ptrDesiredMenu = QueueLoadTrack_GetMenuPtr();
+		P32_SET(sdata->ptrDesiredMenu, QueueLoadTrack_GetMenuPtr());
 		return;
 	}
 
@@ -1698,7 +1698,7 @@ static void SelectProfile_FinalizeAdventure(struct RectMenu *menu)
 		}
 		else if (*SelectProfile_AllProfiles_ExitToPrevious() != 0)
 		{
-			sdata->ptrDesiredMenu = &data.menuSaveGame;
+			P32_SET(sdata->ptrDesiredMenu, &data.menuSaveGame);
 			return;
 		}
 

@@ -195,7 +195,7 @@ s16 NativeReverseTrack_GetSelectedLogicalTrackId(void)
 	{
 		return s_nativeReverseTrackLogicalId;
 	}
-	return (sdata != NULL && sdata->gGT != NULL) ? sdata->gGT->levelID : -1;
+	return (sdata != NULL && P32_GET(struct GameTracker *, sdata->gGT) != NULL) ? P32_GET(struct GameTracker *, sdata->gGT)->levelID : -1;
 }
 
 s16 NativeReverseTrack_GetTrackIdForPhysical(s16 physicalId)
@@ -213,17 +213,17 @@ s16 NativeReverseTrack_GetCurrentLogicalTrackId(void)
 	{
 		return s_nativeReverseTrackLogicalId;
 	}
-	return (sdata != NULL && sdata->gGT != NULL) ? sdata->gGT->levelID : -1;
+	return (sdata != NULL && P32_GET(struct GameTracker *, sdata->gGT) != NULL) ? P32_GET(struct GameTracker *, sdata->gGT)->levelID : -1;
 }
 
 static b32 NativeReverseTrack_IsAllowedMode(void)
 {
-	if ((sdata == NULL) || (sdata->gGT == NULL))
+	if ((sdata == NULL) || (P32_GET(struct GameTracker *, sdata->gGT) == NULL))
 	{
 		return false;
 	}
 
-	u32 gameMode = (u32)sdata->gGT->gameMode1;
+	u32 gameMode = (u32)P32_GET(struct GameTracker *, sdata->gGT)->gameMode1;
 	return (gNativeGhostReplayMode != 0) ||
 	       ((gameMode & TIME_TRIAL) != 0) ||
 	       ((gNativeRelicRaceMode != 0) && ((gameMode & RELIC_RACE) != 0));
@@ -280,9 +280,9 @@ static void NativeReverseTrack_ResetHighScoreTrack(struct HighScoreTrack *track,
 			struct HighScoreEntry *entry = &track->scoreEntry[mode * MEMCARD_HIGH_SCORE_ENTRIES_PER_MODE + entryIndex];
 			entry->time = MEMCARD_HIGH_SCORE_DEFAULT_TIME;
 			entry->characterID = characterId;
-			if ((sdata != NULL) && (sdata->lngStrings != NULL))
+			if ((sdata != NULL) && (P32_GET(P32(char *) *, sdata->lngStrings) != NULL))
 			{
-				strcpy(entry->name, sdata->lngStrings[data.MetaDataCharacters[characterId].name_LNG_short]);
+				strcpy(entry->name, P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.MetaDataCharacters[characterId].name_LNG_short]));
 			}
 			else
 			{
@@ -403,7 +403,7 @@ struct HighScoreTrack *NativeReverseTrack_GetHighScoreTrack(s16 logicalId)
 
 static void NativeReverseTrack_ReflectDriverSpawns(struct Level *level)
 {
-	struct CheckpointNode *nodes = level->ptr_restart_points;
+	struct CheckpointNode *nodes = P32_GET(struct CheckpointNode *, level->ptr_restart_points);
 	u8 previousIndex = nodes[0].nextIndex_backward;
 	if ((previousIndex == 0xff) || (previousIndex >= level->cnt_restart_points))
 	{
@@ -437,14 +437,14 @@ static void NativeReverseTrack_ReflectDriverSpawns(struct Level *level)
 void NativeReverseTrack_ApplyToLevel(struct Level *level)
 {
 	if (!gNativeReverseTrackEnabled || !NativeReverseTrack_IsAllowedMode() || (level == NULL) ||
-	    (sdata == NULL) || (sdata->gGT == NULL) ||
-	    (sdata->gGT->levelID != s_nativeReverseTrackPhysicalId) ||
-	    (level->ptr_restart_points == NULL) || (level->cnt_restart_points <= 0))
+	    (sdata == NULL) || (P32_GET(struct GameTracker *, sdata->gGT) == NULL) ||
+	    (P32_GET(struct GameTracker *, sdata->gGT)->levelID != s_nativeReverseTrackPhysicalId) ||
+	    (P32_GET(struct CheckpointNode *, level->ptr_restart_points) == NULL) || (level->cnt_restart_points <= 0))
 	{
 		return;
 	}
 
-	struct CheckpointNode *nodes = level->ptr_restart_points;
+	struct CheckpointNode *nodes = P32_GET(struct CheckpointNode *, level->ptr_restart_points);
 	u16 trackLength = nodes[0].distToFinish;
 	if (trackLength == 0)
 	{
@@ -516,7 +516,7 @@ void NativeReverseTrack_FormatName(s16 logicalId, char *dst, int dstSize)
 	}
 
 	s16 physicalId = NativeReverseTrack_GetPhysicalFromLogical(logicalId);
-	const char *baseName = sdata->lngStrings[data.metaDataLEV[physicalId].name_LNG];
+	const char *baseName = P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.metaDataLEV[physicalId].name_LNG]);
 	if (NativeReverseTrack_IsLogicalReverse(logicalId))
 	{
 		snprintf(dst, dstSize, "%s%s", baseName, NativeReverseTrack_GetSuffix());

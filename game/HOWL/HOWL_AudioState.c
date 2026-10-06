@@ -6,7 +6,7 @@ void Audio_SetState(u32 state)
 	u8 XA_type;
 	u8 XA_index;
 
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	u16 level;
 
 	XA_type = CDSYS_XA_TYPE_MUSIC;
@@ -144,7 +144,7 @@ void Audio_AdvHub_SwapSong(int levelID)
 
 static int Audio_GetActiveMaskSongForDriver(struct Driver *driver)
 {
-	if ((driver == NULL) || ((driver->actionsFlagSet & ACTION_BOT) != 0) || (driver->instSelf == NULL) || (driver->instSelf->thread == NULL))
+	if ((driver == NULL) || ((driver->actionsFlagSet & ACTION_BOT) != 0) || (P32_GET(struct Instance *, driver->instSelf) == NULL) || (P32_GET(struct Thread *, P32_GET(struct Instance *, driver->instSelf)->thread) == NULL))
 	{
 		return 0;
 	}
@@ -154,7 +154,7 @@ static int Audio_GetActiveMaskSongForDriver(struct Driver *driver)
 		return 0;
 	}
 
-	for (struct Thread *itemThread = driver->instSelf->thread->childThread; itemThread != NULL; itemThread = itemThread->siblingThread)
+	for (struct Thread *itemThread = P32_GET(struct Thread *, P32_GET(struct Thread *, P32_GET(struct Instance *, driver->instSelf)->thread)->childThread); itemThread != NULL; itemThread = P32_GET(struct Thread *, itemThread->siblingThread))
 	{
 		if ((itemThread->flags & THREAD_FLAG_DEAD) != 0)
 		{
@@ -166,12 +166,12 @@ static int Audio_GetActiveMaskSongForDriver(struct Driver *driver)
 			continue;
 		}
 
-		if (itemThread->funcThTick != RB_MaskWeapon_ThTick)
+		if (P32_GET(ThreadFunc, itemThread->funcThTick) != RB_MaskWeapon_ThTick)
 		{
 			continue;
 		}
 
-		struct MaskHeadWeapon *mask = itemThread->object;
+		struct MaskHeadWeapon *mask = P32_GET(void *, itemThread->object);
 		if ((mask == NULL) || (mask->duration <= 0))
 		{
 			continue;
@@ -201,7 +201,7 @@ static void Audio_ApplyMaskSong(struct GameTracker *gGT, int songID, u32 tempo)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8002d554-0x8002d67c.
 void Audio_SetMaskSong(u32 tempo)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 #if defined(__vita__)
 	if (NativeAdhoc_IsConnected() && (gGT->numPlyrCurrGame == 2))
@@ -224,7 +224,7 @@ void Audio_SetMaskSong(u32 tempo)
 
 	for (s32 i = 0; i < gGT->numPlyrCurrGame; i++)
 	{
-		int driverSongID = Audio_GetActiveMaskSongForDriver(gGT->drivers[i]);
+		int driverSongID = Audio_GetActiveMaskSongForDriver(P32_GET(struct Driver *, gGT->drivers[i]));
 		if (driverSongID == CSEQ_SONG_AKU)
 		{
 			hasAku = true;
@@ -266,7 +266,7 @@ void Audio_Update1(void)
 	struct Driver *d = 0;
 	u32 maskTempo;
 	int iVar7;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	switch (sdata->audioState - 1)
 	{
@@ -309,7 +309,7 @@ void Audio_Update1(void)
 		// human driver in the lead
 		for (i = 0; i < 8; i++)
 		{
-			d = gGT->driversInRaceOrder[i];
+			d = P32_GET(struct Driver *, gGT->driversInRaceOrder[i]);
 
 			if ((d != NULL) && ((d->actionsFlagSet & ACTION_BOT) == 0))
 			{
@@ -332,9 +332,9 @@ void Audio_Update1(void)
 #endif
 
 		// if race has more than 2 laps
-		if ((2 < sdata->gGT->numLaps) &&
+		if ((2 < P32_GET(struct GameTracker *, sdata->gGT)->numLaps) &&
 		    // if you are on 2nd to last lap
-		    ((d->lapIndex == sdata->gGT->numLaps - 2U)) &&
+		    ((d->lapIndex == P32_GET(struct GameTracker *, sdata->gGT)->numLaps - 2U)) &&
 		    // distToFinish is small
 		    (d->distanceToFinish_curr < 9000))
 		{
@@ -347,7 +347,7 @@ void Audio_Update1(void)
 		// human driver in the lead
 		for (i = 0; i < 8; i++)
 		{
-			d = gGT->driversInRaceOrder[i];
+			d = P32_GET(struct Driver *, gGT->driversInRaceOrder[i]);
 
 			if ((d != NULL) && ((d->actionsFlagSet & ACTION_BOT) == 0))
 			{
@@ -418,7 +418,7 @@ void Audio_Update1(void)
 		// human driver in the lead
 		for (i = 0; i < 8; i++)
 		{
-			d = gGT->driversInRaceOrder[i];
+			d = P32_GET(struct Driver *, gGT->driversInRaceOrder[i]);
 
 			if ((d != NULL) && ((d->actionsFlagSet & ACTION_BOT) == 0))
 			{
@@ -455,9 +455,9 @@ void Audio_Update1(void)
 		// human driver in the lead
 		for (i = 0; i < 8; i++)
 		{
-			d = gGT->driversInRaceOrder[i];
+			d = P32_GET(struct Driver *, gGT->driversInRaceOrder[i]);
 
-			if ((d != NULL) && (d->instSelf->thread->modelIndex == DYNAMIC_PLAYER))
+			if ((d != NULL) && (P32_GET(struct Thread *, P32_GET(struct Instance *, d->instSelf)->thread)->modelIndex == DYNAMIC_PLAYER))
 			{
 				raceOrderIndex = i;
 				break;

@@ -8,10 +8,10 @@ static void GhostTape_StartInternal(b32 startNativeInputRecording)
 {
 	struct GhostHeader *gh;
 	struct Driver *d;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
-	d = gGT->drivers[0];
-	gh = sdata->GhostRecording.ptrGhost;
+	d = P32_GET(struct Driver *, gGT->drivers[0]);
+	gh = P32_GET(struct GhostHeader *, sdata->GhostRecording.ptrGhost);
 	gh->version = GHOST_TAPE_VERSION_RETAIL;
 	gh->levelID = gGT->levelID;
 	gh->characterID = data.characterIDs[d->driverID];
@@ -32,7 +32,7 @@ static void GhostTape_StartInternal(b32 startNativeInputRecording)
 #else
 	sdata->boolCanSaveGhost = 1;
 #endif
-	sdata->GhostRecording.ptrCurrOffset = sdata->GhostRecording.ptrStartOffset;
+	P32_SET(sdata->GhostRecording.ptrCurrOffset, P32_GET(char *, sdata->GhostRecording.ptrStartOffset));
 	sdata->GhostRecording.countEightFrames = 0;
 	sdata->GhostRecording.countSixteenFrames = 0;
 	sdata->GhostRecording.timeOfLast80buffer = 0;
@@ -80,9 +80,9 @@ void GhostTape_StartReplayCapture(void)
 	}
 
 	char *recordBuffer = GHOSTHEADER_GETRECORDBUFFER(gh);
-	sdata->GhostRecording.ptrGhost = gh;
-	sdata->GhostRecording.ptrStartOffset = &recordBuffer[0];
-	sdata->GhostRecording.ptrEndOffset = &recordBuffer[0x3DD4];
+	P32_SET(sdata->GhostRecording.ptrGhost, gh);
+	P32_SET(sdata->GhostRecording.ptrStartOffset, &recordBuffer[0]);
+	P32_SET(sdata->GhostRecording.ptrEndOffset, &recordBuffer[0x3DD4]);
 	GhostTape_StartInternal(false);
 }
 
@@ -92,7 +92,7 @@ void GhostTape_End(void)
 {
 	struct Driver *d;
 	struct GhostHeader *gh;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// quit, if ghost cant be saved
 	if (sdata->boolCanSaveGhost == 0)
@@ -110,13 +110,13 @@ void GhostTape_End(void)
 	// Write the last chunk of ghost data
 	GhostTape_WriteMoves(1);
 
-	d = gGT->drivers[0];
-	gh = sdata->GhostRecording.ptrGhost;
+	d = P32_GET(struct Driver *, gGT->drivers[0]);
+	gh = P32_GET(struct GhostHeader *, sdata->GhostRecording.ptrGhost);
 
 	gh->ySpeed = d->ySpeed;
 	gh->speedApprox = d->speedApprox;
 	gh->timeElapsedInRace = d->timeElapsedInRace;
-	gh->size = (u32)sdata->GhostRecording.ptrCurrOffset - (u32)sdata->GhostRecording.ptrStartOffset;
+	gh->size = (u32)(P32_GET(char *, sdata->GhostRecording.ptrCurrOffset) - P32_GET(char *, sdata->GhostRecording.ptrStartOffset));
 	NativeGhostInput_StopRecording();
 }
 
@@ -124,7 +124,7 @@ void GhostTape_End(void)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80027f20-0x8002838c.
 void GhostTape_WriteMoves(s16 raceFinished)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	u32 gameMode = gGT->gameMode1;
 
 	if (raceFinished == 0)
@@ -167,10 +167,10 @@ void GhostTape_WriteMoves(s16 raceFinished)
 	    // This is true every 8 frames
 	    ((sdata->GhostRecording.countEightFrames & GHOST_RECORD_INTERVAL_MASK_8) == 0))
 	{
-		struct Driver *driver = gGT->threadBuckets[0].thread->object;
+		struct Driver *driver = P32_GET(void *, P32_GET(struct Thread *, gGT->threadBuckets[0].thread)->object);
 
 		// player instance
-		struct Instance *inst = driver->instSelf;
+		struct Instance *inst = P32_GET(struct Instance *, driver->instSelf);
 
 		// compress position (x, y, z) with bitshifting
 		int posX = inst->matrix.t[0] >> GHOST_RECORD_POSITION_SHIFT;
@@ -186,7 +186,7 @@ void GhostTape_WriteMoves(s16 raceFinished)
 		int timeSincePositionPacket = sdata->GhostRecording.timeElapsedInRace - sdata->GhostRecording.timeOfLast80buffer;
 
 		// get pointer to current recording char in buffer
-		char *writeCursor = sdata->GhostRecording.ptrCurrOffset;
+		char *writeCursor = P32_GET(char *, sdata->GhostRecording.ptrCurrOffset);
 
 		if (
 		    // if animation frame changed
@@ -308,7 +308,7 @@ void GhostTape_WriteMoves(s16 raceFinished)
 		    // if offset of ghost-recording buffer exceeds
 		    // the maximum size of a ghost that can be recorded
 		    // (if you're one frame away from max capacity)
-		    ((u32)sdata->GhostRecording.ptrEndOffset < (u32)writeCursor + GHOST_RECORD_BUFFER_END_GUARD) &&
+		    (P32_GET(char *, sdata->GhostRecording.ptrEndOffset) < (char *)writeCursor + GHOST_RECORD_BUFFER_END_GUARD) &&
 
 		    (sdata->boolCanSaveGhost = 0,
 
@@ -334,7 +334,7 @@ void GhostTape_WriteMoves(s16 raceFinished)
 		sdata->GhostRecording.VelZ = (s16)posZ;
 
 		// save incremeneted pointer
-		sdata->GhostRecording.ptrCurrOffset = writeCursor;
+		P32_SET(sdata->GhostRecording.ptrCurrOffset, writeCursor);
 	}
 
 	// Increment frame counter
@@ -357,7 +357,7 @@ void GhostTape_WriteBoosts(int addReserve, u8 type, int speedCap)
 		return;
 	}
 
-	writeCursor = sdata->GhostRecording.ptrCurrOffset;
+	writeCursor = P32_GET(char *, sdata->GhostRecording.ptrCurrOffset);
 
 	if ((type & TURBO_PAD) != 0)
 	{
@@ -384,7 +384,7 @@ void GhostTape_WriteBoosts(int addReserve, u8 type, int speedCap)
 	writeCursor[4] = (char)((u32)speedCap >> 8);
 	writeCursor[5] = (char)speedCap;
 
-	sdata->GhostRecording.ptrCurrOffset += GHOST_SIZE_BOOST;
+	P32_SET(sdata->GhostRecording.ptrCurrOffset, P32_GET(char *, sdata->GhostRecording.ptrCurrOffset) + GHOST_SIZE_BOOST);
 }
 
 
@@ -397,6 +397,6 @@ void GhostTape_Destroy()
 	if (sdata->ptrGhostTapePlaying != 0)
 	{
 		MEMPACK_ClearHighMem();
-		sdata->ptrGhostTapePlaying = 0;
+		P32_SET(sdata->ptrGhostTapePlaying, 0);
 	}
 }

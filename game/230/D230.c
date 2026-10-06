@@ -47,8 +47,8 @@ struct OverlayDATA_230 D230 =
                 .posY_curr = 0x6c,
 
                 .state = EXECUTE_FUNCPTR | CENTER_ON_COORDS,
-                .rows = &D230.rowsMainMenuBasic[0],
-                .funcPtr = MM_MenuProc_Main,
+                .rows = P32_DEFER(&D230.rowsMainMenuBasic[0]),
+                .funcPtr = P32_DEFER(MM_MenuProc_Main),
 
             },
 
@@ -64,8 +64,8 @@ struct OverlayDATA_230 D230 =
                 .stringIndexTitle = LNG_PLAYERS,
 
                 .state = CENTER_ON_X,
-                .rows = &D230.rowsPlayers1P2P[0],
-                .funcPtr = MM_MenuProc_1p2p,
+                .rows = P32_DEFER(&D230.rowsPlayers1P2P[0]),
+                .funcPtr = P32_DEFER(MM_MenuProc_1p2p),
             },
 
         .rowsPlayers2P3P4P =
@@ -81,8 +81,8 @@ struct OverlayDATA_230 D230 =
                 .stringIndexTitle = LNG_PLAYERS,
 
                 .state = CENTER_ON_X,
-                .rows = &D230.rowsPlayers2P3P4P[0],
-                .funcPtr = MM_MenuProc_2p3p4p,
+                .rows = P32_DEFER(&D230.rowsPlayers2P3P4P[0]),
+                .funcPtr = P32_DEFER(MM_MenuProc_2p3p4p),
             },
 
         .rowsDifficulty =
@@ -98,8 +98,8 @@ struct OverlayDATA_230 D230 =
                 .stringIndexTitle = LNG_DIFFICULTY,
 
                 .state = CENTER_ON_X,
-                .rows = &D230.rowsDifficulty[0],
-                .funcPtr = MM_MenuProc_Difficulty,
+                .rows = P32_DEFER(&D230.rowsDifficulty[0]),
+                .funcPtr = P32_DEFER(MM_MenuProc_Difficulty),
             },
 
         .rowsRaceType =
@@ -114,8 +114,8 @@ struct OverlayDATA_230 D230 =
                 .stringIndexTitle = LNG_RACE_TYPE,
 
                 .state = CENTER_ON_X,
-                .rows = &D230.rowsRaceType[0],
-                .funcPtr = MM_MenuProc_SingleCup,
+                .rows = P32_DEFER(&D230.rowsRaceType[0]),
+                .funcPtr = P32_DEFER(MM_MenuProc_SingleCup),
             },
 
         .rowsAdventure =
@@ -130,8 +130,8 @@ struct OverlayDATA_230 D230 =
                 .stringIndexTitle = RECTMENU_STRING_NONE,
 
                 .state = CENTER_ON_X,
-                .rows = &D230.rowsAdventure[0],
-                .funcPtr = MM_MenuProc_NewLoad,
+                .rows = P32_DEFER(&D230.rowsAdventure[0]),
+                .funcPtr = P32_DEFER(MM_MenuProc_NewLoad),
             },
 
 #if 0
@@ -164,7 +164,7 @@ struct OverlayDATA_230 D230 =
                 .stringIndexTitle = RECTMENU_STRING_NONE,
 
                 .state = DISABLE_INPUT_ALLOW_FUNCPTRS,
-                .funcPtr = MM_Characters_MenuProc,
+                .funcPtr = P32_DEFER(MM_Characters_MenuProc),
             },
 
         .menuTrackSelect =
@@ -172,7 +172,7 @@ struct OverlayDATA_230 D230 =
                 .stringIndexTitle = RECTMENU_STRING_NONE,
 
                 .state = DISABLE_INPUT_ALLOW_FUNCPTRS,
-                .funcPtr = MM_TrackSelect_MenuProc,
+                .funcPtr = P32_DEFER(MM_TrackSelect_MenuProc),
             },
 
         .rowsCupSelect = {{0, 0, 2, 0, 1}, {0, 1, 3, 0, 1}, {0, 0, 2, 2, 3}, {0, 1, 3, 2, 3}, {RECTMENU_STRING_NONE}},
@@ -182,8 +182,8 @@ struct OverlayDATA_230 D230 =
                 .stringIndexTitle = RECTMENU_STRING_NONE,
 
                 .state = INVISIBLE | EXECUTE_FUNCPTR,
-                .rows = &D230.rowsCupSelect[0],
-                .funcPtr = MM_CupSelect_MenuProc,
+                .rows = P32_DEFER(&D230.rowsCupSelect[0]),
+                .funcPtr = P32_DEFER(MM_CupSelect_MenuProc),
             },
 
         .menuBattleWeapons =
@@ -191,7 +191,7 @@ struct OverlayDATA_230 D230 =
                 .stringIndexTitle = RECTMENU_STRING_NONE,
 
                 .state = DISABLE_INPUT_ALLOW_FUNCPTRS,
-                .funcPtr = MM_Battle_MenuProc,
+                .funcPtr = P32_DEFER(MM_Battle_MenuProc),
             },
 
         .menuHighScores =
@@ -199,7 +199,7 @@ struct OverlayDATA_230 D230 =
                 .stringIndexTitle = RECTMENU_STRING_NONE,
 
                 .state = DISABLE_INPUT_ALLOW_FUNCPTRS,
-                .funcPtr = MM_HighScore_MenuProc,
+                .funcPtr = P32_DEFER(MM_HighScore_MenuProc),
             },
 
         .menuScrapbook =
@@ -207,11 +207,11 @@ struct OverlayDATA_230 D230 =
                 .stringIndexTitle = RECTMENU_STRING_NONE,
 
                 .state = DISABLE_INPUT_ALLOW_FUNCPTRS,
-                .funcPtr = MM_Scrapbook_PlayMovie,
+                .funcPtr = P32_DEFER(MM_Scrapbook_PlayMovie),
             },
 
-        .arrayMenuPtrs = {&D230.menuMainMenu, &D230.menuPlayers1P2P, &D230.menuPlayers2P3P4P, &D230.menuAdventure, &D230.menuCharacterSelect,
-                          &D230.menuTrackSelect, &D230.menuCupSelect, &D230.menuBattleWeapons, &D230.menuHighScores},
+        .arrayMenuPtrs = {P32_DEFER(&D230.menuMainMenu), P32_DEFER(&D230.menuPlayers1P2P), P32_DEFER(&D230.menuPlayers2P3P4P), P32_DEFER(&D230.menuAdventure), P32_DEFER(&D230.menuCharacterSelect),
+                          P32_DEFER(&D230.menuTrackSelect), P32_DEFER(&D230.menuCupSelect), P32_DEFER(&D230.menuBattleWeapons), P32_DEFER(&D230.menuHighScores)},
 
         .titleInstances =
             {
@@ -263,28 +263,28 @@ struct OverlayDATA_230 D230 =
 
         .cheats =
             {
-                {4, {CHEAT_S, CHEAT_O, CHEAT_A, CHEAT_R}, MainKillGame_LaunchSpyro2},
-                {5, {CHEAT_S, CHEAT_E, CHEAT_E, CHEAT_D, CHEAT_S}, NULL},
-                {7, {CHEAT_R, CHEAT_O, CHEAT_O, CHEAT_D, CHEAT_U, CHEAT_D, CHEAT_E}, MM_Cheat_UnlockRoo},
-                {9, {CHEAT_L, CHEAT_A, CHEAT_R, CHEAT_D, CHEAT_R, CHEAT_O, CHEAT_L, CHEAT_L, CHEAT_S}, MM_Cheat_UnlockPapu},
-                {7, {CHEAT_D, CHEAT_O, CHEAT_L, CHEAT_L, CHEAT_A, CHEAT_R, CHEAT_S}, MM_Cheat_UnlockJoe},
-                {6, {CHEAT_L, CHEAT_E, CHEAT_A, CHEAT_D, CHEAT_E, CHEAT_D}, MM_Cheat_UnlockPinstripe},
-                {9, {CHEAT_O, CHEAT_D, CHEAT_D, CHEAT_N, CHEAT_O, CHEAT_O, CHEAT_D, CHEAT_L, CHEAT_E}, MM_Cheat_UnlockFakeCrash},
-                {8, {CHEAT_W, CHEAT_A, CHEAT_R, CHEAT_L, CHEAT_O, CHEAT_R, CHEAT_D, CHEAT_S}, NULL},
-                {7, {CHEAT_A, CHEAT_X, CHEAT_E, CHEAT_L, CHEAT_W, CHEAT_A, CHEAT_X}, NULL},
-                {6, {CHEAT_U, CHEAT_N, CHEAT_S, CHEAT_E, CHEAT_E, CHEAT_N}, NULL},
-                {8, {CHEAT_U, CHEAT_N, CHEAT_L, CHEAT_E, CHEAT_A, CHEAT_D, CHEAT_E, CHEAT_D}, NULL},
-                {7, {CHEAT_S, CHEAT_E, CHEAT_A, CHEAT_S, CHEAT_W, CHEAT_A, CHEAT_N}, MM_Cheat_UnlockPenta},
-                {7, {CHEAT_S, CHEAT_L, CHEAT_E, CHEAT_N, CHEAT_D, CHEAT_E, CHEAT_R}, MM_Cheat_UnlockTropy},
-                {9, {CHEAT_U, CHEAT_N, CHEAT_D, CHEAT_E, CHEAT_R, CHEAT_W, CHEAT_E, CHEAT_A, CHEAT_R}, MM_Cheat_UnlockScrapbook},
-                {7, {CHEAT_R, CHEAT_E, CHEAT_W, CHEAT_A, CHEAT_R, CHEAT_D, CHEAT_S}, MM_Cheat_UnlockTracks},
-                {6, {CHEAT_E, CHEAT_N, CHEAT_D, CHEAT_N, CHEAT_E, CHEAT_O}, NULL},
-                {8, {CHEAT_S, CHEAT_L, CHEAT_E, CHEAT_D, CHEAT_R, CHEAT_O, CHEAT_A, CHEAT_D}, NULL},
-                {5, {CHEAT_A, CHEAT_R, CHEAT_R, CHEAT_O, CHEAT_W}, NULL},
-                {6, {CHEAT_D, CHEAT_E, CHEAT_L, CHEAT_U, CHEAT_X, CHEAT_E}, NULL},
-                {7, {CHEAT_A, CHEAT_R, CHEAT_S, CHEAT_E, CHEAT_N, CHEAT_A, CHEAT_L}, NULL},
-                {10, {CHEAT_S, CHEAT_U, CHEAT_D, CHEAT_D, CHEAT_E, CHEAT_N, CHEAT_D, CHEAT_E, CHEAT_A, CHEAT_D}, NULL},
-                {5, {CHEAT_A, CHEAT_D, CHEAT_D, CHEAT_O, CHEAT_N}, NULL},
+                {4, {CHEAT_S, CHEAT_O, CHEAT_A, CHEAT_R}, P32_DEFER(MainKillGame_LaunchSpyro2)},
+                {5, {CHEAT_S, CHEAT_E, CHEAT_E, CHEAT_D, CHEAT_S}, P32_DEFER(NULL)},
+                {7, {CHEAT_R, CHEAT_O, CHEAT_O, CHEAT_D, CHEAT_U, CHEAT_D, CHEAT_E}, P32_DEFER(MM_Cheat_UnlockRoo)},
+                {9, {CHEAT_L, CHEAT_A, CHEAT_R, CHEAT_D, CHEAT_R, CHEAT_O, CHEAT_L, CHEAT_L, CHEAT_S}, P32_DEFER(MM_Cheat_UnlockPapu)},
+                {7, {CHEAT_D, CHEAT_O, CHEAT_L, CHEAT_L, CHEAT_A, CHEAT_R, CHEAT_S}, P32_DEFER(MM_Cheat_UnlockJoe)},
+                {6, {CHEAT_L, CHEAT_E, CHEAT_A, CHEAT_D, CHEAT_E, CHEAT_D}, P32_DEFER(MM_Cheat_UnlockPinstripe)},
+                {9, {CHEAT_O, CHEAT_D, CHEAT_D, CHEAT_N, CHEAT_O, CHEAT_O, CHEAT_D, CHEAT_L, CHEAT_E}, P32_DEFER(MM_Cheat_UnlockFakeCrash)},
+                {8, {CHEAT_W, CHEAT_A, CHEAT_R, CHEAT_L, CHEAT_O, CHEAT_R, CHEAT_D, CHEAT_S}, P32_DEFER(NULL)},
+                {7, {CHEAT_A, CHEAT_X, CHEAT_E, CHEAT_L, CHEAT_W, CHEAT_A, CHEAT_X}, P32_DEFER(NULL)},
+                {6, {CHEAT_U, CHEAT_N, CHEAT_S, CHEAT_E, CHEAT_E, CHEAT_N}, P32_DEFER(NULL)},
+                {8, {CHEAT_U, CHEAT_N, CHEAT_L, CHEAT_E, CHEAT_A, CHEAT_D, CHEAT_E, CHEAT_D}, P32_DEFER(NULL)},
+                {7, {CHEAT_S, CHEAT_E, CHEAT_A, CHEAT_S, CHEAT_W, CHEAT_A, CHEAT_N}, P32_DEFER(MM_Cheat_UnlockPenta)},
+                {7, {CHEAT_S, CHEAT_L, CHEAT_E, CHEAT_N, CHEAT_D, CHEAT_E, CHEAT_R}, P32_DEFER(MM_Cheat_UnlockTropy)},
+                {9, {CHEAT_U, CHEAT_N, CHEAT_D, CHEAT_E, CHEAT_R, CHEAT_W, CHEAT_E, CHEAT_A, CHEAT_R}, P32_DEFER(MM_Cheat_UnlockScrapbook)},
+                {7, {CHEAT_R, CHEAT_E, CHEAT_W, CHEAT_A, CHEAT_R, CHEAT_D, CHEAT_S}, P32_DEFER(MM_Cheat_UnlockTracks)},
+                {6, {CHEAT_E, CHEAT_N, CHEAT_D, CHEAT_N, CHEAT_E, CHEAT_O}, P32_DEFER(NULL)},
+                {8, {CHEAT_S, CHEAT_L, CHEAT_E, CHEAT_D, CHEAT_R, CHEAT_O, CHEAT_A, CHEAT_D}, P32_DEFER(NULL)},
+                {5, {CHEAT_A, CHEAT_R, CHEAT_R, CHEAT_O, CHEAT_W}, P32_DEFER(NULL)},
+                {6, {CHEAT_D, CHEAT_E, CHEAT_L, CHEAT_U, CHEAT_X, CHEAT_E}, P32_DEFER(NULL)},
+                {7, {CHEAT_A, CHEAT_R, CHEAT_S, CHEAT_E, CHEAT_N, CHEAT_A, CHEAT_L}, P32_DEFER(NULL)},
+                {10, {CHEAT_S, CHEAT_U, CHEAT_D, CHEAT_D, CHEAT_E, CHEAT_N, CHEAT_D, CHEAT_E, CHEAT_A, CHEAT_D}, P32_DEFER(NULL)},
+                {5, {CHEAT_A, CHEAT_D, CHEAT_D, CHEAT_O, CHEAT_N}, P32_DEFER(NULL)},
             },
 
         .cheatButtonHistory = {0},
@@ -329,14 +329,14 @@ struct OverlayDATA_230 D230 =
         .characterSelectWindowPosByLayout =
             {
                 // full menus, 1p2p3p4p
-                &D230.characterSelectWindowPos[0],
-                &D230.characterSelectWindowPos[2],
-                &D230.characterSelectWindowPos[6],
-                &D230.characterSelectWindowPos[9],
+                P32_DEFER(&D230.characterSelectWindowPos[0]),
+                P32_DEFER(&D230.characterSelectWindowPos[2]),
+                P32_DEFER(&D230.characterSelectWindowPos[6]),
+                P32_DEFER(&D230.characterSelectWindowPos[9]),
 
                 // small menus, 1p2p
-                &D230.characterSelectWindowPos[1],
-                &D230.characterSelectWindowPos[4],
+                P32_DEFER(&D230.characterSelectWindowPos[1]),
+                P32_DEFER(&D230.characterSelectWindowPos[4]),
             },
 
         .characterSelectLayout =
@@ -480,8 +480,8 @@ struct OverlayDATA_230 D230 =
              // Penta
              {0xE0, 0x20, {14, 1, 14, 14}, 13, 0x6}},
 
-        .characterSelectMetaByLayout = {&D230.characterSelectMeta1P2P[0], &D230.characterSelectMeta1P2P[0], &D230.characterSelectMeta3P[0],
-                                        &D230.characterSelectMeta4P[0], &D230.characterSelectMeta1P2PLimited[0], &D230.characterSelectMeta1P2PLimited[0]},
+        .characterSelectMetaByLayout = {P32_DEFER(&D230.characterSelectMeta1P2P[0]), P32_DEFER(&D230.characterSelectMeta1P2P[0]), P32_DEFER(&D230.characterSelectMeta3P[0]),
+                                        P32_DEFER(&D230.characterSelectMeta4P[0]), P32_DEFER(&D230.characterSelectMeta1P2PLimited[0]), P32_DEFER(&D230.characterSelectMeta1P2PLimited[0])},
 
         .characterMenuID =
             {
@@ -524,8 +524,8 @@ struct OverlayDATA_230 D230 =
                 {-512, 0, 2, 0, 0}, {-512, 0, 0, 0, 0}, {512, 0, 3, 0, 0},  {512, 0, 1, 0, 0},  {512, 0, 7, 0, 0},  {512, 0, 5, 0, 0},  {0, 0, -1, 0, 0},
             },
 
-        .characterSelectTransitionByPlayerCount = {&D230.characterSelectTransition1P2P[0], &D230.characterSelectTransition1P2P[0],
-                                                   &D230.characterSelectTransition3P[0], &D230.characterSelectTransition4P[0]},
+        .characterSelectTransitionByPlayerCount = {P32_DEFER(&D230.characterSelectTransition1P2P[0]), P32_DEFER(&D230.characterSelectTransition1P2P[0]),
+                                                   P32_DEFER(&D230.characterSelectTransition3P[0]), P32_DEFER(&D230.characterSelectTransition4P[0])},
 
         .characterSelectDriverModel =
             {
@@ -535,7 +535,7 @@ struct OverlayDATA_230 D230 =
                 .slideDistance = 0x8C,
             },
 
-        .playerNumberStrings = {&R230.s_1[0], &R230.s_2[0], &R230.s_3[0], &R230.s_4[0]},
+        .playerNumberStrings = {P32_DEFER(&R230.s_1[0]), P32_DEFER(&R230.s_2[0]), P32_DEFER(&R230.s_3[0]), P32_DEFER(&R230.s_4[0])},
 
         .characterSelectFallbackDirection1 = {2, 2, 1, 1},
 
@@ -624,7 +624,7 @@ struct OverlayDATA_230 D230 =
                 .posY_curr = 0x7c,
 
                 .state = USE_SMALL_FONT | CENTER_ON_X,
-                .rows = &D230.rowsLapSel[0],
+                .rows = P32_DEFER(&D230.rowsLapSel[0]),
             },
 
         .videoCol = {.self = 0x808080},
@@ -675,51 +675,51 @@ struct OverlayDATA_230 D230 =
         .menuBattleType = {.stringIndexTitle = RECTMENU_STRING_NONE,
 
                            .state = KEEP_INPUTS_IN_SUBMENU | CENTER_MENU_TEXT | USE_SMALL_FONT,
-                           .rows = &D230.rowsBattleType[0],
-                           .funcPtr = MM_Battle_CloseSubMenu},
+                           .rows = P32_DEFER(&D230.rowsBattleType[0]),
+                           .funcPtr = P32_DEFER(MM_Battle_CloseSubMenu)},
 
         .rowsBattleLengthLifeTime = {{0xA4, 0, 1, 0, 0}, {0xA5, 0, 2, 1, 1}, {0xA6, 1, 2, 2, 2}, {RECTMENU_STRING_NONE}},
 
         .menuBattleLengthLifeTime = {.stringIndexTitle = RECTMENU_STRING_NONE,
 
                                      .state = KEEP_INPUTS_IN_SUBMENU | CENTER_MENU_TEXT | USE_SMALL_FONT,
-                                     .rows = &D230.rowsBattleLengthLifeTime[0],
-                                     .funcPtr = MM_Battle_CloseSubMenu},
+                                     .rows = P32_DEFER(&D230.rowsBattleLengthLifeTime[0]),
+                                     .funcPtr = P32_DEFER(MM_Battle_CloseSubMenu)},
 
         .rowsBattleLengthTimeTime = {{0xA7, 0, 1, 0, 0}, {0xA8, 0, 2, 1, 1}, {0xA9, 1, 2, 2, 2}, {RECTMENU_STRING_NONE}},
 
         .menuBattleLengthTimeTime = {.stringIndexTitle = RECTMENU_STRING_NONE,
 
                                      .state = KEEP_INPUTS_IN_SUBMENU | CENTER_MENU_TEXT | USE_SMALL_FONT,
-                                     .rows = &D230.rowsBattleLengthTimeTime[0],
-                                     .funcPtr = MM_Battle_CloseSubMenu},
+                                     .rows = P32_DEFER(&D230.rowsBattleLengthTimeTime[0]),
+                                     .funcPtr = P32_DEFER(MM_Battle_CloseSubMenu)},
 
         .rowsBattleLengthPoints = {{0xA1, 0, 1, 0, 0}, {0xA2, 0, 2, 1, 1}, {0xA3, 1, 2, 2, 2}, {RECTMENU_STRING_NONE}},
 
         .menuBattleLengthPoints = {.stringIndexTitle = RECTMENU_STRING_NONE,
 
                                    .state = KEEP_INPUTS_IN_SUBMENU | CENTER_MENU_TEXT | USE_SMALL_FONT,
-                                   .rows = &D230.rowsBattleLengthPoints[0],
-                                   .funcPtr = MM_Battle_CloseSubMenu},
+                                   .rows = P32_DEFER(&D230.rowsBattleLengthPoints[0]),
+                                   .funcPtr = P32_DEFER(MM_Battle_CloseSubMenu)},
 
         .rowsBattleLengthLifeLife = {{0x9e, 0, 1, 0, 0}, {0x9f, 0, 2, 1, 1}, {0xA0, 1, 2, 2, 2}, {RECTMENU_STRING_NONE}},
 
         .menuBattleLengthLifeLife = {.stringIndexTitle = RECTMENU_STRING_NONE,
 
                                      .state = KEEP_INPUTS_IN_SUBMENU | CENTER_MENU_TEXT | USE_SMALL_FONT,
-                                     .rows = &D230.rowsBattleLengthLifeLife[0],
-                                     .funcPtr = MM_Battle_CloseSubMenu},
+                                     .rows = P32_DEFER(&D230.rowsBattleLengthLifeLife[0]),
+                                     .funcPtr = P32_DEFER(MM_Battle_CloseSubMenu)},
 
         .rowsBattleStartGame = {{0xAE, 0, 0, 0, 0}, {RECTMENU_STRING_NONE}},
 
         .menuBattleStartGame = {.stringIndexTitle = RECTMENU_STRING_NONE,
 
                                 .state = KEEP_INPUTS_IN_SUBMENU | CENTER_MENU_TEXT | USE_SMALL_FONT,
-                                .rows = &D230.rowsBattleStartGame[0],
-                                .funcPtr = MM_Battle_CloseSubMenu},
+                                .rows = P32_DEFER(&D230.rowsBattleStartGame[0]),
+                                .funcPtr = P32_DEFER(MM_Battle_CloseSubMenu)},
 
-        .battleMenuArray = {&D230.menuBattleType, &D230.menuBattleLengthTimeTime, &D230.menuBattleLengthPoints, &D230.menuBattleLengthLifeLife,
-                            &D230.menuBattleLengthLifeTime},
+        .battleMenuArray = {P32_DEFER(&D230.menuBattleType), P32_DEFER(&D230.menuBattleLengthTimeTime), P32_DEFER(&D230.menuBattleLengthPoints), P32_DEFER(&D230.menuBattleLengthLifeLife),
+                            P32_DEFER(&D230.menuBattleLengthLifeTime)},
 
         .battleWeaponItems = {{0x1, 0x2},
                               {0x2, 0x6},
@@ -777,7 +777,7 @@ struct OverlayDATA_230 D230 =
                           .posY_curr = 0xAF,
 
                           .state = USE_SMALL_FONT | CENTER_ON_X,
-                          .rows = &D230.rowsHighScore[0]},
+                          .rows = P32_DEFER(&D230.rowsHighScore[0])},
 
         .highScoreSelection =
             {
@@ -902,6 +902,88 @@ struct OverlayDATA_230 D230 =
         .s_VlcBuf = "VlcBuf",
         .s_RingBuf = "RingBuf",
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(D230)
+{
+	P32_SET(D230.menuMainMenu.rows, &D230.rowsMainMenuBasic[0]);
+	P32_SET(D230.menuMainMenu.funcPtr, MM_MenuProc_Main);
+	P32_SET(D230.menuPlayers1P2P.rows, &D230.rowsPlayers1P2P[0]);
+	P32_SET(D230.menuPlayers1P2P.funcPtr, MM_MenuProc_1p2p);
+	P32_SET(D230.menuPlayers2P3P4P.rows, &D230.rowsPlayers2P3P4P[0]);
+	P32_SET(D230.menuPlayers2P3P4P.funcPtr, MM_MenuProc_2p3p4p);
+	P32_SET(D230.menuDifficulty.rows, &D230.rowsDifficulty[0]);
+	P32_SET(D230.menuDifficulty.funcPtr, MM_MenuProc_Difficulty);
+	P32_SET(D230.menuRaceType.rows, &D230.rowsRaceType[0]);
+	P32_SET(D230.menuRaceType.funcPtr, MM_MenuProc_SingleCup);
+	P32_SET(D230.menuAdventure.rows, &D230.rowsAdventure[0]);
+	P32_SET(D230.menuAdventure.funcPtr, MM_MenuProc_NewLoad);
+	P32_SET(D230.menuCharacterSelect.funcPtr, MM_Characters_MenuProc);
+	P32_SET(D230.menuTrackSelect.funcPtr, MM_TrackSelect_MenuProc);
+	P32_SET(D230.menuCupSelect.rows, &D230.rowsCupSelect[0]);
+	P32_SET(D230.menuCupSelect.funcPtr, MM_CupSelect_MenuProc);
+	P32_SET(D230.menuBattleWeapons.funcPtr, MM_Battle_MenuProc);
+	P32_SET(D230.menuHighScores.funcPtr, MM_HighScore_MenuProc);
+	P32_SET(D230.menuScrapbook.funcPtr, MM_Scrapbook_PlayMovie);
+	P32_SET(D230.arrayMenuPtrs[0], &D230.menuMainMenu);
+	P32_SET(D230.arrayMenuPtrs[1], &D230.menuPlayers1P2P);
+	P32_SET(D230.arrayMenuPtrs[2], &D230.menuPlayers2P3P4P);
+	P32_SET(D230.arrayMenuPtrs[3], &D230.menuAdventure);
+	P32_SET(D230.arrayMenuPtrs[4], &D230.menuCharacterSelect);
+	P32_SET(D230.arrayMenuPtrs[5], &D230.menuTrackSelect);
+	P32_SET(D230.arrayMenuPtrs[6], &D230.menuCupSelect);
+	P32_SET(D230.arrayMenuPtrs[7], &D230.menuBattleWeapons);
+	P32_SET(D230.arrayMenuPtrs[8], &D230.menuHighScores);
+	P32_SET(D230.cheats[0].handler, MainKillGame_LaunchSpyro2);
+	P32_SET(D230.cheats[2].handler, MM_Cheat_UnlockRoo);
+	P32_SET(D230.cheats[3].handler, MM_Cheat_UnlockPapu);
+	P32_SET(D230.cheats[4].handler, MM_Cheat_UnlockJoe);
+	P32_SET(D230.cheats[5].handler, MM_Cheat_UnlockPinstripe);
+	P32_SET(D230.cheats[6].handler, MM_Cheat_UnlockFakeCrash);
+	P32_SET(D230.cheats[11].handler, MM_Cheat_UnlockPenta);
+	P32_SET(D230.cheats[12].handler, MM_Cheat_UnlockTropy);
+	P32_SET(D230.cheats[13].handler, MM_Cheat_UnlockScrapbook);
+	P32_SET(D230.cheats[14].handler, MM_Cheat_UnlockTracks);
+	P32_SET(D230.characterSelectWindowPosByLayout[0], &D230.characterSelectWindowPos[0]);
+	P32_SET(D230.characterSelectWindowPosByLayout[1], &D230.characterSelectWindowPos[2]);
+	P32_SET(D230.characterSelectWindowPosByLayout[2], &D230.characterSelectWindowPos[6]);
+	P32_SET(D230.characterSelectWindowPosByLayout[3], &D230.characterSelectWindowPos[9]);
+	P32_SET(D230.characterSelectWindowPosByLayout[4], &D230.characterSelectWindowPos[1]);
+	P32_SET(D230.characterSelectWindowPosByLayout[5], &D230.characterSelectWindowPos[4]);
+	P32_SET(D230.characterSelectMetaByLayout[0], &D230.characterSelectMeta1P2P[0]);
+	P32_SET(D230.characterSelectMetaByLayout[1], &D230.characterSelectMeta1P2P[0]);
+	P32_SET(D230.characterSelectMetaByLayout[2], &D230.characterSelectMeta3P[0]);
+	P32_SET(D230.characterSelectMetaByLayout[3], &D230.characterSelectMeta4P[0]);
+	P32_SET(D230.characterSelectMetaByLayout[4], &D230.characterSelectMeta1P2PLimited[0]);
+	P32_SET(D230.characterSelectMetaByLayout[5], &D230.characterSelectMeta1P2PLimited[0]);
+	P32_SET(D230.characterSelectTransitionByPlayerCount[0], &D230.characterSelectTransition1P2P[0]);
+	P32_SET(D230.characterSelectTransitionByPlayerCount[1], &D230.characterSelectTransition1P2P[0]);
+	P32_SET(D230.characterSelectTransitionByPlayerCount[2], &D230.characterSelectTransition3P[0]);
+	P32_SET(D230.characterSelectTransitionByPlayerCount[3], &D230.characterSelectTransition4P[0]);
+	P32_SET(D230.playerNumberStrings[0], &R230.s_1[0]);
+	P32_SET(D230.playerNumberStrings[1], &R230.s_2[0]);
+	P32_SET(D230.playerNumberStrings[2], &R230.s_3[0]);
+	P32_SET(D230.playerNumberStrings[3], &R230.s_4[0]);
+	P32_SET(D230.menuLapSel.rows, &D230.rowsLapSel[0]);
+	P32_SET(D230.menuBattleType.rows, &D230.rowsBattleType[0]);
+	P32_SET(D230.menuBattleType.funcPtr, MM_Battle_CloseSubMenu);
+	P32_SET(D230.menuBattleLengthLifeTime.rows, &D230.rowsBattleLengthLifeTime[0]);
+	P32_SET(D230.menuBattleLengthLifeTime.funcPtr, MM_Battle_CloseSubMenu);
+	P32_SET(D230.menuBattleLengthTimeTime.rows, &D230.rowsBattleLengthTimeTime[0]);
+	P32_SET(D230.menuBattleLengthTimeTime.funcPtr, MM_Battle_CloseSubMenu);
+	P32_SET(D230.menuBattleLengthPoints.rows, &D230.rowsBattleLengthPoints[0]);
+	P32_SET(D230.menuBattleLengthPoints.funcPtr, MM_Battle_CloseSubMenu);
+	P32_SET(D230.menuBattleLengthLifeLife.rows, &D230.rowsBattleLengthLifeLife[0]);
+	P32_SET(D230.menuBattleLengthLifeLife.funcPtr, MM_Battle_CloseSubMenu);
+	P32_SET(D230.menuBattleStartGame.rows, &D230.rowsBattleStartGame[0]);
+	P32_SET(D230.menuBattleStartGame.funcPtr, MM_Battle_CloseSubMenu);
+	P32_SET(D230.battleMenuArray[0], &D230.menuBattleType);
+	P32_SET(D230.battleMenuArray[1], &D230.menuBattleLengthTimeTime);
+	P32_SET(D230.battleMenuArray[2], &D230.menuBattleLengthPoints);
+	P32_SET(D230.battleMenuArray[3], &D230.menuBattleLengthLifeLife);
+	P32_SET(D230.battleMenuArray[4], &D230.menuBattleLengthLifeTime);
+	P32_SET(D230.menuHighScore.rows, &D230.rowsHighScore[0]);
+}
+#endif
 
 struct OVR_230_VideoBSS V230;
 

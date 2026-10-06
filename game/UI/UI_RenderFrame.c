@@ -41,7 +41,7 @@ static void UI_RenderFrame_DrawReplayControls(const char *status)
 	DecalFont_DrawLine((char *)status, 0x100, 4, FONT_SMALL, JUSTIFY_CENTER | ORANGE);
 	DecalFont_DrawLine(line1, 0x100, panel.y + textYOffset, FONT_SMALL, JUSTIFY_CENTER | WHITE);
 	DecalFont_DrawLine(line2, 0x100, panel.y + lineHeight + textYOffset, FONT_SMALL, JUSTIFY_CENTER | WHITE);
-	RECTMENU_DrawInnerRect(&panel, 0, sdata->gGT->backBuffer->otMem.uiOT);
+	RECTMENU_DrawInnerRect(&panel, 0, P32_GET(uint32_t *, P32_GET(struct DB *, P32_GET(struct GameTracker *, sdata->gGT)->backBuffer)->otMem.uiOT));
 }
 #endif
 
@@ -85,7 +85,7 @@ void UI_RenderFrame_Racing()
 	offset = 0;
 
 	struct GameTracker *gGT;
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	int numPlyr = gGT->numPlyrCurrGame;
 	int gameMode1 = gGT->gameMode1;
@@ -110,7 +110,7 @@ void UI_RenderFrame_Racing()
 #endif
 
 		// Get pointer to array of HUD structs
-	hudStructPtr = (struct UiElement2D *)data.hudStructPtr[numPlyr - 1];
+	hudStructPtr = (struct UiElement2D *)P32_GET(struct UiElement2D *, data.hudStructPtr[numPlyr - 1]);
 
 	levPtrMap = 0;
 
@@ -168,7 +168,7 @@ void UI_RenderFrame_Racing()
 #if defined(__vita__)
 			if ((sdata->gGamepads->gamepad[adhocSingleView ? adhocLocalPlayer : 0].buttonsTapped & 0x40000) != 0)
 #else
-			if ((sdata->gGamepads->gamepad[0].buttonsTapped & 0x40000) != 0)
+			if ((P32_GET(struct GamepadSystem *, sdata->gGamepads)->gamepad[0].buttonsTapped & 0x40000) != 0)
 #endif
 			{
 				// if & 8, remove bit 8,
@@ -186,7 +186,7 @@ void UI_RenderFrame_Racing()
 	// numPlyrCurrGame is 0
 	if ((numPlyr == '\0') &&
 
-	    ((gGT->drivers[0]->actionsFlagSet & ACTION_BOT) != 0))
+	    ((P32_GET(struct Driver *, gGT->drivers[0])->actionsFlagSet & ACTION_BOT) != 0))
 	{
 		// force draw speedometer, and not map, why?
 		sdata->HudAndDebugFlags = 8;
@@ -194,13 +194,13 @@ void UI_RenderFrame_Racing()
 
 #ifdef CTR_NATIVE
 	// NOTE(aalhendi): Native can load levels before ST1 map metadata is present.
-	if ((gGT->level1->ptrSpawnType1 != 0) && (gGT->level1->ptrSpawnType1->count != 0))
+	if ((P32_GET(struct SpawnType1 *, P32_GET(struct Level *, gGT->level1)->ptrSpawnType1) != 0) && (P32_GET(struct SpawnType1 *, P32_GET(struct Level *, gGT->level1)->ptrSpawnType1)->count != 0))
 #else
 	if (gGT->level1->ptrSpawnType1->count != 0)
 #endif
 	{
-		void **pointers = ST1_GETPOINTERS(gGT->level1->ptrSpawnType1);
-		levPtrMap = pointers[ST1_MAP];
+		P32(void *) *pointers = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *, gGT->level1)->ptrSpawnType1));
+		levPtrMap = P32_GET(void *, pointers[ST1_MAP]);
 	}
 
 	// If you are not in Relic Race, and not in battle mode,
@@ -211,7 +211,7 @@ void UI_RenderFrame_Racing()
 	}
 
 	// pointer to first Player thread
-	playerThread = gGT->threadBuckets[PLAYER].thread;
+	playerThread = P32_GET(struct Thread *, gGT->threadBuckets[PLAYER].thread);
 
 	cVar22 = '\0';
 	if (playerThread != 0)
@@ -220,7 +220,7 @@ void UI_RenderFrame_Racing()
 		do
 		{
 			// pointer to player structure
-			playerStruct = (struct Driver *)playerThread->object;
+			playerStruct = (struct Driver *)P32_GET(void *, playerThread->object);
 #if defined(__vita__)
 			u32 *adhocPlayerOriginalOT = NULL;
 			if (adhocSingleView)
@@ -272,7 +272,7 @@ void UI_RenderFrame_Racing()
 					// if "Time on clock" last 0xXX u8 is greater than 0x80 and less than 0xFF
 					if ((gGT->elapsedEventTime & 0x80) != 0)
 					{
-						DecalFont_DrawLine(sdata->lngStrings[LNG_WRONG_WAY],
+						DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_WRONG_WAY]),
 
 						                   // midpointX
 						                   pb->rect.x + (pb->rect.w >> 1),
@@ -395,16 +395,16 @@ void UI_RenderFrame_Racing()
 						playerStruct->PickupWumpaHUD.cooldown = partTimeVariable1;
 					}
 
-					struct Icon **iconPtrArray = ICONGROUP_GETICONS(gGT->iconGroup[0xB]);
+					P32(struct Icon *) *iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[0xB]));
 
 					// "wumpaposter" icon group
-					DecalHUD_DrawPolyFT4(iconPtrArray[0], (int)wumpaModelPos.x, (int)wumpaModelPos.y,
+					DecalHUD_DrawPolyFT4(P32_GET(struct Icon *, iconPtrArray[0]), (int)wumpaModelPos.x, (int)wumpaModelPos.y,
 
 					                     // pointer to PrimMem struct
-					                     &gGT->backBuffer->primMem,
+					                     &P32_GET(struct DB *, gGT->backBuffer)->primMem,
 
 					                     // pointer to OT memory
-					                     gGT->pushBuffer_UI.ptrOT,
+					                     P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT),
 
 					                     0, hudStructPtr[UI_HUD_SLOT_WEAPON].scale);
 				}
@@ -418,7 +418,7 @@ void UI_RenderFrame_Racing()
 					// C-Letter
 					if (playerStruct->PickupLetterHUD.modelID == STATIC_C)
 					{
-						curr = sdata->ptrHudC;
+						curr = P32_GET(struct Instance *, sdata->ptrHudC);
 					}
 
 					// T-letter
@@ -426,14 +426,14 @@ void UI_RenderFrame_Racing()
 					{
 						letterCtrPos.x += 0x1d;
 						letterCtrPos.y -= 1;
-						curr = sdata->ptrHudT;
+						curr = P32_GET(struct Instance *, sdata->ptrHudT);
 					}
 
 					// R-Letter
 					else
 					{
 						letterCtrPos.x += 0x3a;
-						curr = sdata->ptrHudR;
+						curr = P32_GET(struct Instance *, sdata->ptrHudR);
 					}
 
 					// make visible
@@ -606,10 +606,10 @@ void UI_RenderFrame_Racing()
 				if (numPlyr > 2)
 				{
 					// Get Color Data
-					ptrColor = data.ptrColor[sVar17];
+					ptrColor = P32_GET(u32 *, data.ptrColor[sVar17]);
 
 					// icon pointer, specifically for the big rank icons that start at 0x19
-					iconPtr = gGT->ptrIcons[(int)playerStruct->driverRank + 0x19];
+					iconPtr = P32_GET(struct Icon *, gGT->ptrIcons[(int)playerStruct->driverRank + 0x19]);
 
 				LAB_80053aec:
 
@@ -620,7 +620,7 @@ void UI_RenderFrame_Racing()
 					    // position
 					    (int)hudStructPtr[UI_HUD_SLOT_BIG1].x, (int)hudStructPtr[UI_HUD_SLOT_BIG1].y,
 
-					    &gGT->backBuffer->primMem, gGT->pushBuffer_UI.ptrOT,
+					    &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT),
 
 					    // color data
 					    ptrColor[0], ptrColor[1], ptrColor[2], ptrColor[3],
@@ -638,12 +638,12 @@ void UI_RenderFrame_Racing()
 				UI_DrawPosSuffix(hudStructPtr[UI_HUD_SLOT_RANK].x, hudStructPtr[UI_HUD_SLOT_RANK].y, playerStruct, (s16)partTimeVariable5);
 
 				// Get Color Data
-				ptrColor = data.ptrColor[partTimeVariable5];
+				ptrColor = P32_GET(u32 *, data.ptrColor[partTimeVariable5]);
 
 				// pointer to icon
 				// get rank icon of each battle team after battle is over
 				// OH GOD THIS IS CONVOLUTED and probably wrong --Super
-				iconPtr = gGT->ptrIcons[gGT->battleSetup.finishedRankOfEachTeam[playerStruct->BattleHUD.teamID] + 0x19];
+				iconPtr = P32_GET(struct Icon *, gGT->ptrIcons[gGT->battleSetup.finishedRankOfEachTeam[playerStruct->BattleHUD.teamID] + 0x19]);
 
 				goto LAB_80053aec;
 			}
@@ -688,7 +688,7 @@ void UI_RenderFrame_Racing()
 
 			// go to next player
 			// thread = thread->sibling
-			playerThread = playerThread->siblingThread;
+			playerThread = P32_GET(struct Thread *, playerThread->siblingThread);
 
 #if defined(__vita__)
 			if (!adhocSingleView)
@@ -713,7 +713,7 @@ void UI_RenderFrame_Racing()
 #if defined(__vita__)
 		playerStruct = gGT->drivers[adhocSingleView ? adhocLocalPlayer : 0];
 #else
-		playerStruct = gGT->drivers[0];
+		playerStruct = P32_GET(struct Driver *, gGT->drivers[0]);
 #endif
 
 		UI_DrawRaceClock(0x14, 8, UI_RACE_CLOCK_SHOW_CURRENT_TIME, playerStruct);
@@ -730,7 +730,7 @@ void UI_RenderFrame_Racing()
 			if (sVar1 != 0)
 			{
 				// Read pointer from address
-				turboThread = gGT->threadBuckets[TURBO].thread;
+				turboThread = P32_GET(struct Thread *, gGT->threadBuckets[TURBO].thread);
 
 				while (
 				    // Pointer != nullptr
@@ -738,9 +738,9 @@ void UI_RenderFrame_Racing()
 
 				    // Adds 0x30 to turboThread pointer, gets value (new address) then adds 4.
 				    // If   [something]   != pointer that holds boost counter
-				    (turboThreadObject = (struct Turbo *)turboThread->object, turboThreadObject->driver != playerStruct))
+				    (turboThreadObject = (struct Turbo *)P32_GET(void *, turboThread->object), P32_GET(struct Driver *, turboThreadObject->driver) != playerStruct))
 				{
-					turboThread = turboThread->siblingThread;
+					turboThread = P32_GET(struct Thread *, turboThread->siblingThread);
 				}
 
 				// Get number of boosts
@@ -809,7 +809,7 @@ void UI_RenderFrame_Racing()
 			}
 
 			// Set display position value (the slide is authored as one step per 30 FPS frame)
-			if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+			if (CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer))
 			{
 				sdata->TurboDisplayPos_Only1P = sVar1;
 			}
@@ -844,25 +844,25 @@ void UI_RenderFrame_Racing()
 					sprintf((char *)&string[0], &sdata->s_999[0]);
 				}
 
-				i = DecalFont_GetLineWidth(sdata->lngStrings[LNG_TURBOS], 1);
+				i = DecalFont_GetLineWidth(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_TURBOS]), 1);
 
 				// Draw the string
 				DecalFont_DrawLine((char *)&string[0], (int)(((u32)turboCountPos.x - i) * 0x10000) >> 0x10, (int)turboCountPos.y, FONT_BIG,
 				                   (JUSTIFY_RIGHT | ORANGE_RED));
 
 
-				sprintf((char *)&string[0], &sdata->s_str[0], sdata->lngStrings[LNG_TURBOS]);
+				sprintf((char *)&string[0], &sdata->s_str[0], P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_TURBOS]));
 
 				// Draw the string
 				DecalFont_DrawLine((char *)&string[0], (int)(s16)turboCountPos.x, (int)turboCountPos.y, FONT_BIG, (JUSTIFY_RIGHT | ORANGE));
 
-				backBuffer = gGT->backBuffer;
-				primMemCurr = backBuffer->primMem.cursor;
+				backBuffer = P32_GET(struct DB *, gGT->backBuffer);
+				primMemCurr = P32_GET(void *, backBuffer->primMem.cursor);
 				TurboCounterBar = 0;
 
-				if ((int)primMemCurr <= (int)backBuffer->primMem.guardEnd)
+				if ((char *)primMemCurr <= P32_GET(char *, backBuffer->primMem.guardEnd))
 				{
-					backBuffer->primMem.cursor = primMemCurr + 9;
+					P32_SET(backBuffer->primMem.cursor, primMemCurr + 9);
 					TurboCounterBar = (POLY_G4 *)primMemCurr;
 				}
 
@@ -885,7 +885,7 @@ void UI_RenderFrame_Racing()
 				TurboCounterBar->y3 = turboCountPos.y + 0x12;
 
 				// pointer to OT memory
-				primMemCurr = gGT->pushBuffer_UI.ptrOT;
+				primMemCurr = P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT);
 
 				addPolyG4(primMemCurr, TurboCounterBar);
 			}
@@ -914,12 +914,12 @@ void UI_RenderFrame_Racing()
 		{
 			local_30[0] = 0;
 
-			UI_Map_DrawDrivers(levPtrMap, gGT->threadBuckets[PLAYER].thread, local_30);
-			UI_Map_DrawDrivers(levPtrMap, gGT->threadBuckets[ROBOT].thread, local_30);
+			UI_Map_DrawDrivers(levPtrMap, P32_GET(struct Thread *, gGT->threadBuckets[PLAYER].thread), local_30);
+			UI_Map_DrawDrivers(levPtrMap, P32_GET(struct Thread *, gGT->threadBuckets[ROBOT].thread), local_30);
 
-			UI_Map_DrawGhosts(levPtrMap, gGT->threadBuckets[GHOST].thread);
+			UI_Map_DrawGhosts(levPtrMap, P32_GET(struct Thread *, gGT->threadBuckets[GHOST].thread));
 
-			UI_Map_DrawTracking(levPtrMap, gGT->threadBuckets[TRACKING].thread);
+			UI_Map_DrawTracking(levPtrMap, P32_GET(struct Thread *, gGT->threadBuckets[TRACKING].thread));
 
 			mapPosX = 500;
 			mapPosY = 195;
@@ -933,16 +933,16 @@ void UI_RenderFrame_Racing()
 			// Draw the map
 			UI_Map_DrawMap(
 			    // top half and bottom half
-			    gGT->ptrIcons[3], gGT->ptrIcons[4],
+			    P32_GET(struct Icon *, gGT->ptrIcons[3]), P32_GET(struct Icon *, gGT->ptrIcons[4]),
 
 			    // X and Y
 			    mapPosX, mapPosY,
 
 			    // Pointer to primary memory
-			    &gGT->backBuffer->primMem,
+			    &P32_GET(struct DB *, gGT->backBuffer)->primMem,
 
 			    // pointer to OT memory
-			    gGT->pushBuffer_UI.ptrOT,
+			    P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT),
 
 			    // color, in this case white
 			    1);
@@ -960,7 +960,7 @@ void UI_RenderFrame_Racing()
 		// for(int i = 0; i < numPlyrCurrGame; i++)
 		do
 		{
-			playerStruct = gGT->drivers[i];
+			playerStruct = P32_GET(struct Driver *, gGT->drivers[i]);
 			pb = &gGT->pushBuffer[playerStruct->driverID];
 #if defined(__vita__)
 			u32 *adhocStatusOriginalOT = NULL;
@@ -1000,13 +1000,13 @@ void UI_RenderFrame_Racing()
 				    // (winner of battle wont use this function)
 				    ((gameMode1 & BATTLE_MODE) == 0))
 				{
-					pbVar6 = sdata->lngStrings[LNG_FINISHED];
+					pbVar6 = P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_FINISHED]);
 				}
 
 				// If you came in last place, or you're in battle
 				else
 				{
-					pbVar6 = sdata->lngStrings[LNG_LOSER];
+					pbVar6 = P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_LOSER]);
 				}
 
 				DecalFont_DrawLine(pbVar6,
@@ -1016,7 +1016,7 @@ void UI_RenderFrame_Racing()
 
 				if (
 				    // If you press Cross or Start
-				    ((sdata->gGamepads->gamepad[i].buttonsTapped & 0x1010) != 0) &&
+				    ((P32_GET(struct GamepadSystem *, sdata->gGamepads)->gamepad[i].buttonsTapped & 0x1010) != 0) &&
 
 				    // If you're in End-Of-Race menu
 				    ((gameMode1 & END_OF_RACE) != 0))
@@ -1070,11 +1070,11 @@ void UI_RenderFrame_Racing()
 
 	if (onePlayerPresentation)
 	{
-		struct UiElement2D *hud1P = data.hudStructPtr[0];
+		struct UiElement2D *hud1P = P32_GET(struct UiElement2D *, data.hudStructPtr[0]);
 #if defined(__vita__)
 		struct Driver *reservesDriver = gGT->drivers[adhocSingleView ? adhocLocalPlayer : 0];
 #else
-		struct Driver *reservesDriver = gGT->drivers[0];
+		struct Driver *reservesDriver = P32_GET(struct Driver *, gGT->drivers[0]);
 #endif
 		if (reservesDriver != NULL)
 		{
@@ -1089,8 +1089,8 @@ void UI_RenderFrame_AdvHub(void)
 	struct UiElement2D *hudStructPtr;
 	struct GameTracker *gGT;
 
-	gGT = sdata->gGT;
-	hudStructPtr = data.hudStructPtr[gGT->numPlyrCurrGame - 1];
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	hudStructPtr = P32_GET(struct UiElement2D *, data.hudStructPtr[gGT->numPlyrCurrGame - 1]);
 
 	UI_DrawNumRelic(hudStructPtr[UI_HUD_SLOT_RELIC].x + 0x10, hudStructPtr[UI_HUD_SLOT_RELIC].y - 10);
 	UI_DrawNumKey(hudStructPtr[UI_HUD_SLOT_KEY].x + 0x10, hudStructPtr[UI_HUD_SLOT_KEY].y - 10);
@@ -1100,16 +1100,16 @@ void UI_RenderFrame_AdvHub(void)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8005435c-0x8005465c for the retail path.
 void UI_RenderFrame_CrystChall(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	struct Driver *player;
 	struct UiElement2D *hudStructPtr;
 	struct Instance *hudCrystal;
 	int iVar5;
 	SVec2 crystalPos;
 
-	player = gGT->drivers[0];
-	hudStructPtr = data.hudStructPtr[0];
-	hudCrystal = sdata->ptrHudCrystal;
+	player = P32_GET(struct Driver *, gGT->drivers[0]);
+	hudStructPtr = P32_GET(struct UiElement2D *, data.hudStructPtr[0]);
+	hudCrystal = P32_GET(struct Instance *, sdata->ptrHudCrystal);
 
 	// If game is not paused
 	if ((gGT->gameMode1 & PAUSE_ALL) == 0)
@@ -1131,7 +1131,7 @@ void UI_RenderFrame_CrystChall(void)
 	// Draw weapon and number of wumpa fruit in HUD
 	UI_Weapon_DrawSelf(hudStructPtr[UI_HUD_SLOT_WEAPON].x, hudStructPtr[UI_HUD_SLOT_WEAPON].y, hudStructPtr[UI_HUD_SLOT_WEAPON].scale, player);
 
-	DecalFont_DrawLine(sdata->lngStrings[LNG_TIME], 0x14, 8, FONT_SMALL, ORANGE);
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_TIME]), 0x14, 8, FONT_SMALL, ORANGE);
 
 	// "TIME" and the actual time are printed at the same
 	// X-coordinate, so we know 0x14 is the X, which only
@@ -1187,7 +1187,7 @@ void UI_RenderFrame_CrystChall(void)
 		// if you have enough crystals to win the race
 		if (gGT->numCrystalsInLEV <= player->numCrystals)
 		{
-			player->funcPtrs[DRIVER_FUNC_INIT] = VehPhysProc_FreezeEndEvent_Init;
+			P32_SET(player->funcPtrs[DRIVER_FUNC_INIT], VehPhysProc_FreezeEndEvent_Init);
 
 			player->actionsFlagSet |= ACTION_RACE_FINISHED;
 
@@ -1306,7 +1306,7 @@ void UI_RenderFrame_Wumpa3D_2P3P4P(struct GameTracker *gGT)
 
 	// NOTE(aalhendi): Retail reads the gp slot populated by UI_INSTANCE_InitAll
 	// with ptrPushBufferUI, not the adjacent ptrFruitDisp instance slot.
-	wumpaPushBuffer = (struct PushBuffer *)(uintptr_t)sdata->ptrPushBufferUI;
+	wumpaPushBuffer = P32_DEC(struct PushBuffer *, sdata->ptrPushBufferUI);
 
 #if defined(CTR_NATIVE)
 	if ((gGT->numPlyrCurrGame >= 2) && (wumpaPushBuffer == NULL))
@@ -1317,20 +1317,20 @@ void UI_RenderFrame_Wumpa3D_2P3P4P(struct GameTracker *gGT)
 
 	if (wumpaPushBuffer != NULL)
 	{
-		uint32_t *textureStart = wumpaPushBuffer->ptrOT;
-		uint32_t *textureEnd = wumpaPushBuffer->renderBucketOTRangeEnd;
+		uint32_t *textureStart = P32_GET(uint32_t *, wumpaPushBuffer->ptrOT);
+		uint32_t *textureEnd = P32_GET(uint32_t *, wumpaPushBuffer->renderBucketOTRangeEnd);
 		b32 shouldCycleTexture = (textureStart != NULL) && (textureEnd != NULL);
 
 #ifdef CTR_NATIVE
-		shouldCycleTexture = shouldCycleTexture && CtrGpu_IsCurrentOTRange(gGT->backBuffer, textureStart, textureEnd);
+		shouldCycleTexture = shouldCycleTexture && CtrGpu_IsCurrentOTRange(P32_GET(struct DB *, gGT->backBuffer), textureStart, textureEnd);
 #endif
 
-		PushBuffer_SetDrawEnv_DecalMP(textureEnd, gGT->backBuffer, viewport, viewport->x + (viewport->w >> 1) - 0x100, viewport->y + (viewport->h >> 1) - 0x6c,
+		PushBuffer_SetDrawEnv_DecalMP(textureEnd, P32_GET(struct DB *, gGT->backBuffer), viewport, viewport->x + (viewport->w >> 1) - 0x100, viewport->y + (viewport->h >> 1) - 0x6c,
 		                              0, 0, 0, 0, 1);
 
 		if (shouldCycleTexture)
 		{
-			u32 *cycleOT = (u32 *)&gGT->pushBuffer[0].ptrOT[0x3ff];
+			u32 *cycleOT = (u32 *)&P32_GET(uint32_t *, gGT->pushBuffer[0].ptrOT)[0x3ff];
 #if defined(__vita__)
 			if (adhocSingleView)
 			{
@@ -1354,9 +1354,9 @@ void UI_RenderFrame_Wumpa3D_2P3P4P(struct GameTracker *gGT)
 		}
 
 		struct UiElement2D *hud = adhocSingleView
-		    ? data.hudStructPtr[0]
-		    : &data.hudStructPtr[gGT->numPlyrCurrGame - 1][playerIndex * UI_HUD_SLOT_COUNT];
-		struct Driver *driver = gGT->drivers[playerIndex];
+		    ? P32_GET(struct UiElement2D *, data.hudStructPtr[0])
+		    : &P32_GET(struct UiElement2D *, data.hudStructPtr[gGT->numPlyrCurrGame - 1])[playerIndex * UI_HUD_SLOT_COUNT];
+		struct Driver *driver = P32_GET(struct Driver *, gGT->drivers[playerIndex]);
 
 		if ((driver->actionsFlagSet & ACTION_RACE_FINISHED) != 0)
 		{
@@ -1371,7 +1371,7 @@ void UI_RenderFrame_Wumpa3D_2P3P4P(struct GameTracker *gGT)
 		s16 posX = hud[UI_HUD_SLOT_FRUIT_MODEL].x + wumpaPushBuffer->rect.x - (viewport->w >> 1);
 		s16 posY = hud[UI_HUD_SLOT_FRUIT_MODEL].y + wumpaPushBuffer->rect.y - (viewport->h >> 1);
 
-		POLY_FT4 *prim = (POLY_FT4 *)gGT->backBuffer->primMem.cursor;
+		POLY_FT4 *prim = (POLY_FT4 *)P32_GET(void *, P32_GET(struct DB *, gGT->backBuffer)->primMem.cursor);
 		u8 u0 = (u8)(viewport->x & 0x3f);
 		u8 v0 = (u8)viewport->y;
 		u8 u1 = u0 + (u8)viewport->w;
@@ -1401,7 +1401,7 @@ void UI_RenderFrame_Wumpa3D_2P3P4P(struct GameTracker *gGT)
 			prim->b0 = shineColor;
 		}
 
-		gGT->backBuffer->primMem.cursor = prim + 1;
-		AddPrim(gGT->pushBuffer_UI.ptrOT, prim);
+		P32_SET(P32_GET(struct DB *, gGT->backBuffer)->primMem.cursor, prim + 1);
+		AddPrim(P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), prim);
 	}
 }

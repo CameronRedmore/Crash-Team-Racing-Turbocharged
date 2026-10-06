@@ -3,7 +3,7 @@
 // this is only for LevInstances,
 // NonLev-related entries are empty
 
-#define SET_MDM(x, y, z) {.name = 0, .LInB = y, .LInC = z}
+#define SET_MDM(x, y, z) {.name = 0, .LInB = P32_DEFER(y), .LInC = P32_DEFER(z)}
 // usage of this macro is mainly because I'm too lazy to go through this file and manually recalculate all the values where s16 is expected instead of uint.
 // this is purely to reduce warnings in the compiler output. (i.e., the compiler was doing this implicitly). (literally 800 lines of warnings at
 // time-of-writing).
@@ -13,7 +13,7 @@
 // FIND:            (?<!AS\()(?i:0x(?=ffff)[0-9abcdef]+)
 // REPLACE:         AS($1)
 
-// the procedure that I would use to convert (by hand, unfortunately) would be to take the last 4 digits of any 0xffffXXXX number,
+// the procedure that I would use to convert (by hand, unfortunately) would be to take the last P32_DEFER(4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)4 digits o)f any 0xffffXXXX number,
 // take it into windows' calculator (programmer mode), do 0 minus that number, then you should get a number like 0xffff_ffff_ffff_YYYY
 // the resulting "correct number" to replace your original number would be "-0xYYYY"
 
@@ -1060,23 +1060,23 @@ struct Data
             .s_XA_ENG_EXTRA = "\\XA\\ENG\\EXTRA\\S00.XA;1",
             .s_XA_ENG_GAME = "\\XA\\ENG\\GAME\\S00.XA;1",
 
-            .xaLanguagePtrs = {sdata_static.s_JPN, sdata_static.s_ENG, sdata_static.s_FRN, sdata_static.s_GRM, sdata_static.s_ITL, sdata_static.s_SPN,
-                               sdata_static.s_DCH},
+            .xaLanguagePtrs = {P32_DEFER(sdata_static.s_JPN), P32_DEFER(sdata_static.s_ENG), P32_DEFER(sdata_static.s_FRN), P32_DEFER(sdata_static.s_GRM), P32_DEFER(sdata_static.s_ITL), P32_DEFER(sdata_static.s_SPN),
+                               P32_DEFER(sdata_static.s_DCH)},
 
             .audioMeta[0] = {.stringIndex_char1 = 0xB,
                              .stringIndex_char2 = 0xC,
 
-                             .name = data.s_XA_MUSIC},
+                             .name = P32_DEFER(data.s_XA_MUSIC)},
 
             .audioMeta[1] = {.stringIndex_char1 = 0xF,
                              .stringIndex_char2 = 0x10,
 
-                             .name = data.s_XA_ENG_EXTRA},
+                             .name = P32_DEFER(data.s_XA_ENG_EXTRA)},
 
             .audioMeta[2] = {.stringIndex_char1 = 0xE,
                              .stringIndex_char2 = 0xF,
 
-                             .name = data.s_XA_ENG_GAME},
+                             .name = P32_DEFER(data.s_XA_ENG_GAME)},
 
             .MetaDataModels =
                 {
@@ -1090,7 +1090,7 @@ struct Data
                     SET_MDM(NULL, NULL, NULL),
 
                     // 0x02 - PU_WUMPA_FRUIT
-                    SET_MDM(NULL, RB_Fruit_LInB, RB_Fruit_LInC),
+                    SET_MDM(NULL, P32_DEFER(RB_Fruit_LInB), P32_DEFER(RB_Fruit_LInC)),
 
                     // 0x03 - PU_SMALL_BOMB
                     SET_MDM(NULL, NULL, NULL),
@@ -1105,13 +1105,13 @@ struct Data
                     // used for Crystal Challenge TNT/Nitro, no BSP collision,
                     // LInB births thread that checks for collision every frame,
                     // DECOMP should birth unthreaded instances, and add hitboxes
-                    SET_MDM(NULL, RB_GenericMine_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(RB_GenericMine_LInB), NULL),
 
                     // 0x07 - PU_FRUIT_CRATE
-                    SET_MDM(NULL, RB_Default_LInB, RB_CrateFruit_LInC),
+                    SET_MDM(NULL, P32_DEFER(RB_Default_LInB), P32_DEFER(RB_CrateFruit_LInC)),
 
                     // 0x08 - PU_RANDOM_CRATE (Weapon Box)
-                    SET_MDM(NULL, RB_Default_LInB, RB_CrateWeapon_LInC),
+                    SET_MDM(NULL, P32_DEFER(RB_Default_LInB), P32_DEFER(RB_CrateWeapon_LInC)),
 
                     // 0x09 - PU_TIME_CRATE_1 (unused duplicate of 0x5C)
                     SET_MDM(NULL, NULL, NULL),
@@ -1141,10 +1141,10 @@ struct Data
                     SET_MDM(NULL, NULL, NULL),
 
                     // 0x12 - FLAME_JET (tiger temple)
-                    SET_MDM(NULL, RB_FlameJet_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(RB_FlameJet_LInB), NULL),
 
                     // 0x13 - PIRANHA_PLANT (papu pyramid)
-                    SET_MDM(NULL, RB_Plant_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(RB_Plant_LInB), NULL),
 
                     // 0x14 - GATE
                     SET_MDM(NULL, NULL, NULL),
@@ -1186,19 +1186,19 @@ struct Data
                     SET_MDM(NULL, NULL, NULL),
 
                     // 0x21 - DYNAMIC_MINE_CART
-                    SET_MDM(NULL, RB_Minecart_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(RB_Minecart_LInB), NULL),
 
                     // 0x22 - TEMP_SNOWBALL (blizzard bluff boulder)
-                    SET_MDM(NULL, RB_Snowball_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(RB_Snowball_LInB), NULL),
 
                     // 0x23 - FINISH_LINE
                     SET_MDM(NULL, NULL, NULL),
 
                     // 0x24 - ARMADILLO (armadillo)
-                    SET_MDM(NULL, RB_Armadillo_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(RB_Armadillo_LInB), NULL),
 
                     // 0x25 - BLADE
-                    SET_MDM(NULL, RB_Blade_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(RB_Blade_LInB), NULL),
 
                     // 0x26 - STATIC_CRATE_EXPLOSION
                     SET_MDM(NULL, NULL, NULL),
@@ -1207,7 +1207,7 @@ struct Data
                     // used for Crystal Challenge TNT/Nitro, no BSP collision,
                     // LInB births thread that checks for collision every frame,
                     // DECOMP should birth unthreaded instances, and add hitboxes
-                    SET_MDM(NULL, RB_GenericMine_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(RB_GenericMine_LInB), NULL),
 
                     // 0x28 - STATIC_CRATE_NITRO (unused duplicate of 0x6)
                     SET_MDM(NULL, NULL, NULL),
@@ -1318,35 +1318,35 @@ struct Data
                     SET_MDM(NULL, NULL, NULL),
 
                     // 0x4c - DYNAMIC_SEAL (polar pass)
-                    SET_MDM(NULL, RB_Seal_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(RB_Seal_LInB), NULL),
 
                     // 0x4d - DYNAMIC_ORCA (unused, polar pass)
-                    SET_MDM(NULL, RB_Orca_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(RB_Orca_LInB), NULL),
 
                     // 0x4e - DYNAMIC_BARREL (sewer speedway)
-                    SET_MDM(NULL, RB_Snowball_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(RB_Snowball_LInB), NULL),
 
                     // 0x4f - DYNAMIC_VONLABASS (unused, hot air skyway)
-                    SET_MDM(NULL, RB_Baron_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(RB_Baron_LInB), NULL),
 
                     // 0x50 - DYNAMIC_SKUNK (unused, unknown track)
                     SET_MDM(NULL, NULL /*RB_Minecart_LInB*/, NULL),
 
                     // 0x51 - DYNAMIC_TURTLE (mystery caves)
-                    SET_MDM(NULL, RB_Turtle_LInB, RB_Turtle_LInC),
+                    SET_MDM(NULL, P32_DEFER(RB_Turtle_LInB), P32_DEFER(RB_Turtle_LInC)),
 
                     // 0x52 - DYNAMIC_SPIDER (cortex castle)
-                    SET_MDM(NULL, RB_Spider_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(RB_Spider_LInB), NULL),
 
                     // 0x53 - DYNAMIC_SPIDERSHADOW
                     SET_MDM(NULL, NULL, NULL),
 
                     // 0x54 - DYNAMIC_FIREBALL (mystery caves fireball)
                     // DECOMP version removed LInC, it does nothing
-                    SET_MDM(NULL, RB_Fireball_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(RB_Fireball_LInB), NULL),
 
                     // 0x55 - DYNAMIC_DRUM (n gin labs barrel)
-                    SET_MDM(NULL, RB_Baron_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(RB_Baron_LInB), NULL),
 
                     // 0x56 - DYNAMIC_SHIELD (blue shield)
                     SET_MDM(NULL, NULL, NULL),
@@ -1367,7 +1367,7 @@ struct Data
                     SET_MDM(NULL, NULL, NULL),
 
                     // 0x5c - STATIC_TIME_CRATE_01
-                    SET_MDM(NULL, RB_Default_LInB, RB_CrateTime_LInC),
+                    SET_MDM(NULL, P32_DEFER(RB_Default_LInB), P32_DEFER(RB_CrateTime_LInC)),
 
                     // 0x5d - DYNAMIC_HIGHLIGHT
                     SET_MDM(NULL, NULL, NULL),
@@ -1381,7 +1381,7 @@ struct Data
                     // 0x60 - STATIC_CRYSTAL
                     // LInC should not birth a thread, nor call ThCollide,
                     // LInC should only kill LInB's thread and trigger HUD
-                    SET_MDM(NULL, RB_Crystal_LInB, RB_Crystal_LInC),
+                    SET_MDM(NULL, P32_DEFER(RB_Crystal_LInB), P32_DEFER(RB_Crystal_LInC)),
 
                     // 0x61 - STATIC_RELIC
                     SET_MDM(NULL, NULL, NULL),
@@ -1393,10 +1393,10 @@ struct Data
                     SET_MDM(NULL, NULL, NULL),
 
                     // 0x64 - STATIC_TIME_CRATE_02
-                    SET_MDM(NULL, RB_Default_LInB, RB_CrateTime_LInC),
+                    SET_MDM(NULL, P32_DEFER(RB_Default_LInB), P32_DEFER(RB_CrateTime_LInC)),
 
                     // 0x65 - STATIC_TIME_CRATE_03
-                    SET_MDM(NULL, RB_Default_LInB, RB_CrateTime_LInC),
+                    SET_MDM(NULL, P32_DEFER(RB_Default_LInB), P32_DEFER(RB_CrateTime_LInC)),
 
                     // 0x66 - STATIC_INTRO_TROPHY
                     SET_MDM(NULL, NULL, NULL),
@@ -1417,7 +1417,7 @@ struct Data
                     SET_MDM(NULL, NULL, NULL),
 
                     // 0x6C - STATIC_WARPPAD
-                    SET_MDM(NULL, AH_WarpPad_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(AH_WarpPad_LInB), NULL),
 
                     // 0x6D - STATIC_BIG0
                     SET_MDM(NULL, NULL, NULL),
@@ -1429,28 +1429,28 @@ struct Data
                     SET_MDM(NULL, NULL, NULL),
 
                     // 0x70 - STATIC_TEETH
-                    SET_MDM(NULL, RB_Teeth_LInB, RB_Teeth_LInC),
+                    SET_MDM(NULL, P32_DEFER(RB_Teeth_LInB), P32_DEFER(RB_Teeth_LInC)),
 
                     // 0x71 - STATIC_STARTTEXT
-                    SET_MDM(NULL, RB_StartText_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(RB_StartText_LInB), NULL),
 
                     // 0x72 - STATIC_SAVEOBJ
-                    SET_MDM(NULL, AH_SaveObj_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(AH_SaveObj_LInB), NULL),
 
                     // 0x73 - STATIC_PINGARAGE
-                    SET_MDM(NULL, AH_Garage_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(AH_Garage_LInB), NULL),
 
                     // 0x74 - STATIC_PAPUGARAGE
-                    SET_MDM(NULL, AH_Garage_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(AH_Garage_LInB), NULL),
 
                     // 0x75 - STATIC_ROOGARAGE
-                    SET_MDM(NULL, AH_Garage_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(AH_Garage_LInB), NULL),
 
                     // 0x76 - STATIC_JOEGARAGE
-                    SET_MDM(NULL, AH_Garage_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(AH_Garage_LInB), NULL),
 
                     // 0x77 - STATIC_OXIDEGARAGE
-                    SET_MDM(NULL, AH_Garage_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(AH_Garage_LInB), NULL),
 
                     // 0x78 - STATIC_SCAN (load/save screen)
                     SET_MDM(NULL, NULL, NULL),
@@ -1459,7 +1459,7 @@ struct Data
                     SET_MDM(NULL, NULL, NULL),
 
                     // 0x7a - STATIC_DOOR
-                    SET_MDM(NULL, AH_Door_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(AH_Door_LInB), NULL),
 
                     // 0x7b - STATIC_BEAM (warppad vortex)
                     SET_MDM(NULL, NULL, NULL),
@@ -1535,66 +1535,66 @@ struct Data
 
                     // 0x93 - STATIC_C
                     // Retail LInC births a thread if missing, then calls ThCollide.
-                    SET_MDM(NULL, RB_CtrLetter_LInB, RB_CtrLetter_LInC),
+                    SET_MDM(NULL, P32_DEFER(RB_CtrLetter_LInB), P32_DEFER(RB_CtrLetter_LInC)),
 
                     // 0x94 - STATIC_T
                     // Retail LInC births a thread if missing, then calls ThCollide.
-                    SET_MDM(NULL, RB_CtrLetter_LInB, RB_CtrLetter_LInC),
+                    SET_MDM(NULL, P32_DEFER(RB_CtrLetter_LInB), P32_DEFER(RB_CtrLetter_LInC)),
 
                     // 0x95 - STATIC_R
                     // Retail LInC births a thread if missing, then calls ThCollide.
-                    SET_MDM(NULL, RB_CtrLetter_LInB, RB_CtrLetter_LInC),
+                    SET_MDM(NULL, P32_DEFER(RB_CtrLetter_LInB), P32_DEFER(RB_CtrLetter_LInC)),
 
                     // 0x96 - STATIC_CRASHINTRO
-                    SET_MDM(NULL, CS_Thread_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(CS_Thread_LInB), NULL),
 
                     // 0x97 - STATIC_COCOINTRO
-                    SET_MDM(NULL, CS_Thread_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(CS_Thread_LInB), NULL),
 
                     // 0x98 - STATIC_CORTEXINTRO
-                    SET_MDM(NULL, CS_Thread_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(CS_Thread_LInB), NULL),
 
                     // 0x99 - STATIC_TINYINTRO
-                    SET_MDM(NULL, CS_Thread_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(CS_Thread_LInB), NULL),
 
                     // 0x9A - STATIC_POLARINTRO
-                    SET_MDM(NULL, CS_Thread_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(CS_Thread_LInB), NULL),
 
                     // 0x9B - STATIC_DINGOINTRO
-                    SET_MDM(NULL, CS_Thread_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(CS_Thread_LInB), NULL),
 
                     // 0x9C - STATIC_OXIDEINTRO
-                    SET_MDM(NULL, CS_Thread_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(CS_Thread_LInB), NULL),
 
                     // 0x9D - STATIC_SIMPLEKARTINTRO
-                    SET_MDM(NULL, CS_Thread_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(CS_Thread_LInB), NULL),
 
                     // 0x9E - STATIC_TINYKARTINTRO
-                    SET_MDM(NULL, CS_Thread_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(CS_Thread_LInB), NULL),
 
                     // 0x9F - STATIC_DINGOKARTINTRO
-                    SET_MDM(NULL, CS_Thread_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(CS_Thread_LInB), NULL),
 
                     // 0xA0 - STATIC_SIMPLEOBJINTRO
-                    SET_MDM(NULL, CS_Thread_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(CS_Thread_LInB), NULL),
 
                     // 0xA1 - STATIC_PPOINTTHINGINTRO
-                    SET_MDM(NULL, CS_Thread_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(CS_Thread_LInB), NULL),
 
                     // 0xA2 - STATIC_PRTHINGINTRO
-                    SET_MDM(NULL, CS_Thread_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(CS_Thread_LInB), NULL),
 
                     // 0xA3 - STATIC_OXIDELILSHIP
-                    SET_MDM(NULL, CS_Thread_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(CS_Thread_LInB), NULL),
 
                     // 0xA4 - STATIC_INTROOXIDECAM
-                    SET_MDM(NULL, CS_Thread_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(CS_Thread_LInB), NULL),
 
                     // 0xA5 - STATIC_INTROOXIDEBODY
-                    SET_MDM(NULL, CS_Thread_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(CS_Thread_LInB), NULL),
 
                     // 0xa6 - STATIC_STARTBANNERWAVE
-                    SET_MDM(NULL, RB_Banner_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(RB_Banner_LInB), NULL),
 
                     // 0xa7 - STATIC_DOOR2
                     SET_MDM(NULL, NULL, NULL),
@@ -1708,79 +1708,79 @@ struct Data
                     SET_MDM(NULL, NULL, NULL),
 
                     // 0xcc - STATIC_INTRO_FLASH
-                    SET_MDM(NULL, CS_Thread_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(CS_Thread_LInB), NULL),
 
                     // 0xcd - STATIC_INTRODOORS
-                    SET_MDM(NULL, CS_Thread_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(CS_Thread_LInB), NULL),
 
                     // 0xce - STATIC_CRASHSELECT
-                    SET_MDM(NULL, CS_Thread_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(CS_Thread_LInB), NULL),
 
                     // 0xcf - STATIC_CORTEXSELECT
-                    SET_MDM(NULL, CS_Thread_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(CS_Thread_LInB), NULL),
 
                     // 0xd0 - STATIC_TINYSELECT
-                    SET_MDM(NULL, CS_Thread_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(CS_Thread_LInB), NULL),
 
                     // 0xd1 - STATIC_COCOSELECT
-                    SET_MDM(NULL, CS_Thread_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(CS_Thread_LInB), NULL),
 
                     // 0xd2 - STATIC_NGINSELECT
-                    SET_MDM(NULL, CS_Thread_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(CS_Thread_LInB), NULL),
 
                     // 0xd3 - STATIC_DINGOSELECT
-                    SET_MDM(NULL, CS_Thread_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(CS_Thread_LInB), NULL),
 
                     // 0xd4 - STATIC_POLARSELECT
-                    SET_MDM(NULL, CS_Thread_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(CS_Thread_LInB), NULL),
 
                     // 0xd5 - STATIC_PURASELECT
-                    SET_MDM(NULL, CS_Thread_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(CS_Thread_LInB), NULL),
 
                     // 0xd6 - STATIC_ENDDOORS
-                    SET_MDM(NULL, CS_Thread_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(CS_Thread_LInB), NULL),
 
                     // 0xd7 - STATIC_ENDFLASH
-                    SET_MDM(NULL, CS_Thread_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(CS_Thread_LInB), NULL),
 
                     // 0xd8 - STATIC_ENDINGOXIDE
-                    SET_MDM(NULL, CS_Thread_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(CS_Thread_LInB), NULL),
 
                     // 0xd9 - STATIC_ENDIGNOXIDE_02 (mispelled in-game)
-                    SET_MDM(NULL, CS_Thread_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(CS_Thread_LInB), NULL),
 
                     // 0xda - STATIC_ENDOXIDEBIGSHIP
-                    SET_MDM(NULL, CS_Thread_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(CS_Thread_LInB), NULL),
 
                     // 0xdb - STATIC_ENDOXIDELILSHIP
-                    SET_MDM(NULL, CS_Thread_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(CS_Thread_LInB), NULL),
 
                     // 0xdc - STATIC_OXIDECAMEND
-                    SET_MDM(NULL, CS_Thread_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(CS_Thread_LInB), NULL),
 
                     // 0xdd - STATIC_OXIDECAMEND02
-                    SET_MDM(NULL, CS_Thread_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(CS_Thread_LInB), NULL),
 
                     // 0xde - STATIC_JLOGO_FLAG
                     SET_MDM(NULL, NULL, NULL),
 
                     // 0xdf - STATIC_OXIDESPEAKER
-                    SET_MDM(NULL, CS_Thread_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(CS_Thread_LInB), NULL),
 
                     // 0xe0 - STATIC_INTROSPARKS
-                    SET_MDM(NULL, CS_Thread_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(CS_Thread_LInB), NULL),
 
                     // 0xe1 - STATIC_GNORMALZ
-                    SET_MDM(NULL, AH_Sign_LInB, NULL),
+                    SET_MDM(NULL, P32_DEFER(AH_Sign_LInB), NULL),
 
 #endif
                 },
 
-            .ptrRenderedQuadblockDestination_forEachPlayer = {&sdata_static.quadBlocksRendered[0], &sdata_static.quadBlocksRendered[0x40],
-                                                              &sdata_static.quadBlocksRendered[0x80], &sdata_static.quadBlocksRendered[0xC0]},
+            .ptrRenderedQuadblockDestination_forEachPlayer = {P32_DEFER(&sdata_static.quadBlocksRendered[0]), P32_DEFER(&sdata_static.quadBlocksRendered[0x40]),
+                                                              P32_DEFER(&sdata_static.quadBlocksRendered[0x80]), P32_DEFER(&sdata_static.quadBlocksRendered[0xC0])},
 
-            .ptrRenderedQuadblockDestination_again = {&sdata_static.quadBlocksRendered[0], &sdata_static.quadBlocksRendered[0x40],
-                                                      &sdata_static.quadBlocksRendered[0x80], &sdata_static.quadBlocksRendered[0xC0]},
+            .ptrRenderedQuadblockDestination_again = {P32_DEFER(&sdata_static.quadBlocksRendered[0]), P32_DEFER(&sdata_static.quadBlocksRendered[0x40]),
+                                                      P32_DEFER(&sdata_static.quadBlocksRendered[0x80]), P32_DEFER(&sdata_static.quadBlocksRendered[0xC0])},
 
             .colors =
                 {
@@ -1831,43 +1831,43 @@ struct Data
 
             .ptrColor =
                 {
-                    &data.colors[ORANGE][0],
-                    &data.colors[PERIWINKLE][0],
-                    &data.colors[ORANGE_DARKENED][0],
-                    &data.colors[RED][0],
-                    &data.colors[WHITE][0],
-                    &data.colors[CRASH_BLUE][0],
-                    &data.colors[CORTEX_RED][0],
-                    &data.colors[TINY_GREEN][0],
-                    &data.colors[COCO_MAGENTA][0],
-                    &data.colors[N_GIN_PURPLE][0],
-                    &data.colors[DINGODILE_OLIVE][0],
-                    &data.colors[POLAR_CYAN][0],
-                    &data.colors[PURA_VIOLET][0],
-                    &data.colors[PINSTRIPE_PALE_DARK_BLUE][0],
-                    &data.colors[PAPU_YELLOW][0],
-                    &data.colors[ROO_ORANGE][0],
-                    &data.colors[JOE_COLOR][0],
-                    &data.colors[TROPY_LIGHT_BLUE][0],
-                    &data.colors[PENTA_WHITE][0],
-                    &data.colors[FAKE_CRASH_GRAY][0],
-                    &data.colors[OXIDE_LIGHT_GREEN][0],
-                    &data.colors[BLACK][0],
-                    &data.colors[SILVER][0],
-                    &data.colors[GRAY][0],
-                    &data.colors[PLAYER_BLUE][0],
-                    &data.colors[PLAYER_RED][0],
-                    &data.colors[PLAYER_GREEN][0],
-                    &data.colors[PLAYER_YELLOW][0],
-                    &data.colors[DARK_RED][0],
-                    &data.colors[LIGHT_GREEN][0],
-                    &data.colors[FOREST_GREEN][0],
-                    &data.colors[CREDITS_FADE][0],
+                    P32_DEFER(&data.colors[ORANGE][0]),
+                    P32_DEFER(&data.colors[PERIWINKLE][0]),
+                    P32_DEFER(&data.colors[ORANGE_DARKENED][0]),
+                    P32_DEFER(&data.colors[RED][0]),
+                    P32_DEFER(&data.colors[WHITE][0]),
+                    P32_DEFER(&data.colors[CRASH_BLUE][0]),
+                    P32_DEFER(&data.colors[CORTEX_RED][0]),
+                    P32_DEFER(&data.colors[TINY_GREEN][0]),
+                    P32_DEFER(&data.colors[COCO_MAGENTA][0]),
+                    P32_DEFER(&data.colors[N_GIN_PURPLE][0]),
+                    P32_DEFER(&data.colors[DINGODILE_OLIVE][0]),
+                    P32_DEFER(&data.colors[POLAR_CYAN][0]),
+                    P32_DEFER(&data.colors[PURA_VIOLET][0]),
+                    P32_DEFER(&data.colors[PINSTRIPE_PALE_DARK_BLUE][0]),
+                    P32_DEFER(&data.colors[PAPU_YELLOW][0]),
+                    P32_DEFER(&data.colors[ROO_ORANGE][0]),
+                    P32_DEFER(&data.colors[JOE_COLOR][0]),
+                    P32_DEFER(&data.colors[TROPY_LIGHT_BLUE][0]),
+                    P32_DEFER(&data.colors[PENTA_WHITE][0]),
+                    P32_DEFER(&data.colors[FAKE_CRASH_GRAY][0]),
+                    P32_DEFER(&data.colors[OXIDE_LIGHT_GREEN][0]),
+                    P32_DEFER(&data.colors[BLACK][0]),
+                    P32_DEFER(&data.colors[SILVER][0]),
+                    P32_DEFER(&data.colors[GRAY][0]),
+                    P32_DEFER(&data.colors[PLAYER_BLUE][0]),
+                    P32_DEFER(&data.colors[PLAYER_RED][0]),
+                    P32_DEFER(&data.colors[PLAYER_GREEN][0]),
+                    P32_DEFER(&data.colors[PLAYER_YELLOW][0]),
+                    P32_DEFER(&data.colors[DARK_RED][0]),
+                    P32_DEFER(&data.colors[LIGHT_GREEN][0]),
+                    P32_DEFER(&data.colors[FOREST_GREEN][0]),
+                    P32_DEFER(&data.colors[CREDITS_FADE][0]),
 
 #if BUILD >= UsaRetail
-                    &data.colors[BLUE][0],
-                    &data.colors[LIME_GREEN][0],
-                    &data.colors[ORANGE_RED][0],
+                    P32_DEFER(&data.colors[BLUE][0]),
+                    P32_DEFER(&data.colors[LIME_GREEN][0]),
+                    P32_DEFER(&data.colors[ORANGE_RED][0]),
 #endif
                 },
 
@@ -3098,12 +3098,12 @@ struct Data
                                    0xC4D0, 0xC8B0, 0xCC92, 0xD074, 0xD457, 0xD83B, 0xDC1F, 0xE005, 0xE3EC, 0xE7D3, 0xEBBC, 0xEFA5},
 #endif
 
-            .opcodeFunc = {cseq_opcode00_empty, // should remove
-                           cseq_opcode01_noteoff,
-                           cseq_opcode02_empty, // should remove
-                           cseq_opcode03,
-                           cseq_opcode04_empty, // should remove
-                           cseq_opcode05_noteon, cseq_opcode06, cseq_opcode07, cseq_opcode08, cseq_opcode09, cseq_opcode0a},
+            .opcodeFunc = {P32_DEFER(cseq_opcode00_empty), // should remove
+                           P32_DEFER(cseq_opcode01_noteoff),
+                           P32_DEFER(cseq_opcode02_empty), // should remove
+                           P32_DEFER(cseq_opcode03),
+                           P32_DEFER(cseq_opcode04_empty), // should remove
+                           P32_DEFER(cseq_opcode05_noteon), P32_DEFER(cseq_opcode06), P32_DEFER(cseq_opcode07), P32_DEFER(cseq_opcode08), P32_DEFER(cseq_opcode09), P32_DEFER(cseq_opcode0a)},
 
             .opcodeOffset = {0x01, 0x02, 0x02, 0x01, 0x02, 0x03, 0x02, 0x02, 0x02, 0x02, 0x02},
 
@@ -3111,161 +3111,161 @@ struct Data
 
                                  .voiceSet =
                                      {
-                                         {&data.voiceData[0].index[0], 2},
-                                         {&data.voiceData[0].index[2], 2},
-                                         {&data.voiceData[0].index[4], 2},
-                                         {&data.voiceData[0].index[6], 2},
-                                         {&data.voiceData[0].index[8], 2},
-                                         {&data.voiceData[0].index[10], 2},
-                                         {&data.voiceData[0].index[12], 2},
-                                         {&data.voiceData[0].index[14], 2},
-                                         {&data.voiceData[0].index[16], 1},
-                                         {&data.voiceData[0].index[18], 1},
-                                         {&data.voiceData[0].index[20], 1},
+                                         {P32_DEFER(&data.voiceData[0].index[0]), 2},
+                                         {P32_DEFER(&data.voiceData[0].index[2]), 2},
+                                         {P32_DEFER(&data.voiceData[0].index[4]), 2},
+                                         {P32_DEFER(&data.voiceData[0].index[6]), 2},
+                                         {P32_DEFER(&data.voiceData[0].index[8]), 2},
+                                         {P32_DEFER(&data.voiceData[0].index[10]), 2},
+                                         {P32_DEFER(&data.voiceData[0].index[12]), 2},
+                                         {P32_DEFER(&data.voiceData[0].index[14]), 2},
+                                         {P32_DEFER(&data.voiceData[0].index[16]), 1},
+                                         {P32_DEFER(&data.voiceData[0].index[18]), 1},
+                                         {P32_DEFER(&data.voiceData[0].index[20]), 1},
                                      }},
                           [1] = {.index = {19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 0, 36, 0, 37, 0},
 
                                  .voiceSet =
                                      {
-                                         {&data.voiceData[1].index[0], 2},
-                                         {&data.voiceData[1].index[2], 2},
-                                         {&data.voiceData[1].index[4], 2},
-                                         {&data.voiceData[1].index[6], 2},
-                                         {&data.voiceData[1].index[8], 2},
-                                         {&data.voiceData[1].index[10], 2},
-                                         {&data.voiceData[1].index[12], 2},
-                                         {&data.voiceData[1].index[14], 2},
-                                         {&data.voiceData[1].index[16], 1},
-                                         {&data.voiceData[1].index[18], 1},
-                                         {&data.voiceData[1].index[20], 1},
+                                         {P32_DEFER(&data.voiceData[1].index[0]), 2},
+                                         {P32_DEFER(&data.voiceData[1].index[2]), 2},
+                                         {P32_DEFER(&data.voiceData[1].index[4]), 2},
+                                         {P32_DEFER(&data.voiceData[1].index[6]), 2},
+                                         {P32_DEFER(&data.voiceData[1].index[8]), 2},
+                                         {P32_DEFER(&data.voiceData[1].index[10]), 2},
+                                         {P32_DEFER(&data.voiceData[1].index[12]), 2},
+                                         {P32_DEFER(&data.voiceData[1].index[14]), 2},
+                                         {P32_DEFER(&data.voiceData[1].index[16]), 1},
+                                         {P32_DEFER(&data.voiceData[1].index[18]), 1},
+                                         {P32_DEFER(&data.voiceData[1].index[20]), 1},
                                      }},
                           [2] = {.index = {38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 0, 55, 0, 56, 0},
 
                                  .voiceSet =
                                      {
-                                         {&data.voiceData[2].index[0], 2},
-                                         {&data.voiceData[2].index[2], 2},
-                                         {&data.voiceData[2].index[4], 2},
-                                         {&data.voiceData[2].index[6], 2},
-                                         {&data.voiceData[2].index[8], 2},
-                                         {&data.voiceData[2].index[10], 2},
-                                         {&data.voiceData[2].index[12], 2},
-                                         {&data.voiceData[2].index[14], 2},
-                                         {&data.voiceData[2].index[16], 1},
-                                         {&data.voiceData[2].index[18], 1},
-                                         {&data.voiceData[2].index[20], 1},
+                                         {P32_DEFER(&data.voiceData[2].index[0]), 2},
+                                         {P32_DEFER(&data.voiceData[2].index[2]), 2},
+                                         {P32_DEFER(&data.voiceData[2].index[4]), 2},
+                                         {P32_DEFER(&data.voiceData[2].index[6]), 2},
+                                         {P32_DEFER(&data.voiceData[2].index[8]), 2},
+                                         {P32_DEFER(&data.voiceData[2].index[10]), 2},
+                                         {P32_DEFER(&data.voiceData[2].index[12]), 2},
+                                         {P32_DEFER(&data.voiceData[2].index[14]), 2},
+                                         {P32_DEFER(&data.voiceData[2].index[16]), 1},
+                                         {P32_DEFER(&data.voiceData[2].index[18]), 1},
+                                         {P32_DEFER(&data.voiceData[2].index[20]), 1},
                                      }},
                           [3] = {.index = {57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 0, 74, 0, 75, 0},
 
                                  .voiceSet =
                                      {
-                                         {&data.voiceData[3].index[0], 2},
-                                         {&data.voiceData[3].index[2], 2},
-                                         {&data.voiceData[3].index[4], 2},
-                                         {&data.voiceData[3].index[6], 2},
-                                         {&data.voiceData[3].index[8], 2},
-                                         {&data.voiceData[3].index[10], 2},
-                                         {&data.voiceData[3].index[12], 2},
-                                         {&data.voiceData[3].index[14], 2},
-                                         {&data.voiceData[3].index[16], 1},
-                                         {&data.voiceData[3].index[18], 1},
-                                         {&data.voiceData[3].index[20], 1},
+                                         {P32_DEFER(&data.voiceData[3].index[0]), 2},
+                                         {P32_DEFER(&data.voiceData[3].index[2]), 2},
+                                         {P32_DEFER(&data.voiceData[3].index[4]), 2},
+                                         {P32_DEFER(&data.voiceData[3].index[6]), 2},
+                                         {P32_DEFER(&data.voiceData[3].index[8]), 2},
+                                         {P32_DEFER(&data.voiceData[3].index[10]), 2},
+                                         {P32_DEFER(&data.voiceData[3].index[12]), 2},
+                                         {P32_DEFER(&data.voiceData[3].index[14]), 2},
+                                         {P32_DEFER(&data.voiceData[3].index[16]), 1},
+                                         {P32_DEFER(&data.voiceData[3].index[18]), 1},
+                                         {P32_DEFER(&data.voiceData[3].index[20]), 1},
                                      }},
                           [4] = {.index = {76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 0, 93, 0, 94, 0},
 
                                  .voiceSet =
                                      {
-                                         {&data.voiceData[4].index[0], 2},
-                                         {&data.voiceData[4].index[2], 2},
-                                         {&data.voiceData[4].index[4], 2},
-                                         {&data.voiceData[4].index[6], 2},
-                                         {&data.voiceData[4].index[8], 2},
-                                         {&data.voiceData[4].index[10], 2},
-                                         {&data.voiceData[4].index[12], 2},
-                                         {&data.voiceData[4].index[14], 2},
-                                         {&data.voiceData[4].index[16], 1},
-                                         {&data.voiceData[4].index[18], 1},
-                                         {&data.voiceData[4].index[20], 1},
+                                         {P32_DEFER(&data.voiceData[4].index[0]), 2},
+                                         {P32_DEFER(&data.voiceData[4].index[2]), 2},
+                                         {P32_DEFER(&data.voiceData[4].index[4]), 2},
+                                         {P32_DEFER(&data.voiceData[4].index[6]), 2},
+                                         {P32_DEFER(&data.voiceData[4].index[8]), 2},
+                                         {P32_DEFER(&data.voiceData[4].index[10]), 2},
+                                         {P32_DEFER(&data.voiceData[4].index[12]), 2},
+                                         {P32_DEFER(&data.voiceData[4].index[14]), 2},
+                                         {P32_DEFER(&data.voiceData[4].index[16]), 1},
+                                         {P32_DEFER(&data.voiceData[4].index[18]), 1},
+                                         {P32_DEFER(&data.voiceData[4].index[20]), 1},
                                      }},
                           [5] = {.index = {95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 0, 112, 0, 113, 0},
 
                                  .voiceSet =
                                      {
-                                         {&data.voiceData[5].index[0], 2},
-                                         {&data.voiceData[5].index[2], 2},
-                                         {&data.voiceData[5].index[4], 2},
-                                         {&data.voiceData[5].index[6], 2},
-                                         {&data.voiceData[5].index[8], 2},
-                                         {&data.voiceData[5].index[10], 2},
-                                         {&data.voiceData[5].index[12], 2},
-                                         {&data.voiceData[5].index[14], 2},
-                                         {&data.voiceData[5].index[16], 1},
-                                         {&data.voiceData[5].index[18], 1},
-                                         {&data.voiceData[5].index[20], 1},
+                                         {P32_DEFER(&data.voiceData[5].index[0]), 2},
+                                         {P32_DEFER(&data.voiceData[5].index[2]), 2},
+                                         {P32_DEFER(&data.voiceData[5].index[4]), 2},
+                                         {P32_DEFER(&data.voiceData[5].index[6]), 2},
+                                         {P32_DEFER(&data.voiceData[5].index[8]), 2},
+                                         {P32_DEFER(&data.voiceData[5].index[10]), 2},
+                                         {P32_DEFER(&data.voiceData[5].index[12]), 2},
+                                         {P32_DEFER(&data.voiceData[5].index[14]), 2},
+                                         {P32_DEFER(&data.voiceData[5].index[16]), 1},
+                                         {P32_DEFER(&data.voiceData[5].index[18]), 1},
+                                         {P32_DEFER(&data.voiceData[5].index[20]), 1},
                                      }},
                           [6] = {.index = {114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 0, 131, 0, 132, 0},
 
                                  .voiceSet =
                                      {
-                                         {&data.voiceData[6].index[0], 2},
-                                         {&data.voiceData[6].index[2], 2},
-                                         {&data.voiceData[6].index[4], 2},
-                                         {&data.voiceData[6].index[6], 2},
-                                         {&data.voiceData[6].index[8], 2},
-                                         {&data.voiceData[6].index[10], 2},
-                                         {&data.voiceData[6].index[12], 2},
-                                         {&data.voiceData[6].index[14], 2},
-                                         {&data.voiceData[6].index[16], 1},
-                                         {&data.voiceData[6].index[18], 1},
-                                         {&data.voiceData[6].index[20], 1},
+                                         {P32_DEFER(&data.voiceData[6].index[0]), 2},
+                                         {P32_DEFER(&data.voiceData[6].index[2]), 2},
+                                         {P32_DEFER(&data.voiceData[6].index[4]), 2},
+                                         {P32_DEFER(&data.voiceData[6].index[6]), 2},
+                                         {P32_DEFER(&data.voiceData[6].index[8]), 2},
+                                         {P32_DEFER(&data.voiceData[6].index[10]), 2},
+                                         {P32_DEFER(&data.voiceData[6].index[12]), 2},
+                                         {P32_DEFER(&data.voiceData[6].index[14]), 2},
+                                         {P32_DEFER(&data.voiceData[6].index[16]), 1},
+                                         {P32_DEFER(&data.voiceData[6].index[18]), 1},
+                                         {P32_DEFER(&data.voiceData[6].index[20]), 1},
                                      }},
                           [7] = {.index = {133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 0, 150, 0, 151, 0},
 
                                  .voiceSet =
                                      {
-                                         {&data.voiceData[7].index[0], 2},
-                                         {&data.voiceData[7].index[2], 2},
-                                         {&data.voiceData[7].index[4], 2},
-                                         {&data.voiceData[7].index[6], 2},
-                                         {&data.voiceData[7].index[8], 2},
-                                         {&data.voiceData[7].index[10], 2},
-                                         {&data.voiceData[7].index[12], 2},
-                                         {&data.voiceData[7].index[14], 2},
-                                         {&data.voiceData[7].index[16], 1},
-                                         {&data.voiceData[7].index[18], 1},
-                                         {&data.voiceData[7].index[20], 1},
+                                         {P32_DEFER(&data.voiceData[7].index[0]), 2},
+                                         {P32_DEFER(&data.voiceData[7].index[2]), 2},
+                                         {P32_DEFER(&data.voiceData[7].index[4]), 2},
+                                         {P32_DEFER(&data.voiceData[7].index[6]), 2},
+                                         {P32_DEFER(&data.voiceData[7].index[8]), 2},
+                                         {P32_DEFER(&data.voiceData[7].index[10]), 2},
+                                         {P32_DEFER(&data.voiceData[7].index[12]), 2},
+                                         {P32_DEFER(&data.voiceData[7].index[14]), 2},
+                                         {P32_DEFER(&data.voiceData[7].index[16]), 1},
+                                         {P32_DEFER(&data.voiceData[7].index[18]), 1},
+                                         {P32_DEFER(&data.voiceData[7].index[20]), 1},
                                      }},
                           [8] = {.index = {152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 0, 169, 0, 170, 0},
 
                                  .voiceSet =
                                      {
-                                         {&data.voiceData[8].index[0], 2},
-                                         {&data.voiceData[8].index[2], 2},
-                                         {&data.voiceData[8].index[4], 2},
-                                         {&data.voiceData[8].index[6], 2},
-                                         {&data.voiceData[8].index[8], 2},
-                                         {&data.voiceData[8].index[10], 2},
-                                         {&data.voiceData[8].index[12], 2},
-                                         {&data.voiceData[8].index[14], 2},
-                                         {&data.voiceData[8].index[16], 1},
-                                         {&data.voiceData[8].index[18], 1},
-                                         {&data.voiceData[8].index[20], 1},
+                                         {P32_DEFER(&data.voiceData[8].index[0]), 2},
+                                         {P32_DEFER(&data.voiceData[8].index[2]), 2},
+                                         {P32_DEFER(&data.voiceData[8].index[4]), 2},
+                                         {P32_DEFER(&data.voiceData[8].index[6]), 2},
+                                         {P32_DEFER(&data.voiceData[8].index[8]), 2},
+                                         {P32_DEFER(&data.voiceData[8].index[10]), 2},
+                                         {P32_DEFER(&data.voiceData[8].index[12]), 2},
+                                         {P32_DEFER(&data.voiceData[8].index[14]), 2},
+                                         {P32_DEFER(&data.voiceData[8].index[16]), 1},
+                                         {P32_DEFER(&data.voiceData[8].index[18]), 1},
+                                         {P32_DEFER(&data.voiceData[8].index[20]), 1},
                                      }},
                           [9] = {.index = {171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 0, 188, 0, 189, 0},
 
                                  .voiceSet =
                                      {
-                                         {&data.voiceData[9].index[0], 2},
-                                         {&data.voiceData[9].index[2], 2},
-                                         {&data.voiceData[9].index[4], 2},
-                                         {&data.voiceData[9].index[6], 2},
-                                         {&data.voiceData[9].index[8], 2},
-                                         {&data.voiceData[9].index[10], 2},
-                                         {&data.voiceData[9].index[12], 2},
-                                         {&data.voiceData[9].index[14], 2},
-                                         {&data.voiceData[9].index[16], 1},
-                                         {&data.voiceData[9].index[18], 1},
-                                         {&data.voiceData[9].index[20], 1},
+                                         {P32_DEFER(&data.voiceData[9].index[0]), 2},
+                                         {P32_DEFER(&data.voiceData[9].index[2]), 2},
+                                         {P32_DEFER(&data.voiceData[9].index[4]), 2},
+                                         {P32_DEFER(&data.voiceData[9].index[6]), 2},
+                                         {P32_DEFER(&data.voiceData[9].index[8]), 2},
+                                         {P32_DEFER(&data.voiceData[9].index[10]), 2},
+                                         {P32_DEFER(&data.voiceData[9].index[12]), 2},
+                                         {P32_DEFER(&data.voiceData[9].index[14]), 2},
+                                         {P32_DEFER(&data.voiceData[9].index[16]), 1},
+                                         {P32_DEFER(&data.voiceData[9].index[18]), 1},
+                                         {P32_DEFER(&data.voiceData[9].index[20]), 1},
                                      }},
 
                           // This one breaks the pattern,
@@ -3275,106 +3275,106 @@ struct Data
 
                                   .voiceSet =
                                       {
-                                          {&data.voiceData[10].index[0], 2},
-                                          {&data.voiceData[10].index[2], 2},
-                                          {&data.voiceData[10].index[4], 2},
-                                          {&data.voiceData[10].index[6], 2},
-                                          {&data.voiceData[10].index[8], 2},
-                                          {&data.voiceData[10].index[10], 2},
-                                          {&data.voiceData[10].index[12], 2},
-                                          {&data.voiceData[10].index[14], 2},
-                                          {&data.voiceData[10].index[16], 1},
-                                          {&data.voiceData[10].index[18], 1},
-                                          {&data.voiceData[10].index[20], 1},
+                                          {P32_DEFER(&data.voiceData[10].index[0]), 2},
+                                          {P32_DEFER(&data.voiceData[10].index[2]), 2},
+                                          {P32_DEFER(&data.voiceData[10].index[4]), 2},
+                                          {P32_DEFER(&data.voiceData[10].index[6]), 2},
+                                          {P32_DEFER(&data.voiceData[10].index[8]), 2},
+                                          {P32_DEFER(&data.voiceData[10].index[10]), 2},
+                                          {P32_DEFER(&data.voiceData[10].index[12]), 2},
+                                          {P32_DEFER(&data.voiceData[10].index[14]), 2},
+                                          {P32_DEFER(&data.voiceData[10].index[16]), 1},
+                                          {P32_DEFER(&data.voiceData[10].index[18]), 1},
+                                          {P32_DEFER(&data.voiceData[10].index[20]), 1},
                                       }},
 
                           [11] = {.index = {209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225, 0, 226, 0, 227, 0},
 
                                   .voiceSet =
                                       {
-                                          {&data.voiceData[11].index[0], 2},
-                                          {&data.voiceData[11].index[2], 2},
-                                          {&data.voiceData[11].index[4], 2},
-                                          {&data.voiceData[11].index[6], 2},
-                                          {&data.voiceData[11].index[8], 2},
-                                          {&data.voiceData[11].index[10], 2},
-                                          {&data.voiceData[11].index[12], 2},
-                                          {&data.voiceData[11].index[14], 2},
-                                          {&data.voiceData[11].index[16], 1},
-                                          {&data.voiceData[11].index[18], 1},
-                                          {&data.voiceData[11].index[20], 1},
+                                          {P32_DEFER(&data.voiceData[11].index[0]), 2},
+                                          {P32_DEFER(&data.voiceData[11].index[2]), 2},
+                                          {P32_DEFER(&data.voiceData[11].index[4]), 2},
+                                          {P32_DEFER(&data.voiceData[11].index[6]), 2},
+                                          {P32_DEFER(&data.voiceData[11].index[8]), 2},
+                                          {P32_DEFER(&data.voiceData[11].index[10]), 2},
+                                          {P32_DEFER(&data.voiceData[11].index[12]), 2},
+                                          {P32_DEFER(&data.voiceData[11].index[14]), 2},
+                                          {P32_DEFER(&data.voiceData[11].index[16]), 1},
+                                          {P32_DEFER(&data.voiceData[11].index[18]), 1},
+                                          {P32_DEFER(&data.voiceData[11].index[20]), 1},
                                       }},
                           [12] = {.index = {228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 0, 245, 0, 246, 0},
 
                                   .voiceSet =
                                       {
-                                          {&data.voiceData[12].index[0], 2},
-                                          {&data.voiceData[12].index[2], 2},
-                                          {&data.voiceData[12].index[4], 2},
-                                          {&data.voiceData[12].index[6], 2},
-                                          {&data.voiceData[12].index[8], 2},
-                                          {&data.voiceData[12].index[10], 2},
-                                          {&data.voiceData[12].index[12], 2},
-                                          {&data.voiceData[12].index[14], 2},
-                                          {&data.voiceData[12].index[16], 1},
-                                          {&data.voiceData[12].index[18], 1},
-                                          {&data.voiceData[12].index[20], 1},
+                                          {P32_DEFER(&data.voiceData[12].index[0]), 2},
+                                          {P32_DEFER(&data.voiceData[12].index[2]), 2},
+                                          {P32_DEFER(&data.voiceData[12].index[4]), 2},
+                                          {P32_DEFER(&data.voiceData[12].index[6]), 2},
+                                          {P32_DEFER(&data.voiceData[12].index[8]), 2},
+                                          {P32_DEFER(&data.voiceData[12].index[10]), 2},
+                                          {P32_DEFER(&data.voiceData[12].index[12]), 2},
+                                          {P32_DEFER(&data.voiceData[12].index[14]), 2},
+                                          {P32_DEFER(&data.voiceData[12].index[16]), 1},
+                                          {P32_DEFER(&data.voiceData[12].index[18]), 1},
+                                          {P32_DEFER(&data.voiceData[12].index[20]), 1},
                                       }},
                           [13] = {.index = {247, 248, 249, 250, 251, 252, 253, 254, 255, 256, 257, 258, 259, 260, 261, 262, 263, 0, 264, 0, 265, 0},
 
                                   .voiceSet =
                                       {
-                                          {&data.voiceData[13].index[0], 2},
-                                          {&data.voiceData[13].index[2], 2},
-                                          {&data.voiceData[13].index[4], 2},
-                                          {&data.voiceData[13].index[6], 2},
-                                          {&data.voiceData[13].index[8], 2},
-                                          {&data.voiceData[13].index[10], 2},
-                                          {&data.voiceData[13].index[12], 2},
-                                          {&data.voiceData[13].index[14], 2},
-                                          {&data.voiceData[13].index[16], 1},
-                                          {&data.voiceData[13].index[18], 1},
-                                          {&data.voiceData[13].index[20], 1},
+                                          {P32_DEFER(&data.voiceData[13].index[0]), 2},
+                                          {P32_DEFER(&data.voiceData[13].index[2]), 2},
+                                          {P32_DEFER(&data.voiceData[13].index[4]), 2},
+                                          {P32_DEFER(&data.voiceData[13].index[6]), 2},
+                                          {P32_DEFER(&data.voiceData[13].index[8]), 2},
+                                          {P32_DEFER(&data.voiceData[13].index[10]), 2},
+                                          {P32_DEFER(&data.voiceData[13].index[12]), 2},
+                                          {P32_DEFER(&data.voiceData[13].index[14]), 2},
+                                          {P32_DEFER(&data.voiceData[13].index[16]), 1},
+                                          {P32_DEFER(&data.voiceData[13].index[18]), 1},
+                                          {P32_DEFER(&data.voiceData[13].index[20]), 1},
                                       }},
                           [14] = {.index = {266, 267, 268, 269, 270, 271, 272, 273, 274, 275, 276, 277, 278, 279, 280, 281, 282, 0, 283, 0, 284, 0},
 
                                   .voiceSet =
                                       {
-                                          {&data.voiceData[14].index[0], 2},
-                                          {&data.voiceData[14].index[2], 2},
-                                          {&data.voiceData[14].index[4], 2},
-                                          {&data.voiceData[14].index[6], 2},
-                                          {&data.voiceData[14].index[8], 2},
-                                          {&data.voiceData[14].index[10], 2},
-                                          {&data.voiceData[14].index[12], 2},
-                                          {&data.voiceData[14].index[14], 2},
-                                          {&data.voiceData[14].index[16], 1},
-                                          {&data.voiceData[14].index[18], 1},
-                                          {&data.voiceData[14].index[20], 1},
+                                          {P32_DEFER(&data.voiceData[14].index[0]), 2},
+                                          {P32_DEFER(&data.voiceData[14].index[2]), 2},
+                                          {P32_DEFER(&data.voiceData[14].index[4]), 2},
+                                          {P32_DEFER(&data.voiceData[14].index[6]), 2},
+                                          {P32_DEFER(&data.voiceData[14].index[8]), 2},
+                                          {P32_DEFER(&data.voiceData[14].index[10]), 2},
+                                          {P32_DEFER(&data.voiceData[14].index[12]), 2},
+                                          {P32_DEFER(&data.voiceData[14].index[14]), 2},
+                                          {P32_DEFER(&data.voiceData[14].index[16]), 1},
+                                          {P32_DEFER(&data.voiceData[14].index[18]), 1},
+                                          {P32_DEFER(&data.voiceData[14].index[20]), 1},
                                       }},
                           [15] = {.index = {285, 286, 287, 288, 289, 290, 291, 292, 293, 294, 295, 296, 297, 298, 299, 300, 301, 0, 302, 0, 303, 0},
 
                                   .voiceSet =
                                       {
-                                          {&data.voiceData[15].index[0], 2},
-                                          {&data.voiceData[15].index[2], 2},
-                                          {&data.voiceData[15].index[4], 2},
-                                          {&data.voiceData[15].index[6], 2},
-                                          {&data.voiceData[15].index[8], 2},
-                                          {&data.voiceData[15].index[10], 2},
-                                          {&data.voiceData[15].index[12], 2},
-                                          {&data.voiceData[15].index[14], 2},
-                                          {&data.voiceData[15].index[16], 1},
-                                          {&data.voiceData[15].index[18], 1},
-                                          {&data.voiceData[15].index[20], 1},
+                                          {P32_DEFER(&data.voiceData[15].index[0]), 2},
+                                          {P32_DEFER(&data.voiceData[15].index[2]), 2},
+                                          {P32_DEFER(&data.voiceData[15].index[4]), 2},
+                                          {P32_DEFER(&data.voiceData[15].index[6]), 2},
+                                          {P32_DEFER(&data.voiceData[15].index[8]), 2},
+                                          {P32_DEFER(&data.voiceData[15].index[10]), 2},
+                                          {P32_DEFER(&data.voiceData[15].index[12]), 2},
+                                          {P32_DEFER(&data.voiceData[15].index[14]), 2},
+                                          {P32_DEFER(&data.voiceData[15].index[16]), 1},
+                                          {P32_DEFER(&data.voiceData[15].index[18]), 1},
+                                          {P32_DEFER(&data.voiceData[15].index[20]), 1},
                                       }}},
 
-            .voiceSetPtr = {(int)&data.voiceData[0].voiceSet[0], (int)&data.voiceData[1].voiceSet[0], (int)&data.voiceData[2].voiceSet[0],
-                            (int)&data.voiceData[3].voiceSet[0], (int)&data.voiceData[4].voiceSet[0], (int)&data.voiceData[5].voiceSet[0],
-                            (int)&data.voiceData[6].voiceSet[0], (int)&data.voiceData[7].voiceSet[0], (int)&data.voiceData[8].voiceSet[0],
-                            (int)&data.voiceData[9].voiceSet[0], (int)&data.voiceData[10].voiceSet[0], (int)&data.voiceData[11].voiceSet[0],
-                            (int)&data.voiceData[12].voiceSet[0], (int)&data.voiceData[13].voiceSet[0], (int)&data.voiceData[14].voiceSet[0],
-                            (int)&data.voiceData[15].voiceSet[0]},
+            .voiceSetPtr = {P32_DEFER(&data.voiceData[0].voiceSet[0]), P32_DEFER(&data.voiceData[1].voiceSet[0]), P32_DEFER(&data.voiceData[2].voiceSet[0]),
+                            P32_DEFER(&data.voiceData[3].voiceSet[0]), P32_DEFER(&data.voiceData[4].voiceSet[0]), P32_DEFER(&data.voiceData[5].voiceSet[0]),
+                            P32_DEFER(&data.voiceData[6].voiceSet[0]), P32_DEFER(&data.voiceData[7].voiceSet[0]), P32_DEFER(&data.voiceData[8].voiceSet[0]),
+                            P32_DEFER(&data.voiceData[9].voiceSet[0]), P32_DEFER(&data.voiceData[10].voiceSet[0]), P32_DEFER(&data.voiceData[11].voiceSet[0]),
+                            P32_DEFER(&data.voiceData[12].voiceSet[0]), P32_DEFER(&data.voiceData[13].voiceSet[0]), P32_DEFER(&data.voiceData[14].voiceSet[0]),
+                            P32_DEFER(&data.voiceData[15].voiceSet[0])},
 
             .voiceID = {4, 1, 5, 2, 1, 1, 1, 3, 6, 6, 7, 7, 7, 7, 7, 4, 0, 0, 0, 0, 0, 8, 8, 8},
 
@@ -3589,14 +3589,14 @@ struct Data
                     {4, 7, 1, 2},
                 },
 
-            .overlayCallbackFuncs = {LOAD_Callback_Overlay_230, LOAD_Callback_Overlay_231, LOAD_Callback_Overlay_232, LOAD_Callback_Overlay_233},
+            .overlayCallbackFuncs = {P32_DEFER(LOAD_Callback_Overlay_230), P32_DEFER(LOAD_Callback_Overlay_231), P32_DEFER(LOAD_Callback_Overlay_232), P32_DEFER(LOAD_Callback_Overlay_233)},
 
             // NOTE(aalhendi): Retail keeps these debug-name pointers live; LOAD_TenStages and
             // MainInit_StringToLevID depend on them for level routing.
             .metaDataLEV =
                 {
                     [DINGO_CANYON] = {.hubID = 2,
-                                      .name_Debug = sdata_static.s_proto8,
+                                      .name_Debug = P32_DEFER(sdata_static.s_proto8),
                                       .name_LNG = 110,
                                       .timeTrial = 110400,
                                       .numTrophiesToOpen = 7,
@@ -3604,7 +3604,7 @@ struct Data
                                       .characterID_Boss = -1,
                                       .characterID_Champion = DINGODILE},
                     [DRAGON_MINES] = {.hubID = 3,
-                                      .name_Debug = sdata_static.s_proto9,
+                                      .name_Debug = P32_DEFER(sdata_static.s_proto9),
                                       .name_LNG = 111,
                                       .timeTrial = 110400,
                                       .numTrophiesToOpen = 9,
@@ -3612,7 +3612,7 @@ struct Data
                                       .characterID_Boss = KOMODO_JOE,
                                       .characterID_Champion = KOMODO_JOE},
                     [BLIZZARD_BLUFF] = {.hubID = 3,
-                                        .name_Debug = sdata_static.s_desert2,
+                                        .name_Debug = P32_DEFER(sdata_static.s_desert2),
                                         .name_LNG = 112,
                                         .timeTrial = 106560,
                                         .numTrophiesToOpen = 8,
@@ -3620,7 +3620,7 @@ struct Data
                                         .characterID_Boss = -1,
                                         .characterID_Champion = PENTA_PENGUIN},
                     [CRASH_COVE] = {.hubID = 1,
-                                    .name_Debug = sdata_static.s_island1,
+                                    .name_Debug = P32_DEFER(sdata_static.s_island1),
                                     .name_LNG = 113,
                                     .timeTrial = 103680,
                                     .numTrophiesToOpen = 0,
@@ -3628,7 +3628,7 @@ struct Data
                                     .characterID_Boss = -1,
                                     .characterID_Champion = CRASH_BANDICOOT},
                     [TIGER_TEMPLE] = {.hubID = 2,
-                                      .name_Debug = sdata_static.s_temple1,
+                                      .name_Debug = P32_DEFER(sdata_static.s_temple1),
                                       .name_LNG = 114,
                                       .timeTrial = 130560,
                                       .numTrophiesToOpen = 4,
@@ -3636,7 +3636,7 @@ struct Data
                                       .characterID_Boss = -1,
                                       .characterID_Champion = PURA},
                     [PAPU_PYRAMID] = {.hubID = 2,
-                                      .name_Debug = sdata_static.s_temple2,
+                                      .name_Debug = P32_DEFER(sdata_static.s_temple2),
                                       .name_LNG = 115,
                                       .timeTrial = 127680,
                                       .numTrophiesToOpen = 6,
@@ -3644,7 +3644,7 @@ struct Data
                                       .characterID_Boss = PAPU_PAPU,
                                       .characterID_Champion = PAPU_PAPU},
                     [ROO_TUBES] = {.hubID = 1,
-                                   .name_Debug = sdata_static.s_tube1,
+                                   .name_Debug = P32_DEFER(sdata_static.s_tube1),
                                    .name_LNG = 116,
                                    .timeTrial = 105600,
                                    .numTrophiesToOpen = 0,
@@ -3652,7 +3652,7 @@ struct Data
                                    .characterID_Boss = RIPPER_ROO,
                                    .characterID_Champion = RIPPER_ROO},
                     [HOT_AIR_SKYWAY] = {.hubID = 4,
-                                        .name_Debug = sdata_static.s_blimp1,
+                                        .name_Debug = P32_DEFER(sdata_static.s_blimp1),
                                         .name_LNG = 117,
                                         .timeTrial = 208320,
                                         .numTrophiesToOpen = 14,
@@ -3660,7 +3660,7 @@ struct Data
                                         .characterID_Boss = PINSTRIPE,
                                         .characterID_Champion = PINSTRIPE},
                     [SEWER_SPEEDWAY] = {.hubID = 1,
-                                        .name_Debug = sdata_static.s_sewer1,
+                                        .name_Debug = P32_DEFER(sdata_static.s_sewer1),
                                         .name_LNG = 118,
                                         .timeTrial = 138240,
                                         .numTrophiesToOpen = 3,
@@ -3668,7 +3668,7 @@ struct Data
                                         .characterID_Boss = -1,
                                         .characterID_Champion = N_TROPY},
                     [MYSTERY_CAVES] = {.hubID = 1,
-                                       .name_Debug = sdata_static.s_cave1,
+                                       .name_Debug = P32_DEFER(sdata_static.s_cave1),
                                        .name_LNG = 119,
                                        .timeTrial = 145920,
                                        .numTrophiesToOpen = 1,
@@ -3676,7 +3676,7 @@ struct Data
                                        .characterID_Boss = -1,
                                        .characterID_Champion = FAKE_CRASH},
                     [CORTEX_CASTLE] = {.hubID = 4,
-                                       .name_Debug = sdata_static.s_castle1,
+                                       .name_Debug = P32_DEFER(sdata_static.s_castle1),
                                        .name_LNG = 120,
                                        .timeTrial = 157440,
                                        .numTrophiesToOpen = 12,
@@ -3684,7 +3684,7 @@ struct Data
                                        .characterID_Boss = -1,
                                        .characterID_Champion = NEO_CORTEX},
                     [N_GIN_LABS] = {.hubID = 4,
-                                    .name_Debug = sdata_static.s_labs1,
+                                    .name_Debug = P32_DEFER(sdata_static.s_labs1),
                                     .name_LNG = 121,
                                     .timeTrial = 177600,
                                     .numTrophiesToOpen = 12,
@@ -3692,7 +3692,7 @@ struct Data
                                     .characterID_Boss = -1,
                                     .characterID_Champion = N_GIN},
                     [POLAR_PASS] = {.hubID = 3,
-                                    .name_Debug = sdata_static.s_ice1,
+                                    .name_Debug = P32_DEFER(sdata_static.s_ice1),
                                     .name_LNG = 122,
                                     .timeTrial = 188160,
                                     .numTrophiesToOpen = 10,
@@ -3700,7 +3700,7 @@ struct Data
                                     .characterID_Boss = -1,
                                     .characterID_Champion = POLAR},
                     [OXIDE_STATION] = {.hubID = 4,
-                                       .name_Debug = sdata_static.s_space,
+                                       .name_Debug = P32_DEFER(sdata_static.s_space),
                                        .name_LNG = 123,
                                        .timeTrial = 204480,
                                        .numTrophiesToOpen = 15,
@@ -3708,7 +3708,7 @@ struct Data
                                        .characterID_Boss = NITROS_OXIDE,
                                        .characterID_Champion = NITROS_OXIDE},
                     [COCO_PARK] = {.hubID = 2,
-                                   .name_Debug = rdata.s_asphalt1,
+                                   .name_Debug = P32_DEFER(rdata.s_asphalt1),
                                    .name_LNG = 124,
                                    .timeTrial = 103680,
                                    .numTrophiesToOpen = 4,
@@ -3716,7 +3716,7 @@ struct Data
                                    .characterID_Boss = -1,
                                    .characterID_Champion = COCO_BANDICOOT},
                     [TINY_ARENA] = {.hubID = 3,
-                                    .name_Debug = rdata.s_asphalt2,
+                                    .name_Debug = P32_DEFER(rdata.s_asphalt2),
                                     .name_LNG = 125,
                                     .timeTrial = 232320,
                                     .numTrophiesToOpen = 11,
@@ -3724,7 +3724,7 @@ struct Data
                                     .characterID_Boss = -1,
                                     .characterID_Champion = TINY_TIGER},
                     [SLIDE_COLISEUM] = {.hubID = 0,
-                                        .name_Debug = sdata_static.s_secret1,
+                                        .name_Debug = P32_DEFER(sdata_static.s_secret1),
                                         .name_LNG = 126,
                                         .timeTrial = 138240,
                                         .numTrophiesToOpen = 10,
@@ -3732,7 +3732,7 @@ struct Data
                                         .characterID_Boss = -1,
                                         .characterID_Champion = CRASH_BANDICOOT},
                     [TURBO_TRACK] = {.hubID = 0,
-                                     .name_Debug = sdata_static.s_secret2,
+                                     .name_Debug = P32_DEFER(sdata_static.s_secret2),
                                      .name_LNG = 127,
                                      .timeTrial = 144000,
                                      .numTrophiesToOpen = 15,
@@ -3740,7 +3740,7 @@ struct Data
                                      .characterID_Boss = -1,
                                      .characterID_Champion = CRASH_BANDICOOT},
                     [NITRO_COURT] = {.hubID = 4,
-                                     .name_Debug = sdata_static.s_battle1,
+                                     .name_Debug = P32_DEFER(sdata_static.s_battle1),
                                      .name_LNG = 98,
                                      .timeTrial = 172800,
                                      .numTrophiesToOpen = 4,
@@ -3748,7 +3748,7 @@ struct Data
                                      .characterID_Boss = -1,
                                      .characterID_Champion = -1},
                     [RAMPAGE_RUINS] = {.hubID = 2,
-                                       .name_Debug = sdata_static.s_battle2,
+                                       .name_Debug = P32_DEFER(sdata_static.s_battle2),
                                        .name_LNG = 99,
                                        .timeTrial = 172800,
                                        .numTrophiesToOpen = 2,
@@ -3756,7 +3756,7 @@ struct Data
                                        .characterID_Boss = -1,
                                        .characterID_Champion = -1},
                     [PARKING_LOT] = {.hubID = -1,
-                                     .name_Debug = sdata_static.s_battle3,
+                                     .name_Debug = P32_DEFER(sdata_static.s_battle3),
                                      .name_LNG = 100,
                                      .timeTrial = 172800,
                                      .numTrophiesToOpen = 0,
@@ -3764,7 +3764,7 @@ struct Data
                                      .characterID_Boss = -1,
                                      .characterID_Champion = -1},
                     [SKULL_ROCK] = {.hubID = 1,
-                                    .name_Debug = sdata_static.s_battle4,
+                                    .name_Debug = P32_DEFER(sdata_static.s_battle4),
                                     .name_LNG = 101,
                                     .timeTrial = 172800,
                                     .numTrophiesToOpen = 1,
@@ -3772,7 +3772,7 @@ struct Data
                                     .characterID_Boss = -1,
                                     .characterID_Champion = -1},
                     [THE_NORTH_BOWL] = {.hubID = -1,
-                                        .name_Debug = sdata_static.s_battle5,
+                                        .name_Debug = P32_DEFER(sdata_static.s_battle5),
                                         .name_LNG = 102,
                                         .timeTrial = 172800,
                                         .numTrophiesToOpen = 0,
@@ -3780,7 +3780,7 @@ struct Data
                                         .characterID_Boss = -1,
                                         .characterID_Champion = -1},
                     [ROCKY_ROAD] = {.hubID = 3,
-                                    .name_Debug = sdata_static.s_battle6,
+                                    .name_Debug = P32_DEFER(sdata_static.s_battle6),
                                     .name_LNG = 103,
                                     .timeTrial = 172800,
                                     .numTrophiesToOpen = 3,
@@ -3788,7 +3788,7 @@ struct Data
                                     .characterID_Boss = -1,
                                     .characterID_Champion = -1},
                     [LAB_BASEMENT] = {.hubID = -1,
-                                      .name_Debug = sdata_static.s_battle7,
+                                      .name_Debug = P32_DEFER(sdata_static.s_battle7),
                                       .name_LNG = 104,
                                       .timeTrial = 172800,
                                       .numTrophiesToOpen = 0,
@@ -3796,7 +3796,7 @@ struct Data
                                       .characterID_Boss = -1,
                                       .characterID_Champion = -1},
                     [GEM_STONE_VALLEY] = {.hubID = -1,
-                                          .name_Debug = sdata_static.s_hub1,
+                                          .name_Debug = P32_DEFER(sdata_static.s_hub1),
                                           .name_LNG = 128,
                                           .timeTrial = 172800,
                                           .numTrophiesToOpen = 0,
@@ -3804,7 +3804,7 @@ struct Data
                                           .characterID_Boss = -1,
                                           .characterID_Champion = -1},
                     [N_SANITY_BEACH] = {.hubID = -1,
-                                        .name_Debug = sdata_static.s_hub2,
+                                        .name_Debug = P32_DEFER(sdata_static.s_hub2),
                                         .name_LNG = 129,
                                         .timeTrial = 172800,
                                         .numTrophiesToOpen = 0,
@@ -3812,7 +3812,7 @@ struct Data
                                         .characterID_Boss = -1,
                                         .characterID_Champion = -1},
                     [THE_LOST_RUINS] = {.hubID = -1,
-                                        .name_Debug = sdata_static.s_hub3,
+                                        .name_Debug = P32_DEFER(sdata_static.s_hub3),
                                         .name_LNG = 130,
                                         .timeTrial = 172800,
                                         .numTrophiesToOpen = 0,
@@ -3820,7 +3820,7 @@ struct Data
                                         .characterID_Boss = -1,
                                         .characterID_Champion = -1},
                     [GLACIER_PARK] = {.hubID = -1,
-                                      .name_Debug = sdata_static.s_hub4,
+                                      .name_Debug = P32_DEFER(sdata_static.s_hub4),
                                       .name_LNG = 131,
                                       .timeTrial = 172800,
                                       .numTrophiesToOpen = 1,
@@ -3828,7 +3828,7 @@ struct Data
                                       .characterID_Boss = -1,
                                       .characterID_Champion = -1},
                     [CITADEL_CITY] = {.hubID = -1,
-                                      .name_Debug = sdata_static.s_hub5,
+                                      .name_Debug = P32_DEFER(sdata_static.s_hub5),
                                       .name_LNG = 132,
                                       .timeTrial = 172800,
                                       .numTrophiesToOpen = 2,
@@ -3836,7 +3836,7 @@ struct Data
                                       .characterID_Boss = -1,
                                       .characterID_Champion = -1},
                     [INTRO_RACE_TODAY] = {.hubID = -1,
-                                          .name_Debug = sdata_static.s_intro1,
+                                          .name_Debug = P32_DEFER(sdata_static.s_intro1),
                                           .name_LNG = 0,
                                           .timeTrial = 172800,
                                           .numTrophiesToOpen = 2,
@@ -3844,7 +3844,7 @@ struct Data
                                           .characterID_Boss = -1,
                                           .characterID_Champion = -1},
                     [INTRO_COCO] = {.hubID = -1,
-                                    .name_Debug = sdata_static.s_intro2,
+                                    .name_Debug = P32_DEFER(sdata_static.s_intro2),
                                     .name_LNG = 0,
                                     .timeTrial = 172800,
                                     .numTrophiesToOpen = 2,
@@ -3852,7 +3852,7 @@ struct Data
                                     .characterID_Boss = -1,
                                     .characterID_Champion = -1},
                     [INTRO_TINY] = {.hubID = -1,
-                                    .name_Debug = sdata_static.s_intro3,
+                                    .name_Debug = P32_DEFER(sdata_static.s_intro3),
                                     .name_LNG = 0,
                                     .timeTrial = 172800,
                                     .numTrophiesToOpen = 2,
@@ -3860,7 +3860,7 @@ struct Data
                                     .characterID_Boss = -1,
                                     .characterID_Champion = -1},
                     [INTRO_POLAR] = {.hubID = -1,
-                                     .name_Debug = sdata_static.s_intro4,
+                                     .name_Debug = P32_DEFER(sdata_static.s_intro4),
                                      .name_LNG = 0,
                                      .timeTrial = 172800,
                                      .numTrophiesToOpen = 2,
@@ -3868,7 +3868,7 @@ struct Data
                                      .characterID_Boss = -1,
                                      .characterID_Champion = -1},
                     [INTRO_DINGODILE] = {.hubID = -1,
-                                         .name_Debug = sdata_static.s_intro5,
+                                         .name_Debug = P32_DEFER(sdata_static.s_intro5),
                                          .name_LNG = 0,
                                          .timeTrial = 172800,
                                          .numTrophiesToOpen = 2,
@@ -3876,7 +3876,7 @@ struct Data
                                          .characterID_Boss = -1,
                                          .characterID_Champion = -1},
                     [INTRO_CORTEX] = {.hubID = -1,
-                                      .name_Debug = sdata_static.s_intro6,
+                                      .name_Debug = P32_DEFER(sdata_static.s_intro6),
                                       .name_LNG = 0,
                                       .timeTrial = 172800,
                                       .numTrophiesToOpen = 2,
@@ -3884,7 +3884,7 @@ struct Data
                                       .characterID_Boss = -1,
                                       .characterID_Champion = -1},
                     [INTRO_SPACE] = {.hubID = -1,
-                                     .name_Debug = sdata_static.s_intro7,
+                                     .name_Debug = P32_DEFER(sdata_static.s_intro7),
                                      .name_LNG = 0,
                                      .timeTrial = 172800,
                                      .numTrophiesToOpen = 2,
@@ -3892,7 +3892,7 @@ struct Data
                                      .characterID_Boss = -1,
                                      .characterID_Champion = -1},
                     [INTRO_CRASH] = {.hubID = -1,
-                                     .name_Debug = sdata_static.s_intro8,
+                                     .name_Debug = P32_DEFER(sdata_static.s_intro8),
                                      .name_LNG = 0,
                                      .timeTrial = 172800,
                                      .numTrophiesToOpen = 2,
@@ -3900,7 +3900,7 @@ struct Data
                                      .characterID_Boss = -1,
                                      .characterID_Champion = -1},
                     [INTRO_OXIDE] = {.hubID = -1,
-                                     .name_Debug = sdata_static.s_intro9,
+                                     .name_Debug = P32_DEFER(sdata_static.s_intro9),
                                      .name_LNG = 0,
                                      .timeTrial = 172800,
                                      .numTrophiesToOpen = 2,
@@ -3908,7 +3908,7 @@ struct Data
                                      .characterID_Boss = -1,
                                      .characterID_Champion = -1},
                     [MAIN_MENU_LEVEL] = {.hubID = -1,
-                                         .name_Debug = rdata.s_screen15,
+                                         .name_Debug = P32_DEFER(rdata.s_screen15),
                                          .name_LNG = 0,
                                          .timeTrial = 172800,
                                          .numTrophiesToOpen = 2,
@@ -3916,7 +3916,7 @@ struct Data
                                          .characterID_Boss = -1,
                                          .characterID_Champion = -1},
                     [ADVENTURE_GARAGE] = {.hubID = -1,
-                                          .name_Debug = sdata_static.s_garage1,
+                                          .name_Debug = P32_DEFER(sdata_static.s_garage1),
                                           .name_LNG = 0,
                                           .timeTrial = 172800,
                                           .numTrophiesToOpen = 2,
@@ -3924,7 +3924,7 @@ struct Data
                                           .characterID_Boss = -1,
                                           .characterID_Champion = -1},
                     [NAUGHTY_DOG_CRATE] = {.hubID = -1,
-                                           .name_Debug = sdata_static.s_ndi_needToRename,
+                                           .name_Debug = P32_DEFER(sdata_static.s_ndi_needToRename),
                                            .name_LNG = 0,
                                            .timeTrial = 172800,
                                            .numTrophiesToOpen = 2,
@@ -3932,7 +3932,7 @@ struct Data
                                            .characterID_Boss = -1,
                                            .characterID_Champion = -1},
                     [OXIDE_ENDING] = {.hubID = -1,
-                                      .name_Debug = sdata_static.s_ending1,
+                                      .name_Debug = P32_DEFER(sdata_static.s_ending1),
                                       .name_LNG = 0,
                                       .timeTrial = 172800,
                                       .numTrophiesToOpen = 2,
@@ -3940,7 +3940,7 @@ struct Data
                                       .characterID_Boss = -1,
                                       .characterID_Champion = -1},
                     [OXIDE_TRUE_ENDING] = {.hubID = -1,
-                                           .name_Debug = sdata_static.s_ending2,
+                                           .name_Debug = P32_DEFER(sdata_static.s_ending2),
                                            .name_LNG = 0,
                                            .timeTrial = 172800,
                                            .numTrophiesToOpen = 2,
@@ -3948,7 +3948,7 @@ struct Data
                                            .characterID_Boss = -1,
                                            .characterID_Champion = -1},
                     [CREDITS_CRASH] = {.hubID = -1,
-                                       .name_Debug = sdata_static.s_credit1,
+                                       .name_Debug = P32_DEFER(sdata_static.s_credit1),
                                        .name_LNG = 0,
                                        .timeTrial = 172800,
                                        .numTrophiesToOpen = 2,
@@ -3956,7 +3956,7 @@ struct Data
                                        .characterID_Boss = -1,
                                        .characterID_Champion = -1},
                     [CREDITS_CORTEX] = {.hubID = -1,
-                                        .name_Debug = sdata_static.s_credit2,
+                                        .name_Debug = P32_DEFER(sdata_static.s_credit2),
                                         .name_LNG = 0,
                                         .timeTrial = 172800,
                                         .numTrophiesToOpen = 2,
@@ -3964,7 +3964,7 @@ struct Data
                                         .characterID_Boss = -1,
                                         .characterID_Champion = -1},
                     [CREDITS_TINY] = {.hubID = -1,
-                                      .name_Debug = sdata_static.s_credit3,
+                                      .name_Debug = P32_DEFER(sdata_static.s_credit3),
                                       .name_LNG = 0,
                                       .timeTrial = 172800,
                                       .numTrophiesToOpen = 2,
@@ -3972,7 +3972,7 @@ struct Data
                                       .characterID_Boss = -1,
                                       .characterID_Champion = -1},
                     [CREDITS_COCO] = {.hubID = -1,
-                                      .name_Debug = sdata_static.s_credit4,
+                                      .name_Debug = P32_DEFER(sdata_static.s_credit4),
                                       .name_LNG = 0,
                                       .timeTrial = 172800,
                                       .numTrophiesToOpen = 2,
@@ -3980,7 +3980,7 @@ struct Data
                                       .characterID_Boss = -1,
                                       .characterID_Champion = -1},
                     [CREDITS_N_GIN] = {.hubID = -1,
-                                       .name_Debug = sdata_static.s_credit5,
+                                       .name_Debug = P32_DEFER(sdata_static.s_credit5),
                                        .name_LNG = 0,
                                        .timeTrial = 172800,
                                        .numTrophiesToOpen = 2,
@@ -3988,7 +3988,7 @@ struct Data
                                        .characterID_Boss = -1,
                                        .characterID_Champion = -1},
                     [CREDITS_DINGO] = {.hubID = -1,
-                                       .name_Debug = sdata_static.s_credit6,
+                                       .name_Debug = P32_DEFER(sdata_static.s_credit6),
                                        .name_LNG = 0,
                                        .timeTrial = 172800,
                                        .numTrophiesToOpen = 2,
@@ -3996,7 +3996,7 @@ struct Data
                                        .characterID_Boss = -1,
                                        .characterID_Champion = -1},
                     [CREDITS_POLAR] = {.hubID = -1,
-                                       .name_Debug = sdata_static.s_credit7,
+                                       .name_Debug = P32_DEFER(sdata_static.s_credit7),
                                        .name_LNG = 0,
                                        .timeTrial = 172800,
                                        .numTrophiesToOpen = 2,
@@ -4004,7 +4004,7 @@ struct Data
                                        .characterID_Boss = -1,
                                        .characterID_Champion = -1},
                     [CREDITS_PURA] = {.hubID = -1,
-                                      .name_Debug = sdata_static.s_credit8,
+                                      .name_Debug = P32_DEFER(sdata_static.s_credit8),
                                       .name_LNG = 0,
                                       .timeTrial = 172800,
                                       .numTrophiesToOpen = 2,
@@ -4012,7 +4012,7 @@ struct Data
                                       .characterID_Boss = -1,
                                       .characterID_Champion = -1},
                     [CREDITS_PINSTRIPE] = {.hubID = -1,
-                                           .name_Debug = sdata_static.s_credit9,
+                                           .name_Debug = P32_DEFER(sdata_static.s_credit9),
                                            .name_LNG = 0,
                                            .timeTrial = 172800,
                                            .numTrophiesToOpen = 2,
@@ -4020,7 +4020,7 @@ struct Data
                                            .characterID_Boss = -1,
                                            .characterID_Champion = -1},
                     [CREDITS_PAPU] = {.hubID = -1,
-                                      .name_Debug = rdata.s_credit10,
+                                      .name_Debug = P32_DEFER(rdata.s_credit10),
                                       .name_LNG = 0,
                                       .timeTrial = 172800,
                                       .numTrophiesToOpen = 2,
@@ -4028,7 +4028,7 @@ struct Data
                                       .characterID_Boss = -1,
                                       .characterID_Champion = -1},
                     [CREDITS_ROO] = {.hubID = -1,
-                                     .name_Debug = rdata.s_credit11,
+                                     .name_Debug = P32_DEFER(rdata.s_credit11),
                                      .name_LNG = 0,
                                      .timeTrial = 172800,
                                      .numTrophiesToOpen = 2,
@@ -4036,7 +4036,7 @@ struct Data
                                      .characterID_Boss = -1,
                                      .characterID_Champion = -1},
                     [CREDITS_JOE] = {.hubID = -1,
-                                     .name_Debug = rdata.s_credit12,
+                                     .name_Debug = P32_DEFER(rdata.s_credit12),
                                      .name_LNG = 0,
                                      .timeTrial = 172800,
                                      .numTrophiesToOpen = 2,
@@ -4044,7 +4044,7 @@ struct Data
                                      .characterID_Boss = -1,
                                      .characterID_Champion = -1},
                     [CREDITS_TROPY] = {.hubID = -1,
-                                       .name_Debug = rdata.s_credit13,
+                                       .name_Debug = P32_DEFER(rdata.s_credit13),
                                        .name_LNG = 0,
                                        .timeTrial = 172800,
                                        .numTrophiesToOpen = 2,
@@ -4052,7 +4052,7 @@ struct Data
                                        .characterID_Boss = -1,
                                        .characterID_Champion = -1},
                     [CREDITS_PENTA] = {.hubID = -1,
-                                       .name_Debug = rdata.s_credit14,
+                                       .name_Debug = P32_DEFER(rdata.s_credit14),
                                        .name_LNG = 0,
                                        .timeTrial = 172800,
                                        .numTrophiesToOpen = 2,
@@ -4060,7 +4060,7 @@ struct Data
                                        .characterID_Boss = -1,
                                        .characterID_Champion = -1},
                     [CREDITS_FAKE_CRASH] = {.hubID = -1,
-                                            .name_Debug = rdata.s_credit15,
+                                            .name_Debug = P32_DEFER(rdata.s_credit15),
                                             .name_LNG = 0,
                                             .timeTrial = 172800,
                                             .numTrophiesToOpen = 2,
@@ -4068,7 +4068,7 @@ struct Data
                                             .characterID_Boss = -1,
                                             .characterID_Champion = -1},
                     [CREDITS_OXIDE] = {.hubID = -1,
-                                       .name_Debug = rdata.s_credit16,
+                                       .name_Debug = P32_DEFER(rdata.s_credit16),
                                        .name_LNG = 0,
                                        .timeTrial = 172800,
                                        .numTrophiesToOpen = 2,
@@ -4076,7 +4076,7 @@ struct Data
                                        .characterID_Boss = -1,
                                        .characterID_Champion = -1},
                     [CREDITS_AMI] = {.hubID = -1,
-                                     .name_Debug = rdata.s_credit17,
+                                     .name_Debug = P32_DEFER(rdata.s_credit17),
                                      .name_LNG = 0,
                                      .timeTrial = 172800,
                                      .numTrophiesToOpen = 2,
@@ -4084,7 +4084,7 @@ struct Data
                                      .characterID_Boss = -1,
                                      .characterID_Champion = -1},
                     [CREDITS_ISABELLA] = {.hubID = -1,
-                                          .name_Debug = rdata.s_credit18,
+                                          .name_Debug = P32_DEFER(rdata.s_credit18),
                                           .name_LNG = 0,
                                           .timeTrial = 172800,
                                           .numTrophiesToOpen = 2,
@@ -4092,7 +4092,7 @@ struct Data
                                           .characterID_Boss = -1,
                                           .characterID_Champion = -1},
                     [CREDITS_LIZ] = {.hubID = -1,
-                                     .name_Debug = rdata.s_credit19,
+                                     .name_Debug = P32_DEFER(rdata.s_credit19),
                                      .name_LNG = 0,
                                      .timeTrial = 172800,
                                      .numTrophiesToOpen = 2,
@@ -4100,7 +4100,7 @@ struct Data
                                      .characterID_Boss = -1,
                                      .characterID_Champion = -1},
                     [CREDITS_MEGUMI] = {.hubID = -1,
-                                        .name_Debug = rdata.s_credit20,
+                                        .name_Debug = P32_DEFER(rdata.s_credit20),
                                         .name_LNG = 0,
                                         .timeTrial = 172800,
                                         .numTrophiesToOpen = 2,
@@ -4108,7 +4108,7 @@ struct Data
                                         .characterID_Boss = -1,
                                         .characterID_Champion = -1},
                     [SCRAPBOOK] = {.hubID = -1,
-                                   .name_Debug = rdata.s_screen18,
+                                   .name_Debug = P32_DEFER(rdata.s_screen18),
                                    .name_LNG = 0,
                                    .timeTrial = 172800,
                                    .numTrophiesToOpen = 2,
@@ -4217,7 +4217,7 @@ struct Data
                     .unk1 = 0,
                     .state = ALL_PLAYERS_USE_MENU | RECTMENU_STATE_SMALL_CALLBACK_CENTERED,
                     .rows = 0,
-                    .funcPtr = MainFreeze_MenuPtrOptions,
+                    .funcPtr = P32_DEFER(MainFreeze_MenuPtrOptions),
                     .drawStyle = 4,
 
                     // the rest initializes as zeros
@@ -4237,8 +4237,8 @@ struct Data
                     .posY_curr = 0x6c,
                     .unk1 = 0,
                     .state = ALL_PLAYERS_USE_MENU | RECTMENU_STATE_SMALL_EXEC_CENTERED,
-                    .rows = &data.rowsQuit[0],
-                    .funcPtr = MainFreeze_MenuPtrQuit,
+                    .rows = P32_DEFER(&data.rowsQuit[0]),
+                    .funcPtr = P32_DEFER(MainFreeze_MenuPtrQuit),
                     .drawStyle = 4,
 
                     // the rest initializes as zeros
@@ -4369,8 +4369,8 @@ struct Data
                     .posY_curr = 0xAF,
                     .unk1 = 0,
                     .state = ALL_PLAYERS_USE_MENU | RECTMENU_STATE_SMALL_EXEC_CENTERED,
-                    .rows = &data.rowsAdvHub[0],
-                    .funcPtr = MainFreeze_MenuPtrDefault,
+                    .rows = P32_DEFER(&data.rowsAdvHub[0]),
+                    .funcPtr = P32_DEFER(MainFreeze_MenuPtrDefault),
                     .drawStyle = 4,
                 },
 
@@ -4390,8 +4390,8 @@ struct Data
                     .posY_curr = 0x6c,
                     .unk1 = 0,
                     .state = ALL_PLAYERS_USE_MENU | RECTMENU_STATE_SMALL_CENTERED | BIG_TEXT_IN_TITLE,
-                    .rows = &data.rowsAdvRace[0],
-                    .funcPtr = MainFreeze_MenuPtrDefault,
+                    .rows = P32_DEFER(&data.rowsAdvRace[0]),
+                    .funcPtr = P32_DEFER(MainFreeze_MenuPtrDefault),
                     .drawStyle = 4,
                 },
 
@@ -4410,8 +4410,8 @@ struct Data
                     .posY_curr = 0x6c,
                     .unk1 = 0,
                     .state = ALL_PLAYERS_USE_MENU | RECTMENU_STATE_SMALL_CENTERED | BIG_TEXT_IN_TITLE,
-                    .rows = &data.rowsAdvCup[0],
-                    .funcPtr = MainFreeze_MenuPtrDefault,
+                    .rows = P32_DEFER(&data.rowsAdvCup[0]),
+                    .funcPtr = P32_DEFER(MainFreeze_MenuPtrDefault),
                     .drawStyle = 6,
                 },
 
@@ -4434,8 +4434,8 @@ struct Data
                     .posY_curr = 0x6c,
                     .unk1 = 0,
                     .state = ALL_PLAYERS_USE_MENU | RECTMENU_STATE_SMALL_EXEC_CENTERED | BIG_TEXT_IN_TITLE,
-                    .rows = &data.rowsBattle[0],
-                    .funcPtr = MainFreeze_MenuPtrDefault,
+                    .rows = P32_DEFER(&data.rowsBattle[0]),
+                    .funcPtr = P32_DEFER(MainFreeze_MenuPtrDefault),
                     .drawStyle = 4,
                 },
 
@@ -4454,8 +4454,8 @@ struct Data
                     .posY_curr = 0x6c,
                     .unk1 = 0,
                     .state = ALL_PLAYERS_USE_MENU | RECTMENU_STATE_SMALL_EXEC_CENTERED | BIG_TEXT_IN_TITLE,
-                    .rows = &data.rowsArcadeCup[0],
-                    .funcPtr = MainFreeze_MenuPtrDefault,
+                    .rows = P32_DEFER(&data.rowsArcadeCup[0]),
+                    .funcPtr = P32_DEFER(MainFreeze_MenuPtrDefault),
                     .drawStyle = 4,
                 },
 
@@ -4477,8 +4477,8 @@ struct Data
                     .posY_curr = 0x6c,
                     .unk1 = 0,
                     .state = ALL_PLAYERS_USE_MENU | RECTMENU_STATE_SMALL_EXEC_CENTERED | BIG_TEXT_IN_TITLE,
-                    .rows = &data.rowsArcadeRace[0],
-                    .funcPtr = MainFreeze_MenuPtrDefault,
+                    .rows = P32_DEFER(&data.rowsArcadeRace[0]),
+                    .funcPtr = P32_DEFER(MainFreeze_MenuPtrDefault),
                     .drawStyle = 4,
                 },
 
@@ -4753,11 +4753,11 @@ struct Data
 
             .bossWeaponMetaPtr =
                 {
-                    &data.BossWeaponOxide[0],
-                    &data.BossWeaponRoo[0],
-                    &data.BossWeaponPapu[0],
-                    &data.BossWeaponJoe[0],
-                    &data.BossWeaponPinstripe[0],
+                    P32_DEFER(&data.BossWeaponOxide[0]),
+                    P32_DEFER(&data.BossWeaponRoo[0]),
+                    P32_DEFER(&data.BossWeaponPapu[0]),
+                    P32_DEFER(&data.BossWeaponJoe[0]),
+                    P32_DEFER(&data.BossWeaponPinstripe[0]),
                 },
 
             .s_BASCUS_94426_SLOTS = "BASCUS-94426-SLOTS",
@@ -4786,14 +4786,14 @@ struct Data
                     .posY_curr = 0x96,
                     .unk1 = 0,
                     .state = RECTMENU_STATE_SMALL_EXEC_CENTER_X,
-                    .rows = &data.rowsSaveGame[0],
-                    .funcPtr = TakeCupProgress_MenuProc,
+                    .rows = P32_DEFER(&data.rowsSaveGame[0]),
+                    .funcPtr = P32_DEFER(TakeCupProgress_MenuProc),
                     .drawStyle = 4,
                 },
 
             .menuQueueLoadTrack = {.stringIndexTitle = RECTMENU_STRING_NONE,
                                    .state = DISABLE_INPUT_ALLOW_FUNCPTRS, // no input, just funcPtr
-                                   .funcPtr = QueueLoadTrack_MenuProc},
+                                   .funcPtr = P32_DEFER(QueueLoadTrack_MenuProc)},
 
             .matrixTitleFlag = {.m =
                                     {
@@ -4841,8 +4841,8 @@ struct Data
                     .posY_curr = 0x7A,
                     .unk1 = 0,
                     .state = RECTMENU_STATE_SMALL_EXEC_CENTER_X,
-                    .rows = &data.rowsGreenLoadSave[0],
-                    .funcPtr = SelectProfile_AdvPickMode_MenuProc,
+                    .rows = P32_DEFER(&data.rowsGreenLoadSave[0]),
+                    .funcPtr = P32_DEFER(SelectProfile_AdvPickMode_MenuProc),
                     .drawStyle = SELECT_PROFILE_DRAW_STYLE_GREEN,
                 },
 
@@ -4850,35 +4850,35 @@ struct Data
                 {
                     .stringIndexTitle = RECTMENU_STRING_NONE,
                     .state = RECTMENU_STATE_INVISIBLE_CALLBACK,
-                    .funcPtr = SelectProfile_AllProfiles_MenuProc,
+                    .funcPtr = P32_DEFER(SelectProfile_AllProfiles_MenuProc),
                 },
 
             .menuGhostSelection =
                 {
                     .stringIndexTitle = RECTMENU_STRING_NONE,
                     .state = RECTMENU_STATE_INVISIBLE_CALLBACK,
-                    .funcPtr = SelectProfile_AllProfiles_MenuProc,
+                    .funcPtr = P32_DEFER(SelectProfile_AllProfiles_MenuProc),
                 },
 
             .menuWarning2 =
                 {
                     .stringIndexTitle = RECTMENU_STRING_NONE,
                     .state = RECTMENU_STATE_INVISIBLE_CALLBACK,
-                    .funcPtr = SelectProfile_AllProfiles_MenuProc,
+                    .funcPtr = P32_DEFER(SelectProfile_AllProfiles_MenuProc),
                 },
 
             .menuSubmitName =
                 {
                     .stringIndexTitle = RECTMENU_STRING_NONE,
                     .state = RECTMENU_STATE_CALLBACK,
-                    .funcPtr = SubmitName_MenuProc,
+                    .funcPtr = P32_DEFER(SubmitName_MenuProc),
                 },
 
             .menuQueueLoadHub =
                 {
                     .stringIndexTitle = RECTMENU_STRING_NONE,
                     .state = DISABLE_INPUT_ALLOW_FUNCPTRS,
-                    .funcPtr = SelectProfile_QueueLoadHub_MenuProc,
+                    .funcPtr = P32_DEFER(SelectProfile_QueueLoadHub_MenuProc),
                 },
 
             .MetaDataLoadSave =
@@ -4919,7 +4919,7 @@ struct Data
                     .posY_curr = 0x86,
                     .unk1 = 0,
                     .state = RECTMENU_STATE_SMALL_CALLBACK_CENTER_X,
-                    .rows = &data.rowsOverwrite[0],
+                    .rows = P32_DEFER(&data.rowsOverwrite[0]),
                     .funcPtr = 0,
                     .drawStyle = SELECT_PROFILE_DRAW_STYLE_GREEN,
                 },
@@ -4931,7 +4931,7 @@ struct Data
                     .posY_curr = 0x82,
                     .unk1 = 0,
                     .state = RECTMENU_STATE_SMALL_CALLBACK_CENTER_X,
-                    .rows = &data.rowsOverwrite[0],
+                    .rows = P32_DEFER(&data.rowsOverwrite[0]),
                     .funcPtr = 0,
                     .drawStyle = 0, // NORMAL
                 },
@@ -5005,10 +5005,10 @@ struct Data
 
             .hudStructPtr =
                 {
-                    &data.hud_1P_P1[0],
-                    &data.hud_2P_P1[0],
-                    &data.hud_4P_P1[0],
-                    &data.hud_4P_P1[0],
+                    P32_DEFER(&data.hud_1P_P1[0]),
+                    P32_DEFER(&data.hud_2P_P1[0]),
+                    P32_DEFER(&data.hud_4P_P1[0]),
+                    P32_DEFER(&data.hud_4P_P1[0]),
                 },
 
             .trackerAnim1 =
@@ -5059,8 +5059,8 @@ struct Data
                     .posY_curr = 0xB4,
                     .unk1 = 0,
                     .state = RECTMENU_STATE_CENTERED,
-                    .rows = &data.rowsRetryExit[0],
-                    .funcPtr = UI_RaceEnd_MenuProc,
+                    .rows = P32_DEFER(&data.rowsRetryExit[0]),
+                    .funcPtr = P32_DEFER(UI_RaceEnd_MenuProc),
                     .drawStyle = 4,
                 },
 
@@ -5250,7 +5250,7 @@ struct Data
             // the strings are needed for model lookup
             .MetaDataCharacters = {[CRASH_BANDICOOT] =
                                        {
-                                           .name_Debug = rdata.s_crash,
+                                           .name_Debug = P32_DEFER(rdata.s_crash),
                                            .name_LNG_long = 44,
                                            .name_LNG_short = 60,
                                            .iconID = 32,
@@ -5258,7 +5258,7 @@ struct Data
                                        },
                                    [NEO_CORTEX] =
                                        {
-                                           .name_Debug = rdata.s_cortex,
+                                           .name_Debug = P32_DEFER(rdata.s_cortex),
                                            .name_LNG_long = 45,
                                            .name_LNG_short = 61,
                                            .iconID = 33,
@@ -5266,7 +5266,7 @@ struct Data
                                        },
                                    [TINY_TIGER] =
                                        {
-                                           .name_Debug = rdata.s_tiny,
+                                           .name_Debug = P32_DEFER(rdata.s_tiny),
                                            .name_LNG_long = 46,
                                            .name_LNG_short = 62,
                                            .iconID = 34,
@@ -5274,7 +5274,7 @@ struct Data
                                        },
                                    [COCO_BANDICOOT] =
                                        {
-                                           .name_Debug = rdata.s_coco,
+                                           .name_Debug = P32_DEFER(rdata.s_coco),
                                            .name_LNG_long = 47,
                                            .name_LNG_short = 63,
                                            .iconID = 35,
@@ -5282,7 +5282,7 @@ struct Data
                                        },
                                    [N_GIN] =
                                        {
-                                           .name_Debug = rdata.s_ngin,
+                                           .name_Debug = P32_DEFER(rdata.s_ngin),
                                            .name_LNG_long = 48,
                                            .name_LNG_short = 64,
                                            .iconID = 36,
@@ -5290,7 +5290,7 @@ struct Data
                                        },
                                    [DINGODILE] =
                                        {
-                                           .name_Debug = rdata.s_dingo,
+                                           .name_Debug = P32_DEFER(rdata.s_dingo),
                                            .name_LNG_long = 49,
                                            .name_LNG_short = 65,
                                            .iconID = 37,
@@ -5298,7 +5298,7 @@ struct Data
                                        },
                                    [POLAR] =
                                        {
-                                           .name_Debug = rdata.s_polar,
+                                           .name_Debug = P32_DEFER(rdata.s_polar),
                                            .name_LNG_long = 50,
                                            .name_LNG_short = 66,
                                            .iconID = 38,
@@ -5306,7 +5306,7 @@ struct Data
                                        },
                                    [PURA] =
                                        {
-                                           .name_Debug = rdata.s_pura,
+                                           .name_Debug = P32_DEFER(rdata.s_pura),
                                            .name_LNG_long = 51,
                                            .name_LNG_short = 67,
                                            .iconID = 39,
@@ -5314,7 +5314,7 @@ struct Data
                                        },
                                    [PINSTRIPE] =
                                        {
-                                           .name_Debug = rdata.s_pinstripe,
+                                           .name_Debug = P32_DEFER(rdata.s_pinstripe),
                                            .name_LNG_long = 52,
                                            .name_LNG_short = 68,
                                            .iconID = 43,
@@ -5322,7 +5322,7 @@ struct Data
                                        },
                                    [PAPU_PAPU] =
                                        {
-                                           .name_Debug = rdata.s_papu,
+                                           .name_Debug = P32_DEFER(rdata.s_papu),
                                            .name_LNG_long = 53,
                                            .name_LNG_short = 69,
                                            .iconID = 41,
@@ -5330,7 +5330,7 @@ struct Data
                                        },
                                    [RIPPER_ROO] =
                                        {
-                                           .name_Debug = rdata.s_roo,
+                                           .name_Debug = P32_DEFER(rdata.s_roo),
                                            .name_LNG_long = 54,
                                            .name_LNG_short = 70,
                                            .iconID = 40,
@@ -5338,7 +5338,7 @@ struct Data
                                        },
                                    [KOMODO_JOE] =
                                        {
-                                           .name_Debug = rdata.s_joe,
+                                           .name_Debug = P32_DEFER(rdata.s_joe),
                                            .name_LNG_long = 55,
                                            .name_LNG_short = 71,
                                            .iconID = 42,
@@ -5346,7 +5346,7 @@ struct Data
                                        },
                                    [N_TROPY] =
                                        {
-                                           .name_Debug = rdata.s_ntropy,
+                                           .name_Debug = P32_DEFER(rdata.s_ntropy),
                                            .name_LNG_long = 56,
                                            .name_LNG_short = 72,
                                            .iconID = 44,
@@ -5354,7 +5354,7 @@ struct Data
                                        },
                                    [PENTA_PENGUIN] =
                                        {
-                                           .name_Debug = rdata.s_pen,
+                                           .name_Debug = P32_DEFER(rdata.s_pen),
                                            .name_LNG_long = 58,
                                            .name_LNG_short = 74,
                                            .iconID = 53,
@@ -5362,7 +5362,7 @@ struct Data
                                        },
                                    [FAKE_CRASH] =
                                        {
-                                           .name_Debug = rdata.s_fake,
+                                           .name_Debug = P32_DEFER(rdata.s_fake),
                                            .name_LNG_long = 59,
                                            .name_LNG_short = 75,
                                            .iconID = 54,
@@ -5370,7 +5370,7 @@ struct Data
                                        },
                                    [NITROS_OXIDE] =
                                        {
-                                           .name_Debug = rdata.s_oxide,
+                                           .name_Debug = P32_DEFER(rdata.s_oxide),
                                            .name_LNG_long = 57,
                                            .name_LNG_short = 73,
                                            .iconID = 55,
@@ -6508,26 +6508,26 @@ struct Data
                     // first one is empty
                     {0, 0},
 
-                    {&data.matArr01[0], 0xB},
-                    {&data.matArr02[0], 0x1},
-                    {&data.matArr03[0], 0x9},
-                    {&data.matArr04[0], 0x10},
-                    {&data.matArr05[0], 0xF},
-                    {&data.matArr06[0], 0x1B},
+                    {P32_DEFER(&data.matArr01[0]), 0xB},
+                    {P32_DEFER(&data.matArr02[0]), 0x1},
+                    {P32_DEFER(&data.matArr03[0]), 0x9},
+                    {P32_DEFER(&data.matArr04[0]), 0x10},
+                    {P32_DEFER(&data.matArr05[0]), 0xF},
+                    {P32_DEFER(&data.matArr06[0]), 0x1B},
 
-                    {&data.matArr07[0], 0x4},
-                    {&data.matArr08[0], 0x4},
-                    {&data.matArr09[0], 0x4},
-                    {&data.matArr0A[0], 0x4},
-                    {&data.matArr0B[0], 0x4},
-                    {&data.matArr0C[0], 0x4},
-                    {&data.matArr0D[0], 0x4},
-                    {&data.matArr0E[0], 0x4},
-                    {&data.matArr0F[0], 0x4},
-                    {&data.matArr10[0], 0x4},
-                    {&data.matArr11[0], 0x4},
-                    {&data.matArr12[0], 0x4},
-                    {&data.matArr13[0], 0x4},
+                    {P32_DEFER(&data.matArr07[0]), 0x4},
+                    {P32_DEFER(&data.matArr08[0]), 0x4},
+                    {P32_DEFER(&data.matArr09[0]), 0x4},
+                    {P32_DEFER(&data.matArr0A[0]), 0x4},
+                    {P32_DEFER(&data.matArr0B[0]), 0x4},
+                    {P32_DEFER(&data.matArr0C[0]), 0x4},
+                    {P32_DEFER(&data.matArr0D[0]), 0x4},
+                    {P32_DEFER(&data.matArr0E[0]), 0x4},
+                    {P32_DEFER(&data.matArr0F[0]), 0x4},
+                    {P32_DEFER(&data.matArr10[0]), 0x4},
+                    {P32_DEFER(&data.matArr11[0]), 0x4},
+                    {P32_DEFER(&data.matArr12[0]), 0x4},
+                    {P32_DEFER(&data.matArr13[0]), 0x4},
                 },
 
             .MetaDataScrub =
@@ -6994,8 +6994,8 @@ struct Data
                                       180,
                                       256,
                                       256,
-                                      &data.emSet_DirtLR[0],
-                                      &data.emSet_DirtLR[0],
+                                      P32_DEFER(&data.emSet_DirtLR[0]),
+                                      P32_DEFER(&data.emSet_DirtLR[0]),
                                       256,
                                       256,
                                       256,
@@ -7012,8 +7012,8 @@ struct Data
                                        180,
                                        256,
                                        256,
-                                       &data.emSet_GrassL[0],
-                                       &data.emSet_GrassR[0],
+                                       P32_DEFER(&data.emSet_GrassL[0]),
+                                       P32_DEFER(&data.emSet_GrassR[0]),
                                        256,
                                        256,
                                        256,
@@ -7048,8 +7048,8 @@ struct Data
                                       180,
                                       256,
                                       256,
-                                      &data.emSet_SnowLR[0],
-                                      &data.emSet_SnowLR[0],
+                                      P32_DEFER(&data.emSet_SnowLR[0]),
+                                      P32_DEFER(&data.emSet_SnowLR[0]),
                                       128,
                                       256,
                                       256,
@@ -7093,8 +7093,8 @@ struct Data
                                            180,
                                            256,
                                            256,
-                                           &data.emSet_GrassL[0],
-                                           &data.emSet_GrassR[0],
+                                           P32_DEFER(&data.emSet_GrassL[0]),
+                                           P32_DEFER(&data.emSet_GrassR[0]),
                                            256,
                                            256,
                                            256,
@@ -7111,8 +7111,8 @@ struct Data
                                           180,
                                           256,
                                           256,
-                                          &data.emSet_DirtLR[0],
-                                          &data.emSet_DirtLR[0],
+                                          P32_DEFER(&data.emSet_DirtLR[0]),
+                                          P32_DEFER(&data.emSet_DirtLR[0]),
                                           256,
                                           256,
                                           256,
@@ -8783,5 +8783,492 @@ struct Data
 
             // .confetti = {}
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(data)
+{
+	P32_SET(data.xaLanguagePtrs[0], sdata_static.s_JPN);
+	P32_SET(data.xaLanguagePtrs[1], sdata_static.s_ENG);
+	P32_SET(data.xaLanguagePtrs[2], sdata_static.s_FRN);
+	P32_SET(data.xaLanguagePtrs[3], sdata_static.s_GRM);
+	P32_SET(data.xaLanguagePtrs[4], sdata_static.s_ITL);
+	P32_SET(data.xaLanguagePtrs[5], sdata_static.s_SPN);
+	P32_SET(data.xaLanguagePtrs[6], sdata_static.s_DCH);
+	P32_SET(data.audioMeta[0].name, data.s_XA_MUSIC);
+	P32_SET(data.audioMeta[1].name, data.s_XA_ENG_EXTRA);
+	P32_SET(data.audioMeta[2].name, data.s_XA_ENG_GAME);
+	P32_SET(data.MetaDataModels[2].LInB, RB_Fruit_LInB);
+	P32_SET(data.MetaDataModels[2].LInC, RB_Fruit_LInC);
+	P32_SET(data.MetaDataModels[6].LInB, RB_GenericMine_LInB);
+	P32_SET(data.MetaDataModels[7].LInB, RB_Default_LInB);
+	P32_SET(data.MetaDataModels[7].LInC, RB_CrateFruit_LInC);
+	P32_SET(data.MetaDataModels[8].LInB, RB_Default_LInB);
+	P32_SET(data.MetaDataModels[8].LInC, RB_CrateWeapon_LInC);
+	P32_SET(data.MetaDataModels[18].LInB, RB_FlameJet_LInB);
+	P32_SET(data.MetaDataModels[19].LInB, RB_Plant_LInB);
+	P32_SET(data.MetaDataModels[33].LInB, RB_Minecart_LInB);
+	P32_SET(data.MetaDataModels[34].LInB, RB_Snowball_LInB);
+	P32_SET(data.MetaDataModels[36].LInB, RB_Armadillo_LInB);
+	P32_SET(data.MetaDataModels[37].LInB, RB_Blade_LInB);
+	P32_SET(data.MetaDataModels[39].LInB, RB_GenericMine_LInB);
+	P32_SET(data.MetaDataModels[76].LInB, RB_Seal_LInB);
+	P32_SET(data.MetaDataModels[77].LInB, RB_Orca_LInB);
+	P32_SET(data.MetaDataModels[78].LInB, RB_Snowball_LInB);
+	P32_SET(data.MetaDataModels[79].LInB, RB_Baron_LInB);
+	P32_SET(data.MetaDataModels[81].LInB, RB_Turtle_LInB);
+	P32_SET(data.MetaDataModels[81].LInC, RB_Turtle_LInC);
+	P32_SET(data.MetaDataModels[82].LInB, RB_Spider_LInB);
+	P32_SET(data.MetaDataModels[84].LInB, RB_Fireball_LInB);
+	P32_SET(data.MetaDataModels[85].LInB, RB_Baron_LInB);
+	P32_SET(data.MetaDataModels[92].LInB, RB_Default_LInB);
+	P32_SET(data.MetaDataModels[92].LInC, RB_CrateTime_LInC);
+	P32_SET(data.MetaDataModels[96].LInB, RB_Crystal_LInB);
+	P32_SET(data.MetaDataModels[96].LInC, RB_Crystal_LInC);
+	P32_SET(data.MetaDataModels[100].LInB, RB_Default_LInB);
+	P32_SET(data.MetaDataModels[100].LInC, RB_CrateTime_LInC);
+	P32_SET(data.MetaDataModels[101].LInB, RB_Default_LInB);
+	P32_SET(data.MetaDataModels[101].LInC, RB_CrateTime_LInC);
+	P32_SET(data.MetaDataModels[108].LInB, AH_WarpPad_LInB);
+	P32_SET(data.MetaDataModels[112].LInB, RB_Teeth_LInB);
+	P32_SET(data.MetaDataModels[112].LInC, RB_Teeth_LInC);
+	P32_SET(data.MetaDataModels[113].LInB, RB_StartText_LInB);
+	P32_SET(data.MetaDataModels[114].LInB, AH_SaveObj_LInB);
+	P32_SET(data.MetaDataModels[115].LInB, AH_Garage_LInB);
+	P32_SET(data.MetaDataModels[116].LInB, AH_Garage_LInB);
+	P32_SET(data.MetaDataModels[117].LInB, AH_Garage_LInB);
+	P32_SET(data.MetaDataModels[118].LInB, AH_Garage_LInB);
+	P32_SET(data.MetaDataModels[119].LInB, AH_Garage_LInB);
+	P32_SET(data.MetaDataModels[122].LInB, AH_Door_LInB);
+	P32_SET(data.MetaDataModels[147].LInB, RB_CtrLetter_LInB);
+	P32_SET(data.MetaDataModels[147].LInC, RB_CtrLetter_LInC);
+	P32_SET(data.MetaDataModels[148].LInB, RB_CtrLetter_LInB);
+	P32_SET(data.MetaDataModels[148].LInC, RB_CtrLetter_LInC);
+	P32_SET(data.MetaDataModels[149].LInB, RB_CtrLetter_LInB);
+	P32_SET(data.MetaDataModels[149].LInC, RB_CtrLetter_LInC);
+	P32_SET(data.MetaDataModels[150].LInB, CS_Thread_LInB);
+	P32_SET(data.MetaDataModels[151].LInB, CS_Thread_LInB);
+	P32_SET(data.MetaDataModels[152].LInB, CS_Thread_LInB);
+	P32_SET(data.MetaDataModels[153].LInB, CS_Thread_LInB);
+	P32_SET(data.MetaDataModels[154].LInB, CS_Thread_LInB);
+	P32_SET(data.MetaDataModels[155].LInB, CS_Thread_LInB);
+	P32_SET(data.MetaDataModels[156].LInB, CS_Thread_LInB);
+	P32_SET(data.MetaDataModels[157].LInB, CS_Thread_LInB);
+	P32_SET(data.MetaDataModels[158].LInB, CS_Thread_LInB);
+	P32_SET(data.MetaDataModels[159].LInB, CS_Thread_LInB);
+	P32_SET(data.MetaDataModels[160].LInB, CS_Thread_LInB);
+	P32_SET(data.MetaDataModels[161].LInB, CS_Thread_LInB);
+	P32_SET(data.MetaDataModels[162].LInB, CS_Thread_LInB);
+	P32_SET(data.MetaDataModels[163].LInB, CS_Thread_LInB);
+	P32_SET(data.MetaDataModels[164].LInB, CS_Thread_LInB);
+	P32_SET(data.MetaDataModels[165].LInB, CS_Thread_LInB);
+	P32_SET(data.MetaDataModels[166].LInB, RB_Banner_LInB);
+	P32_SET(data.MetaDataModels[204].LInB, CS_Thread_LInB);
+	P32_SET(data.MetaDataModels[205].LInB, CS_Thread_LInB);
+	P32_SET(data.MetaDataModels[206].LInB, CS_Thread_LInB);
+	P32_SET(data.MetaDataModels[207].LInB, CS_Thread_LInB);
+	P32_SET(data.MetaDataModels[208].LInB, CS_Thread_LInB);
+	P32_SET(data.MetaDataModels[209].LInB, CS_Thread_LInB);
+	P32_SET(data.MetaDataModels[210].LInB, CS_Thread_LInB);
+	P32_SET(data.MetaDataModels[211].LInB, CS_Thread_LInB);
+	P32_SET(data.MetaDataModels[212].LInB, CS_Thread_LInB);
+	P32_SET(data.MetaDataModels[213].LInB, CS_Thread_LInB);
+	P32_SET(data.MetaDataModels[214].LInB, CS_Thread_LInB);
+	P32_SET(data.MetaDataModels[215].LInB, CS_Thread_LInB);
+	P32_SET(data.MetaDataModels[216].LInB, CS_Thread_LInB);
+	P32_SET(data.MetaDataModels[217].LInB, CS_Thread_LInB);
+	P32_SET(data.MetaDataModels[218].LInB, CS_Thread_LInB);
+	P32_SET(data.MetaDataModels[219].LInB, CS_Thread_LInB);
+	P32_SET(data.MetaDataModels[220].LInB, CS_Thread_LInB);
+	P32_SET(data.MetaDataModels[221].LInB, CS_Thread_LInB);
+	P32_SET(data.MetaDataModels[223].LInB, CS_Thread_LInB);
+	P32_SET(data.MetaDataModels[224].LInB, CS_Thread_LInB);
+	P32_SET(data.MetaDataModels[225].LInB, AH_Sign_LInB);
+	P32_SET(data.ptrRenderedQuadblockDestination_forEachPlayer[0], &sdata_static.quadBlocksRendered[0]);
+	P32_SET(data.ptrRenderedQuadblockDestination_forEachPlayer[1], &sdata_static.quadBlocksRendered[0x40]);
+	P32_SET(data.ptrRenderedQuadblockDestination_forEachPlayer[2], &sdata_static.quadBlocksRendered[0x80]);
+	P32_SET(data.ptrRenderedQuadblockDestination_forEachPlayer[3], &sdata_static.quadBlocksRendered[0xC0]);
+	P32_SET(data.ptrRenderedQuadblockDestination_again[0], &sdata_static.quadBlocksRendered[0]);
+	P32_SET(data.ptrRenderedQuadblockDestination_again[1], &sdata_static.quadBlocksRendered[0x40]);
+	P32_SET(data.ptrRenderedQuadblockDestination_again[2], &sdata_static.quadBlocksRendered[0x80]);
+	P32_SET(data.ptrRenderedQuadblockDestination_again[3], &sdata_static.quadBlocksRendered[0xC0]);
+	P32_SET(data.ptrColor[0], &data.colors[ORANGE][0]);
+	P32_SET(data.ptrColor[1], &data.colors[PERIWINKLE][0]);
+	P32_SET(data.ptrColor[2], &data.colors[ORANGE_DARKENED][0]);
+	P32_SET(data.ptrColor[3], &data.colors[RED][0]);
+	P32_SET(data.ptrColor[4], &data.colors[WHITE][0]);
+	P32_SET(data.ptrColor[5], &data.colors[CRASH_BLUE][0]);
+	P32_SET(data.ptrColor[6], &data.colors[CORTEX_RED][0]);
+	P32_SET(data.ptrColor[7], &data.colors[TINY_GREEN][0]);
+	P32_SET(data.ptrColor[8], &data.colors[COCO_MAGENTA][0]);
+	P32_SET(data.ptrColor[9], &data.colors[N_GIN_PURPLE][0]);
+	P32_SET(data.ptrColor[10], &data.colors[DINGODILE_OLIVE][0]);
+	P32_SET(data.ptrColor[11], &data.colors[POLAR_CYAN][0]);
+	P32_SET(data.ptrColor[12], &data.colors[PURA_VIOLET][0]);
+	P32_SET(data.ptrColor[13], &data.colors[PINSTRIPE_PALE_DARK_BLUE][0]);
+	P32_SET(data.ptrColor[14], &data.colors[PAPU_YELLOW][0]);
+	P32_SET(data.ptrColor[15], &data.colors[ROO_ORANGE][0]);
+	P32_SET(data.ptrColor[16], &data.colors[JOE_COLOR][0]);
+	P32_SET(data.ptrColor[17], &data.colors[TROPY_LIGHT_BLUE][0]);
+	P32_SET(data.ptrColor[18], &data.colors[PENTA_WHITE][0]);
+	P32_SET(data.ptrColor[19], &data.colors[FAKE_CRASH_GRAY][0]);
+	P32_SET(data.ptrColor[20], &data.colors[OXIDE_LIGHT_GREEN][0]);
+	P32_SET(data.ptrColor[21], &data.colors[BLACK][0]);
+	P32_SET(data.ptrColor[22], &data.colors[SILVER][0]);
+	P32_SET(data.ptrColor[23], &data.colors[GRAY][0]);
+	P32_SET(data.ptrColor[24], &data.colors[PLAYER_BLUE][0]);
+	P32_SET(data.ptrColor[25], &data.colors[PLAYER_RED][0]);
+	P32_SET(data.ptrColor[26], &data.colors[PLAYER_GREEN][0]);
+	P32_SET(data.ptrColor[27], &data.colors[PLAYER_YELLOW][0]);
+	P32_SET(data.ptrColor[28], &data.colors[DARK_RED][0]);
+	P32_SET(data.ptrColor[29], &data.colors[LIGHT_GREEN][0]);
+	P32_SET(data.ptrColor[30], &data.colors[FOREST_GREEN][0]);
+	P32_SET(data.ptrColor[31], &data.colors[CREDITS_FADE][0]);
+	P32_SET(data.ptrColor[32], &data.colors[BLUE][0]);
+	P32_SET(data.ptrColor[33], &data.colors[LIME_GREEN][0]);
+	P32_SET(data.ptrColor[34], &data.colors[ORANGE_RED][0]);
+	P32_SET(data.opcodeFunc[0], cseq_opcode00_empty);
+	P32_SET(data.opcodeFunc[1], cseq_opcode01_noteoff);
+	P32_SET(data.opcodeFunc[2], cseq_opcode02_empty);
+	P32_SET(data.opcodeFunc[3], cseq_opcode03);
+	P32_SET(data.opcodeFunc[4], cseq_opcode04_empty);
+	P32_SET(data.opcodeFunc[5], cseq_opcode05_noteon);
+	P32_SET(data.opcodeFunc[6], cseq_opcode06);
+	P32_SET(data.opcodeFunc[7], cseq_opcode07);
+	P32_SET(data.opcodeFunc[8], cseq_opcode08);
+	P32_SET(data.opcodeFunc[9], cseq_opcode09);
+	P32_SET(data.opcodeFunc[10], cseq_opcode0a);
+	P32_SET(data.voiceData[0].voiceSet[0].ptr, &data.voiceData[0].index[0]);
+	P32_SET(data.voiceData[0].voiceSet[1].ptr, &data.voiceData[0].index[2]);
+	P32_SET(data.voiceData[0].voiceSet[2].ptr, &data.voiceData[0].index[4]);
+	P32_SET(data.voiceData[0].voiceSet[3].ptr, &data.voiceData[0].index[6]);
+	P32_SET(data.voiceData[0].voiceSet[4].ptr, &data.voiceData[0].index[8]);
+	P32_SET(data.voiceData[0].voiceSet[5].ptr, &data.voiceData[0].index[10]);
+	P32_SET(data.voiceData[0].voiceSet[6].ptr, &data.voiceData[0].index[12]);
+	P32_SET(data.voiceData[0].voiceSet[7].ptr, &data.voiceData[0].index[14]);
+	P32_SET(data.voiceData[0].voiceSet[8].ptr, &data.voiceData[0].index[16]);
+	P32_SET(data.voiceData[0].voiceSet[9].ptr, &data.voiceData[0].index[18]);
+	P32_SET(data.voiceData[0].voiceSet[10].ptr, &data.voiceData[0].index[20]);
+	P32_SET(data.voiceData[1].voiceSet[0].ptr, &data.voiceData[1].index[0]);
+	P32_SET(data.voiceData[1].voiceSet[1].ptr, &data.voiceData[1].index[2]);
+	P32_SET(data.voiceData[1].voiceSet[2].ptr, &data.voiceData[1].index[4]);
+	P32_SET(data.voiceData[1].voiceSet[3].ptr, &data.voiceData[1].index[6]);
+	P32_SET(data.voiceData[1].voiceSet[4].ptr, &data.voiceData[1].index[8]);
+	P32_SET(data.voiceData[1].voiceSet[5].ptr, &data.voiceData[1].index[10]);
+	P32_SET(data.voiceData[1].voiceSet[6].ptr, &data.voiceData[1].index[12]);
+	P32_SET(data.voiceData[1].voiceSet[7].ptr, &data.voiceData[1].index[14]);
+	P32_SET(data.voiceData[1].voiceSet[8].ptr, &data.voiceData[1].index[16]);
+	P32_SET(data.voiceData[1].voiceSet[9].ptr, &data.voiceData[1].index[18]);
+	P32_SET(data.voiceData[1].voiceSet[10].ptr, &data.voiceData[1].index[20]);
+	P32_SET(data.voiceData[2].voiceSet[0].ptr, &data.voiceData[2].index[0]);
+	P32_SET(data.voiceData[2].voiceSet[1].ptr, &data.voiceData[2].index[2]);
+	P32_SET(data.voiceData[2].voiceSet[2].ptr, &data.voiceData[2].index[4]);
+	P32_SET(data.voiceData[2].voiceSet[3].ptr, &data.voiceData[2].index[6]);
+	P32_SET(data.voiceData[2].voiceSet[4].ptr, &data.voiceData[2].index[8]);
+	P32_SET(data.voiceData[2].voiceSet[5].ptr, &data.voiceData[2].index[10]);
+	P32_SET(data.voiceData[2].voiceSet[6].ptr, &data.voiceData[2].index[12]);
+	P32_SET(data.voiceData[2].voiceSet[7].ptr, &data.voiceData[2].index[14]);
+	P32_SET(data.voiceData[2].voiceSet[8].ptr, &data.voiceData[2].index[16]);
+	P32_SET(data.voiceData[2].voiceSet[9].ptr, &data.voiceData[2].index[18]);
+	P32_SET(data.voiceData[2].voiceSet[10].ptr, &data.voiceData[2].index[20]);
+	P32_SET(data.voiceData[3].voiceSet[0].ptr, &data.voiceData[3].index[0]);
+	P32_SET(data.voiceData[3].voiceSet[1].ptr, &data.voiceData[3].index[2]);
+	P32_SET(data.voiceData[3].voiceSet[2].ptr, &data.voiceData[3].index[4]);
+	P32_SET(data.voiceData[3].voiceSet[3].ptr, &data.voiceData[3].index[6]);
+	P32_SET(data.voiceData[3].voiceSet[4].ptr, &data.voiceData[3].index[8]);
+	P32_SET(data.voiceData[3].voiceSet[5].ptr, &data.voiceData[3].index[10]);
+	P32_SET(data.voiceData[3].voiceSet[6].ptr, &data.voiceData[3].index[12]);
+	P32_SET(data.voiceData[3].voiceSet[7].ptr, &data.voiceData[3].index[14]);
+	P32_SET(data.voiceData[3].voiceSet[8].ptr, &data.voiceData[3].index[16]);
+	P32_SET(data.voiceData[3].voiceSet[9].ptr, &data.voiceData[3].index[18]);
+	P32_SET(data.voiceData[3].voiceSet[10].ptr, &data.voiceData[3].index[20]);
+	P32_SET(data.voiceData[4].voiceSet[0].ptr, &data.voiceData[4].index[0]);
+	P32_SET(data.voiceData[4].voiceSet[1].ptr, &data.voiceData[4].index[2]);
+	P32_SET(data.voiceData[4].voiceSet[2].ptr, &data.voiceData[4].index[4]);
+	P32_SET(data.voiceData[4].voiceSet[3].ptr, &data.voiceData[4].index[6]);
+	P32_SET(data.voiceData[4].voiceSet[4].ptr, &data.voiceData[4].index[8]);
+	P32_SET(data.voiceData[4].voiceSet[5].ptr, &data.voiceData[4].index[10]);
+	P32_SET(data.voiceData[4].voiceSet[6].ptr, &data.voiceData[4].index[12]);
+	P32_SET(data.voiceData[4].voiceSet[7].ptr, &data.voiceData[4].index[14]);
+	P32_SET(data.voiceData[4].voiceSet[8].ptr, &data.voiceData[4].index[16]);
+	P32_SET(data.voiceData[4].voiceSet[9].ptr, &data.voiceData[4].index[18]);
+	P32_SET(data.voiceData[4].voiceSet[10].ptr, &data.voiceData[4].index[20]);
+	P32_SET(data.voiceData[5].voiceSet[0].ptr, &data.voiceData[5].index[0]);
+	P32_SET(data.voiceData[5].voiceSet[1].ptr, &data.voiceData[5].index[2]);
+	P32_SET(data.voiceData[5].voiceSet[2].ptr, &data.voiceData[5].index[4]);
+	P32_SET(data.voiceData[5].voiceSet[3].ptr, &data.voiceData[5].index[6]);
+	P32_SET(data.voiceData[5].voiceSet[4].ptr, &data.voiceData[5].index[8]);
+	P32_SET(data.voiceData[5].voiceSet[5].ptr, &data.voiceData[5].index[10]);
+	P32_SET(data.voiceData[5].voiceSet[6].ptr, &data.voiceData[5].index[12]);
+	P32_SET(data.voiceData[5].voiceSet[7].ptr, &data.voiceData[5].index[14]);
+	P32_SET(data.voiceData[5].voiceSet[8].ptr, &data.voiceData[5].index[16]);
+	P32_SET(data.voiceData[5].voiceSet[9].ptr, &data.voiceData[5].index[18]);
+	P32_SET(data.voiceData[5].voiceSet[10].ptr, &data.voiceData[5].index[20]);
+	P32_SET(data.voiceData[6].voiceSet[0].ptr, &data.voiceData[6].index[0]);
+	P32_SET(data.voiceData[6].voiceSet[1].ptr, &data.voiceData[6].index[2]);
+	P32_SET(data.voiceData[6].voiceSet[2].ptr, &data.voiceData[6].index[4]);
+	P32_SET(data.voiceData[6].voiceSet[3].ptr, &data.voiceData[6].index[6]);
+	P32_SET(data.voiceData[6].voiceSet[4].ptr, &data.voiceData[6].index[8]);
+	P32_SET(data.voiceData[6].voiceSet[5].ptr, &data.voiceData[6].index[10]);
+	P32_SET(data.voiceData[6].voiceSet[6].ptr, &data.voiceData[6].index[12]);
+	P32_SET(data.voiceData[6].voiceSet[7].ptr, &data.voiceData[6].index[14]);
+	P32_SET(data.voiceData[6].voiceSet[8].ptr, &data.voiceData[6].index[16]);
+	P32_SET(data.voiceData[6].voiceSet[9].ptr, &data.voiceData[6].index[18]);
+	P32_SET(data.voiceData[6].voiceSet[10].ptr, &data.voiceData[6].index[20]);
+	P32_SET(data.voiceData[7].voiceSet[0].ptr, &data.voiceData[7].index[0]);
+	P32_SET(data.voiceData[7].voiceSet[1].ptr, &data.voiceData[7].index[2]);
+	P32_SET(data.voiceData[7].voiceSet[2].ptr, &data.voiceData[7].index[4]);
+	P32_SET(data.voiceData[7].voiceSet[3].ptr, &data.voiceData[7].index[6]);
+	P32_SET(data.voiceData[7].voiceSet[4].ptr, &data.voiceData[7].index[8]);
+	P32_SET(data.voiceData[7].voiceSet[5].ptr, &data.voiceData[7].index[10]);
+	P32_SET(data.voiceData[7].voiceSet[6].ptr, &data.voiceData[7].index[12]);
+	P32_SET(data.voiceData[7].voiceSet[7].ptr, &data.voiceData[7].index[14]);
+	P32_SET(data.voiceData[7].voiceSet[8].ptr, &data.voiceData[7].index[16]);
+	P32_SET(data.voiceData[7].voiceSet[9].ptr, &data.voiceData[7].index[18]);
+	P32_SET(data.voiceData[7].voiceSet[10].ptr, &data.voiceData[7].index[20]);
+	P32_SET(data.voiceData[8].voiceSet[0].ptr, &data.voiceData[8].index[0]);
+	P32_SET(data.voiceData[8].voiceSet[1].ptr, &data.voiceData[8].index[2]);
+	P32_SET(data.voiceData[8].voiceSet[2].ptr, &data.voiceData[8].index[4]);
+	P32_SET(data.voiceData[8].voiceSet[3].ptr, &data.voiceData[8].index[6]);
+	P32_SET(data.voiceData[8].voiceSet[4].ptr, &data.voiceData[8].index[8]);
+	P32_SET(data.voiceData[8].voiceSet[5].ptr, &data.voiceData[8].index[10]);
+	P32_SET(data.voiceData[8].voiceSet[6].ptr, &data.voiceData[8].index[12]);
+	P32_SET(data.voiceData[8].voiceSet[7].ptr, &data.voiceData[8].index[14]);
+	P32_SET(data.voiceData[8].voiceSet[8].ptr, &data.voiceData[8].index[16]);
+	P32_SET(data.voiceData[8].voiceSet[9].ptr, &data.voiceData[8].index[18]);
+	P32_SET(data.voiceData[8].voiceSet[10].ptr, &data.voiceData[8].index[20]);
+	P32_SET(data.voiceData[9].voiceSet[0].ptr, &data.voiceData[9].index[0]);
+	P32_SET(data.voiceData[9].voiceSet[1].ptr, &data.voiceData[9].index[2]);
+	P32_SET(data.voiceData[9].voiceSet[2].ptr, &data.voiceData[9].index[4]);
+	P32_SET(data.voiceData[9].voiceSet[3].ptr, &data.voiceData[9].index[6]);
+	P32_SET(data.voiceData[9].voiceSet[4].ptr, &data.voiceData[9].index[8]);
+	P32_SET(data.voiceData[9].voiceSet[5].ptr, &data.voiceData[9].index[10]);
+	P32_SET(data.voiceData[9].voiceSet[6].ptr, &data.voiceData[9].index[12]);
+	P32_SET(data.voiceData[9].voiceSet[7].ptr, &data.voiceData[9].index[14]);
+	P32_SET(data.voiceData[9].voiceSet[8].ptr, &data.voiceData[9].index[16]);
+	P32_SET(data.voiceData[9].voiceSet[9].ptr, &data.voiceData[9].index[18]);
+	P32_SET(data.voiceData[9].voiceSet[10].ptr, &data.voiceData[9].index[20]);
+	P32_SET(data.voiceData[10].voiceSet[0].ptr, &data.voiceData[10].index[0]);
+	P32_SET(data.voiceData[10].voiceSet[1].ptr, &data.voiceData[10].index[2]);
+	P32_SET(data.voiceData[10].voiceSet[2].ptr, &data.voiceData[10].index[4]);
+	P32_SET(data.voiceData[10].voiceSet[3].ptr, &data.voiceData[10].index[6]);
+	P32_SET(data.voiceData[10].voiceSet[4].ptr, &data.voiceData[10].index[8]);
+	P32_SET(data.voiceData[10].voiceSet[5].ptr, &data.voiceData[10].index[10]);
+	P32_SET(data.voiceData[10].voiceSet[6].ptr, &data.voiceData[10].index[12]);
+	P32_SET(data.voiceData[10].voiceSet[7].ptr, &data.voiceData[10].index[14]);
+	P32_SET(data.voiceData[10].voiceSet[8].ptr, &data.voiceData[10].index[16]);
+	P32_SET(data.voiceData[10].voiceSet[9].ptr, &data.voiceData[10].index[18]);
+	P32_SET(data.voiceData[10].voiceSet[10].ptr, &data.voiceData[10].index[20]);
+	P32_SET(data.voiceData[11].voiceSet[0].ptr, &data.voiceData[11].index[0]);
+	P32_SET(data.voiceData[11].voiceSet[1].ptr, &data.voiceData[11].index[2]);
+	P32_SET(data.voiceData[11].voiceSet[2].ptr, &data.voiceData[11].index[4]);
+	P32_SET(data.voiceData[11].voiceSet[3].ptr, &data.voiceData[11].index[6]);
+	P32_SET(data.voiceData[11].voiceSet[4].ptr, &data.voiceData[11].index[8]);
+	P32_SET(data.voiceData[11].voiceSet[5].ptr, &data.voiceData[11].index[10]);
+	P32_SET(data.voiceData[11].voiceSet[6].ptr, &data.voiceData[11].index[12]);
+	P32_SET(data.voiceData[11].voiceSet[7].ptr, &data.voiceData[11].index[14]);
+	P32_SET(data.voiceData[11].voiceSet[8].ptr, &data.voiceData[11].index[16]);
+	P32_SET(data.voiceData[11].voiceSet[9].ptr, &data.voiceData[11].index[18]);
+	P32_SET(data.voiceData[11].voiceSet[10].ptr, &data.voiceData[11].index[20]);
+	P32_SET(data.voiceData[12].voiceSet[0].ptr, &data.voiceData[12].index[0]);
+	P32_SET(data.voiceData[12].voiceSet[1].ptr, &data.voiceData[12].index[2]);
+	P32_SET(data.voiceData[12].voiceSet[2].ptr, &data.voiceData[12].index[4]);
+	P32_SET(data.voiceData[12].voiceSet[3].ptr, &data.voiceData[12].index[6]);
+	P32_SET(data.voiceData[12].voiceSet[4].ptr, &data.voiceData[12].index[8]);
+	P32_SET(data.voiceData[12].voiceSet[5].ptr, &data.voiceData[12].index[10]);
+	P32_SET(data.voiceData[12].voiceSet[6].ptr, &data.voiceData[12].index[12]);
+	P32_SET(data.voiceData[12].voiceSet[7].ptr, &data.voiceData[12].index[14]);
+	P32_SET(data.voiceData[12].voiceSet[8].ptr, &data.voiceData[12].index[16]);
+	P32_SET(data.voiceData[12].voiceSet[9].ptr, &data.voiceData[12].index[18]);
+	P32_SET(data.voiceData[12].voiceSet[10].ptr, &data.voiceData[12].index[20]);
+	P32_SET(data.voiceData[13].voiceSet[0].ptr, &data.voiceData[13].index[0]);
+	P32_SET(data.voiceData[13].voiceSet[1].ptr, &data.voiceData[13].index[2]);
+	P32_SET(data.voiceData[13].voiceSet[2].ptr, &data.voiceData[13].index[4]);
+	P32_SET(data.voiceData[13].voiceSet[3].ptr, &data.voiceData[13].index[6]);
+	P32_SET(data.voiceData[13].voiceSet[4].ptr, &data.voiceData[13].index[8]);
+	P32_SET(data.voiceData[13].voiceSet[5].ptr, &data.voiceData[13].index[10]);
+	P32_SET(data.voiceData[13].voiceSet[6].ptr, &data.voiceData[13].index[12]);
+	P32_SET(data.voiceData[13].voiceSet[7].ptr, &data.voiceData[13].index[14]);
+	P32_SET(data.voiceData[13].voiceSet[8].ptr, &data.voiceData[13].index[16]);
+	P32_SET(data.voiceData[13].voiceSet[9].ptr, &data.voiceData[13].index[18]);
+	P32_SET(data.voiceData[13].voiceSet[10].ptr, &data.voiceData[13].index[20]);
+	P32_SET(data.voiceData[14].voiceSet[0].ptr, &data.voiceData[14].index[0]);
+	P32_SET(data.voiceData[14].voiceSet[1].ptr, &data.voiceData[14].index[2]);
+	P32_SET(data.voiceData[14].voiceSet[2].ptr, &data.voiceData[14].index[4]);
+	P32_SET(data.voiceData[14].voiceSet[3].ptr, &data.voiceData[14].index[6]);
+	P32_SET(data.voiceData[14].voiceSet[4].ptr, &data.voiceData[14].index[8]);
+	P32_SET(data.voiceData[14].voiceSet[5].ptr, &data.voiceData[14].index[10]);
+	P32_SET(data.voiceData[14].voiceSet[6].ptr, &data.voiceData[14].index[12]);
+	P32_SET(data.voiceData[14].voiceSet[7].ptr, &data.voiceData[14].index[14]);
+	P32_SET(data.voiceData[14].voiceSet[8].ptr, &data.voiceData[14].index[16]);
+	P32_SET(data.voiceData[14].voiceSet[9].ptr, &data.voiceData[14].index[18]);
+	P32_SET(data.voiceData[14].voiceSet[10].ptr, &data.voiceData[14].index[20]);
+	P32_SET(data.voiceData[15].voiceSet[0].ptr, &data.voiceData[15].index[0]);
+	P32_SET(data.voiceData[15].voiceSet[1].ptr, &data.voiceData[15].index[2]);
+	P32_SET(data.voiceData[15].voiceSet[2].ptr, &data.voiceData[15].index[4]);
+	P32_SET(data.voiceData[15].voiceSet[3].ptr, &data.voiceData[15].index[6]);
+	P32_SET(data.voiceData[15].voiceSet[4].ptr, &data.voiceData[15].index[8]);
+	P32_SET(data.voiceData[15].voiceSet[5].ptr, &data.voiceData[15].index[10]);
+	P32_SET(data.voiceData[15].voiceSet[6].ptr, &data.voiceData[15].index[12]);
+	P32_SET(data.voiceData[15].voiceSet[7].ptr, &data.voiceData[15].index[14]);
+	P32_SET(data.voiceData[15].voiceSet[8].ptr, &data.voiceData[15].index[16]);
+	P32_SET(data.voiceData[15].voiceSet[9].ptr, &data.voiceData[15].index[18]);
+	P32_SET(data.voiceData[15].voiceSet[10].ptr, &data.voiceData[15].index[20]);
+	P32_SET(data.overlayCallbackFuncs[0], LOAD_Callback_Overlay_230);
+	P32_SET(data.overlayCallbackFuncs[1], LOAD_Callback_Overlay_231);
+	P32_SET(data.overlayCallbackFuncs[2], LOAD_Callback_Overlay_232);
+	P32_SET(data.overlayCallbackFuncs[3], LOAD_Callback_Overlay_233);
+	P32_SET(data.metaDataLEV[0].name_Debug, sdata_static.s_proto8);
+	P32_SET(data.metaDataLEV[1].name_Debug, sdata_static.s_proto9);
+	P32_SET(data.metaDataLEV[2].name_Debug, sdata_static.s_desert2);
+	P32_SET(data.metaDataLEV[3].name_Debug, sdata_static.s_island1);
+	P32_SET(data.metaDataLEV[4].name_Debug, sdata_static.s_temple1);
+	P32_SET(data.metaDataLEV[5].name_Debug, sdata_static.s_temple2);
+	P32_SET(data.metaDataLEV[6].name_Debug, sdata_static.s_tube1);
+	P32_SET(data.metaDataLEV[7].name_Debug, sdata_static.s_blimp1);
+	P32_SET(data.metaDataLEV[8].name_Debug, sdata_static.s_sewer1);
+	P32_SET(data.metaDataLEV[9].name_Debug, sdata_static.s_cave1);
+	P32_SET(data.metaDataLEV[10].name_Debug, sdata_static.s_castle1);
+	P32_SET(data.metaDataLEV[11].name_Debug, sdata_static.s_labs1);
+	P32_SET(data.metaDataLEV[12].name_Debug, sdata_static.s_ice1);
+	P32_SET(data.metaDataLEV[13].name_Debug, sdata_static.s_space);
+	P32_SET(data.metaDataLEV[14].name_Debug, rdata.s_asphalt1);
+	P32_SET(data.metaDataLEV[15].name_Debug, rdata.s_asphalt2);
+	P32_SET(data.metaDataLEV[16].name_Debug, sdata_static.s_secret1);
+	P32_SET(data.metaDataLEV[17].name_Debug, sdata_static.s_secret2);
+	P32_SET(data.metaDataLEV[18].name_Debug, sdata_static.s_battle1);
+	P32_SET(data.metaDataLEV[19].name_Debug, sdata_static.s_battle2);
+	P32_SET(data.metaDataLEV[20].name_Debug, sdata_static.s_battle3);
+	P32_SET(data.metaDataLEV[21].name_Debug, sdata_static.s_battle4);
+	P32_SET(data.metaDataLEV[22].name_Debug, sdata_static.s_battle5);
+	P32_SET(data.metaDataLEV[23].name_Debug, sdata_static.s_battle6);
+	P32_SET(data.metaDataLEV[24].name_Debug, sdata_static.s_battle7);
+	P32_SET(data.metaDataLEV[25].name_Debug, sdata_static.s_hub1);
+	P32_SET(data.metaDataLEV[26].name_Debug, sdata_static.s_hub2);
+	P32_SET(data.metaDataLEV[27].name_Debug, sdata_static.s_hub3);
+	P32_SET(data.metaDataLEV[28].name_Debug, sdata_static.s_hub4);
+	P32_SET(data.metaDataLEV[29].name_Debug, sdata_static.s_hub5);
+	P32_SET(data.metaDataLEV[30].name_Debug, sdata_static.s_intro1);
+	P32_SET(data.metaDataLEV[31].name_Debug, sdata_static.s_intro2);
+	P32_SET(data.metaDataLEV[32].name_Debug, sdata_static.s_intro3);
+	P32_SET(data.metaDataLEV[33].name_Debug, sdata_static.s_intro4);
+	P32_SET(data.metaDataLEV[34].name_Debug, sdata_static.s_intro5);
+	P32_SET(data.metaDataLEV[35].name_Debug, sdata_static.s_intro6);
+	P32_SET(data.metaDataLEV[36].name_Debug, sdata_static.s_intro7);
+	P32_SET(data.metaDataLEV[37].name_Debug, sdata_static.s_intro8);
+	P32_SET(data.metaDataLEV[38].name_Debug, sdata_static.s_intro9);
+	P32_SET(data.metaDataLEV[39].name_Debug, rdata.s_screen15);
+	P32_SET(data.metaDataLEV[40].name_Debug, sdata_static.s_garage1);
+	P32_SET(data.metaDataLEV[41].name_Debug, sdata_static.s_ndi_needToRename);
+	P32_SET(data.metaDataLEV[42].name_Debug, sdata_static.s_ending1);
+	P32_SET(data.metaDataLEV[43].name_Debug, sdata_static.s_ending2);
+	P32_SET(data.metaDataLEV[44].name_Debug, sdata_static.s_credit1);
+	P32_SET(data.metaDataLEV[45].name_Debug, sdata_static.s_credit2);
+	P32_SET(data.metaDataLEV[46].name_Debug, sdata_static.s_credit3);
+	P32_SET(data.metaDataLEV[47].name_Debug, sdata_static.s_credit4);
+	P32_SET(data.metaDataLEV[48].name_Debug, sdata_static.s_credit5);
+	P32_SET(data.metaDataLEV[49].name_Debug, sdata_static.s_credit6);
+	P32_SET(data.metaDataLEV[50].name_Debug, sdata_static.s_credit7);
+	P32_SET(data.metaDataLEV[51].name_Debug, sdata_static.s_credit8);
+	P32_SET(data.metaDataLEV[52].name_Debug, sdata_static.s_credit9);
+	P32_SET(data.metaDataLEV[53].name_Debug, rdata.s_credit10);
+	P32_SET(data.metaDataLEV[54].name_Debug, rdata.s_credit11);
+	P32_SET(data.metaDataLEV[55].name_Debug, rdata.s_credit12);
+	P32_SET(data.metaDataLEV[56].name_Debug, rdata.s_credit13);
+	P32_SET(data.metaDataLEV[57].name_Debug, rdata.s_credit14);
+	P32_SET(data.metaDataLEV[58].name_Debug, rdata.s_credit15);
+	P32_SET(data.metaDataLEV[59].name_Debug, rdata.s_credit16);
+	P32_SET(data.metaDataLEV[60].name_Debug, rdata.s_credit17);
+	P32_SET(data.metaDataLEV[61].name_Debug, rdata.s_credit18);
+	P32_SET(data.metaDataLEV[62].name_Debug, rdata.s_credit19);
+	P32_SET(data.metaDataLEV[63].name_Debug, rdata.s_credit20);
+	P32_SET(data.metaDataLEV[64].name_Debug, rdata.s_screen18);
+	P32_SET(data.menuRacingWheelConfig.funcPtr, MainFreeze_MenuPtrOptions);
+	P32_SET(data.menuQuit.rows, &data.rowsQuit[0]);
+	P32_SET(data.menuQuit.funcPtr, MainFreeze_MenuPtrQuit);
+	P32_SET(data.menuAdvHub.rows, &data.rowsAdvHub[0]);
+	P32_SET(data.menuAdvHub.funcPtr, MainFreeze_MenuPtrDefault);
+	P32_SET(data.menuAdvRace.rows, &data.rowsAdvRace[0]);
+	P32_SET(data.menuAdvRace.funcPtr, MainFreeze_MenuPtrDefault);
+	P32_SET(data.menuAdvCup.rows, &data.rowsAdvCup[0]);
+	P32_SET(data.menuAdvCup.funcPtr, MainFreeze_MenuPtrDefault);
+	P32_SET(data.menuBattle.rows, &data.rowsBattle[0]);
+	P32_SET(data.menuBattle.funcPtr, MainFreeze_MenuPtrDefault);
+	P32_SET(data.menuArcadeCup.rows, &data.rowsArcadeCup[0]);
+	P32_SET(data.menuArcadeCup.funcPtr, MainFreeze_MenuPtrDefault);
+	P32_SET(data.menuArcadeRace.rows, &data.rowsArcadeRace[0]);
+	P32_SET(data.menuArcadeRace.funcPtr, MainFreeze_MenuPtrDefault);
+	P32_SET(data.bossWeaponMetaPtr[0], &data.BossWeaponOxide[0]);
+	P32_SET(data.bossWeaponMetaPtr[1], &data.BossWeaponRoo[0]);
+	P32_SET(data.bossWeaponMetaPtr[2], &data.BossWeaponPapu[0]);
+	P32_SET(data.bossWeaponMetaPtr[3], &data.BossWeaponJoe[0]);
+	P32_SET(data.bossWeaponMetaPtr[4], &data.BossWeaponPinstripe[0]);
+	P32_SET(data.menuSaveGame.rows, &data.rowsSaveGame[0]);
+	P32_SET(data.menuSaveGame.funcPtr, TakeCupProgress_MenuProc);
+	P32_SET(data.menuQueueLoadTrack.funcPtr, QueueLoadTrack_MenuProc);
+	P32_SET(data.menuGreenLoadSave.rows, &data.rowsGreenLoadSave[0]);
+	P32_SET(data.menuGreenLoadSave.funcPtr, SelectProfile_AdvPickMode_MenuProc);
+	P32_SET(data.menuFourAdvProfiles.funcPtr, SelectProfile_AllProfiles_MenuProc);
+	P32_SET(data.menuGhostSelection.funcPtr, SelectProfile_AllProfiles_MenuProc);
+	P32_SET(data.menuWarning2.funcPtr, SelectProfile_AllProfiles_MenuProc);
+	P32_SET(data.menuSubmitName.funcPtr, SubmitName_MenuProc);
+	P32_SET(data.menuQueueLoadHub.funcPtr, SelectProfile_QueueLoadHub_MenuProc);
+	P32_SET(data.menuOverwriteAdv.rows, &data.rowsOverwrite[0]);
+	P32_SET(data.menuOverwriteGhost.rows, &data.rowsOverwrite[0]);
+	P32_SET(data.hudStructPtr[0], &data.hud_1P_P1[0]);
+	P32_SET(data.hudStructPtr[1], &data.hud_2P_P1[0]);
+	P32_SET(data.hudStructPtr[2], &data.hud_4P_P1[0]);
+	P32_SET(data.hudStructPtr[3], &data.hud_4P_P1[0]);
+	P32_SET(data.menuRetryExit.rows, &data.rowsRetryExit[0]);
+	P32_SET(data.menuRetryExit.funcPtr, UI_RaceEnd_MenuProc);
+	P32_SET(data.MetaDataCharacters[0].name_Debug, rdata.s_crash);
+	P32_SET(data.MetaDataCharacters[1].name_Debug, rdata.s_cortex);
+	P32_SET(data.MetaDataCharacters[2].name_Debug, rdata.s_tiny);
+	P32_SET(data.MetaDataCharacters[3].name_Debug, rdata.s_coco);
+	P32_SET(data.MetaDataCharacters[4].name_Debug, rdata.s_ngin);
+	P32_SET(data.MetaDataCharacters[5].name_Debug, rdata.s_dingo);
+	P32_SET(data.MetaDataCharacters[6].name_Debug, rdata.s_polar);
+	P32_SET(data.MetaDataCharacters[7].name_Debug, rdata.s_pura);
+	P32_SET(data.MetaDataCharacters[8].name_Debug, rdata.s_pinstripe);
+	P32_SET(data.MetaDataCharacters[9].name_Debug, rdata.s_papu);
+	P32_SET(data.MetaDataCharacters[10].name_Debug, rdata.s_roo);
+	P32_SET(data.MetaDataCharacters[11].name_Debug, rdata.s_joe);
+	P32_SET(data.MetaDataCharacters[12].name_Debug, rdata.s_ntropy);
+	P32_SET(data.MetaDataCharacters[13].name_Debug, rdata.s_pen);
+	P32_SET(data.MetaDataCharacters[14].name_Debug, rdata.s_fake);
+	P32_SET(data.MetaDataCharacters[15].name_Debug, rdata.s_oxide);
+	P32_SET(data.bakedGteMath[1].physEntry, &data.matArr01[0]);
+	P32_SET(data.bakedGteMath[2].physEntry, &data.matArr02[0]);
+	P32_SET(data.bakedGteMath[3].physEntry, &data.matArr03[0]);
+	P32_SET(data.bakedGteMath[4].physEntry, &data.matArr04[0]);
+	P32_SET(data.bakedGteMath[5].physEntry, &data.matArr05[0]);
+	P32_SET(data.bakedGteMath[6].physEntry, &data.matArr06[0]);
+	P32_SET(data.bakedGteMath[7].physEntry, &data.matArr07[0]);
+	P32_SET(data.bakedGteMath[8].physEntry, &data.matArr08[0]);
+	P32_SET(data.bakedGteMath[9].physEntry, &data.matArr09[0]);
+	P32_SET(data.bakedGteMath[10].physEntry, &data.matArr0A[0]);
+	P32_SET(data.bakedGteMath[11].physEntry, &data.matArr0B[0]);
+	P32_SET(data.bakedGteMath[12].physEntry, &data.matArr0C[0]);
+	P32_SET(data.bakedGteMath[13].physEntry, &data.matArr0D[0]);
+	P32_SET(data.bakedGteMath[14].physEntry, &data.matArr0E[0]);
+	P32_SET(data.bakedGteMath[15].physEntry, &data.matArr0F[0]);
+	P32_SET(data.bakedGteMath[16].physEntry, &data.matArr10[0]);
+	P32_SET(data.bakedGteMath[17].physEntry, &data.matArr11[0]);
+	P32_SET(data.bakedGteMath[18].physEntry, &data.matArr12[0]);
+	P32_SET(data.bakedGteMath[19].physEntry, &data.matArr13[0]);
+	P32_SET(data.MetaDataTerrain[1].em_OddFrame, &data.emSet_DirtLR[0]);
+	P32_SET(data.MetaDataTerrain[1].em_EvenFrame, &data.emSet_DirtLR[0]);
+	P32_SET(data.MetaDataTerrain[2].em_OddFrame, &data.emSet_GrassL[0]);
+	P32_SET(data.MetaDataTerrain[2].em_EvenFrame, &data.emSet_GrassR[0]);
+	P32_SET(data.MetaDataTerrain[9].em_OddFrame, &data.emSet_SnowLR[0]);
+	P32_SET(data.MetaDataTerrain[9].em_EvenFrame, &data.emSet_SnowLR[0]);
+	P32_SET(data.MetaDataTerrain[19].em_OddFrame, &data.emSet_GrassL[0]);
+	P32_SET(data.MetaDataTerrain[19].em_EvenFrame, &data.emSet_GrassR[0]);
+	P32_SET(data.MetaDataTerrain[20].em_OddFrame, &data.emSet_DirtLR[0]);
+	P32_SET(data.MetaDataTerrain[20].em_EvenFrame, &data.emSet_DirtLR[0]);
+	for (int i = 0; i < 0x10; i++)
+	{
+		P32_SET(data.voiceSetPtr[i], &data.voiceData[i].voiceSet[0]);
+	}
+}
+#endif
 
 #undef AS

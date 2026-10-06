@@ -221,14 +221,14 @@ void PushBuffer_SetDrawEnv_DecalMP(void *ot, struct DB *backBuffer, RECT *viewpo
 	// isbg (always 0)
 	newDrawEnv.isbg = isbg;
 
-	p = backBuffer->primMem.cursor;
+	p = P32_GET(void *, backBuffer->primMem.cursor);
 	void *prim = NULL;
 
 	// cursor < guardEnd
-	if (p <= backBuffer->primMem.guardEnd)
+	if (p <= P32_GET(void *, backBuffer->primMem.guardEnd))
 	{
 		// advance curr
-		backBuffer->primMem.cursor = (void *)((u32)backBuffer->primMem.cursor + 0x40);
+		P32_SET(backBuffer->primMem.cursor, P32_GET(char *, backBuffer->primMem.cursor) + 0x40);
 
 		prim = p;
 	}
@@ -285,10 +285,10 @@ void PushBuffer_SetDrawEnv_Normal(void *ot, struct PushBuffer *pb, struct DB *ba
 
 	newDrawEnv.isbg = isbg;
 
-	void *p = backBuffer->primMem.cursor;
-	if (p <= backBuffer->primMem.guardEnd)
+	void *p = P32_GET(void *, backBuffer->primMem.cursor);
+	if (p <= P32_GET(void *, backBuffer->primMem.guardEnd))
 	{
-		backBuffer->primMem.cursor = (void *)((u32)backBuffer->primMem.cursor + 0x40);
+		P32_SET(backBuffer->primMem.cursor, P32_GET(char *, backBuffer->primMem.cursor) + 0x40);
 
 		SetDrawEnv(p, &newDrawEnv);
 
@@ -374,11 +374,11 @@ void PushBuffer_SetMatrixVP(struct PushBuffer *pb)
 	viewC = (uVar4 & 0xffff) | (uVar5 & 0xffff0000);
 
 	// CameraTranspose, for lightning during Driver Warping effect
-	*(int *)((int)&pb->matrix_CameraTranspose + 0x0) = view0;
-	*(int *)((int)&pb->matrix_CameraTranspose + 0x4) = view4;
-	*(int *)((int)&pb->matrix_CameraTranspose + 0x8) = view8;
-	*(int *)((int)&pb->matrix_CameraTranspose + 0xC) = viewC;
-	*(s16 *)((int)&pb->matrix_CameraTranspose + 0x10) = sVar7;
+	CTR_WriteU32LE((char *)&pb->matrix_CameraTranspose + 0x0, (u32)view0);
+	CTR_WriteU32LE((char *)&pb->matrix_CameraTranspose + 0x4, (u32)view4);
+	CTR_WriteU32LE((char *)&pb->matrix_CameraTranspose + 0x8, (u32)view8);
+	CTR_WriteU32LE((char *)&pb->matrix_CameraTranspose + 0xC, (u32)viewC);
+	CTR_WriteU16LE((char *)&pb->matrix_CameraTranspose + 0x10, (u16)sVar7);
 
 	// load transpose camera matrix
 	// similar to gte_SetLightMatrix
@@ -400,11 +400,11 @@ void PushBuffer_SetMatrixVP(struct PushBuffer *pb)
 	CTR_GteStoreMAC(&pb->matrix_ViewProj.t[0]);
 
 	// start with transpose camera matrix
-	*(int *)((int)&pb->matrix_ViewProj + 0x0) = view0;
-	*(int *)((int)&pb->matrix_ViewProj + 0x4) = view4;
-	*(int *)((int)&pb->matrix_ViewProj + 0x8) = view8;
-	*(int *)((int)&pb->matrix_ViewProj + 0xC) = viewC;
-	*(s16 *)((int)&pb->matrix_ViewProj + 0x10) = sVar7;
+	CTR_WriteU32LE((char *)&pb->matrix_ViewProj + 0x0, (u32)view0);
+	CTR_WriteU32LE((char *)&pb->matrix_ViewProj + 0x4, (u32)view4);
+	CTR_WriteU32LE((char *)&pb->matrix_ViewProj + 0x8, (u32)view8);
+	CTR_WriteU32LE((char *)&pb->matrix_ViewProj + 0xC, (u32)viewC);
+	CTR_WriteU16LE((char *)&pb->matrix_ViewProj + 0x10, (u16)sVar7);
 
 	// NTSC:
 	// 0x360/0x600 = 9/16 aspect,
@@ -988,7 +988,7 @@ void PushBuffer_FadeOneWindow(struct PushBuffer *pb)
 	int fadeStrength;
 	multiCmdPacket *p = NULL;
 
-	struct DB *backBuffer = sdata->gGT->backBuffer;
+	struct DB *backBuffer = P32_GET(struct DB *, P32_GET(struct GameTracker *, sdata->gGT)->backBuffer);
 
 	s16 currValue = pb->fadeFromBlack_currentValue;
 
@@ -996,7 +996,7 @@ void PushBuffer_FadeOneWindow(struct PushBuffer *pb)
 	// some amount of fading
 	if (currValue != 0x1000)
 	{
-		p = (multiCmdPacket *)backBuffer->primMem.cursor;
+		p = (multiCmdPacket *)P32_GET(void *, backBuffer->primMem.cursor);
 
 		setlen(p, 7);
 		p->f4.tag = 0;
@@ -1038,10 +1038,10 @@ void PushBuffer_FadeOneWindow(struct PushBuffer *pb)
 		p->f4.y2 = pb->rect.h;
 		p->f4.x3 = pb->rect.w;
 		p->f4.y3 = pb->rect.h;
-		AddPrim(pb->ptrOT, p);
+		AddPrim(P32_GET(uint32_t *, pb->ptrOT), p);
 
 		// move pointer after writing polygons
-		backBuffer->primMem.cursor = p + 1;
+		P32_SET(backBuffer->primMem.cursor, p + 1);
 	}
 
 	// alter the fade value by the fade velocity
@@ -1077,7 +1077,7 @@ void PushBuffer_FadeOneWindow(struct PushBuffer *pb)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80043ab8-0x80043b30.
 void PushBuffer_FadeAllWindows()
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	for (int i = 0; i < gGT->numPlyrCurrGame; i++)
 	{

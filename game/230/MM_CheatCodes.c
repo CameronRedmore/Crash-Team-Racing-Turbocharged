@@ -80,7 +80,7 @@ b32 NativeCheat_AreAllCharactersUnlocked(void)
 void NativeCheat_ApplyConfigured(void)
 {
 #if defined(CTR_NATIVE)
-	if ((sdata == NULL) || (sdata->gGT == NULL))
+	if ((sdata == NULL) || (P32_GET(struct GameTracker *, sdata->gGT) == NULL))
 	{
 		return;
 	}
@@ -91,13 +91,13 @@ void NativeCheat_ApplyConfigured(void)
 b32 NativeCheat_DisablesRecords(void)
 {
 #if defined(CTR_NATIVE)
-	if ((sdata == NULL) || (sdata->gGT == NULL))
+	if ((sdata == NULL) || (P32_GET(struct GameTracker *, sdata->gGT) == NULL))
 		return 0;
 
-	if ((sdata->gGT->gameMode2 & CHEAT_ALL) != 0)
+	if ((P32_GET(struct GameTracker *, sdata->gGT)->gameMode2 & CHEAT_ALL) != 0)
 		return 1;
 
-	return ((sdata->gGT->gameMode1 & (TIME_TRIAL | RELIC_RACE)) != 0) && NativeCustomRacer_DisablesRecords();
+	return ((P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 & (TIME_TRIAL | RELIC_RACE)) != 0) && NativeCustomRacer_DisablesRecords();
 #else
 	return 0;
 #endif
@@ -106,7 +106,7 @@ b32 NativeCheat_DisablesRecords(void)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800ac9fc-0x800aca34.
 void MM_Cheat_MaxWumpa(void)
 {
-	sdata->gGT->gameMode2 |= CHEAT_WUMPA;
+	P32_GET(struct GameTracker *, sdata->gGT)->gameMode2 |= CHEAT_WUMPA;
 	OtherFX_Play(MM_CHEAT_SUCCESS_SFX, 1);
 }
 
@@ -176,70 +176,70 @@ void MM_Cheat_UnlockTracks(void)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800acc2c-0x800acc64.
 void MM_Cheat_InfiniteMasks(void)
 {
-	sdata->gGT->gameMode2 |= CHEAT_MASK;
+	P32_GET(struct GameTracker *, sdata->gGT)->gameMode2 |= CHEAT_MASK;
 	OtherFX_Play(MM_CHEAT_SUCCESS_SFX, 1);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800acc64-0x800acc9c.
 void MM_Cheat_MaxTurbos(void)
 {
-	sdata->gGT->gameMode2 |= CHEAT_TURBO;
+	P32_GET(struct GameTracker *, sdata->gGT)->gameMode2 |= CHEAT_TURBO;
 	OtherFX_Play(MM_CHEAT_SUCCESS_SFX, 1);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800acc9c-0x800accd4.
 void MM_Cheat_MaxInvisibility(void)
 {
-	sdata->gGT->gameMode2 |= CHEAT_INVISIBLE;
+	P32_GET(struct GameTracker *, sdata->gGT)->gameMode2 |= CHEAT_INVISIBLE;
 	OtherFX_Play(MM_CHEAT_SUCCESS_SFX, 1);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800accd4-0x800acd10.
 void MM_Cheat_MaxEngine(void)
 {
-	sdata->gGT->gameMode2 |= CHEAT_ENGINE;
+	P32_GET(struct GameTracker *, sdata->gGT)->gameMode2 |= CHEAT_ENGINE;
 	OtherFX_Play(MM_CHEAT_SUCCESS_SFX, 1);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800acd10-0x800acd4c.
 void MM_Cheat_MaxBombs(void)
 {
-	sdata->gGT->gameMode2 |= CHEAT_BOMBS;
+	P32_GET(struct GameTracker *, sdata->gGT)->gameMode2 |= CHEAT_BOMBS;
 	OtherFX_Play(MM_CHEAT_SUCCESS_SFX, 1);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800acd4c-0x800acd88.
 void MM_Cheat_AdvDifficulty(void)
 {
-	sdata->gGT->gameMode2 |= CHEAT_ADV;
+	P32_GET(struct GameTracker *, sdata->gGT)->gameMode2 |= CHEAT_ADV;
 	OtherFX_Play(MM_CHEAT_SUCCESS_SFX, 1);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800acdc4-0x800ace00.
 void MM_Cheat_IcyTracks(void)
 {
-	sdata->gGT->gameMode2 |= CHEAT_ICY;
+	P32_GET(struct GameTracker *, sdata->gGT)->gameMode2 |= CHEAT_ICY;
 	OtherFX_Play(MM_CHEAT_SUCCESS_SFX, 1);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800ace00-0x800ace3c.
 void MM_Cheat_SuperTurboPads(void)
 {
-	sdata->gGT->gameMode2 |= CHEAT_TURBOPAD;
+	P32_GET(struct GameTracker *, sdata->gGT)->gameMode2 |= CHEAT_TURBOPAD;
 	OtherFX_Play(MM_CHEAT_SUCCESS_SFX, 1);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800ace78-0x800aceb4.
 void MM_Cheat_TurboCounter(void)
 {
-	sdata->gGT->gameMode2 |= CHEAT_TURBOCOUNT;
+	P32_GET(struct GameTracker *, sdata->gGT)->gameMode2 |= CHEAT_TURBOCOUNT;
 	OtherFX_Play(MM_CHEAT_SUCCESS_SFX, 1);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800aceb4-0x800acff4.
 void MM_ParseCheatCodes(void)
 {
-	struct GamepadBuffer *gpad = &sdata->gGamepads->gamepad[0];
+	struct GamepadBuffer *gpad = &P32_GET(struct GamepadSystem *, sdata->gGamepads)->gamepad[0];
 
 	// if not holding L1 and R1
 	if ((gpad->buttonsHeldCurrFrame & (BTN_L1 | BTN_R1)) != (BTN_L1 | BTN_R1))
@@ -289,9 +289,9 @@ void MM_ParseCheatCodes(void)
 			continue;
 		}
 
-		if (D230.cheats[cheatIndex].handler != NULL)
+		if (P32_GET(void (*)(void), D230.cheats[cheatIndex].handler) != NULL)
 		{
-			D230.cheats[cheatIndex].handler();
+			P32_GET(void (*)(void), D230.cheats[cheatIndex].handler)();
 		}
 	}
 

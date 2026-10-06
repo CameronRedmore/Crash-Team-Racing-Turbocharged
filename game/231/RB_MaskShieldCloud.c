@@ -14,10 +14,10 @@ void RB_MaskWeapon_FadeAway(struct Thread *t)
 	struct Instance *maskBeamInst;
 	struct MaskHeadWeapon *mask;
 
-	inst = t->inst;
-	mask = inst->thread->object;
-	driverInst = t->parentThread->inst;
-	maskBeamInst = mask->maskBeamInst;
+	inst = P32_GET(struct Instance *, t->inst);
+	mask = P32_GET(void *, P32_GET(struct Thread *, inst->thread)->object);
+	driverInst = P32_GET(struct Instance *, P32_GET(struct Thread *, t->parentThread)->inst);
+	maskBeamInst = P32_GET(struct Instance *, mask->maskBeamInst);
 
 	struct MaskHeadScratch *mhs = CTR_SCRATCHPAD_PTR(struct MaskHeadScratch, 0x108);
 
@@ -28,7 +28,7 @@ void RB_MaskWeapon_FadeAway(struct Thread *t)
 	mhs->posOffset.z = ((durationAdjusted * MATH_Cos(mask->rot.y)) >> 0xc);
 	mhs->posOffset.y = 0x40;
 
-	mask->rot.y += CTR_FRAME_STEP(-0x100, sdata->gGT->timer);
+	mask->rot.y += CTR_FRAME_STEP(-0x100, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 
 	struct Instance *instCurr;
 	instCurr = inst;
@@ -39,9 +39,9 @@ void RB_MaskWeapon_FadeAway(struct Thread *t)
 	{
 		LHMatrix_Parent(instCurr, driverInst, &mhs->posOffset);
 
-		instCurr->scale.x += CTR_FRAME_STEP(-0x100, sdata->gGT->timer);
-		instCurr->scale.y += CTR_FRAME_STEP(-0x100, sdata->gGT->timer);
-		instCurr->scale.z += CTR_FRAME_STEP(-0x100, sdata->gGT->timer);
+		instCurr->scale.x += CTR_FRAME_STEP(-0x100, P32_GET(struct GameTracker *, sdata->gGT)->timer);
+		instCurr->scale.y += CTR_FRAME_STEP(-0x100, P32_GET(struct GameTracker *, sdata->gGT)->timer);
+		instCurr->scale.z += CTR_FRAME_STEP(-0x100, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 
 		// position offset
 		mhs->posOffset.x = 0;
@@ -60,14 +60,14 @@ void RB_MaskWeapon_FadeAway(struct Thread *t)
 
 	if (maskBeamInst->alphaScale < 0x1000)
 	{
-		maskBeamInst->alphaScale += CTR_FRAME_STEP(0x200, sdata->gGT->timer);
+		maskBeamInst->alphaScale += CTR_FRAME_STEP(0x200, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 	}
 
 	totalTime = mask->duration;
 
 	if (totalTime < 0x200)
 	{
-		totalTime += sdata->gGT->elapsedTimeMS;
+		totalTime += P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS;
 
 		if (totalTime > 0x200)
 		{
@@ -101,15 +101,15 @@ void RB_MaskWeapon_ThTick(struct Thread *maskTh)
 
 	struct Instance *instCurr;
 
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	numPlyr = gGT->numPlyrCurrGame;
 
-	mask = maskTh->object;
-	maskInst = maskTh->inst;
-	maskBeamInst = mask->maskBeamInst;
+	mask = P32_GET(void *, maskTh->object);
+	maskInst = P32_GET(struct Instance *, maskTh->inst);
+	maskBeamInst = P32_GET(struct Instance *, mask->maskBeamInst);
 
-	d = maskTh->parentThread->object;
-	driverInst = maskTh->parentThread->inst;
+	d = P32_GET(void *, P32_GET(struct Thread *, maskTh->parentThread)->object);
+	driverInst = P32_GET(struct Instance *, P32_GET(struct Thread *, maskTh->parentThread)->inst);
 
 	struct InstDrawPerPlayer *maskIdpp = INST_GETIDPP(maskInst);
 	struct InstDrawPerPlayer *beamIdpp = INST_GETIDPP(maskBeamInst);
@@ -119,8 +119,8 @@ void RB_MaskWeapon_ThTick(struct Thread *maskTh)
 		for (int i = 0; i < numPlyr; i++)
 		{
 			pb = &gGT->pushBuffer[i];
-			maskIdpp[i].pushBuffer = pb;
-			beamIdpp[i].pushBuffer = pb;
+			P32_SET(maskIdpp[i].pushBuffer, pb);
+			P32_SET(beamIdpp[i].pushBuffer, pb);
 		}
 	}
 
@@ -133,8 +133,8 @@ void RB_MaskWeapon_ThTick(struct Thread *maskTh)
 				continue;
 			}
 
-			maskIdpp[i].pushBuffer = NULL;
-			beamIdpp[i].pushBuffer = NULL;
+			P32_SET(maskIdpp[i].pushBuffer, NULL);
+			P32_SET(beamIdpp[i].pushBuffer, NULL);
 		}
 	}
 
@@ -217,7 +217,7 @@ void RB_MaskWeapon_ThTick(struct Thread *maskTh)
 	}
 
 	// adjust rotation
-	mask->rot.y += CTR_FRAME_STEP(-0x100, sdata->gGT->timer);
+	mask->rot.y += CTR_FRAME_STEP(-0x100, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 
 	// If duration is over
 	if (mask->duration == 0)
@@ -266,16 +266,16 @@ void RB_ShieldDark_ThTick_Pop(struct Thread *t)
 	struct Driver *driverOwner;
 	SVec3 rot;
 
-	sh = t->object;
-	instDark = t->inst;
-	instColor = sh->instColor;
-	driverOwner = t->parentThread->object;
+	sh = P32_GET(void *, t->object);
+	instDark = P32_GET(struct Instance *, t->inst);
+	instColor = P32_GET(struct Instance *, sh->instColor);
+	driverOwner = P32_GET(void *, P32_GET(struct Thread *, t->parentThread)->object);
 
 	rot.x = 0;
 	rot.y = 0;
 	rot.z = 0;
-	LHMatrix_Parent(instDark, driverOwner->instSelf, &rot);
-	LHMatrix_Parent(instColor, driverOwner->instSelf, &rot);
+	LHMatrix_Parent(instDark, P32_GET(struct Instance *, driverOwner->instSelf), &rot);
+	LHMatrix_Parent(instColor, P32_GET(struct Instance *, driverOwner->instSelf), &rot);
 
 	// set rotation
 	CTR_MatrixSetRotIdentity(&instDark->matrix);
@@ -299,7 +299,7 @@ void RB_ShieldDark_ThTick_Pop(struct Thread *t)
 
 		// next frame
 #if CTR_NATIVE_60FPS
-		if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+		if (CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer))
 		{
 			sh->animFrame += 1;
 		}
@@ -321,7 +321,7 @@ void RB_ShieldDark_ThTick_Pop(struct Thread *t)
 	}
 
 	INSTANCE_Death(instColor);
-	INSTANCE_Death(sh->instHighlight);
+	INSTANCE_Death(P32_GET(struct Instance *, sh->instHighlight));
 
 	// this thread is now dead
 	t->flags |= THREAD_FLAG_DEAD;
@@ -348,20 +348,20 @@ void RB_ShieldDark_ThTick_Grow(struct Thread *th)
 	struct TrackerWeapon *tw;
 	struct PushBuffer *pb;
 
-	struct GameTracker *gGT = sdata->gGT;
-	struct Instance *shieldInst = th->inst;
-	struct Shield *shield = th->object;
-	struct Instance *colorInst = shield->instColor;
-	struct Instance *highlightInst = shield->instHighlight;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct Instance *shieldInst = P32_GET(struct Instance *, th->inst);
+	struct Shield *shield = P32_GET(void *, th->object);
+	struct Instance *colorInst = P32_GET(struct Instance *, shield->instColor);
+	struct Instance *highlightInst = P32_GET(struct Instance *, shield->instHighlight);
 
-	struct Thread *playerTh = th->parentThread;
-	struct Driver *player = playerTh->object;
-	struct Instance *driverInst = playerTh->inst;
+	struct Thread *playerTh = P32_GET(struct Thread *, th->parentThread);
+	struct Driver *player = P32_GET(void *, playerTh->object);
+	struct Instance *driverInst = P32_GET(struct Instance *, playerTh->inst);
 
 	// if highlight cooldown is gone
 	if (shield->highlightTimer == 0)
 	{
-		shield->highlightRot.y += CTR_FRAME_STEP(0x100, sdata->gGT->timer);
+		shield->highlightRot.y += CTR_FRAME_STEP(0x100, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 
 		highlightInst->flags &= ~HIDE_MODEL;
 
@@ -410,9 +410,9 @@ void RB_ShieldDark_ThTick_Grow(struct Thread *th)
 		for (i = 0; i < gGT->numPlyrCurrGame; i++)
 		{
 			pb = &gGT->pushBuffer[i];
-			idpp[i].pushBuffer = pb;
-			colorIdpp[i].pushBuffer = pb;
-			highlightIdpp[i].pushBuffer = pb;
+			P32_SET(idpp[i].pushBuffer, pb);
+			P32_SET(colorIdpp[i].pushBuffer, pb);
+			P32_SET(highlightIdpp[i].pushBuffer, pb);
 		}
 	}
 
@@ -426,9 +426,9 @@ void RB_ShieldDark_ThTick_Grow(struct Thread *th)
 				continue;
 			}
 
-			idpp[i].pushBuffer = 0;
-			colorIdpp[i].pushBuffer = 0;
-			highlightIdpp[i].pushBuffer = 0;
+			P32_SET(idpp[i].pushBuffer, 0);
+			P32_SET(colorIdpp[i].pushBuffer, 0);
+			P32_SET(highlightIdpp[i].pushBuffer, 0);
 		}
 	}
 
@@ -474,7 +474,7 @@ void RB_ShieldDark_ThTick_Grow(struct Thread *th)
 
 		// next frame
 #if CTR_NATIVE_60FPS
-		if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+		if (CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer))
 		{
 			shield->animFrame++;
 		}
@@ -518,7 +518,7 @@ void RB_ShieldDark_ThTick_Grow(struct Thread *th)
 		if (duration == 0)
 		{
 			// erase bubble instance from driver
-			player->instBubbleHold = NULL;
+			P32_SET(player->instBubbleHold, NULL);
 
 			goto LAB_800b0d6c;
 		}
@@ -559,7 +559,7 @@ void RB_ShieldDark_ThTick_Grow(struct Thread *th)
 		}
 
 		shield->animFrame = 0;
-		player->instBubbleHold = NULL;
+		P32_SET(player->instBubbleHold, NULL);
 
 		// execute, then assign per-frame funcPtr to thread
 		ThTick_SetAndExec(th, RB_ShieldDark_ThTick_Pop);
@@ -571,7 +571,7 @@ void RB_ShieldDark_ThTick_Grow(struct Thread *th)
 		return;
 	}
 
-	player->instBubbleHold = NULL;
+	P32_SET(player->instBubbleHold, NULL);
 	player->numTimesMissileLaunched++;
 
 	GAMEPAD_ShockFreq(player, 8, 0);
@@ -589,8 +589,8 @@ void RB_ShieldDark_ThTick_Grow(struct Thread *th)
 	// create a thread, get an instance
 	struct Instance *bombInst = INSTANCE_BirthWithThread(model, 0, MEDIUM, OTHER, RB_MovingExplosive_ThTick, sizeof(struct TrackerWeapon), playerTh);
 
-	struct Thread *bombTh = bombInst->thread;
-	bombTh->funcThDestroy = PROC_DestroyInstance;
+	struct Thread *bombTh = P32_GET(struct Thread *, bombInst->thread);
+	P32_SET(bombTh->funcThDestroy, PROC_DestroyInstance);
 
 	// if driver is not an AI (human)
 	if ((player->actionsFlagSet & ACTION_BOT) == 0)
@@ -617,16 +617,16 @@ void RB_ShieldDark_ThTick_Grow(struct Thread *th)
 	bombInst->alphaScale = 0x400;
 
 	// get object from thread
-	tw = bombTh->object;
+	tw = P32_GET(void *, bombTh->object);
 
 	tw->flags = 0;
-	tw->driverTarget = 0;
+	P32_SET(tw->driverTarget, 0);
 	tw->timeAlive = 0;
 	tw->soundIDCount = 0;
 	tw->blindFrames = 0;
 
-	tw->driverParent = player;
-	tw->instParent = driverInst;
+	P32_SET(tw->driverParent, player);
+	P32_SET(tw->instParent, driverInst);
 
 	// do NOT patch for 60fps,
 	// velocity uses elapsedTime
@@ -663,15 +663,15 @@ void RB_RainCloud_FadeAway(struct Thread *t)
 	struct RainCloud *rcloud;
 
 #if CTR_NATIVE_60FPS
-	if (!CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+	if (!CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer))
 	{
 		return;
 	}
 #endif
 
-	inst = t->inst;
-	rcloud = t->object;
-	parentInst = t->parentThread->inst;
+	inst = P32_GET(struct Instance *, t->inst);
+	rcloud = P32_GET(void *, t->object);
+	parentInst = P32_GET(struct Instance *, P32_GET(struct Thread *, t->parentThread)->inst);
 
 	// offset upward before averaging
 	inst->matrix.t[1] += 0x80;
@@ -684,7 +684,7 @@ void RB_RainCloud_FadeAway(struct Thread *t)
 		inst->matrix.t[i] = inst->matrix.t[i] >> 1;
 	}
 
-	struct RainLocal *rainLocal = rcloud->rainLocal;
+	struct RainLocal *rainLocal = P32_GET(struct RainLocal *, rcloud->rainLocal);
 	rainLocal->frameCount -= 2;
 
 	inst->scale.z += -0x100;
@@ -693,7 +693,7 @@ void RB_RainCloud_FadeAway(struct Thread *t)
 
 	if (inst->scale.x < 0)
 	{
-		JitPool_Remove(&sdata->gGT->JitPools.rain, (struct Item *)rainLocal);
+		JitPool_Remove(&P32_GET(struct GameTracker *, sdata->gGT)->JitPools.rain, (struct Item *)rainLocal);
 
 		// This thread is now dead
 		t->flags |= THREAD_FLAG_DEAD;
@@ -711,16 +711,16 @@ void RB_RainCloud_ThTick(struct Thread *t)
 	struct RainCloud *rcloud;
 	struct Instance *dInst;
 
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
-	inst = t->inst;
-	rcloud = t->object;
+	inst = P32_GET(struct Instance *, t->inst);
+	rcloud = P32_GET(void *, t->object);
 
 	// get player who put the potion
-	struct Thread *driverTh = t->parentThread;
+	struct Thread *driverTh = P32_GET(struct Thread *, t->parentThread);
 
-	d = driverTh->object;
-	dInst = driverTh->inst;
+	d = P32_GET(void *, driverTh->object);
+	dInst = P32_GET(struct Instance *, driverTh->inst);
 
 	animFrame = inst->animFrame;
 	numFrames = INSTANCE_GetNumAnimFrames(inst, 0);
@@ -814,7 +814,7 @@ void RB_RainCloud_ThTick(struct Thread *t)
 	// using mask weapon,
 	// or timeMS is over
 	rcloud->timeMS = 0;
-	d->thCloud = NULL;
+	P32_SET(d->thCloud, NULL);
 
 	ThTick_SetAndExec(t, RB_RainCloud_FadeAway);
 	return;
@@ -830,26 +830,26 @@ void RB_RainCloud_Init(struct Driver *d)
 	struct RainLocal *rlocal;
 
 	// if driver -> cloudTh is invalid
-	if (d->thCloud == NULL)
+	if (P32_GET(struct Thread *, d->thCloud) == NULL)
 	{
-		cloudInst = INSTANCE_BirthWithThread(STATIC_CLOUD, s_cloud1, SMALL, OTHER, RB_RainCloud_ThTick, sizeof(struct RainCloud), d->instSelf->thread);
+		cloudInst = INSTANCE_BirthWithThread(STATIC_CLOUD, s_cloud1, SMALL, OTHER, RB_RainCloud_ThTick, sizeof(struct RainCloud), P32_GET(struct Thread *, P32_GET(struct Instance *, d->instSelf)->thread));
 
-		cloudInst->thread->funcThDestroy = PROC_DestroyInstance;
+		P32_SET(P32_GET(struct Thread *, cloudInst->thread)->funcThDestroy, PROC_DestroyInstance);
 
 		CTR_MatrixSetRotIdentity(&cloudInst->matrix);
 
 		// cloud->posX = driver->posX
-		cloudInst->matrix.t[0] = d->instSelf->matrix.t[0];
-		cloudInst->matrix.t[1] = d->instSelf->matrix.t[1] + 0x80;
-		cloudInst->matrix.t[2] = d->instSelf->matrix.t[2];
+		cloudInst->matrix.t[0] = P32_GET(struct Instance *, d->instSelf)->matrix.t[0];
+		cloudInst->matrix.t[1] = P32_GET(struct Instance *, d->instSelf)->matrix.t[1] + 0x80;
+		cloudInst->matrix.t[2] = P32_GET(struct Instance *, d->instSelf)->matrix.t[2];
 
 		cloudInst->alphaScale = 0x800;
 
-		cloudInst->depthBiasNormal = d->instSelf->depthBiasNormal;
-		cloudInst->depthBiasSecondary = d->instSelf->depthBiasSecondary;
+		cloudInst->depthBiasNormal = P32_GET(struct Instance *, d->instSelf)->depthBiasNormal;
+		cloudInst->depthBiasSecondary = P32_GET(struct Instance *, d->instSelf)->depthBiasSecondary;
 
 		// add rain to pool
-		rlocal = (struct RainLocal *)JitPool_Add(&sdata->gGT->JitPools.rain);
+		rlocal = (struct RainLocal *)JitPool_Add(&P32_GET(struct GameTracker *, sdata->gGT)->JitPools.rain);
 
 		if (rlocal != NULL)
 		{
@@ -863,16 +863,16 @@ void RB_RainCloud_Init(struct Driver *d)
 			rlocal->vel.y = -0x28;
 			rlocal->vel.z = 0;
 
-			rlocal->pos.x = d->instSelf->matrix.t[0];
-			rlocal->pos.y = d->instSelf->matrix.t[1] + 0x80;
-			rlocal->pos.z = d->instSelf->matrix.t[2];
+			rlocal->pos.x = P32_GET(struct Instance *, d->instSelf)->matrix.t[0];
+			rlocal->pos.y = P32_GET(struct Instance *, d->instSelf)->matrix.t[1] + 0x80;
+			rlocal->pos.z = P32_GET(struct Instance *, d->instSelf)->matrix.t[2];
 
-			rlocal->cloudInst = cloudInst;
+			P32_SET(rlocal->cloudInst, cloudInst);
 		}
 
-		rcloud = cloudInst->thread->object;
+		rcloud = P32_GET(void *, P32_GET(struct Thread *, cloudInst->thread)->object);
 		rcloud->timeMS = 0x1e00; // 7.68s
-		rcloud->rainLocal = rlocal;
+		P32_SET(rcloud->rainLocal, rlocal);
 		rcloud->effect = RAIN_CLOUD_EFFECT_ITEM_ROLL;
 
 		if (
@@ -884,14 +884,14 @@ void RB_RainCloud_Init(struct Driver *d)
 			rcloud->effect = RAIN_CLOUD_EFFECT_SLOW;
 		}
 
-		d->thCloud = cloudInst->thread;
+		P32_SET(d->thCloud, P32_GET(struct Thread *, cloudInst->thread));
 	}
 
 	// if cloud already exists, and
 	// driver hits another red potion
 	else
 	{
-		rcloud = d->thCloud->object;
+		rcloud = P32_GET(void *, P32_GET(struct Thread *, d->thCloud)->object);
 
 		// set duration to 8 seconds
 		rcloud->timeMS = 0x1e00;

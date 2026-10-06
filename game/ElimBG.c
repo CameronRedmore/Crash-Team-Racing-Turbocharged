@@ -63,10 +63,10 @@ static b32 sElimBG_HdValid;
 static b32 ElimBG_DrawHdBackground(struct GameTracker *gGT)
 {
 	u32 texture = NativeGpu_GetPauseBackgroundTexture();
-	DR_PSYX_TEX *setTexture = (DR_PSYX_TEX *)gGT->backBuffer->primMem.cursor;
+	DR_PSYX_TEX *setTexture = (DR_PSYX_TEX *)P32_GET(void *, P32_GET(struct DB *, gGT->backBuffer)->primMem.cursor);
 	POLY_FT4 *p = (POLY_FT4 *)(setTexture + 1);
 	DR_PSYX_TEX *resetTexture = (DR_PSYX_TEX *)(p + 1);
-	u32 *ot = (u32 *)&gGT->pushBuffer_UI.ptrOT[4];
+	u32 *ot = (u32 *)&P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT)[4];
 	u32 oldTag = *ot;
 
 	if (texture == 0)
@@ -97,7 +97,7 @@ static b32 ElimBG_DrawHdBackground(struct GameTracker *gGT)
 	p->tag = CtrGpu_PackOTTag(CtrGpu_PrimToOTLink24(resetTexture), 0x09000000);
 	resetTexture->tag = CtrGpu_PackOTTag(oldTag, 0x02000000);
 	*ot = (u32)CtrGpu_PrimToOTLink24(setTexture);
-	gGT->backBuffer->primMem.cursor = resetTexture + 1;
+	P32_SET(P32_GET(struct DB *, gGT->backBuffer)->primMem.cursor, resetTexture + 1);
 	return true;
 }
 #endif
@@ -148,28 +148,28 @@ void ElimBG_SaveScreenshot_Full(struct GameTracker *gGT)
 
 	// vram copy, then overwrite vram with pause image
 
-	u32 start1 = (u32)gGT->db[0].primMem.end;
-	u32 start2 = (u32)gGT->db[1].primMem.end;
+	char *start1 = P32_GET(char *, gGT->db[0].primMem.end);
+	char *start2 = P32_GET(char *, gGT->db[1].primMem.end);
 	start1 -= ELIM_BG_PRIMMEM_PAUSE_BYTES;
 	start2 -= ELIM_BG_PRIMMEM_PAUSE_BYTES;
-	gGT->db[0].primMem.end = (void *)start1;
-	gGT->db[1].primMem.end = (void *)start2;
+	P32_SET(gGT->db[0].primMem.end, (void *)start1);
+	P32_SET(gGT->db[1].primMem.end, (void *)start2);
 
 	// double-buffered packed 4bpp pause strips
-	sdata->PausePtrsVRAM[ELIM_BG_SLOT_PACKED_STRIP_DB0] = (char *)start1;
-	sdata->PausePtrsVRAM[ELIM_BG_SLOT_PACKED_STRIP_DB1] = (char *)start2;
+	P32_SET(sdata->PausePtrsVRAM[ELIM_BG_SLOT_PACKED_STRIP_DB0], (char *)start1);
+	P32_SET(sdata->PausePtrsVRAM[ELIM_BG_SLOT_PACKED_STRIP_DB1], (char *)start2);
 
 	// double-buffered raw screenshot strips from VRAM
-	sdata->PausePtrsVRAM[ELIM_BG_SLOT_RAW_STRIP_DB0] = (char *)(start1 + ELIM_BG_RAW_STRIP_OFFSET);
-	sdata->PausePtrsVRAM[ELIM_BG_SLOT_RAW_STRIP_DB1] = (char *)(start2 + ELIM_BG_RAW_STRIP_OFFSET);
+	P32_SET(sdata->PausePtrsVRAM[ELIM_BG_SLOT_RAW_STRIP_DB0], (char *)(start1 + ELIM_BG_RAW_STRIP_OFFSET));
+	P32_SET(sdata->PausePtrsVRAM[ELIM_BG_SLOT_RAW_STRIP_DB1], (char *)(start2 + ELIM_BG_RAW_STRIP_OFFSET));
 
 	// backups of the two VRAM pages overwritten by the pause image
-	sdata->PausePtrsVRAM[ELIM_BG_SLOT_TEXTURE_DB0] = (char *)(start1 + ELIM_BG_TEXTURE_BACKUP_OFFSET);
-	sdata->PausePtrsVRAM[ELIM_BG_SLOT_TEXTURE_DB1] = (char *)(start2 + ELIM_BG_TEXTURE_BACKUP_OFFSET);
+	P32_SET(sdata->PausePtrsVRAM[ELIM_BG_SLOT_TEXTURE_DB0], (char *)(start1 + ELIM_BG_TEXTURE_BACKUP_OFFSET));
+	P32_SET(sdata->PausePtrsVRAM[ELIM_BG_SLOT_TEXTURE_DB1], (char *)(start2 + ELIM_BG_TEXTURE_BACKUP_OFFSET));
 
 	// copy texture vram into PrimMem
-	StoreImage(&rect1, (u32 *)sdata->PausePtrsVRAM[ELIM_BG_SLOT_TEXTURE_DB0]);
-	StoreImage(&rect2, (u32 *)sdata->PausePtrsVRAM[ELIM_BG_SLOT_TEXTURE_DB1]);
+	StoreImage(&rect1, (u32 *)P32_GET(char *, sdata->PausePtrsVRAM[ELIM_BG_SLOT_TEXTURE_DB0]));
+	StoreImage(&rect2, (u32 *)P32_GET(char *, sdata->PausePtrsVRAM[ELIM_BG_SLOT_TEXTURE_DB1]));
 
 	// === copy screen into texture vram ===
 
@@ -191,7 +191,7 @@ void ElimBG_SaveScreenshot_Full(struct GameTracker *gGT)
 	rDst.h = ELIM_BG_STRIP_H;
 
 	// start the first Store
-	StoreImage(&rSrc, (u32 *)sdata->PausePtrsVRAM[ELIM_BG_SLOT_RAW_STRIP_DB0]);
+	StoreImage(&rSrc, (u32 *)P32_GET(char *, sdata->PausePtrsVRAM[ELIM_BG_SLOT_RAW_STRIP_DB0]));
 
 	for (rDst.y = 0; rDst.y < (ELIM_BG_SCREEN_H - ELIM_BG_STRIP_H); rDst.y += ELIM_BG_STRIP_H)
 	{
@@ -202,21 +202,21 @@ void ElimBG_SaveScreenshot_Full(struct GameTracker *gGT)
 
 		// start next Store, while processing previous store
 		rSrc.y += ELIM_BG_STRIP_H;
-		StoreImage((RECT *)&rSrc, (u32 *)sdata->PausePtrsVRAM[ELIM_BG_SLOT_RAW_STRIP_DB0 + bufferIndex]);
+		StoreImage((RECT *)&rSrc, (u32 *)P32_GET(char *, sdata->PausePtrsVRAM[ELIM_BG_SLOT_RAW_STRIP_DB0 + bufferIndex]));
 
-		ElimBG_SaveScreenshot_Chunk((u16 *)sdata->PausePtrsVRAM[ELIM_BG_SLOT_PACKED_STRIP_DB0 + (1 - bufferIndex)],
-		                            (u16 *)sdata->PausePtrsVRAM[ELIM_BG_SLOT_RAW_STRIP_DB0 + (1 - bufferIndex)], ELIM_BG_CHUNK_SOURCE_PIXELS);
+		ElimBG_SaveScreenshot_Chunk((u16 *)P32_GET(char *, sdata->PausePtrsVRAM[ELIM_BG_SLOT_PACKED_STRIP_DB0 + (1 - bufferIndex)]),
+		                            (u16 *)P32_GET(char *, sdata->PausePtrsVRAM[ELIM_BG_SLOT_RAW_STRIP_DB0 + (1 - bufferIndex)]), ELIM_BG_CHUNK_SOURCE_PIXELS);
 
-		LoadImage(&rDst, (u32 *)sdata->PausePtrsVRAM[ELIM_BG_SLOT_PACKED_STRIP_DB0 + (1 - bufferIndex)]);
+		LoadImage(&rDst, (u32 *)P32_GET(char *, sdata->PausePtrsVRAM[ELIM_BG_SLOT_PACKED_STRIP_DB0 + (1 - bufferIndex)]));
 	}
 
 	// wait for last Store
 	DrawSync(0);
 
-	ElimBG_SaveScreenshot_Chunk((u16 *)sdata->PausePtrsVRAM[ELIM_BG_SLOT_PACKED_STRIP_DB0 + bufferIndex],
-	                            (u16 *)sdata->PausePtrsVRAM[ELIM_BG_SLOT_RAW_STRIP_DB0 + bufferIndex], ELIM_BG_CHUNK_SOURCE_PIXELS);
+	ElimBG_SaveScreenshot_Chunk((u16 *)P32_GET(char *, sdata->PausePtrsVRAM[ELIM_BG_SLOT_PACKED_STRIP_DB0 + bufferIndex]),
+	                            (u16 *)P32_GET(char *, sdata->PausePtrsVRAM[ELIM_BG_SLOT_RAW_STRIP_DB0 + bufferIndex]), ELIM_BG_CHUNK_SOURCE_PIXELS);
 
-	LoadImage(&rDst, (u32 *)sdata->PausePtrsVRAM[ELIM_BG_SLOT_PACKED_STRIP_DB0 + bufferIndex]);
+	LoadImage(&rDst, (u32 *)P32_GET(char *, sdata->PausePtrsVRAM[ELIM_BG_SLOT_PACKED_STRIP_DB0 + bufferIndex]));
 
 	rDst.y = ELIM_BG_FINAL_STRIP_Y;
 	rDst.w = ELIM_BG_FINAL_STRIP_W;
@@ -273,12 +273,12 @@ void ElimBG_ToggleAllInstances(struct GameTracker *gGT, b32 boolGameIsPaused)
 	struct Instance *inst;
 	struct InstDef *ptrInstDefs;
 
-	lev = gGT->level1;
+	lev = P32_GET(struct Level *, gGT->level1);
 
 	// Loop through all instances in level
-	for (ptrInstDefs = &lev->ptrInstDefs[0]; ptrInstDefs < &lev->ptrInstDefs[lev->numInstances]; ptrInstDefs++)
+	for (ptrInstDefs = &P32_GET(struct InstDef *, lev->ptrInstDefs)[0]; ptrInstDefs < &P32_GET(struct InstDef *, lev->ptrInstDefs)[lev->numInstances]; ptrInstDefs++)
 	{
-		inst = ptrInstDefs->ptrInstance;
+		inst = P32_GET(struct Instance *, ptrInstDefs->ptrInstance);
 
 		if (inst != 0)
 		{
@@ -287,7 +287,7 @@ void ElimBG_ToggleAllInstances(struct GameTracker *gGT, b32 boolGameIsPaused)
 	}
 
 	// Loop through all instances in Instance Pool
-	for (inst = (struct Instance *)gGT->JitPools.instance.taken.first; inst != 0; inst = inst->next)
+	for (inst = (struct Instance *)P32_GET(struct Item *, gGT->JitPools.instance.taken.first); inst != 0; inst = P32_GET(struct Instance *, inst->next))
 	{
 		ElimBG_ToggleInstance(inst, boolGameIsPaused);
 	}
@@ -323,13 +323,13 @@ void ElimBG_HandleState(struct GameTracker *gGT)
 		rect2.h = ELIM_BG_TEXTURE_BACKUP_H;
 
 		// load from RAM, back to VRAM
-		LoadImage(&rect1, (u32 *)sdata->PausePtrsVRAM[ELIM_BG_SLOT_TEXTURE_DB0]);
-		LoadImage(&rect2, (u32 *)sdata->PausePtrsVRAM[ELIM_BG_SLOT_TEXTURE_DB1]);
+		LoadImage(&rect1, (u32 *)P32_GET(char *, sdata->PausePtrsVRAM[ELIM_BG_SLOT_TEXTURE_DB0]));
+		LoadImage(&rect2, (u32 *)P32_GET(char *, sdata->PausePtrsVRAM[ELIM_BG_SLOT_TEXTURE_DB1]));
 
 		DrawSync(0);
 
-		gGT->db[0].primMem.end = (void *)((int)gGT->db[0].primMem.end + ELIM_BG_PRIMMEM_PAUSE_BYTES);
-		gGT->db[1].primMem.end = (void *)((int)gGT->db[1].primMem.end + ELIM_BG_PRIMMEM_PAUSE_BYTES);
+		P32_SET(gGT->db[0].primMem.end, P32_GET(char *, gGT->db[0].primMem.end) + ELIM_BG_PRIMMEM_PAUSE_BYTES);
+		P32_SET(gGT->db[1].primMem.end, P32_GET(char *, gGT->db[1].primMem.end) + ELIM_BG_PRIMMEM_PAUSE_BYTES);
 
 		// Enable all instances
 		ElimBG_ToggleAllInstances(gGT, 0);
@@ -377,10 +377,10 @@ void ElimBG_HandleState(struct GameTracker *gGT)
 			do
 			{
 				// backBuffer->primMem.cursor
-				p = (POLY_FT4 *)gGT->backBuffer->primMem.cursor;
+				p = (POLY_FT4 *)P32_GET(void *, P32_GET(struct DB *, gGT->backBuffer)->primMem.cursor);
 
 				// increment primMem by size of primitive
-				gGT->backBuffer->primMem.cursor = p + 1;
+				P32_SET(P32_GET(struct DB *, gGT->backBuffer)->primMem.cursor, p + 1);
 
 				setPolyFT4(p);
 
@@ -451,7 +451,7 @@ void ElimBG_HandleState(struct GameTracker *gGT)
 				p->v3 = (char)textureY;
 
 				// pointer to OT mem, and pointer to primitive
-				AddPrim(&gGT->pushBuffer_UI.ptrOT[4], p);
+				AddPrim(&P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT)[4], p);
 
 				// while v0 (tex coord Y) < screensize
 			} while ((int)textureY < ELIM_BG_SCREEN_H);

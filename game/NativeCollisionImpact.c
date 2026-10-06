@@ -8,8 +8,8 @@ u32 NativeCollision_Impact(struct Driver *d, struct Thread *t, struct Scratchpad
 	NativePhysicsVec *velocity = &value;
 	NativePhysicsVec normal = NativeCollision_Normal(sps);
 
-	if ((d->vShiftCount != 0) && (sps->boolDidTouchQuadblock != 0) && ((sps->hit.ptrQuadblock->quadFlags & QUADBLOCK_FLAG_GROUND) != 0) &&
-	    (sps->hit.reorderResult != COLL_TRIANGLE_CLIP_FACE) && (sps->hit.ptrQuadblock != d->underDriver))
+	if ((d->vShiftCount != 0) && (sps->boolDidTouchQuadblock != 0) && ((P32_GET(struct QuadBlock *, sps->hit.ptrQuadblock)->quadFlags & QUADBLOCK_FLAG_GROUND) != 0) &&
+	    (sps->hit.reorderResult != COLL_TRIANGLE_CLIP_FACE) && (P32_GET(struct QuadBlock *, sps->hit.ptrQuadblock) != P32_GET(struct QuadBlock *, d->underDriver)))
 	{
 		if ((abs(d->speedApprox) < 0x300) && (abs(d->jumpHeightCurr) < 0x300) && (d->fireSpeed == 0))
 		{
@@ -87,7 +87,7 @@ u32 NativeCollision_Impact(struct Driver *d, struct Thread *t, struct Scratchpad
 			impact = NativePhysics_RotateDriver(d, impact, 1);
 
 			if ((sps->boolDidTouchQuadblock != 0) && ((sps->Union.QuadBlockColl.searchFlags & COLL_SEARCH_WALL_PROJECTION_DONE) == 0) &&
-			    ((d->actionsFlagSetPrevFrame & ACTION_TOUCH_GROUND) == 0) && ((sps->hit.ptrQuadblock->quadFlags & QUADBLOCK_FLAG_GROUND) != 0))
+			    ((d->actionsFlagSetPrevFrame & ACTION_TOUCH_GROUND) == 0) && ((P32_GET(struct QuadBlock *, sps->hit.ptrQuadblock)->quadFlags & QUADBLOCK_FLAG_GROUND) != 0))
 			{
 				NativePhysicsVec wallVelocity;
 				NativePhysicsVec oldVelocity = {oldVelX, 0, oldVelZ};
@@ -163,8 +163,8 @@ u32 NativeCollision_Impact(struct Driver *d, struct Thread *t, struct Scratchpad
 						d->rotCurr.w = (d->rotCurr.w - turnAngle);
 					}
 
-					d->instSelf->animIndex = 2;
-					d->instSelf->animFrame = 0;
+					P32_GET(struct Instance *, d->instSelf)->animIndex = 2;
+					P32_GET(struct Instance *, d->instSelf)->animFrame = 0;
 					d->matrixArray = BAKED_GTE_MATRIX_CRASH_FALL;
 					d->matrixIndex = 0;
 

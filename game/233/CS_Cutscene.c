@@ -6,7 +6,7 @@ void CS_Cutscene_Start(void)
 {
 	struct CsThreadInitData initData = {0};
 
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	CS_Thread_Init(0, R233.s_introcam, 0, 0, 0);
 

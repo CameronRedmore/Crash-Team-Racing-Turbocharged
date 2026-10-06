@@ -60,7 +60,7 @@ static int RenderStars_IsVisible(u32 gteFlag, u32 sxy)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8006e26c-0x8006e588
 void RenderStars(struct PushBuffer *pb, struct PrimMem *primMem, struct Stars *stars, u8 numPlyr)
 {
-	u32 *prim = (u32 *)primMem->cursor;
+	u32 *prim = (u32 *)P32_GET(void *, primMem->cursor);
 	int playerCount = numPlyr;
 
 	// NOTE(aalhendi): PSX-backfeed blocker: retail uses 0x1f800000-0x1f80002c
@@ -102,12 +102,12 @@ void RenderStars(struct PushBuffer *pb, struct PrimMem *primMem, struct Stars *s
 		starIndex = (u16)stars->numStars;
 		spread = (u16)stars->spread;
 		seedShift = (u16)stars->seed + 20;
-		ot = &pb->ptrOT[(u16)stars->distance];
+		ot = &P32_GET(uint32_t *, pb->ptrOT)[(u16)stars->distance];
 		state0 = 0x30125400;
 		state1 = 0x493583fe;
 		int nativeLayer = -1;
 #if defined(CTR_NATIVE) && NATIVE_DRAW3D_SUPPORTED
-		if (NATIVE_DRAW3D_ACTIVE() && (u8 *)prim + sizeof(DR_PSYX_DRAW3D) <= (u8 *)primMem->guardEnd)
+		if (NATIVE_DRAW3D_ACTIVE() && (u8 *)prim + sizeof(DR_PSYX_DRAW3D) <= (u8 *)P32_GET(void *, primMem->guardEnd))
 		{
 			NativeDraw3DView view = {0};
 			double rotation[9], translation[3];
@@ -246,5 +246,5 @@ void RenderStars(struct PushBuffer *pb, struct PrimMem *primMem, struct Stars *s
 		prim = (u32 *)(drawMode + 1);
 	}
 
-	primMem->cursor = prim;
+	P32_SET(primMem->cursor, prim);
 }

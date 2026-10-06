@@ -124,7 +124,7 @@ void UI_RaceStart_IntroText1P(void)
 	RECT rect;
 	int colors[2];
 
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	struct CameraDC *introCamera = &gGT->cameraDC[0];
 	struct PushBuffer *introPB = &gGT->pushBuffer[0];
 #if defined(__vita__)
@@ -267,7 +267,7 @@ LAB_80055930:
 			posX = introPB->rect.x + ((introPB->rect.w << 0x10) >> 0x11);
 
 			// string of top title bar
-			titleText = sdata->lngStrings[textID];
+			titleText = P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[textID]);
 
 			// Y-value that transitions title text to off-screen
 			titleY = introPB->rect.y - (barTransition - UI_RACE_START_TITLE_TOP_Y_BIAS);
@@ -279,7 +279,7 @@ LAB_80055930:
 			// Name of Cup
 
 			// uVar9 * 4
-			DecalFont_DrawLine(sdata->lngStrings[textID],
+			DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[textID]),
 
 			                   introPB->rect.x + ((introPB->rect.w << 0x10) >> 0x11),
 
@@ -289,7 +289,7 @@ LAB_80055930:
 			// Track 1/4, 2/4, 3/4, 4/4 in cup
 			sprintf(trackText, "%s %ld/4",
 
-			        sdata->lngStrings[LNG_TRACK],
+			        P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_TRACK]),
 
 			        // Track Index (0, 1, 2, 3) + 1
 			        CTR_PRINTF_PSX_LONG((gGT->cup.trackIndex) + 1));
@@ -318,7 +318,7 @@ LAB_80055930:
 		    // 8d878 + 110*4 -> Dingo Canyon
 
 		    // Level ID
-		    sdata->lngStrings[data.metaDataLEV[gGT->levelID].name_LNG],
+		    P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.metaDataLEV[gGT->levelID].name_LNG]),
 
 		    introPB->rect.x + ((introPB->rect.w << 0x10) >> 0x11),
 
@@ -340,7 +340,7 @@ LAB_80055930:
 		Color color;
 		color.self = colors[0];
 
-		uint32_t *ot = gGT->backBuffer->otMem.uiOT;
+		uint32_t *ot = P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT);
 
 		CTR_Box_DrawSolidBox(&rect, color, ot);
 
@@ -371,7 +371,7 @@ void UI_RaceEnd_MenuProc(struct RectMenu *menu)
 	s16 option;
 	struct GameTracker *gGT;
 
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	if (menu->funcState != RECTMENU_FUNC_STATE_INPUT)
 	{
@@ -392,11 +392,11 @@ void UI_RaceEnd_MenuProc(struct RectMenu *menu)
 		return;
 	}
 
-	option = menu->rows[row].stringIndex;
+	option = P32_GET(struct MenuRow *, menu->rows)[row].stringIndex;
 	if ((gNativeGhostReplayMode != 0) && (option == NATIVE_MENU_STRING_CHALLENGE_GHOST))
 	{
 		s16 logicalTrackId = NativeReverseTrack_GetCurrentLogicalTrackId();
-		struct GhostHeader *challengeGhost = sdata->GhostRecording.ptrGhost;
+		struct GhostHeader *challengeGhost = P32_GET(struct GhostHeader *, sdata->GhostRecording.ptrGhost);
 
 		if ((challengeGhost == NULL) || (sdata->boolGhostTooBigToSave != 0) || (challengeGhost->size == 0))
 		{
@@ -404,16 +404,16 @@ void UI_RaceEnd_MenuProc(struct RectMenu *menu)
 			return;
 		}
 
-		if (sdata->ptrGhostTapePlaying == NULL)
+		if (P32_GET(struct GhostHeader *, sdata->ptrGhostTapePlaying) == NULL)
 		{
-			sdata->ptrGhostTapePlaying = MEMPACK_AllocHighMem(GHOST_RECORD_BUFFER_SIZE);
-			if (sdata->ptrGhostTapePlaying == NULL)
+			P32_SET(sdata->ptrGhostTapePlaying, MEMPACK_AllocHighMem(GHOST_RECORD_BUFFER_SIZE));
+			if (P32_GET(struct GhostHeader *, sdata->ptrGhostTapePlaying) == NULL)
 			{
 				OtherFX_Play(5, 1);
 				return;
 			}
 		}
-		memcpy(sdata->ptrGhostTapePlaying, challengeGhost, GHOST_RECORD_BUFFER_SIZE);
+		memcpy(P32_GET(struct GhostHeader *, sdata->ptrGhostTapePlaying), challengeGhost, GHOST_RECORD_BUFFER_SIZE);
 
 		gNativeGhostReplayMode = 0;
 		gNativeRelicRaceMode = 0;
@@ -427,7 +427,7 @@ void UI_RaceEnd_MenuProc(struct RectMenu *menu)
 		gGT->gameMode1 |= TIME_TRIAL;
 		gGT->gameModeEnd &= ~PLAYER_GHOST_BEAT;
 		sdata->boolReplayHumanGhost = 1;
-		data.characterIDs[1] = sdata->ptrGhostTapePlaying->characterID;
+		data.characterIDs[1] = P32_GET(struct GhostHeader *, sdata->ptrGhostTapePlaying)->characterID;
 		sdata->boolGhostsDrawing = 0;
 
 		option = UI_RACE_END_OPTION_RETRY;
@@ -532,11 +532,11 @@ void UI_RaceEnd_MenuProc(struct RectMenu *menu)
 		// slower than ND's copy, I know, we'll
 		// come up with a modern-gcc friendly way
 		// to sort the LWs and SWs later
-		memcpy(sdata->ptrGhostTapePlaying, sdata->GhostRecording.ptrGhost, GHOST_RECORD_BUFFER_SIZE);
+		memcpy(P32_GET(struct GhostHeader *, sdata->ptrGhostTapePlaying), P32_GET(struct GhostHeader *, sdata->GhostRecording.ptrGhost), GHOST_RECORD_BUFFER_SIZE);
 
 		// Make P2 the character that is saved in the
 		// header of the ghost that you will see in the race
-		data.characterIDs[1] = sdata->ptrGhostTapePlaying->characterID;
+		data.characterIDs[1] = P32_GET(struct GhostHeader *, sdata->ptrGhostTapePlaying)->characterID;
 
 		// no ghosts are drawing
 		sdata->boolGhostsDrawing = 0;
@@ -572,7 +572,7 @@ void UI_RaceEnd_MenuProc(struct RectMenu *menu)
 		SelectProfile_ToggleMode(SELECT_PROFILE_MODE_GHOST_SAVE);
 
 		// Change active Menu to GhostSelection
-		sdata->ptrActiveMenu = &data.menuGhostSelection;
+		P32_SET(sdata->ptrActiveMenu, &data.menuGhostSelection);
 		break;
 	}
 

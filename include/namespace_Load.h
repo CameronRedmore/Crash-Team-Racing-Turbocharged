@@ -277,7 +277,7 @@ CTR_STATIC_ASSERT(DRAM_POINTER_MAP_WORD_SHIFT == 2);
 
 #define DRAM_SET_PATCHED(x)   *(int *)x = *(int *)x | 0x10000000;
 
-#define DRAM_IS_PATCHED(x)    ((*(int *)((u32)x - 4) & 0x10000000) != 0)
+#define DRAM_IS_PATCHED(x)    ((*(int *)((uintptr_t)(x) - 4) & 0x10000000) != 0)
 
 struct VramHeader
 {
@@ -340,7 +340,7 @@ enum LoadType
 struct LoadQueueSlot
 {
 	// 0x0
-	struct BigHeader *ptrBigfileCdPos_UNUSED;
+	P32(struct BigHeader *) ptrBigfileCdPos_UNUSED;
 
 	// 0x4
 	u16 flags;
@@ -352,13 +352,13 @@ struct LoadQueueSlot
 	u32 subfileIndex;
 
 	// 0xC
-	void *ptrDestination;
+	P32(void *) ptrDestination;
 
 	// 0x10
 	u32 size_UNUSED;
 
 	// 0x14
-	void (*callbackFuncPtr)(struct LoadQueueSlot *);
+	P32_FNPTR(void, callbackFuncPtr, (struct LoadQueueSlot *));
 };
 
 #define LOAD_QUEUE_CALLBACK_SET_POINTER ((void (*)(struct LoadQueueSlot *)) - 2)

@@ -105,15 +105,15 @@ void *LOAD_ReadDirectory(char *filename)
 	// undo header allocation, only use "needed" size
 	MEMPACK_ReallocMem(sizeof(struct BigHeader) + sizeof(struct BigEntry) * bh->numEntry);
 
-	sdata->ptrBigfileCdPos_2 = bh;
+	P32_SET(sdata->ptrBigfileCdPos_2, bh);
 	return bh;
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 PS1 path 0x80031d30-0x80031e00.
 void LOAD_DramFileCallback(struct LoadQueueSlot *lqs)
 {
-	char *fileBuf = lqs->ptrDestination;
-	void (*callback)(struct LoadQueueSlot *) = lqs->callbackFuncPtr;
+	char *fileBuf = P32_GET(void *, lqs->ptrDestination);
+	void (*callback)(struct LoadQueueSlot *) = P32_GET(void (*)(struct LoadQueueSlot *), lqs->callbackFuncPtr);
 
 	if (fileBuf != NULL)
 	{
@@ -140,7 +140,7 @@ void LOAD_DramFileCallback(struct LoadQueueSlot *lqs)
 			lqs->flags |= LT_GETADDR;
 		}
 
-		lqs->ptrDestination = &fileBuf[4];
+		P32_SET(lqs->ptrDestination, &fileBuf[4]);
 	}
 
 #if defined(CTR_NATIVE)
@@ -167,13 +167,13 @@ void *LOAD_DramFile(void *bigfilePtr, int subfileIndex, void *ptrDestination, u3
 	{
 		loadedFile = LOAD_ReadFile_ex(bigfilePtr, LT_GETADDR, subfileIndex, ptrDestination, sizePtr, NULL);
 
-		lqs.ptrBigfileCdPos_UNUSED = bigfilePtr;
+		P32_SET(lqs.ptrBigfileCdPos_UNUSED, bigfilePtr);
 		lqs.flags = 0;
 		lqs.type_UNUSED = LT_DRAM;
 		lqs.subfileIndex = subfileIndex;
-		lqs.ptrDestination = loadedFile;
+		P32_SET(lqs.ptrDestination, loadedFile);
 		lqs.size_UNUSED = *sizePtr;
-		lqs.callbackFuncPtr = NULL;
+		P32_SET(lqs.callbackFuncPtr, NULL);
 
 		LOAD_DramFileCallback(&lqs);
 
@@ -183,8 +183,9 @@ void *LOAD_DramFile(void *bigfilePtr, int subfileIndex, void *ptrDestination, u3
 	if (callbackOrFlags == -2)
 	{
 		loadedFile = LOAD_ReadFile_ex(bigfilePtr, LT_GETADDR, subfileIndex, NULL, sizePtr, LOAD_DramFileCallback);
-		data.currSlot.ptrDestination = loadedFile;
-		*(void **)ptrDestination = loadedFile;
+		P32_SET(data.currSlot.ptrDestination, loadedFile);
+		// The destination is a retail 4-byte pointer slot.
+		P32_SET(*(P32(void *) *)ptrDestination, loadedFile);
 		return loadedFile;
 	}
 
@@ -194,11 +195,11 @@ void *LOAD_DramFile(void *bigfilePtr, int subfileIndex, void *ptrDestination, u3
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80031ee4-0x80031fdc.
 void LOAD_VramFileCallback(struct LoadQueueSlot *lqs)
 {
-	int *vramBuf = lqs->ptrDestination;
+	int *vramBuf = P32_GET(void *, lqs->ptrDestination);
 
 #if defined(CTR_NATIVE)
 	if ((vramBuf != NULL) && (lqs->subfileIndex == BI_SHAREDMPKVRM) &&
-	    !NativeCustomRacer_IsBigHeader(lqs->ptrBigfileCdPos_UNUSED))
+	    !NativeCustomRacer_IsBigHeader(P32_GET(struct BigHeader *, lqs->ptrBigfileCdPos_UNUSED)))
 	{
 		NativeCustomRacer_CaptureRetailSharedVram(vramBuf, lqs->size_UNUSED);
 	}
@@ -234,7 +235,7 @@ void LOAD_VramFileCallback(struct LoadQueueSlot *lqs)
 	}
 
 	// LOAD_NextQueuedFile waits 3 vsync frames before releasing the queue.
-	sdata->frameFinishedVRAM = sdata->gGT->frameTimer_VsyncCallback;
+	sdata->frameFinishedVRAM = P32_GET(struct GameTracker *, sdata->gGT)->frameTimer_VsyncCallback;
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80031fdc-0x80032110.
@@ -252,13 +253,13 @@ void *LOAD_VramFile(void *bigfilePtr, int subfileIndex, void *ptrDestination, u3
 	{
 		loadedFile = LOAD_ReadFile_ex(bigfilePtr, LT_VRAM, subfileIndex, ptrDestination, sizePtr, NULL);
 
-		lqs.ptrBigfileCdPos_UNUSED = bigfilePtr;
+		P32_SET(lqs.ptrBigfileCdPos_UNUSED, bigfilePtr);
 		lqs.flags = 0;
 		lqs.type_UNUSED = LT_VRAM;
 		lqs.subfileIndex = subfileIndex;
-		lqs.ptrDestination = loadedFile;
+		P32_SET(lqs.ptrDestination, loadedFile);
 		lqs.size_UNUSED = *sizePtr;
-		lqs.callbackFuncPtr = NULL;
+		P32_SET(lqs.callbackFuncPtr, NULL);
 
 		LOAD_VramFileCallback(&lqs);
 
@@ -276,8 +277,9 @@ void *LOAD_VramFile(void *bigfilePtr, int subfileIndex, void *ptrDestination, u3
 	if (callbackOrFlags == -2)
 	{
 		loadedFile = LOAD_ReadFile_ex(bigfilePtr, LT_VRAM, subfileIndex, NULL, sizePtr, LOAD_VramFileCallback);
-		data.currSlot.ptrDestination = loadedFile;
-		*(void **)ptrDestination = loadedFile;
+		P32_SET(data.currSlot.ptrDestination, loadedFile);
+		// The destination is a retail 4-byte pointer slot.
+		P32_SET(*(P32(void *) *)ptrDestination, loadedFile);
 		return loadedFile;
 	}
 
@@ -304,9 +306,9 @@ void LOAD_ReadFileASyncCallback(u8 result, u8 *unk)
 			MEMPACK_ReallocMem(lqs->size_UNUSED);
 		}
 
-		if (sdata->callbackCdReadSuccess != NULL)
+		if (P32_GET(void (*)(struct LoadQueueSlot *), sdata->callbackCdReadSuccess) != NULL)
 		{
-			sdata->callbackCdReadSuccess(lqs);
+			P32_GET(void (*)(struct LoadQueueSlot *), sdata->callbackCdReadSuccess)(lqs);
 		}
 	}
 
@@ -346,7 +348,7 @@ void *LOAD_ReadFile_ex(struct BigHeader *bigfile, u32 loadType, int subfileIndex
 	// default bigfile; retail callers are expected to pass the real pointer.
 	if (bigfile == NULL)
 	{
-		bigfile = sdata->ptrBigfile1;
+		bigfile = P32_GET(struct BigHeader *, sdata->ptrBigfile1);
 	}
 #endif
 
@@ -394,7 +396,7 @@ void *LOAD_ReadFile_ex(struct BigHeader *bigfile, u32 loadType, int subfileIndex
 #if defined(CTR_NATIVE)
 	// Publish the request metadata before the asynchronous native CD read is
 	// queued. Its completion callback is dispatched later on the main thread.
-	lqs->ptrDestination = ptrDst;
+	P32_SET(lqs->ptrDestination, ptrDst);
 	lqs->size_UNUSED = eSize;
 #endif
 
@@ -404,12 +406,12 @@ void *LOAD_ReadFile_ex(struct BigHeader *bigfile, u32 loadType, int subfileIndex
 
 		if (callback != NULL)
 		{
-			sdata->callbackCdReadSuccess = callback;
+			P32_SET(sdata->callbackCdReadSuccess, callback);
 			CdReadCallback(LOAD_ReadFileASyncCallback);
 		}
 		else
 		{
-			sdata->callbackCdReadSuccess = NULL;
+			P32_SET(sdata->callbackCdReadSuccess, NULL);
 			CdReadCallback(NULL);
 		}
 

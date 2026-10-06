@@ -17,12 +17,23 @@ endif()
 # than a cosmetic one. Renaming the product is not.
 set(CTR_PRODUCT_NAME "Crash Team Racing: Turbocharged")
 
-if(NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
+option(CTR_NATIVE_64BIT "Experimental: build for a 64-bit target (game pointers must live below 2 GiB)" OFF)
+
+if(CTR_NATIVE_64BIT)
+    if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+        message(FATAL_ERROR "CTR_NATIVE_64BIT is ON but the target is not 64-bit.")
+    endif()
+elseif(NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
     message(FATAL_ERROR
         "CTR Native currently requires a 32-bit target. "
         "Select Win32 for MSVC, an i686 MinGW compiler on Windows, or pass -m32 "
-        "in the initial compiler and linker flags on Linux."
+        "in the initial compiler and linker flags on Linux. "
+        "For the experimental 64-bit port, configure with -DCTR_NATIVE_64BIT=ON."
     )
+endif()
+
+if(CTR_NATIVE_64BIT)
+    add_compile_definitions(CTR_NATIVE_64BIT)
 endif()
 
 set(CTR_NATIVE_MSVC_FRONTEND OFF)
@@ -318,6 +329,9 @@ if(BUILD_TESTING AND NOT EMSCRIPTEN)
         target_link_libraries(ctr_native_physics_test PRIVATE m)
     endif()
     add_test(NAME ctr_native_physics COMMAND ctr_native_physics_test)
+    add_executable(ctr_native_image_heap_test tests/native_image_heap_test.c)
+    target_include_directories(ctr_native_image_heap_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
+    add_test(NAME ctr_native_image_heap COMMAND ctr_native_image_heap_test)
     add_executable(ctr_native_draw3d_test tests/native_draw3d_test.c platform/native_draw3d.c)
     target_sources(ctr_native_draw3d_test PRIVATE platform/native_aspect.c platform/native_projection.c)
     target_include_directories(ctr_native_draw3d_test PRIVATE ${CMAKE_SOURCE_DIR}/include)

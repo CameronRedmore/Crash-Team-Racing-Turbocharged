@@ -4,7 +4,9 @@ static void OVR233_ResetGarage(void);
 static void OVR233_ResetCreditsBSS(void);
 
 CTR_STATIC_ASSERT(sizeof(struct OverlayRDATA_233) == 0xbd90);
+#ifndef CTR_NATIVE_64BIT
 CTR_STATIC_ASSERT(sizeof(void *) == 4);
+#endif
 
 struct OverlayDATA_233 D233;
 
@@ -20,7 +22,7 @@ struct OverlayDATA_233 D233;
 	            .unk1 = 0,                                 \
 	            .state = RECTMENU_STATE_CALLBACK_CENTERED, \
 	            .rows = 0,                                 \
-	            .funcPtr = CS_Garage_MenuProc,             \
+	            .funcPtr = P32_DEFER(CS_Garage_MenuProc),  \
 	            .drawStyle = 0,                            \
 	        },                                             \
 	    .numFramesMax_GarageMove = 0x1d,                   \
@@ -58,9 +60,16 @@ struct OverlayDATA_233 D233;
 	        },                                             \
 	}
 
-static const struct OVR233_Garage s_gGarageInitialState = OVR233_GARAGE_INITIALIZER;
+static CTR_P32_MUTABLE struct OVR233_Garage s_gGarageInitialState = OVR233_GARAGE_INITIALIZER;
 
 struct OVR233_Garage gGarage = OVR233_GARAGE_INITIALIZER;
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(gGarage)
+{
+	P32_SET(s_gGarageInitialState.menuGarage.funcPtr, CS_Garage_MenuProc);
+	P32_SET(gGarage.menuGarage.funcPtr, CS_Garage_MenuProc);
+}
+#endif
 
 // NOTE(aalhendi): Retail overlay data at 0x800b9488-0x800b9498.
 #define OVR233_CREDITS_BSS_INITIALIZER           \
@@ -75,13 +84,13 @@ struct Ovr233_Credits_BSS creditsBSS = OVR233_CREDITS_BSS_INITIALIZER;
 
 void OVR233_RebuildInitMatrixTable(void)
 {
-	D233.cs_initMatrixTable[0].data = &D233.cs_initMatrixData[0];
+	P32_SET(D233.cs_initMatrixTable[0].data, &D233.cs_initMatrixData[0]);
 	D233.cs_initMatrixTable[0].count = 41;
-	D233.cs_initMatrixTable[1].data = &D233.cs_initMatrixData[41];
+	P32_SET(D233.cs_initMatrixTable[1].data, &D233.cs_initMatrixData[41]);
 	D233.cs_initMatrixTable[1].count = 45;
-	D233.cs_initMatrixTable[2].data = &D233.cs_initMatrixData[86];
+	P32_SET(D233.cs_initMatrixTable[2].data, &D233.cs_initMatrixData[86]);
 	D233.cs_initMatrixTable[2].count = 49;
-	D233.cs_initMatrixTable[3].data = &D233.cs_initMatrixData[135];
+	P32_SET(D233.cs_initMatrixTable[3].data, &D233.cs_initMatrixData[135]);
 	D233.cs_initMatrixTable[3].count = 55;
 }
 
@@ -101,8 +110,8 @@ static void OVR233_ResetD233(void)
 	D233.audioVolumeBackupPad = R233.audioVolumeBackupPad;
 	D233.podiumPrizeDropReady = R233.podiumPrizeDropReady;
 	D233.cutsceneState = R233.cutsceneState;
-	D233.ptrModelBossHead = R233.ptrModelBossHead;
-	D233.ptrModelBossBody = R233.ptrModelBossBody;
+	P32_SET(D233.ptrModelBossHead, P32_GET(struct Model *const, R233.ptrModelBossHead));
+	P32_SET(D233.ptrModelBossBody, P32_GET(struct Model *const, R233.ptrModelBossBody));
 	memcpy(D233.cs_initMatrixData, R233.cs_initMatrixData, sizeof(D233.cs_initMatrixData));
 	OVR233_RebuildInitMatrixTable();
 }

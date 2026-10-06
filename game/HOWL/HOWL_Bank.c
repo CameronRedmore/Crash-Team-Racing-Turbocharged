@@ -21,19 +21,19 @@ int Bank_Alloc(int bankID, struct Bank *ptrBank)
 	// is last bank needed for level?
 	sdata->bankFlags = (ptrBank->flags & 1) != 0;
 
-	sdata->bankSectorOffset = sdata->howl_bankOffsets[bankID & 0xffff];
+	sdata->bankSectorOffset = P32_GET(u16 *, sdata->howl_bankOffsets)[bankID & 0xffff];
 
 	// ghidra makes this look like a pointer to stack memory,
 	// game shows it's a pointer to ram bank[8], what's happening?
-	sdata->ptrLastBank = ptrBank;
+	P32_SET(sdata->ptrLastBank, ptrBank);
 
 	// temporary for loading banks to RAM,
 	// sending data to SPU, then erasing RAM
 	MEMPACK_PushState();
 
-	sdata->ptrSampleBlock2 = MEMPACK_AllocMem(0x800 /*, "SampleBlock"*/);
+	P32_SET(sdata->ptrSampleBlock2, MEMPACK_AllocMem(0x800 /*, "SampleBlock"*/));
 
-	if (sdata->ptrSampleBlock2 == 0)
+	if (P32_GET(struct SampleBlockHeader *, sdata->ptrSampleBlock2) == 0)
 	{
 		// no data loaded, PopState
 		MEMPACK_PopState();
@@ -44,7 +44,7 @@ int Bank_Alloc(int bankID, struct Bank *ptrBank)
 	// to parse banks and ship to SPU
 	sdata->bankLoadStage = 0;
 
-	sdata->ptrSampleBlock1 = sdata->ptrSampleBlock2;
+	P32_SET(sdata->ptrSampleBlock1, P32_GET(struct SampleBlockHeader *, sdata->ptrSampleBlock2));
 	return 1;
 }
 
@@ -65,7 +65,7 @@ int Bank_AssignSpuAddrs()
 	if (sdata->bankLoadStage == 0)
 	{
 		ret = LOAD_HowlSectorChainStart(&sdata->KartHWL_CdFile,         // CdLoc of HOWL
-		                                (void *)sdata->ptrSampleBlock2, // destination in RAM for banks
+		                                (void *)P32_GET(struct SampleBlockHeader *, sdata->ptrSampleBlock2), // destination in RAM for banks
 		                                sdata->bankSectorOffset,        // bank offset on disc, from CdLoc
 		                                1                               // one sector
 		);
@@ -89,10 +89,10 @@ int Bank_AssignSpuAddrs()
 
 		sdata->audioAllocSize = 0;
 
-		for (i = 0; i < sdata->ptrSampleBlock1->numSamples; i++)
+		for (i = 0; i < P32_GET(struct SampleBlockHeader *, sdata->ptrSampleBlock1)->numSamples; i++)
 		{
-			s16 *spuIndexArr = SBHEADER_GETARR(sdata->ptrSampleBlock1);
-			sdata->audioAllocSize += sdata->howl_spuAddrs[spuIndexArr[i]].spuSize;
+			s16 *spuIndexArr = SBHEADER_GETARR(P32_GET(struct SampleBlockHeader *, sdata->ptrSampleBlock1));
+			sdata->audioAllocSize += P32_GET(struct SpuAddrEntry *, sdata->howl_spuAddrs)[spuIndexArr[i]].spuSize;
 		}
 
 		// convert bit-shifted count to
@@ -102,14 +102,14 @@ int Bank_AssignSpuAddrs()
 		// not last bank needed for level
 		if (sdata->bankFlags == 0)
 		{
-			sdata->ptrLastBank->max = sdata->audioAllocSize >> 3;
+			P32_GET(struct Bank *, sdata->ptrLastBank)->max = sdata->audioAllocSize >> 3;
 		}
 
 		// last bank needed for level
 		else
 		{
 			// Naughty Dog bug? No bitshift?
-			if (sdata->ptrLastBank->max < sdata->audioAllocSize)
+			if (P32_GET(struct Bank *, sdata->ptrLastBank)->max < sdata->audioAllocSize)
 			{
 				// Stage 4: Complete
 				sdata->bankLoadStage = 4;
@@ -124,7 +124,7 @@ int Bank_AssignSpuAddrs()
 		MEMPACK_ReallocMem(((sdata->audioAllocSize + 0x7ff) & 0xfffff800) + 0x800);
 
 		ret = LOAD_HowlSectorChainStart(&sdata->KartHWL_CdFile,                        // CdLoc of HOWL
-		                                (void *)((int)sdata->ptrSampleBlock2 + 0x800), // destination
+		                                (void *)(P32_GET(char *, sdata->ptrSampleBlock2) + 0x800), // destination
 		                                sdata->bankSectorOffset + 1,                   // offset of howl
 		                                sdata->numAudioSectors                         // number of sectors
 		);
@@ -137,14 +137,14 @@ int Bank_AssignSpuAddrs()
 		// not last bank needed?
 		if (sdata->bankFlags == 0)
 		{
-			sdata->ptrLastBank->min = sdata->audioAllocPtr;
+			P32_GET(struct Bank *, sdata->ptrLastBank)->min = sdata->audioAllocPtr;
 			audioAllocPtr = sdata->audioAllocPtr;
 		}
 
 		// last bank needed
 		else
 		{
-			audioAllocPtr = sdata->ptrLastBank->min;
+			audioAllocPtr = P32_GET(struct Bank *, sdata->ptrLastBank)->min;
 		}
 
 		// === Assign SpuEntry for all "new" samples ===
@@ -156,10 +156,10 @@ int Bank_AssignSpuAddrs()
 		printf("%08x\n", sdata->audioAllocPtr);
 #endif
 
-		for (i = 0; i < sdata->ptrSampleBlock1->numSamples; i++)
+		for (i = 0; i < P32_GET(struct SampleBlockHeader *, sdata->ptrSampleBlock1)->numSamples; i++)
 		{
-			s16 *spuIndexArr = SBHEADER_GETARR(sdata->ptrSampleBlock1);
-			sae = &sdata->howl_spuAddrs[spuIndexArr[i]];
+			s16 *spuIndexArr = SBHEADER_GETARR(P32_GET(struct SampleBlockHeader *, sdata->ptrSampleBlock1));
+			sae = &P32_GET(struct SpuAddrEntry *, sdata->howl_spuAddrs)[spuIndexArr[i]];
 
 			if (sae->spuAddr == 0)
 			{
@@ -185,7 +185,7 @@ int Bank_AssignSpuAddrs()
 			return 0;
 		}
 
-		int spuAddrStart = (u32)sdata->ptrLastBank->min * 8;
+		int spuAddrStart = (u32)P32_GET(struct Bank *, sdata->ptrLastBank)->min * 8;
 
 		// 0x7e000 = 512kb SPU memory
 		if (spuAddrStart + sdata->audioAllocSize < 0x7e000)
@@ -193,7 +193,7 @@ int Bank_AssignSpuAddrs()
 			// start transfer
 			SpuSetTransferStartAddr(spuAddrStart);
 
-			SpuWrite((u8 *)((int)sdata->ptrSampleBlock2 + 0x800), (size_t)sdata->audioAllocSize);
+			SpuWrite((u8 *)(P32_GET(char *, sdata->ptrSampleBlock2) + 0x800), (size_t)sdata->audioAllocSize);
 		}
 
 		sdata->bankLoadStage++;
@@ -214,7 +214,7 @@ int Bank_AssignSpuAddrs()
 			sdata->audioAllocPtr += sdata->audioAllocSize >> 3;
 		}
 
-		sdata->ptrLastBank->flags |= 2;
+		P32_GET(struct Bank *, sdata->ptrLastBank)->flags |= 2;
 
 		// SPU Transfer done, remove bank from RAM
 		MEMPACK_PopState();
@@ -256,9 +256,9 @@ void Bank_ClearInRange(u16 min, u16 max)
 	int i;
 	u16 end = min + max;
 	struct SpuAddrEntry *sae;
-	sae = &sdata->howl_spuAddrs[0];
+	sae = &P32_GET(struct SpuAddrEntry *, sdata->howl_spuAddrs)[0];
 
-	for (i = 0; i < sdata->ptrHowlHeader->numSpuAddrs; i++)
+	for (i = 0; i < P32_GET(struct HowlHeader *, sdata->ptrHowlHeader)->numSpuAddrs; i++)
 	{
 		if (sae[i].spuAddr < min)
 		{

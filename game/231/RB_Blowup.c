@@ -19,16 +19,16 @@ static void RB_Blowup_CopyDrawState(struct Instance *dstInst, struct Instance *s
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b1714-0x800b17f0
 void RB_Blowup_ProcessBucket(struct Thread *thread)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
-	for (; thread != NULL; thread = thread->siblingThread)
+	for (; thread != NULL; thread = P32_GET(struct Thread *, thread->siblingThread))
 	{
-		u32 *blowup = thread->object;
+		u32 *blowup = P32_GET(void *, thread->object);
 
 		for (int i = 0; i < gGT->numPlyrCurrGame; i++)
 		{
-			struct Instance *shockwaveInst = (struct Instance *)(uintptr_t)blowup[0];
-			struct Instance *explosionInst = (struct Instance *)(uintptr_t)blowup[1];
+			struct Instance *shockwaveInst = P32_DEC(struct Instance *, blowup[0]);
+			struct Instance *explosionInst = P32_DEC(struct Instance *, blowup[1]);
 
 			if (shockwaveInst == NULL || explosionInst == NULL)
 			{
@@ -45,7 +45,7 @@ static void RB_Blowup_UpdateSlot(int *slot)
 	struct Instance *inst;
 	int nextFrame;
 
-	inst = (struct Instance *)*slot;
+	inst = P32_DEC(struct Instance *, *slot);
 	if (inst == NULL)
 	{
 		return;
@@ -66,7 +66,7 @@ static void RB_Blowup_UpdateSlot(int *slot)
 void RB_Blowup_ThTick(struct Thread *t)
 {
 	int *blowup;
-	blowup = t->object;
+	blowup = P32_GET(void *, t->object);
 
 	RB_Blowup_UpdateSlot(&blowup[1]);
 	RB_Blowup_UpdateSlot(&blowup[0]);
@@ -86,7 +86,7 @@ void RB_Blowup_Init(struct Instance *weaponInst)
 	struct Instance *explosionInst;
 	struct Instance *shockwaveInst;
 	struct ModelHeader *headers;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	u32 color;
 	int *blowup;
 
@@ -95,11 +95,11 @@ void RB_Blowup_Init(struct Instance *weaponInst)
 
 	explosionInst->flags |= (VISIBLE_DURING_GAMEPLAY | DRAW_BILLBOARD);
 
-	explosionTh = explosionInst->thread;
-	blowup = explosionTh->object;
+	explosionTh = P32_GET(struct Thread *, explosionInst->thread);
+	blowup = P32_GET(void *, explosionTh->object);
 
 	// set explosion instance
-	blowup[1] = (s32)(uintptr_t)explosionInst;
+	blowup[1] = (s32)P32_ENC(explosionInst);
 
 	// copy position and rotation from weapon to explosion
 	CTR_MatrixCopyRot(&explosionInst->matrix, &weaponInst->matrix);
@@ -114,7 +114,7 @@ void RB_Blowup_Init(struct Instance *weaponInst)
 	int modelID = STATIC_SHOCKWAVE_GREEN;
 
 	// if instance -> model -> modelID == tnt
-	if (weaponInst->model->id == STATIC_CRATE_TNT)
+	if (P32_GET(struct Model *, weaponInst->model)->id == STATIC_CRATE_TNT)
 	{
 		// red
 		color = 0xad10000;
@@ -131,10 +131,10 @@ void RB_Blowup_Init(struct Instance *weaponInst)
 
 	// ======== Next Instance ==========
 
-	shockwaveInst = INSTANCE_Birth3D(gGT->modelPtr[modelID], 0, explosionTh);
+	shockwaveInst = INSTANCE_Birth3D(P32_GET(struct Model *, gGT->modelPtr[modelID]), 0, explosionTh);
 
 	// set shockwave instance
-	blowup[0] = (s32)(uintptr_t)shockwaveInst;
+	blowup[0] = (s32)P32_ENC(shockwaveInst);
 
 	shockwaveInst->flags |= PIXEL_LOD;
 
@@ -143,7 +143,7 @@ void RB_Blowup_Init(struct Instance *weaponInst)
 	shockwaveInst->matrix.t[1] = weaponInst->matrix.t[1];
 	shockwaveInst->matrix.t[2] = weaponInst->matrix.t[2];
 
-	headers = shockwaveInst->model->headers;
+	headers = P32_GET(struct ModelHeader *, P32_GET(struct Model *, shockwaveInst->model)->headers);
 
 	// set flag to always point to camera
 	headers[0].flags |= 2;
@@ -173,18 +173,18 @@ void RB_Blowup_Init(struct Instance *weaponInst)
 		sps->Input1.hitRadiusSquared = 0x19000;
 	}
 
-	sps->Input1.modelID = weaponInst->model->id;
+	sps->Input1.modelID = P32_GET(struct Model *, weaponInst->model)->id;
 
-	sps->Union.ThBuckColl.thread = weaponInst->thread;
-	sps->Union.ThBuckColl.funcCallback = RB_Burst_CollThBucket;
+	P32_SET(sps->Union.ThBuckColl.thread, P32_GET(struct Thread *, weaponInst->thread));
+	P32_SET(sps->Union.ThBuckColl.funcCallback, RB_Burst_CollThBucket);
 
 	PROC_StartSearch_Self(sps);
 
-	PROC_CollideHitboxWithBucket(gGT->threadBuckets[ROBOT].thread, sps, 0);
-	PROC_CollideHitboxWithBucket(gGT->threadBuckets[MINE].thread, sps, 0);
+	PROC_CollideHitboxWithBucket(P32_GET(struct Thread *, gGT->threadBuckets[ROBOT].thread), sps, 0);
+	PROC_CollideHitboxWithBucket(P32_GET(struct Thread *, gGT->threadBuckets[MINE].thread), sps, 0);
 
 	// Nitro explosion has smaller radius than TNT explosion
-	if (weaponInst->model->id != STATIC_CRATE_TNT)
+	if (P32_GET(struct Model *, weaponInst->model)->id != STATIC_CRATE_TNT)
 	{
 		// hitRadius and hitRadiusSquared
 		sps->Input1.hitRadius = 0x80;
@@ -192,8 +192,8 @@ void RB_Blowup_Init(struct Instance *weaponInst)
 	}
 
 	// check collision with player threads
-	PROC_CollideHitboxWithBucket(gGT->threadBuckets[PLAYER].thread, sps, 0);
+	PROC_CollideHitboxWithBucket(P32_GET(struct Thread *, gGT->threadBuckets[PLAYER].thread), sps, 0);
 
-	sps->Union.ThBuckColl.funcCallback = RB_Burst_CollLevInst;
+	P32_SET(sps->Union.ThBuckColl.funcCallback, RB_Burst_CollLevInst);
 	return;
 }

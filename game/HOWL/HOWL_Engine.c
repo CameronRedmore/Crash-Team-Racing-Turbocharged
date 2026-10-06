@@ -23,14 +23,14 @@ b32 EngineAudio_InitOnce(u32 soundID, u32 flags)
 
 	// check out of bounds
 	soundID = soundID & 0xffff;
-	if ((int)soundID >= sdata->ptrHowlHeader->numEngineFX)
+	if ((int)soundID >= P32_GET(struct HowlHeader *, sdata->ptrHowlHeader)->numEngineFX)
 	{
 		return 0;
 	}
 
 	// check sound is loaded
-	ptrEngineFX = &sdata->howl_metaEngineFX[soundID];
-	if (sdata->howl_spuAddrs[ptrEngineFX->spuIndex].spuAddr == 0)
+	ptrEngineFX = &P32_GET(struct EngineFX *, sdata->howl_metaEngineFX)[soundID];
+	if (P32_GET(struct SpuAddrEntry *, sdata->howl_spuAddrs)[ptrEngineFX->spuIndex].spuAddr == 0)
 	{
 		return 0;
 	}
@@ -82,14 +82,14 @@ s16 EngineAudio_Recalculate(u32 soundID, u32 sfx)
 	}
 
 	soundID = soundID & 0xffff;
-	if (sdata->ptrHowlHeader->numEngineFX <= (int)soundID)
+	if (P32_GET(struct HowlHeader *, sdata->ptrHowlHeader)->numEngineFX <= (int)soundID)
 	{
 		return 0;
 	}
 
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
-	ptrEngineFX = &sdata->howl_metaEngineFX[soundID];
+	ptrEngineFX = &P32_GET(struct EngineFX *, sdata->howl_metaEngineFX)[soundID];
 
 	if (gGT->numPlyrCurrGame > 1)
 	{
@@ -501,7 +501,7 @@ void EngineSound_AI(struct Driver *ai, struct Driver *cameraDriver, int slotInde
 
 static int EngineSound_NearestAIs_GetDistance(struct Driver *ai, int pushBufferIndex)
 {
-	struct PushBuffer *pb = &sdata->gGT->pushBuffer[pushBufferIndex];
+	struct PushBuffer *pb = &P32_GET(struct GameTracker *, sdata->gGT)->pushBuffer[pushBufferIndex];
 	int dx = CTR_MipsSubLo(pb->pos.x, CTR_MipsSra(ai->posCurr.x, 8));
 	int dy = CTR_MipsSubLo(pb->pos.y, CTR_MipsSra(ai->posCurr.y, 8));
 	int dz = CTR_MipsSubLo(pb->pos.z, CTR_MipsSra(ai->posCurr.z, 8));
@@ -553,7 +553,7 @@ static int EngineSound_NearestAIs_CalculateLR(s32 *dir)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8002ff28-0x80030208
 void EngineSound_NearestAIs(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	struct Driver *closestDrivers[2];
 	int closestDistances[2];
 	s16 closestPlayers[2];
@@ -568,9 +568,9 @@ void EngineSound_NearestAIs(void)
 	closestDistances[0] = 0x7fffffff;
 	closestDistances[1] = 0x7fffffff;
 
-	for (struct Thread *thread = gGT->threadBuckets[ROBOT].thread; thread != NULL; thread = thread->siblingThread)
+	for (struct Thread *thread = P32_GET(struct Thread *, gGT->threadBuckets[ROBOT].thread); thread != NULL; thread = P32_GET(struct Thread *, thread->siblingThread))
 	{
-		struct Driver *ai = thread->object;
+		struct Driver *ai = P32_GET(void *, thread->object);
 
 		for (int i = 0; i < gGT->numPlyrCurrGame; i++)
 		{
@@ -585,7 +585,7 @@ void EngineSound_NearestAIs(void)
 		{
 			s32 dir[3];
 			s16 playerIndex = closestPlayers[i];
-			struct Driver *cameraDriver = gGT->cameraDC[playerIndex].driverToFollow;
+			struct Driver *cameraDriver = P32_GET(struct Driver *, gGT->cameraDC[playerIndex].driverToFollow);
 			u32 lr;
 
 			GTE_AudioLR_Driver(&gGT->pushBuffer[playerIndex].matrix_Camera, ai, dir);
@@ -608,7 +608,7 @@ void EngineAudio_Stop(u32 soundID)
 	}
 
 	soundID = soundID & 0xffff;
-	if (sdata->ptrHowlHeader->numEngineFX <= (int)soundID)
+	if (P32_GET(struct HowlHeader *, sdata->ptrHowlHeader)->numEngineFX <= (int)soundID)
 	{
 		return;
 	}

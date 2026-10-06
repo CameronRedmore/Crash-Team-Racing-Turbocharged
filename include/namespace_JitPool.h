@@ -27,7 +27,7 @@ struct JitPool
 	s32 poolSize;
 
 	// 0x24
-	void *ptrPoolData;
+	P32(void *) ptrPoolData;
 };
 
 CTR_STATIC_ASSERT(OFFSETOF(struct JitPool, free) == 0x0);

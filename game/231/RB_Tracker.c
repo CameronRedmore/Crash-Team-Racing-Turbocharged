@@ -14,17 +14,17 @@ struct Thread *RB_GetThread_ClosestTracker(struct Driver *d)
 	smallestDist = 0x3fffffff;
 
 	// loop through all threads
-	for (currThread = sdata->gGT->threadBuckets[TRACKING].thread; currThread != NULL; currThread = currThread->siblingThread)
+	for (currThread = P32_GET(struct Thread *, P32_GET(struct GameTracker *, sdata->gGT)->threadBuckets[TRACKING].thread); currThread != NULL; currThread = P32_GET(struct Thread *, currThread->siblingThread))
 	{
-		struct TrackerWeapon *tw = currThread->object;
+		struct TrackerWeapon *tw = P32_GET(void *, currThread->object);
 
-		if (tw->driverTarget != d)
+		if (P32_GET(struct Driver *, tw->driverTarget) != d)
 		{
 			continue;
 		}
 
-		struct Instance *dInst = d->instSelf;
-		struct Instance *currInst = currThread->inst;
+		struct Instance *dInst = P32_GET(struct Instance *, d->instSelf);
+		struct Instance *currInst = P32_GET(struct Instance *, currThread->inst);
 
 		if (
 		    // get distance between posX and posZ of

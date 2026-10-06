@@ -12,7 +12,7 @@ struct Instance *LinkedCollide_Radius(struct Instance *objInst, struct Thread *_
 	// if thread valid, loop through every thread in the linked list until there are no more threads
 	while (thBucket != 0)
 	{
-		thInst = thBucket->inst;
+		thInst = P32_GET(struct Instance *, thBucket->inst);
 
 		// get difference in X, Y, and Z, from both instances
 		diff_x = thInst->matrix.t[0] - objInst->matrix.t[0];
@@ -22,7 +22,7 @@ struct Instance *LinkedCollide_Radius(struct Instance *objInst, struct Thread *_
 		diff_dist = diff_x * diff_x + diff_z * diff_z;
 
 		// Minecart
-		if (objInst->model->id == DYNAMIC_MINE_CART)
+		if (P32_GET(struct Model *, objInst->model)->id == DYNAMIC_MINE_CART)
 		{
 			// Cylinder collision
 			if ((diff_dist < hitRadius) && (-0x20 < diff_y))
@@ -38,7 +38,7 @@ struct Instance *LinkedCollide_Radius(struct Instance *objInst, struct Thread *_
 		}
 
 		// next thread in the list (thread bucket)
-		thBucket = thBucket->siblingThread;
+		thBucket = P32_GET(struct Thread *, thBucket->siblingThread);
 	}
 	// no collision
 	return 0;
@@ -48,7 +48,7 @@ struct Instance *LinkedCollide_Radius(struct Instance *objInst, struct Thread *_
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800315ac-0x80031608.
 struct Instance *LinkedCollide_Hitbox_Desc(struct HitboxDesc *objBoxDesc)
 {
-	return LinkedCollide_Hitbox(objBoxDesc->inst, objBoxDesc->thread, objBoxDesc->bucket, objBoxDesc->bbox);
+	return LinkedCollide_Hitbox(P32_GET(struct Instance *, objBoxDesc->inst), P32_GET(struct Thread *, objBoxDesc->thread), P32_GET(struct Thread *, objBoxDesc->bucket), objBoxDesc->bbox);
 }
 
 
@@ -65,9 +65,9 @@ struct Instance *LinkedCollide_Hitbox(struct Instance *objInst, struct Thread *_
 	(void)_objTh;
 
 	// Loop over thBucket Linked List
-	for (; thBucket != 0; thBucket = thBucket->siblingThread)
+	for (; thBucket != 0; thBucket = P32_GET(struct Thread *, thBucket->siblingThread))
 	{
-		thInst = thBucket->inst;
+		thInst = P32_GET(struct Instance *, thBucket->inst);
 
 		thInstPos.vx = thInst->matrix.t[0];
 		thInstPos.vy = thInst->matrix.t[1];

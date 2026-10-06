@@ -8,11 +8,11 @@ void RB_GenericMine_LInB(struct Instance *inst)
 	struct MineWeapon *mw;
 	struct Instance *parentInst;
 
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	RB_Default_LInB(inst);
 
-	if (inst->thread != NULL)
+	if (P32_GET(struct Thread *, inst->thread) != NULL)
 	{
 		return;
 	}
@@ -37,20 +37,20 @@ void RB_GenericMine_LInB(struct Instance *inst)
 	{
 		return;
 	}
-	inst->thread = t;
-	t->inst = inst;
+	P32_SET(inst->thread, t);
+	P32_SET(t->inst, inst);
 
 	// Retail parents crystal-challenge level mines to driver 0.
-	parentInst = gGT->drivers[0]->instSelf;
+	parentInst = P32_GET(struct Instance *, P32_GET(struct Driver *, gGT->drivers[0])->instSelf);
 
-	t->funcThCollide = (void *)RB_Hazard_ThCollide_Generic;
-	t->parentThread = parentInst->thread;
-	t->modelIndex = inst->model->id;
+	P32_SET(t->funcThCollide, (void *)RB_Hazard_ThCollide_Generic);
+	P32_SET(t->parentThread, P32_GET(struct Thread *, parentInst->thread));
+	t->modelIndex = P32_GET(struct Model *, inst->model)->id;
 
-	mw = t->object;
-	mw->instParent = parentInst;
-	mw->driverTarget = NULL;
-	mw->crateInst = NULL;
+	mw = P32_GET(void *, t->object);
+	P32_SET(mw->instParent, parentInst);
+	P32_SET(mw->driverTarget, NULL);
+	P32_SET(mw->crateInst, NULL);
 	mw->velocity.x = 0;
 	mw->velocity.y = 0;
 	mw->velocity.z = 0;
@@ -80,10 +80,10 @@ void RB_GenericMine_ThTick(struct Thread *t)
 	int param;
 	b32 boolPotion;
 
-	gGT = sdata->gGT;
-	inst = t->inst;
-	mw = inst->thread->object;
-	model = inst->model->id;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	inst = P32_GET(struct Instance *, t->inst);
+	mw = P32_GET(void *, P32_GET(struct Thread *, inst->thread)->object);
+	model = P32_GET(struct Model *, inst->model)->id;
 
 	boolPotion = (u32)(model - STATIC_BEAKER_RED) < 2;
 
@@ -159,9 +159,9 @@ void RB_GenericMine_ThTick(struct Thread *t)
 	if (inst->scale.x < 0x1000)
 	{
 		// make scale larger each frame
-		inst->scale.x += CTR_FRAME_STEP(0x200, sdata->gGT->timer);
-		inst->scale.y += CTR_FRAME_STEP(0x200, sdata->gGT->timer);
-		inst->scale.z += CTR_FRAME_STEP(0x200, sdata->gGT->timer);
+		inst->scale.x += CTR_FRAME_STEP(0x200, P32_GET(struct GameTracker *, sdata->gGT)->timer);
+		inst->scale.y += CTR_FRAME_STEP(0x200, P32_GET(struct GameTracker *, sdata->gGT)->timer);
+		inst->scale.z += CTR_FRAME_STEP(0x200, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 	}
 	else
 	{
@@ -178,7 +178,7 @@ void RB_GenericMine_ThTick(struct Thread *t)
 		param = 0x1900;
 	}
 
-	coll = RB_Hazard_CollideWithDrivers(inst, mw->parentSafetyFrames, param, mw->instParent);
+	coll = RB_Hazard_CollideWithDrivers(inst, mw->parentSafetyFrames, param, P32_GET(struct Instance *, mw->instParent));
 
 	// if no collision
 	if (coll == 0)
@@ -188,11 +188,11 @@ void RB_GenericMine_ThTick(struct Thread *t)
 
 	// get driver who hit tnt (or nitro)
 	// from the object attached to thread
-	d = coll->thread->object;
+	d = P32_GET(void *, P32_GET(struct Thread *, coll->thread)->object);
 
-	if (((mw->crateInst != 0) && (mw->crateInst->thread != 0)) && (mw->crateInst->thread->object != 0))
+	if (((P32_GET(struct Instance *, mw->crateInst) != 0) && (P32_GET(struct Thread *, P32_GET(struct Instance *, mw->crateInst)->thread) != 0)) && (P32_GET(void *, P32_GET(struct Thread *, P32_GET(struct Instance *, mw->crateInst)->thread)->object) != 0))
 	{
-		crate = mw->crateInst->thread->object;
+		crate = P32_GET(void *, P32_GET(struct Thread *, P32_GET(struct Instance *, mw->crateInst)->thread)->object);
 		crate->boolPauseCooldown = 0;
 	}
 
@@ -210,7 +210,7 @@ void RB_GenericMine_ThTick(struct Thread *t)
 		}
 
 		// spin driver
-		coll = (struct Instance *)RB_Hazard_HurtDriver(d, 1, mw->instParent->thread->object, param);
+		coll = (struct Instance *)(intptr_t)RB_Hazard_HurtDriver(d, 1, P32_GET(void *, P32_GET(struct Thread *, P32_GET(struct Instance *, mw->instParent)->thread)->object), param);
 
 		// if collision, and if this was a red potion
 		if ((coll != 0) && (mw->flags & MINE_WEAPON_FLAG_RED_BEAKER) != 0)
@@ -256,7 +256,7 @@ void RB_GenericMine_ThTick(struct Thread *t)
 	else
 	{
 		// if driver->instTntRecv is valid
-		if (d->instTntRecv != NULL)
+		if (P32_GET(struct Instance *, d->instTntRecv) != NULL)
 		{
 			// blasted driver
 			RB_Hazard_HurtDriver(d, 2, 0, 2);
@@ -265,17 +265,17 @@ void RB_GenericMine_ThTick(struct Thread *t)
 			d->damageColorTimer = 0x1e;
 
 			// set scale (x, y, z) to zero
-			d->instTntRecv->scale.x = 0;
-			d->instTntRecv->scale.y = 0;
-			d->instTntRecv->scale.z = 0;
+			P32_GET(struct Instance *, d->instTntRecv)->scale.x = 0;
+			P32_GET(struct Instance *, d->instTntRecv)->scale.y = 0;
+			P32_GET(struct Instance *, d->instTntRecv)->scale.z = 0;
 
-			d->instTntRecv->flags |= HIDE_MODEL;
+			P32_GET(struct Instance *, d->instTntRecv)->flags |= HIDE_MODEL;
 
 			// this thread is now dead
-			d->instTntRecv->thread->flags |= THREAD_FLAG_DEAD;
+			P32_GET(struct Thread *, P32_GET(struct Instance *, d->instTntRecv)->thread)->flags |= THREAD_FLAG_DEAD;
 
 			// erase instTntRecv
-			d->instTntRecv = 0;
+			P32_SET(d->instTntRecv, 0);
 
 			goto LAB_800ad174;
 		}
@@ -292,7 +292,7 @@ void RB_GenericMine_ThTick(struct Thread *t)
 		// if model is Nitro
 		if (model == PU_EXPLOSIVE_CRATE)
 		{
-			RB_Hazard_HurtDriver(d, 2, mw->instParent->thread->object, 2);
+			RB_Hazard_HurtDriver(d, 2, P32_GET(void *, P32_GET(struct Thread *, P32_GET(struct Instance *, mw->instParent)->thread)->object), 2);
 
 			// icon damage timer, draw icon as green
 			d->damageColorTimer = -0x1e;
@@ -304,7 +304,7 @@ void RB_GenericMine_ThTick(struct Thread *t)
 		if (model == STATIC_CRATE_TNT)
 		{
 			// damageType 0 keeps driving unless the shield/mask path absorbs TNT.
-			crate = (struct Crate *)RB_Hazard_HurtDriver(d, 0, mw->instParent->thread->object, 2);
+			crate = (struct Crate *)(intptr_t)RB_Hazard_HurtDriver(d, 0, P32_GET(void *, P32_GET(struct Thread *, P32_GET(struct Instance *, mw->instParent)->thread)->object), 2);
 
 			if (crate == 0)
 			{
@@ -314,16 +314,16 @@ void RB_GenericMine_ThTick(struct Thread *t)
 			// if Instance has no InstDef,
 			// if this TNT is not part of the level,
 			// use existing thread
-			if (inst->instDef == 0)
+			if (P32_GET(struct InstDef *, inst->instDef) == 0)
 			{
 				// icon damage timer, draw icon as red
 				d->damageColorTimer = 0x1e;
 
 				// give driver to tnt object
-				mw->driverTarget = d;
+				P32_SET(mw->driverTarget, d);
 
 				// driver -> instTntRecv
-				d->instTntRecv = inst;
+				P32_SET(d->instTntRecv, inst);
 
 				RB_MinePool_Remove(mw);
 
@@ -353,29 +353,29 @@ void RB_GenericMine_ThTick(struct Thread *t)
 
 				instCrate->matrix = inst->matrix;
 
-				instCrate->thread->funcThDestroy = PROC_DestroyInstance;
+				P32_SET(P32_GET(struct Thread *, instCrate->thread)->funcThDestroy, PROC_DestroyInstance);
 
-				instCrate->thread->funcThCollide = (void *)RB_Hazard_ThCollide_Generic;
+				P32_SET(P32_GET(struct Thread *, instCrate->thread)->funcThCollide, (void *)RB_Hazard_ThCollide_Generic);
 
 				// Get object from thread
-				tnt = instCrate->thread->object;
+				tnt = P32_GET(void *, P32_GET(struct Thread *, instCrate->thread)->object);
 
-				tnt->instParent = d->instSelf;
+				P32_SET(tnt->instParent, P32_GET(struct Instance *, d->instSelf));
 
 				tnt->parentSafetyFrames = (s16)FPS_DOUBLE(10);
 				tnt->boolDestroyed = 0;
 				tnt->tntSpinY = 0;
-				tnt->crateInst = 0;
+				P32_SET(tnt->crateInst, 0);
 				tnt->flags = 0;
 
 				// give driver to tnt object
-				tnt->driverTarget = d;
+				P32_SET(tnt->driverTarget, d);
 
 				// stopFallAtY (where it explodes)
 				tnt->stopFallAtY = inst->matrix.t[1];
 
 				// driver -> instTntRecv
-				d->instTntRecv = instCrate;
+				P32_SET(d->instTntRecv, instCrate);
 
 				// TNT bounce sound
 				PlaySound3D(0x50, instCrate);
@@ -388,7 +388,7 @@ void RB_GenericMine_ThTick(struct Thread *t)
 				tnt->deltaPos.x = 0;
 				tnt->deltaPos.y = 0;
 				tnt->deltaPos.z = 0;
-				instCrate->thread->funcThTick = RB_TNT_ThTick_ThrowOnHead;
+				P32_SET(P32_GET(struct Thread *, instCrate->thread)->funcThTick, RB_TNT_ThTick_ThrowOnHead);
 
 				RB_MinePool_Remove(mw);
 
@@ -428,7 +428,7 @@ LAB_800ad17c:
 	// === If destroyed from MinePool overflow ===
 
 	// instance -> model -> modelID
-	model = inst->model->id;
+	model = P32_GET(struct Model *, inst->model)->id;
 
 	if (model == PU_EXPLOSIVE_CRATE)
 	{
@@ -464,7 +464,7 @@ void RB_GenericMine_ThDestroy(struct Thread *t, struct Instance *inst, struct Mi
 	u32 model;
 	u16 param;
 
-	model = inst->model->id;
+	model = P32_GET(struct Model *, inst->model)->id;
 
 	if (model == PU_EXPLOSIVE_CRATE)
 	{

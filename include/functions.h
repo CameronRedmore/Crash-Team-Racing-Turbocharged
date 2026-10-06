@@ -47,7 +47,7 @@ struct MetaDataMODEL *COLL_LevModelMeta(u32 id);
 void COLL_SearchBSP_CallbackQUADBLK(const SVec3 *top, const SVec3 *bottom, struct ScratchpadStruct *sps, s32 hitRadius);
 void COLL_SearchBSP_CallbackPARAM(struct BSP *root, struct BoundingBox *bbox, CollBspLeafCallback callback, struct ScratchpadStruct *sps);
 
-void CTR_CycleTex_AllModels(u32 numModels, struct Model **pModelArray, int timer);
+void CTR_CycleTex_AllModels(u32 numModels, P32(struct Model *) *pModelArray, int timer);
 void CTR_CycleTex_LEV(struct AnimTex *animtex, int timer);
 void CTR_ErrorScreen(u8 r, u8 g, u8 b);
 void CTR_CycleTex_Model(struct AnimTex *animtex, int timer);
@@ -142,6 +142,7 @@ void GhostTape_WriteMoves(s16 raceFinished);
 extern int gNativeGhostReplayMode;
 #if defined(CTR_NATIVE)
 extern int gNativeBootSkipRequested;
+int NativeBootSkip_StartPressed(void);
 extern int gNativeBossFightMode;
 extern int gNativeBossFightBossID;
 // Runtime state derived from the settings in platform/native_options.h. These
@@ -372,7 +373,7 @@ int INSTANCE_ScaleAnimFrames(struct Instance *inst, int animIndex, int frames);
 void INSTANCE_LevInitAll(struct InstDef *levInstDef, int numInst);
 
 // JitPool
-int JitPool_Add(struct JitPool *AP);
+void *JitPool_Add(struct JitPool *AP);
 void JitPool_Clear(struct JitPool *AP);
 void JitPool_Init(struct JitPool *AP, int maxItems, int itemSize, char *name);
 void JitPool_Remove(struct JitPool *AP, struct Item *item);
@@ -449,7 +450,7 @@ void MainLoadVLC_Callback(struct LoadQueueSlot *param_1);
 void LOAD_InitCD(void);
 int LOAD_InitCDvol(void);
 void LOAD_RunPtrMap(char *origin, int *patchArr, int numPtrs); // 1st param might be `struct Level*`, 2nd param might be `char*`
-void LOAD_LangFile(int bigfilePtr, int lang);
+void LOAD_LangFile(void *bigfilePtr, int lang);
 
 void LOAD_NextQueuedFile(void);
 
@@ -693,7 +694,7 @@ void PickupBots_Update(void);
 
 struct Thread *PROC_BirthWithObject(int flags, void *funcThTick, const char *name, struct Thread *relativeTh);
 void PROC_CheckAllForDead(void);
-void PROC_CheckBloodlineForDead(struct Thread **replaceSelf, struct Thread *th);
+void PROC_CheckBloodlineForDead(P32(struct Thread *) *replaceSelf, struct Thread *th);
 void PROC_CollidePointWithBucket(struct Thread *th, struct BucketSearchParams *buf);
 void PROC_CollidePointWithSelf(struct Thread *th, struct BucketSearchParams *buf);
 void PROC_CollideHitboxWithBucket(struct Thread *collThread, struct ScratchpadStruct *sps, struct Thread *ignoredThread);
@@ -758,7 +759,7 @@ int UI_ConvertX_2(int posX, int scale);
 int UI_ConvertY_2(int posY, int scale);
 
 void UI_INSTANCE_InitAll(void);
-struct Instance *UI_INSTANCE_BirthWithThread(int modelID, int tickFunc, int hudSlot, int rotateToHud, int pushBuffer, int threadName);
+struct Instance *UI_INSTANCE_BirthWithThread(int modelID, void *tickFunc, int hudSlot, int rotateToHud, struct PushBuffer *pushBuffer, const char *threadName);
 
 void UI_DrawBattleScores(int posX, int posY, struct Driver *d);
 void UI_BattleDrawHeadArrows(struct Driver *player);
@@ -1378,7 +1379,7 @@ void GAMEPROG_NewProfile_OutsideAdv(struct GameProgress *gameProg);
 int LOAD_FindFile(char *filename, CdlFILE *cdlFile);
 int LOAD_HowlHeaderSectors(CdlFILE *cdlFileHWL, void *ptrDestination, int firstSector, int numSector);
 int CDSYS_XASeek(b32 boolCdControl, int categoryID, int xaID);
-void LibraryOfModels_Store(struct GameTracker *gGT, u32 numModels, struct Model **ptrModelArray);
+void LibraryOfModels_Store(struct GameTracker *gGT, u32 numModels, P32(struct Model *) *ptrModelArray);
 void LOAD_DramFileCallback(struct LoadQueueSlot *lqs);
 int LOAD_GetBigfileIndex(u32 levelID, int lod, int fileIndexInGroup);
 void LOAD_HubSwapPtrs(struct GameTracker *gGT);
@@ -1435,8 +1436,8 @@ void AnimateWater3P(int timer, int numWaterVertices, struct WaterVert *waterVert
                     int *visOVertList1, int *visOVertList2);
 void AnimateWater4P(int timer, int numWaterVertices, struct WaterVert *waterVert, const struct TextureLayout *waterEnvMap, int *visOVertList0,
                     int *visOVertList1, int *visOVertList2, int *visOVertList3);
-int RenderLists_Init1P2P(struct BSP *bspRoot, int *visLeafList, struct PushBuffer *pb, u32 LevRenderList, void *bspList, u8 numPlyr);
-int RenderLists_Init3P4P(struct BSP *bspRoot, int *visLeafList, struct PushBuffer *pb, u32 LevRenderList, void *bspList);
+int RenderLists_Init1P2P(struct BSP *bspRoot, int *visLeafList, struct PushBuffer *pb, void *LevRenderList, void *bspList, u8 numPlyr);
+int RenderLists_Init3P4P(struct BSP *bspRoot, int *visLeafList, struct PushBuffer *pb, void *LevRenderList, void *bspList);
 // TODO:
 // CTR_Box_DrawWirePrims change void* ot to uint32_t* ot
 

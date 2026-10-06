@@ -52,15 +52,15 @@ CTR_STATIC_ASSERT(SELECT_PROFILE_DEFAULT_GHOST_TIME == 0x8ca00);
 
 struct SelectProfileLoadSaveIcon
 {
-	struct Instance *inst;
+	P32(struct Instance *) inst;
 	SVec3 rot;
 	s16 padding;
 };
 
 struct SelectProfileLoadSaveObj
 {
-	struct Thread *thread;
-	struct SelectProfileLoadSaveIcon *icons;
+	P32(struct Thread *) thread;
+	P32(struct SelectProfileLoadSaveIcon *) icons;
 };
 
 struct SelectProfileRuntimeState

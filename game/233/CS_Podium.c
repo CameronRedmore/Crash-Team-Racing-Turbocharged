@@ -93,8 +93,8 @@ void CS_DestroyPodium_StartDriving(void)
 {
 	struct Instance *inst;
 	struct Driver *d;
-	struct GameTracker *gGT = sdata->gGT;
-	struct Thread *t = gGT->threadBuckets[OTHER].thread;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct Thread *t = P32_GET(struct Thread *, gGT->threadBuckets[OTHER].thread);
 
 	// enable HUD
 	gGT->hudFlags |= HUD_FLAG_RACE_HUD;
@@ -102,24 +102,24 @@ void CS_DestroyPodium_StartDriving(void)
 	// loop through all threads
 	while (t != NULL)
 	{
-		if (t->funcThDestroy != CS_Podium_Prize_ThDestroy)
+		if (P32_GET(ThreadFunc, t->funcThDestroy) != CS_Podium_Prize_ThDestroy)
 		{
 			t->flags |= THREAD_FLAG_DEAD;
 		}
 
-		t = t->siblingThread;
+		t = P32_GET(struct Thread *, t->siblingThread);
 	}
 
-	d = gGT->drivers[0];
+	d = P32_GET(struct Driver *, gGT->drivers[0]);
 
 	// enable collisions for thread,
 	// and make instance visible
-	inst = d->instSelf;
-	inst->thread->flags &= ~THREAD_FLAG_DISABLE_COLLISION;
+	inst = P32_GET(struct Instance *, d->instSelf);
+	P32_GET(struct Thread *, inst->thread)->flags &= ~THREAD_FLAG_DISABLE_COLLISION;
 	inst->flags &= ~(HIDE_MODEL);
 
 	d->kartState = KS_ENGINE_REVVING;
-	d->funcPtrs[DRIVER_FUNC_INIT] = VehPhysProc_Driving_Init;
+	P32_SET(d->funcPtrs[DRIVER_FUNC_INIT], VehPhysProc_Driving_Init);
 
 	// if cutscene changed audio, restore backup
 	if (D233.CutsceneManipulatesAudio != 0)
@@ -157,7 +157,7 @@ void CS_Podium_Stand_Init(struct CsThreadInitData *podiumData)
 	}
 
 	// set funcThDestroy to remove instance from instance pool
-	inst->thread->funcThDestroy = PROC_DestroyInstance;
+	P32_SET(P32_GET(struct Thread *, inst->thread)->funcThDestroy, PROC_DestroyInstance);
 
 	inst->matrix.t[0] = podiumData->podiumPos.x;
 	inst->matrix.t[1] = podiumData->podiumPos.y;
@@ -175,7 +175,7 @@ void CS_Podium_Stand_Init(struct CsThreadInitData *podiumData)
 
 internal b32 CS_Podium_Prize_ShouldStep(void)
 {
-	return CTR_RETAIL_FRAME_TICK(sdata->gGT->timer);
+	return CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800af7c0-0x800af994
@@ -192,7 +192,7 @@ void CS_Podium_Prize_Spin(struct Instance *inst, struct Prize *prize)
 	const SVec3 *prizeRot = &prize->rot;
 	ConvertRotToMatrix(&inst->matrix, prizeRot);
 
-	gGS = sdata->gGamepads;
+	gGS = P32_GET(struct GamepadSystem *, sdata->gGamepads);
 
 	if ((inst->flags & USE_SPECULAR_LIGHT) == 0)
 	{
@@ -281,8 +281,8 @@ void CS_Podium_Prize_ThTick3(struct Thread *th)
 	}
 
 	struct GameTracker *gGT;
-	struct Instance *inst = th->inst;
-	struct Prize *prize = th->object;
+	struct Instance *inst = P32_GET(struct Instance *, th->inst);
+	struct Prize *prize = P32_GET(void *, th->object);
 	s16 framesLeft;
 
 	framesLeft = prize->flyToHudFramesLeft - 1;
@@ -367,7 +367,7 @@ void CS_Podium_Prize_ThTick3(struct Thread *th)
 		}
 	}
 
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	gGT->overlayTransition = 2;
 	gGT->gameMode2 &= ~VEH_FREEZE_PODIUM;
 
@@ -388,10 +388,10 @@ void CS_Podium_Prize_ThTick2(struct Thread *th)
 
 	int currScale;
 
-	struct Prize *prize = th->object;
+	struct Prize *prize = P32_GET(void *, th->object);
 
 	// get instance from thread
-	struct Instance *inst = th->inst;
+	struct Instance *inst = P32_GET(struct Instance *, th->inst);
 
 	s16 frameIndex = prize->bounceFrameIndex;
 
@@ -445,8 +445,8 @@ void CS_Podium_Prize_ThTick1(struct Thread *th)
 		return;
 	}
 
-	struct Instance *inst = th->inst;
-	struct Prize *prize = th->object;
+	struct Instance *inst = P32_GET(struct Instance *, th->inst);
+	struct Prize *prize = P32_GET(void *, th->object);
 	int trig;
 
 	if (D233.podiumPrizeDropReady != 0)
@@ -490,7 +490,7 @@ void CS_Podium_Prize_ThTick1(struct Thread *th)
 
 	{
 		struct InstDrawPerPlayer *idpp = INST_GETIDPP(inst);
-		idpp[0].pushBuffer = &sdata->gGT->pushBuffer_UI;
+		P32_SET(idpp[0].pushBuffer, &P32_GET(struct GameTracker *, sdata->gGT)->pushBuffer_UI);
 	}
 
 	OtherFX_Stop2(PODIUM_PRIZE_STOP_DINGOFIRE_FX);
@@ -504,14 +504,14 @@ void CS_Podium_Prize_ThTick1(struct Thread *th)
 void CS_Podium_Prize_ThDestroy(struct Thread *t)
 {
 	// remove bits
-	sdata->gGT->gameMode2 &= ~(INC_RELIC | INC_KEY | INC_TROPHY);
+	P32_GET(struct GameTracker *, sdata->gGT)->gameMode2 &= ~(INC_RELIC | INC_KEY | INC_TROPHY);
 	PROC_DestroyInstance(t);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800afe90-0x800b021c
 void CS_Podium_Prize_Init(u32 prizeModel, const char *prizeName, const SVec3Slot *podiumPos)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	struct Instance *inst;
 	struct Prize *prize;
 	s32 transformedOffset[3];
@@ -534,8 +534,8 @@ void CS_Podium_Prize_Init(u32 prizeModel, const char *prizeName, const SVec3Slot
 	inst->scale.z = PODIUM_PRIZE_INITIAL_SCALE;
 	inst->flags |= HIDE_MODEL;
 
-	prize = inst->thread->object;
-	inst->thread->funcThDestroy = CS_Podium_Prize_ThDestroy;
+	prize = P32_GET(void *, P32_GET(struct Thread *, inst->thread)->object);
+	P32_SET(P32_GET(struct Thread *, inst->thread)->funcThDestroy, CS_Podium_Prize_ThDestroy);
 
 	prize->orbitRadius = PODIUM_PRIZE_ORBIT_RADIUS;
 	prize->heightOffset = PODIUM_PRIZE_HEIGHT_OFFSET;
@@ -581,7 +581,7 @@ void CS_Podium_Prize_Init(u32 prizeModel, const char *prizeName, const SVec3Slot
 
 	case STATIC_RELIC:
 	{
-		struct UiElement2D *hud = data.hudStructPtr[0];
+		struct UiElement2D *hud = P32_GET(struct UiElement2D *, data.hudStructPtr[0]);
 		u32 bitIndex = gGT->prevLEV + ADV_REWARD_FIRST_PLATINUM_RELIC;
 		u32 relicColor;
 
@@ -619,7 +619,7 @@ void CS_Podium_Prize_Init(u32 prizeModel, const char *prizeName, const SVec3Slot
 
 	case STATIC_TROPHY:
 	{
-		struct UiElement2D *hud = data.hudStructPtr[0];
+		struct UiElement2D *hud = P32_GET(struct UiElement2D *, data.hudStructPtr[0]);
 
 		prize->targetScreenPos.x = hud[UI_HUD_SLOT_TROPHY].x;
 		prize->targetScreenPos.y = hud[UI_HUD_SLOT_TROPHY].y - PODIUM_PRIZE_HUD_Y_OFFSET;
@@ -635,7 +635,7 @@ void CS_Podium_Prize_Init(u32 prizeModel, const char *prizeName, const SVec3Slot
 
 	case STATIC_KEY:
 	{
-		struct UiElement2D *hud = data.hudStructPtr[0];
+		struct UiElement2D *hud = P32_GET(struct UiElement2D *, data.hudStructPtr[0]);
 
 		inst->colorRGBA = INST_COLOR_KEY;
 		prize->specLightVerticalStart = PODIUM_KEY_SPEC_LIGHT_VERTICAL_START;
@@ -664,7 +664,7 @@ void CS_Podium_FullScene_Init(void)
 
 	struct SpawnPosRot *posRot;
 
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// assume cutscene did not manipulate audio
 	D233.CutsceneManipulatesAudio = 0;
@@ -687,13 +687,13 @@ void CS_Podium_FullScene_Init(void)
 
 	D233.podiumPrizeDropReady = 0;
 
-	driverInstSelf = gGT->drivers[0]->instSelf;
+	driverInstSelf = P32_GET(struct Instance *, P32_GET(struct Driver *, gGT->drivers[0])->instSelf);
 
 	D233.podiumCameraFrame = 0;
 
 	driverInstSelf->flags |= HIDE_MODEL;
 
-	VehPhysProc_FreezeEndEvent_Init(driverInstSelf->thread, gGT->drivers[0]);
+	VehPhysProc_FreezeEndEvent_Init(P32_GET(struct Thread *, driverInstSelf->thread), P32_GET(struct Driver *, gGT->drivers[0]));
 
 	// Number of Winners = 1
 	// this means Draw Confetti on one window
@@ -714,7 +714,7 @@ void CS_Podium_FullScene_Init(void)
 
 	// position and rotation of podium scene
 	// Y coordinate (podiumPos.y) has added height
-	posRot = gGT->level1->ptrSpawnType2_PosRot[1].posRot;
+	posRot = P32_GET(struct SpawnPosRot *, P32_GET(struct SpawnType2 *, P32_GET(struct Level *, gGT->level1)->ptrSpawnType2_PosRot)[1].posRot);
 	InitData.podiumPos.x = posRot->pos.x;
 	InitData.podiumPos.y = posRot->pos.y + PODIUM_SCENE_SPAWN_Y_OFFSET;
 	InitData.podiumPos.z = posRot->pos.z;
@@ -775,7 +775,7 @@ void CS_Podium_FullScene_Init(void)
 	// if it allocated correctly
 	if (victoryCamThread != 0)
 	{
-		struct CsPodiumCameraThreadObj *podiumCamera = victoryCamThread->object;
+		struct CsPodiumCameraThreadObj *podiumCamera = P32_GET(void *, victoryCamThread->object);
 		podiumCamera->pathFrame32 = 0;
 	}
 

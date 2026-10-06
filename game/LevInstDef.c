@@ -15,8 +15,8 @@ static int LevInstDef_AbsInt(int value)
 
 static b32 LevInstDef_QuadHasTexture(const struct QuadBlock *quad)
 {
-	return quad->ptr_texture_low != NULL || quad->ptr_texture_mid[0] != NULL || quad->ptr_texture_mid[1] != NULL ||
-	       quad->ptr_texture_mid[2] != NULL || quad->ptr_texture_mid[3] != NULL;
+	return P32_GET(void *const, quad->ptr_texture_low) != NULL || P32_GET(void *const, quad->ptr_texture_mid[0]) != NULL || P32_GET(void *const, quad->ptr_texture_mid[1]) != NULL ||
+	       P32_GET(void *const, quad->ptr_texture_mid[2]) != NULL || P32_GET(void *const, quad->ptr_texture_mid[3]) != NULL;
 }
 
 static b32 LevInstDef_QuadSharesTurboTexture(const struct QuadBlock *quad, const struct QuadBlock *seed)
@@ -26,10 +26,10 @@ static b32 LevInstDef_QuadSharesTurboTexture(const struct QuadBlock *quad, const
 		return false;
 	}
 
-	int sharedTextures = ((quad->ptr_texture_low != NULL) && (quad->ptr_texture_low == seed->ptr_texture_low)) ? 1 : 0;
+	int sharedTextures = ((P32_GET(void *const, quad->ptr_texture_low) != NULL) && (P32_GET(void *const, quad->ptr_texture_low) == P32_GET(void *const, seed->ptr_texture_low))) ? 1 : 0;
 	for (int quadFace = 0; quadFace < 4; quadFace++)
 	{
-		void *quadTexture = quad->ptr_texture_mid[quadFace];
+		void *quadTexture = P32_GET(void *const, quad->ptr_texture_mid[quadFace]);
 		if (quadTexture == NULL)
 		{
 			continue;
@@ -37,7 +37,7 @@ static b32 LevInstDef_QuadSharesTurboTexture(const struct QuadBlock *quad, const
 
 		for (int seedFace = 0; seedFace < 4; seedFace++)
 		{
-			if (quadTexture == seed->ptr_texture_mid[seedFace])
+			if (quadTexture == P32_GET(void *const, seed->ptr_texture_mid[seedFace]))
 			{
 				sharedTextures++;
 				break;
@@ -50,14 +50,14 @@ static b32 LevInstDef_QuadSharesTurboTexture(const struct QuadBlock *quad, const
 
 static b32 LevInstDef_QuadHasSameTextureSignature(const struct QuadBlock *quad, const struct QuadBlock *seed)
 {
-	if ((quad == NULL) || (seed == NULL) || (quad->ptr_texture_low != seed->ptr_texture_low))
+	if ((quad == NULL) || (seed == NULL) || (P32_GET(void *const, quad->ptr_texture_low) != P32_GET(void *const, seed->ptr_texture_low)))
 	{
 		return false;
 	}
 
 	for (int face = 0; face < 4; face++)
 	{
-		if (quad->ptr_texture_mid[face] != seed->ptr_texture_mid[face])
+		if (P32_GET(void *const, quad->ptr_texture_mid[face]) != P32_GET(void *const, seed->ptr_texture_mid[face]))
 		{
 			return false;
 		}
@@ -83,7 +83,7 @@ static int LevInstDef_CountTextureSignatureUses(const struct QuadBlock *quadBloc
 
 static void LevInstDef_TintSuperTurboGlow(struct mesh_info *mesh, const struct QuadBlock *trigger)
 {
-	if ((mesh == NULL) || (mesh->ptrVertexArray == NULL) || (trigger == NULL))
+	if ((mesh == NULL) || (P32_GET(struct LevVertex *, mesh->ptrVertexArray) == NULL) || (trigger == NULL))
 	{
 		return;
 	}
@@ -99,7 +99,7 @@ static void LevInstDef_TintSuperTurboGlow(struct mesh_info *mesh, const struct Q
 
 	for (int vertexIndex = 0; vertexIndex < mesh->numVertex; vertexIndex++)
 	{
-		struct LevVertex *vertex = &mesh->ptrVertexArray[vertexIndex];
+		struct LevVertex *vertex = &P32_GET(struct LevVertex *, mesh->ptrVertexArray)[vertexIndex];
 		if ((vertex->pos.x < minX) || (vertex->pos.x > maxX) || (vertex->pos.y < minY) || (vertex->pos.y > maxY) ||
 		    (vertex->pos.z < minZ) || (vertex->pos.z > maxZ))
 		{
@@ -164,7 +164,7 @@ b32 LevInstDef_IsSuperTurboVisualQuad(const struct QuadBlock *quad)
 
 static void LevInstDef_FindTurboVisualQuads(struct mesh_info *mesh)
 {
-	const struct QuadBlock *quadBlocks = mesh->ptrQuadBlockArray;
+	const struct QuadBlock *quadBlocks = P32_GET(struct QuadBlock *, mesh->ptrQuadBlockArray);
 	const int numQuadBlocks = mesh->numQuadBlock;
 	SDL_memset(s_nativeTurboVisualBits, 0, sizeof(s_nativeTurboVisualBits));
 	SDL_memset(s_nativeSuperTurboVisualBits, 0, sizeof(s_nativeSuperTurboVisualBits));
@@ -251,7 +251,7 @@ static void LevInstDef_FindTurboVisualQuads(struct mesh_info *mesh)
 			if (bestIndex >= 0)
 			{
 				const struct QuadBlock *candidate = &quadBlocks[bestIndex];
-				if (superTurbo && (sdata != NULL) && (sdata->gGT != NULL) && (sdata->gGT->levelID == CORTEX_CASTLE))
+				if (superTurbo && (sdata != NULL) && (P32_GET(struct GameTracker *, sdata->gGT) != NULL) && (P32_GET(struct GameTracker *, sdata->gGT)->levelID == CORTEX_CASTLE))
 				{
 					const int textureUseCount = LevInstDef_CountTextureSignatureUses(quadBlocks, numQuadBlocks, candidate);
 					// Cortex Castle intentionally tags a few ordinary wooden floor tiles as USF.
@@ -315,8 +315,8 @@ static void LevInstDef_FindTurboVisualQuads(struct mesh_info *mesh)
 			}
 
 
-			if (superTurbo && (sdata != NULL) && (sdata->gGT != NULL) &&
-			    ((sdata->gGT->levelID == OXIDE_STATION) || (sdata->gGT->levelID == HOT_AIR_SKYWAY)))
+			if (superTurbo && (sdata != NULL) && (P32_GET(struct GameTracker *, sdata->gGT) != NULL) &&
+			    ((P32_GET(struct GameTracker *, sdata->gGT)->levelID == OXIDE_STATION) || (P32_GET(struct GameTracker *, sdata->gGT)->levelID == HOT_AIR_SKYWAY)))
 			{
 				LevInstDef_TintSuperTurboGlow(mesh, trigger);
 			}
@@ -398,11 +398,11 @@ void LevInstDef_UnPack(struct mesh_info *ptr_mesh_info)
 	int numQuadBlock;
 	struct QuadBlock *ptrQuadBlockArray;
 	struct QuadBlock *qbCurr;
-	struct InstDef **visInstSrc;
+	P32(struct InstDef *) *visInstSrc;
 	struct Level *level1;
 
 	numQuadBlock = ptr_mesh_info->numQuadBlock;
-	ptrQuadBlockArray = ptr_mesh_info->ptrQuadBlockArray;
+	ptrQuadBlockArray = P32_GET(struct QuadBlock *, ptr_mesh_info->ptrQuadBlockArray);
 
 #if defined(CTR_NATIVE)
 	LevInstDef_FindTurboVisualQuads(ptr_mesh_info);
@@ -413,10 +413,10 @@ void LevInstDef_UnPack(struct mesh_info *ptr_mesh_info)
 	{
 		qbCurr = &ptrQuadBlockArray[i];
 
-		if ((qbCurr->pvs != 0) && (qbCurr->pvs->visInstSrc != 0))
+		if ((P32_GET(struct PVS *, qbCurr->pvs) != 0) && (P32_GET(P32(struct Instance *) *, P32_GET(struct PVS *, qbCurr->pvs)->visInstSrc) != 0))
 		{
 			// loop through all instance pointers visible on quadblock
-			for (visInstSrc = (struct InstDef **)qbCurr->pvs->visInstSrc; visInstSrc[0] != NULL; visInstSrc++)
+			for (visInstSrc = (P32(struct InstDef *) *)P32_GET(P32(struct Instance *) *, P32_GET(struct PVS *, qbCurr->pvs)->visInstSrc); P32_GET(struct InstDef *, visInstSrc[0]) != NULL; visInstSrc++)
 			{
 				//ND BUG: This operation is not idempotent. The outer for loop means we will do this operation multiple times
 				//on the same pointer, so we keep switching it from an InstDef pointer to an Instance pointer and back again.
@@ -424,19 +424,19 @@ void LevInstDef_UnPack(struct mesh_info *ptr_mesh_info)
 				//quadblocks), but we need to keep this in mind. The easiest solution I can think of is to keep track of which
 				//InstDefs have been unpacked and only unpack them once, but that requires a lot of extra bookkeeping and wouldn't.
 				//be "vanilla".
-				visInstSrc[0] = (struct InstDef *)visInstSrc[0]->ptrInstance;
+				P32_SET(visInstSrc[0], (struct InstDef *)P32_GET(struct Instance *, P32_GET(struct InstDef *, visInstSrc[0])->ptrInstance));
 			}
 		}
 	}
 
-	level1 = sdata->gGT->level1;
+	level1 = P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1);
 
-	if (level1->ptrInstDefPtrArray != 0)
+	if (P32_GET(P32(struct InstDef *) *, level1->ptrInstDefPtrArray) != 0)
 	{
 		// loop through all instDef pointers in the LEV
-		for (visInstSrc = level1->ptrInstDefPtrArray; visInstSrc[0] != 0; visInstSrc++)
+		for (visInstSrc = P32_GET(P32(struct InstDef *) *, level1->ptrInstDefPtrArray); P32_GET(struct InstDef *, visInstSrc[0]) != 0; visInstSrc++)
 		{
-			visInstSrc[0] = (struct InstDef *)visInstSrc[0]->ptrInstance;
+			P32_SET(visInstSrc[0], (struct InstDef *)P32_GET(struct Instance *, P32_GET(struct InstDef *, visInstSrc[0])->ptrInstance));
 		}
 	}
 
@@ -454,7 +454,7 @@ void LevInstDef_RePack(struct mesh_info *ptr_mesh_info, b32 boolAdvHub)
 	int numQuadBlock;
 	struct QuadBlock *ptrQuadBlockArray;
 	struct QuadBlock *qbCurr;
-	struct Instance **visInstSrc;
+	P32(struct Instance *) *visInstSrc;
 	struct Level *level1;
 	struct Thread *th;
 
@@ -464,48 +464,48 @@ void LevInstDef_RePack(struct mesh_info *ptr_mesh_info, b32 boolAdvHub)
 #endif
 
 	numQuadBlock = ptr_mesh_info->numQuadBlock;
-	ptrQuadBlockArray = ptr_mesh_info->ptrQuadBlockArray;
+	ptrQuadBlockArray = P32_GET(struct QuadBlock *, ptr_mesh_info->ptrQuadBlockArray);
 
 	// loop through all quadblocks
 	for (i = 0; i < numQuadBlock; i++)
 	{
 		qbCurr = &ptrQuadBlockArray[i];
 
-		if ((qbCurr->pvs != 0) && (qbCurr->pvs->visInstSrc != 0))
+		if ((P32_GET(struct PVS *, qbCurr->pvs) != 0) && (P32_GET(P32(struct Instance *) *, P32_GET(struct PVS *, qbCurr->pvs)->visInstSrc) != 0))
 		{
 			// loop through all instance pointers visible on quadblock
-			for (visInstSrc = qbCurr->pvs->visInstSrc; visInstSrc[0] != NULL; visInstSrc++)
+			for (visInstSrc = P32_GET(P32(struct Instance *) *, P32_GET(struct PVS *, qbCurr->pvs)->visInstSrc); P32_GET(struct Instance *, visInstSrc[0]) != NULL; visInstSrc++)
 			{
-				visInstSrc[0] = (struct Instance *)visInstSrc[0]->instDef; // maybe `visInstSrc[0]->instDef->ptrInstance`?
+				P32_SET(visInstSrc[0], (struct Instance *)P32_GET(struct InstDef *, P32_GET(struct Instance *, visInstSrc[0])->instDef)); // maybe `P32_GET(struct Instance *, visInstSrc[0])->instDef->ptrInstance`?
 			}
 		}
 	}
 
-	level1 = sdata->gGT->level1;
+	level1 = P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1);
 
-	if (level1->ptrInstDefPtrArray != 0)
+	if (P32_GET(P32(struct InstDef *) *, level1->ptrInstDefPtrArray) != 0)
 	{
 		// loop through all instDef pointers in the LEV
-		for (visInstSrc = (struct Instance **)level1->ptrInstDefPtrArray; visInstSrc[0] != NULL; visInstSrc++)
+		for (visInstSrc = (P32(struct Instance *) *)P32_GET(P32(struct InstDef *) *, level1->ptrInstDefPtrArray); P32_GET(struct Instance *, visInstSrc[0]) != NULL; visInstSrc++)
 		{
-			struct Instance *inst = visInstSrc[0];
-			struct InstDef *instDef = inst->instDef;
+			struct Instance *inst = P32_GET(struct Instance *, visInstSrc[0]);
+			struct InstDef *instDef = P32_GET(struct InstDef *, inst->instDef);
 
 			// if on adv hub
 			if (boolAdvHub != 0)
 			{
-				th = inst->thread;
+				th = P32_GET(struct Thread *, inst->thread);
 				if (th != 0)
 				{
 					th->flags |= THREAD_FLAG_DEAD;
 				}
 
 				// erase instance in pool
-				LIST_AddFront(&sdata->gGT->JitPools.instance.free, (struct Item *)inst);
+				LIST_AddFront(&P32_GET(struct GameTracker *, sdata->gGT)->JitPools.instance.free, (struct Item *)inst);
 			}
 
 			// go back to instDef
-			visInstSrc[0] = (struct Instance *)instDef;
+			P32_SET(visInstSrc[0], (struct Instance *)instDef);
 		}
 	}
 

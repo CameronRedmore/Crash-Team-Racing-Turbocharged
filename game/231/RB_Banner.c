@@ -31,7 +31,7 @@ CTR_STATIC_ASSERT(offsetof(union RBBannerScratchVertex, yResidue) == 0x4);
 
 static inline u8 *RB_Banner_FirstVertex(struct ModelHeader *mh)
 {
-	return (u8 *)mh->ptrFrameData + mh->ptrFrameData->vertexOffset;
+	return (u8 *)P32_GET(struct ModelFrame *, mh->ptrFrameData) + P32_GET(struct ModelFrame *, mh->ptrFrameData)->vertexOffset;
 }
 
 static inline union RBBannerScratchVertex *RB_Banner_VertexSlot(u32 scratchOffset)
@@ -84,13 +84,13 @@ int RB_Banner_Animate_Init(struct ModelHeader *mh)
 	u8 *vertex;
 	int count = 0;
 
-	if ((s16)(*(u16 *)(void *)mh->ptrCommandList) < 0x40)
+	if ((s16)(*P32_DEC(u16 *, mh->ptrCommandList)) < 0x40)
 	{
 		return 0;
 	}
 
 	vertex = RB_Banner_FirstVertex(mh);
-	cmd = (u32 *)((u8 *)mh->ptrCommandList + 4);
+	cmd = (u32 *)(P32_DEC(u8 *, mh->ptrCommandList) + 4);
 
 	while (*cmd != 0xffffffffU)
 	{
@@ -147,7 +147,7 @@ int RB_Banner_Animate_Init(struct ModelHeader *mh)
 		}
 	}
 
-	if (sdata->gGT->numPlyrCurrGame >= 4)
+	if (P32_GET(struct GameTracker *, sdata->gGT)->numPlyrCurrGame >= 4)
 	{
 		vertex = RB_Banner_FirstVertex(mh);
 		for (int i = 0; i < count; i++, vertex += 3)
@@ -162,7 +162,7 @@ int RB_Banner_Animate_Init(struct ModelHeader *mh)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b56c4-0x800b57b4.
 void RB_Banner_Animate_Play(struct ModelHeader *mh, s16 numVertices)
 {
-	u32 *colors = mh->ptrColors;
+	u32 *colors = P32_GET(u32 *, mh->ptrColors);
 	u32 firstColor = colors[0];
 	u8 *vertex;
 
@@ -177,11 +177,11 @@ void RB_Banner_Animate_Play(struct ModelHeader *mh, s16 numVertices)
 		return;
 	}
 
-	vertex = (u8 *)mh->ptrFrameData + mh->ptrFrameData->vertexOffset;
+	vertex = (u8 *)P32_GET(struct ModelFrame *, mh->ptrFrameData) + P32_GET(struct ModelFrame *, mh->ptrFrameData)->vertexOffset;
 	for (int i = 0; i < numVertices; i++, vertex += 3)
 	{
 		u8 x = vertex[0];
-		u8 color = ((u8 *)mh->ptrColors)[(((x >> 2) + 10) & 0x3f) * 4];
+		u8 color = ((u8 *)P32_GET(u32 *, mh->ptrColors))[(((x >> 2) + 10) & 0x3f) * 4];
 		int wave = (int)color - 0x80;
 
 		if (x < 0x40)
@@ -200,17 +200,17 @@ void RB_Banner_Animate_Play(struct ModelHeader *mh, s16 numVertices)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b57b4-0x800b57f8.
 void RB_Banner_ThTick(struct Thread *t)
 {
-	struct StartBanner *banner = t->object;
+	struct StartBanner *banner = P32_GET(void *, t->object);
 
 	if (banner->numVertices != 0)
 	{
 #if CTR_NATIVE_60FPS
-		if (!CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+		if (!CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer))
 		{
 			return;
 		}
 #endif
-		RB_Banner_Animate_Play(t->inst->model->headers, banner->numVertices);
+		RB_Banner_Animate_Play(P32_GET(struct ModelHeader *, P32_GET(struct Model *, P32_GET(struct Instance *, t->inst)->model)->headers), banner->numVertices);
 	}
 }
 
@@ -219,18 +219,18 @@ static char s_startbanner[] = "startbanner";
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b57f8-0x800b5968.
 void RB_Banner_LInB(struct Instance *inst)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	struct Thread *t;
 	struct StartBanner *banner;
 	struct Model *model;
 
-	if (inst->thread != NULL)
+	if (P32_GET(struct Thread *, inst->thread) != NULL)
 	{
 		return;
 	}
 
 	t = PROC_BirthWithObject(SIZE_RELATIVE_POOL_BUCKET(sizeof(struct StartBanner), NONE, SMALL, STATIC), RB_Banner_ThTick, s_startbanner, NULL);
-	inst->thread = t;
+	P32_SET(inst->thread, t);
 	if (t == NULL)
 	{
 		return;
@@ -238,22 +238,22 @@ void RB_Banner_LInB(struct Instance *inst)
 
 	if (gGT->numPlyrCurrGame >= 4)
 	{
-		t->funcThTick = NULL;
+		P32_SET(t->funcThTick, NULL);
 	}
 
-	banner = t->object;
-	t->inst = inst;
+	banner = P32_GET(void *, t->object);
+	P32_SET(t->inst, inst);
 	banner->unused = 0;
 	banner->numVertices = 0;
 
-	model = gGT->modelPtr[STATIC_STARTBANNERWAVE];
+	model = P32_GET(struct Model *, gGT->modelPtr[STATIC_STARTBANNERWAVE]);
 	if (model == NULL)
 	{
 		return;
 	}
 
-	inst->model = model;
-	banner->numVertices = RB_Banner_Animate_Init(model->headers);
+	P32_SET(inst->model, model);
+	banner->numVertices = RB_Banner_Animate_Init(P32_GET(struct ModelHeader *, model->headers));
 	if (banner->numVertices == 0)
 	{
 		return;
@@ -261,7 +261,7 @@ void RB_Banner_LInB(struct Instance *inst)
 
 	for (int i = 0; i < 0x40; i++)
 	{
-		u8 *color = (u8 *)&model->headers->ptrColors[i];
+		u8 *color = (u8 *)&P32_GET(u32 *, P32_GET(struct ModelHeader *, model->headers)->ptrColors)[i];
 		int value = (MATH_Sin((u32)i << 7) >> 6) + 0x80;
 
 		if (gGT->numPlyrCurrGame >= 4)

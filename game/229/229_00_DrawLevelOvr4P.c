@@ -187,7 +187,7 @@ static int DrawLevelOvr4P_DrawViewportBucket(struct DrawLevelOvr1PRenderList *re
 	void *bucketValue = DrawLevelOvr1P_GetRenderListBucketValue(renderList, bucket);
 	u32 setupAddress = R229.bucketSetupAddresses[bucketIndex];
 	u32 handlerAddress = R229.bucketHandlerAddresses[bucketIndex];
-	struct QuadBlock **renderedOverflowBase = (struct QuadBlock **)data.ptrRenderedQuadblockDestination_forEachPlayer[playerIndex];
+	P32(struct QuadBlock *) *renderedOverflowBase = (P32(struct QuadBlock *) *)P32_GET(void *, data.ptrRenderedQuadblockDestination_forEachPlayer[playerIndex]);
 
 	*didDispatch = 0;
 
@@ -202,7 +202,7 @@ static int DrawLevelOvr4P_DrawViewportBucket(struct DrawLevelOvr1PRenderList *re
 		DrawLevelOvr4P_ApplyBucketSetup(setupAddress, handlerAddress);
 	}
 
-	DrawLevelOvr1P_SetViewportScratchContext(pb, visFaceList, data.PtrClipBuffer[playerIndex], *clipCursor, renderedOverflowBase);
+	DrawLevelOvr1P_SetViewportScratchContext(pb, visFaceList, P32_GET(void *, data.PtrClipBuffer[playerIndex]), *clipCursor, renderedOverflowBase);
 	if (!DrawLevelOvr4P_DispatchBucketHandler(handlerAddress, bucketValue, pb, mesh, primMem, visFaceList))
 	{
 		return 0;
@@ -267,7 +267,7 @@ static int DrawLevelOvr4P_DispatchBucketHandler(u32 handlerAddress, void *bucket
 	if (handlerAddress == OVR229_RETAIL_LABEL_WATER_RENDERED_HANDLER)
 	{
 		DrawLevelOvr1P_SetPrimReserveBias(OVR229_WATER_BSP_LIST_PRIM_RESERVE_BIAS);
-		return Ovr226_800a2904_DrawWaterRenderedListWithDefaultHandler((struct QuadBlock **)bucketValue, pb, mesh, primMem,
+		return Ovr226_800a2904_DrawWaterRenderedListWithDefaultHandler((P32(struct QuadBlock *) *)bucketValue, pb, mesh, primMem,
 		                                                               OVR229_RETAIL_LABEL_WATER_RENDERED_DEFAULT_WRAPPER);
 	}
 
@@ -281,7 +281,7 @@ static int DrawLevelOvr4P_DispatchBucketHandler(u32 handlerAddress, void *bucket
 	{
 		DrawLevelOvr1P_SetPrimReserveBias(OVR229_WATER_BSP_LIST_PRIM_RESERVE_BIAS);
 		DrawLevelOvr1P_SetSplitGroundThresholdScratch();
-		return DrawLevelOvr1P_DrawRenderedQuadBlocks((struct QuadBlock **)bucketValue, pb, mesh, primMem, DRAW_LEVEL_OVR1P_BUCKET_DYNAMIC_RENDERED);
+		return DrawLevelOvr1P_DrawRenderedQuadBlocks((P32(struct QuadBlock *) *)bucketValue, pb, mesh, primMem, DRAW_LEVEL_OVR1P_BUCKET_DYNAMIC_RENDERED);
 	}
 
 	if (handlerAddress == OVR229_RETAIL_LABEL_SPLIT_GROUND_LIST_B_HANDLER)
@@ -304,7 +304,7 @@ static int DrawLevelOvr4P_DispatchBucketHandler(u32 handlerAddress, void *bucket
 		DrawLevelOvr1P_SetPrimReserveBias(OVR229_SPLIT_GROUND_LIST_B_PRIM_RESERVE_BIAS);
 		DrawLevelOvr1P_SetSplitGroundThresholdScratch();
 		DrawLevelOvr1P_SetMosaicReloadSpanOverride(DRAW_LEVEL_OVR1P_SPLIT_GROUND_MOSAIC_RELOAD_SPAN);
-		result = DrawLevelOvr1P_DrawRenderedQuadBlocks((struct QuadBlock **)bucketValue, pb, mesh, primMem, DRAW_LEVEL_OVR1P_BUCKET_4X2_RENDERED);
+		result = DrawLevelOvr1P_DrawRenderedQuadBlocks((P32(struct QuadBlock *) *)bucketValue, pb, mesh, primMem, DRAW_LEVEL_OVR1P_BUCKET_4X2_RENDERED);
 		DrawLevelOvr1P_SetMosaicReloadSpanOverride(0);
 		return result;
 	}
@@ -320,7 +320,7 @@ static int DrawLevelOvr4P_DispatchBucketHandler(u32 handlerAddress, void *bucket
 	{
 		DrawLevelOvr1P_SetPrimReserveBias(OVR229_WATER_BSP_LIST_PRIM_RESERVE_BIAS);
 		DrawLevelOvr1P_SetSplitGroundThresholdScratch();
-		return DrawLevelOvr1P_DrawRenderedQuadBlocks((struct QuadBlock **)bucketValue, pb, mesh, primMem, DRAW_LEVEL_OVR1P_BUCKET_4X4_RENDERED);
+		return DrawLevelOvr1P_DrawRenderedQuadBlocks((P32(struct QuadBlock *) *)bucketValue, pb, mesh, primMem, DRAW_LEVEL_OVR1P_BUCKET_4X4_RENDERED);
 	}
 
 	// NOTE(aalhendi): Reject handler addresses that are not present in the
@@ -349,67 +349,67 @@ void DrawLevelOvr4P(void *LevRenderList, struct PushBuffer *pb, struct BSP *bspL
 	// 0x800a0cbc-0x800a1178. Runtime proof is tracked separately from
 	// source ownership and public route promotion.
 	DrawLevelOvr1P_Scratch()->savedStackPtr32 = (u32)(uintptr_t)&hostStackAnchor;
-	DrawLevelOvr1P_Scratch()->visFaceListArgPtr32[0] = (u32)(uintptr_t)visFaceList0;
+	DrawLevelOvr1P_Scratch()->visFaceListArgPtr32[0] = P32_ENC(visFaceList0);
 	if (visFaceList0 == NULL)
 	{
 		return;
 	}
 
-	DrawLevelOvr1P_Scratch()->visFaceListArgPtr32[1] = (u32)(uintptr_t)visFaceList1;
+	DrawLevelOvr1P_Scratch()->visFaceListArgPtr32[1] = P32_ENC(visFaceList1);
 	if (visFaceList1 == NULL)
 	{
 		return;
 	}
 
-	DrawLevelOvr1P_Scratch()->visFaceListArgPtr32[2] = (u32)(uintptr_t)visFaceList2;
+	DrawLevelOvr1P_Scratch()->visFaceListArgPtr32[2] = P32_ENC(visFaceList2);
 	if (visFaceList2 == NULL)
 	{
 		return;
 	}
 
-	DrawLevelOvr1P_Scratch()->visFaceListArgPtr32[3] = (u32)(uintptr_t)visFaceList3;
+	DrawLevelOvr1P_Scratch()->visFaceListArgPtr32[3] = P32_ENC(visFaceList3);
 	if (visFaceList3 == NULL)
 	{
 		return;
 	}
 
-	DrawLevelOvr1P_Scratch()->waterEnvMapPtr32 = (u32)(uintptr_t)waterEnvMap;
-	DrawLevelOvr1P_Scratch()->primMemEndPtr32 = (u32)(uintptr_t)primMem->end;
+	DrawLevelOvr1P_Scratch()->waterEnvMapPtr32 = P32_ENC(waterEnvMap);
+	DrawLevelOvr1P_Scratch()->primMemEndPtr32 = P32_ENC(P32_GET(void *, primMem->end));
 
-	if (mesh->ptrQuadBlockArray == NULL)
+	if (P32_GET(struct QuadBlock *, mesh->ptrQuadBlockArray) == NULL)
 	{
 		return;
 	}
 
-	clipCursors[0] = data.PtrClipBuffer[0];
-	clipCursors[1] = data.PtrClipBuffer[1];
-	clipCursors[2] = data.PtrClipBuffer[2];
-	clipCursors[3] = data.PtrClipBuffer[3];
+	clipCursors[0] = P32_GET(void *, data.PtrClipBuffer[0]);
+	clipCursors[1] = P32_GET(void *, data.PtrClipBuffer[1]);
+	clipCursors[2] = P32_GET(void *, data.PtrClipBuffer[2]);
+	clipCursors[3] = P32_GET(void *, data.PtrClipBuffer[3]);
 
-	DrawLevelOvr1P_Scratch()->pushBufferPtr32[0] = (u32)(uintptr_t)&pb[0];
-	DrawLevelOvr1P_Scratch()->pushBufferPtr32[1] = (u32)(uintptr_t)&pb[1];
-	DrawLevelOvr1P_Scratch()->pushBufferPtr32[2] = (u32)(uintptr_t)&pb[2];
-	DrawLevelOvr1P_Scratch()->pushBufferPtr32[3] = (u32)(uintptr_t)&pb[3];
-	DrawLevelOvr1P_Scratch()->playerClipCursorPtr32[0] = (u32)(uintptr_t)clipCursors[0];
-	DrawLevelOvr1P_Scratch()->playerClipCursorPtr32[1] = (u32)(uintptr_t)clipCursors[1];
-	DrawLevelOvr1P_Scratch()->playerClipCursorPtr32[2] = (u32)(uintptr_t)clipCursors[2];
-	DrawLevelOvr1P_Scratch()->playerClipCursorPtr32[3] = (u32)(uintptr_t)clipCursors[3];
+	DrawLevelOvr1P_Scratch()->pushBufferPtr32[0] = P32_ENC(&pb[0]);
+	DrawLevelOvr1P_Scratch()->pushBufferPtr32[1] = P32_ENC(&pb[1]);
+	DrawLevelOvr1P_Scratch()->pushBufferPtr32[2] = P32_ENC(&pb[2]);
+	DrawLevelOvr1P_Scratch()->pushBufferPtr32[3] = P32_ENC(&pb[3]);
+	DrawLevelOvr1P_Scratch()->playerClipCursorPtr32[0] = P32_ENC(clipCursors[0]);
+	DrawLevelOvr1P_Scratch()->playerClipCursorPtr32[1] = P32_ENC(clipCursors[1]);
+	DrawLevelOvr1P_Scratch()->playerClipCursorPtr32[2] = P32_ENC(clipCursors[2]);
+	DrawLevelOvr1P_Scratch()->playerClipCursorPtr32[3] = P32_ENC(clipCursors[3]);
 
 	DrawLevelOvr1P_SetPrimReserveBias(0);
 	DrawLevelOvr1P_SetListHandlersSeedRenderedCursor(0);
 	Ovr226_800a0dc4_ClearProjectedScratch();
 	DrawLevelOvr4P_CopyScratchInitTable();
-	DrawLevelOvr1P_Scratch()->renderListPtr32 = (u32)(uintptr_t)LevRenderList;
+	DrawLevelOvr1P_Scratch()->renderListPtr32 = P32_ENC(LevRenderList);
 
 	if (!DrawLevelOvr4P_DispatchBucketTable(renderLists, pb, mesh, primMem, visFaceList0, visFaceList1, visFaceList2, visFaceList3, clipCursors))
 	{
 		return;
 	}
 
-	DrawLevelOvr1P_Scratch()->playerClipCursorPtr32[0] = (u32)(uintptr_t)clipCursors[0];
-	DrawLevelOvr1P_Scratch()->playerClipCursorPtr32[1] = (u32)(uintptr_t)clipCursors[1];
-	DrawLevelOvr1P_Scratch()->playerClipCursorPtr32[2] = (u32)(uintptr_t)clipCursors[2];
-	DrawLevelOvr1P_Scratch()->playerClipCursorPtr32[3] = (u32)(uintptr_t)clipCursors[3];
+	DrawLevelOvr1P_Scratch()->playerClipCursorPtr32[0] = P32_ENC(clipCursors[0]);
+	DrawLevelOvr1P_Scratch()->playerClipCursorPtr32[1] = P32_ENC(clipCursors[1]);
+	DrawLevelOvr1P_Scratch()->playerClipCursorPtr32[2] = P32_ENC(clipCursors[2]);
+	DrawLevelOvr1P_Scratch()->playerClipCursorPtr32[3] = P32_ENC(clipCursors[3]);
 
 	DrawLevelOvr4P_CopyClipRecordJumpTable();
 	if (!DrawLevelOvr_ConsumeClipRecordsForViewport(&pb[0], primMem, clipCursors[0], 0, DrawLevelOvr4P_ConsumeClipRecords))

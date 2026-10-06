@@ -21,11 +21,11 @@ void AH_MaskHint_Start(s16 hintId, u16 bool_interruptWarppad)
 		UNLOCK_ADV_BIT(adv->rewards, ADV_REWARD_HINT_MAP_INFORMATION);
 	}
 
-	struct Driver *d = sdata->gGT->drivers[0];
-	d->funcPtrs[DRIVER_FUNC_INIT] = VehPhysProc_FreezeEndEvent_Init;
+	struct Driver *d = P32_GET(struct Driver *, P32_GET(struct GameTracker *, sdata->gGT)->drivers[0]);
+	P32_SET(d->funcPtrs[DRIVER_FUNC_INIT], VehPhysProc_FreezeEndEvent_Init);
 
 	// If Aku / Uka model pointer is nullptr
-	if (sdata->modelMaskHints3D == NULL)
+	if (P32_GET(struct Model *, sdata->modelMaskHints3D) == NULL)
 	{
 		LOAD_TalkingMask(LOAD_GetAdvPackIndex(), !VehPickupItem_MaskBoolGoodGuy(d));
 
@@ -71,7 +71,7 @@ b32 AH_MaskHint_boolCanSpawn(void)
 void AH_MaskHint_SetAnim(int scale)
 {
 	MATRIX *m;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	struct PushBuffer *pb = &gGT->pushBuffer[0];
 
 	m = &pb->matrix_Camera;
@@ -114,14 +114,14 @@ void AH_MaskHint_SetAnim(int scale)
 	int sin = MATH_Sin(angle);
 	int cos = MATH_Cos(angle);
 
-	struct Instance *mhInst = sdata->instMaskHints3D;
+	struct Instance *mhInst = P32_GET(struct Instance *, sdata->instMaskHints3D);
 	posCurr.x += (s16)((sin * rot) >> 0xc);
 	posCurr.z += (s16)((cos * rot) >> 0xc);
 
 	rotCurr.y += angle;
 	ConvertRotToMatrix(&mhInst->matrix, &rotCurr);
 
-	((struct MaskHint *)mhInst->thread->object)->scale = scale * 4 - 1;
+	((struct MaskHint *)P32_GET(void *, P32_GET(struct Thread *, mhInst->thread)->object))->scale = scale * 4 - 1;
 
 	angle = FPS_HALF((sdata->frameCounter + gGT->timer) * 0x20);
 	sin = MATH_Sin(angle);
@@ -147,10 +147,10 @@ void AH_MaskHint_SpawnParticles(s16 numParticles, struct ParticleEmitter *emSet,
 	}
 
 	// "hubdustpuff"
-	struct IconGroup *ig = sdata->gGT->iconGroup[0x10];
+	struct IconGroup *ig = P32_GET(struct IconGroup *, P32_GET(struct GameTracker *, sdata->gGT)->iconGroup[0x10]);
 
 	// talking mask instance
-	maskInst = sdata->instMaskHints3D;
+	maskInst = P32_GET(struct Instance *, sdata->instMaskHints3D);
 
 	for (i = 0; i < numParticles; i++)
 	{
@@ -205,8 +205,8 @@ force_inline void AH_MaskHint_DrawRepeatPrompt(void)
 	}
 
 	const s16 *ptrLngID = &D232.hintMenuLngIndex[0];
-	struct GameTracker *gGT = sdata->gGT;
-	struct Driver *d = gGT->drivers[0];
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct Driver *d = P32_GET(struct Driver *, gGT->drivers[0]);
 
 	for (/**/; *ptrLngID > -1; ptrLngID++)
 	{
@@ -237,16 +237,16 @@ force_inline void AH_MaskHint_DrawRepeatPrompt(void)
 	r.x = -10;
 	r.y = 0xb0;
 	r.w = 0x214;
-	r.h = 8 + DecalFont_DrawMultiLine(sdata->lngStrings[lngIndex], 0x100, 0xb4, 400, 2, 0xffff8000);
+	r.h = 8 + DecalFont_DrawMultiLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[lngIndex]), 0x100, 0xb4, 400, 2, 0xffff8000);
 
-	RECTMENU_DrawInnerRect(&r, 4, gGT->backBuffer->otMem.uiOT);
+	RECTMENU_DrawInnerRect(&r, 4, P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT));
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 overlay 232 0x800b4470-0x800b4c80.
 void AH_MaskHint_Update()
 {
-	struct GameTracker *gGT = sdata->gGT;
-	struct Driver *d = gGT->drivers[0];
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct Driver *d = P32_GET(struct Driver *, gGT->drivers[0]);
 	struct CameraAngleAxisScratch angleAxisWork;
 	SVec3 pos;
 	SVec3 rot;
@@ -303,9 +303,9 @@ void AH_MaskHint_Update()
 			return;
 		}
 
-		struct Instance *dInst = d->instSelf;
-		sdata->instMaskHints3D = VehTalkMask_Init();
-		struct Instance *mhInst = sdata->instMaskHints3D;
+		struct Instance *dInst = P32_GET(struct Instance *, d->instSelf);
+		P32_SET(sdata->instMaskHints3D, VehTalkMask_Init());
+		struct Instance *mhInst = P32_GET(struct Instance *, sdata->instMaskHints3D);
 
 		SVECTOR matrixRot;
 		CTR_MatrixToRot(&matrixRot, &dInst->matrix, 0x11);
@@ -317,7 +317,7 @@ void AH_MaskHint_Update()
 
 		CTR_COPY_VEC3(D232.maskCamPosStart.v, dInst->matrix.t);
 
-		((struct MaskHint *)mhInst->thread->object)->scale = 0;
+		((struct MaskHint *)P32_GET(void *, P32_GET(struct Thread *, mhInst->thread)->object))->scale = 0;
 
 		AH_MaskHint_SetAnim(0);
 
@@ -378,7 +378,7 @@ void AH_MaskHint_Update()
 		}
 
 		// NOTE(aalhendi): Retail only waits for the mask model pointer.
-		if (sdata->modelMaskHints3D == 0)
+		if (P32_GET(struct Model *, sdata->modelMaskHints3D) == 0)
 		{
 			AH_MaskHint_LerpVol(AH_MASKHINT_FULL_BLEND);
 			break;
@@ -392,7 +392,7 @@ void AH_MaskHint_Update()
 			AH_MaskHint_SpawnParticles(AH_MASKHINT_LEAVE_PARTICLES, &D232.emSet_maskLeave[0], AH_MASKHINT_FULL_BLEND);
 			PARTICLE_SPAWN_UNGATED_END();
 
-			VehTalkMask_PlayXA(sdata->instMaskHints3D, D232.maskHintID);
+			VehTalkMask_PlayXA(P32_GET(struct Instance *, sdata->instMaskHints3D), D232.maskHintID);
 
 			if (((gGT->gameMode1 & ADVENTURE_ARENA) != 0) &&
 
@@ -426,7 +426,7 @@ void AH_MaskHint_Update()
 			D232.maskWarppadDelayFrames--;
 		}
 
-		if ((delayComplete && (VehTalkMask_boolNoXA() || ((sdata->gGamepads->gamepad[0].buttonsTapped & BTN_TRIANGLE) != 0))) &&
+		if ((delayComplete && (VehTalkMask_boolNoXA() || ((P32_GET(struct GamepadSystem *, sdata->gGamepads)->gamepad[0].buttonsTapped & BTN_TRIANGLE) != 0))) &&
 		    (sdata->AkuAkuHintState++,
 
 		     // If you're in Adventure Arena
@@ -492,7 +492,7 @@ void AH_MaskHint_Update()
 			sdata->boolDraw3D_AdvMask = 0;
 
 			gGT->gameMode2 &= ~(VEH_FREEZE_DOOR);
-			d->funcPtrs[DRIVER_FUNC_INIT] = VehPhysProc_Driving_Init;
+			P32_SET(d->funcPtrs[DRIVER_FUNC_INIT], VehPhysProc_Driving_Init);
 		}
 
 		break;

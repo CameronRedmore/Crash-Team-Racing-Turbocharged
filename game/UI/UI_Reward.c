@@ -131,21 +131,21 @@ void UI_SaveLapTime(int numLaps, int lapTime, s16 driverID)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8004c718-0x8004c850.
 void UI_ThTick_CountPickup(struct Thread *bucket)
 {
-	struct GameTracker *gGT = sdata->gGT;
-	struct UiElement3D *obj = bucket->object;
-	struct Instance *inst = bucket->inst;
-	b32 isTimeCrate = inst->model->id == STATIC_TIME_CRATE_01;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct UiElement3D *obj = P32_GET(void *, bucket->object);
+	struct Instance *inst = P32_GET(struct Instance *, bucket->inst);
+	b32 isTimeCrate = P32_GET(struct Model *, inst->model)->id == STATIC_TIME_CRATE_01;
 
 	inst->colorRGBA = UI_REWARD_PICKUP_COLOR;
 
 	if ((gGT->numPlyrCurrGame == 1) && !isTimeCrate)
 	{
-		inst->alphaScale = (gGT->drivers[0]->numWumpas < DRIVER_WUMPA_JUICED_COUNT)
+		inst->alphaScale = (P32_GET(struct Driver *, gGT->drivers[0])->numWumpas < DRIVER_WUMPA_JUICED_COUNT)
 		                       ? 0
 		                       : ((s16)sdata->wumpaShineResult - UI_REWARD_WUMPA_SHINE_CENTER) << UI_REWARD_WUMPA_SHINE_SHIFT;
 	}
 
-	obj->rot.y += CTR_FRAME_STEP(isTimeCrate ? UI_REWARD_PICKUP_ROT_SLOW : UI_REWARD_PICKUP_ROT_FAST, sdata->gGT->timer);
+	obj->rot.y += CTR_FRAME_STEP(isTimeCrate ? UI_REWARD_PICKUP_ROT_SLOW : UI_REWARD_PICKUP_ROT_FAST, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 
 	MATRIX *mat = &inst->matrix;
 
@@ -154,7 +154,7 @@ void UI_ThTick_CountPickup(struct Thread *bucket)
 	MatrixRotate(mat, &obj->m, mat);
 
 #if defined(CTR_NATIVE)
-	if (!isTimeCrate && (inst->model->id == STATIC_FRUITDISP) &&
+	if (!isTimeCrate && (P32_GET(struct Model *, inst->model)->id == STATIC_FRUITDISP) &&
 	    (gGT->numPlyrCurrGame >= 2) && ((gGT->gameMode1 & MAIN_MENU) == 0))
 	{
 		if ((gGT->gameMode1 & END_OF_RACE) != 0)
@@ -167,7 +167,7 @@ void UI_ThTick_CountPickup(struct Thread *bucket)
 
 		for (int i = 0; i < gGT->numPlyrCurrGame; i++)
 		{
-			if ((gGT->drivers[i] != NULL) && (gGT->drivers[i]->instFruitDisp == inst))
+			if ((P32_GET(struct Driver *, gGT->drivers[i]) != NULL) && (P32_GET(struct Instance *, P32_GET(struct Driver *, gGT->drivers[i])->instFruitDisp) == inst))
 			{
 				owner = i;
 				break;
@@ -176,7 +176,7 @@ void UI_ThTick_CountPickup(struct Thread *bucket)
 
 		if (owner >= 0)
 		{
-			inst->alphaScale = (gGT->drivers[owner]->numWumpas < DRIVER_WUMPA_JUICED_COUNT)
+			inst->alphaScale = (P32_GET(struct Driver *, gGT->drivers[owner])->numWumpas < DRIVER_WUMPA_JUICED_COUNT)
 			                       ? 0
 			                       : ((s16)sdata->wumpaShineResult - UI_REWARD_WUMPA_SHINE_CENTER) << UI_REWARD_WUMPA_SHINE_SHIFT;
 
@@ -212,11 +212,11 @@ void UI_ThTick_CountPickup(struct Thread *bucket)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8004c850-0x8004c914.
 void UI_ThTick_Reward(struct Thread *bucket)
 {
-	struct GameTracker *gGT = sdata->gGT;
-	struct Instance *inst = bucket->inst;
-	struct UiElement3D *obj = bucket->object;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct Instance *inst = P32_GET(struct Instance *, bucket->inst);
+	struct UiElement3D *obj = P32_GET(void *, bucket->object);
 
-	obj->rot.y += CTR_FRAME_STEP(UI_REWARD_PICKUP_ROT_SLOW, sdata->gGT->timer);
+	obj->rot.y += CTR_FRAME_STEP(UI_REWARD_PICKUP_ROT_SLOW, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 
 	Vector_SpecLightSpin2D(inst, &obj->rot, &obj->lightDir);
 
@@ -241,14 +241,14 @@ void UI_ThTick_Reward(struct Thread *bucket)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8004c914-0x8004ca04.
 void UI_ThTick_CtrLetters(struct Thread *bucket)
 {
-	struct Instance *inst = bucket->inst;
-	struct UiElement3D *obj = bucket->object;
+	struct Instance *inst = P32_GET(struct Instance *, bucket->inst);
+	struct UiElement3D *obj = P32_GET(void *, bucket->object);
 
-	obj->rot.y += CTR_FRAME_STEP(UI_REWARD_PICKUP_ROT_SLOW, sdata->gGT->timer);
+	obj->rot.y += CTR_FRAME_STEP(UI_REWARD_PICKUP_ROT_SLOW, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 
 	Vector_SpecLightSpin2D(inst, &obj->rot, &obj->lightDir);
 
-	if (((sdata->gGT->gameMode1 & END_OF_RACE) != 0) && RaceFlag_IsTransitioning())
+	if (((P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 & END_OF_RACE) != 0) && RaceFlag_IsTransitioning())
 	{
 		inst->scale.x = 0;
 		inst->scale.y = 0;
@@ -280,8 +280,8 @@ void UI_ThTick_CtrLetters(struct Thread *bucket)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8004ca04-0x8004caa8.
 void UI_ThTick_big1(struct Thread *bucket)
 {
-	struct UiElement3D *obj = bucket->object;
-	struct Instance *inst = bucket->inst;
+	struct UiElement3D *obj = P32_GET(void *, bucket->object);
+	struct Instance *inst = P32_GET(struct Instance *, bucket->inst);
 
 	s16 scale = obj->scale;
 	CTR_WriteU32LE(&inst->matrix.m[0][0], scale);
@@ -292,7 +292,7 @@ void UI_ThTick_big1(struct Thread *bucket)
 
 	MatrixRotate(&inst->matrix, &obj->m, &inst->matrix);
 
-	u32 drawOtagState = CTR_ReadU32LE(&sdata->gGT->bool_DrawOTag_InProgress);
+	u32 drawOtagState = CTR_ReadU32LE(&P32_GET(struct GameTracker *, sdata->gGT)->bool_DrawOTag_InProgress);
 	if ((drawOtagState & UI_REWARD_HUD_VISIBLE_WORD_MASK) == UI_REWARD_HUD_VISIBLE_WORD_VALUE)
 	{
 		inst->flags &= ~HIDE_MODEL;

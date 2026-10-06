@@ -7,14 +7,14 @@
 struct HitboxDesc
 {
 	// check collision
-	struct Instance *inst;
-	struct Thread *thread;
-	struct Thread *bucket;
+	P32(struct Instance *) inst;
+	P32(struct Thread *) thread;
+	P32(struct Thread *) bucket;
 	struct BoundingBox bbox;
 
 	// post collision
-	struct Thread *threadHit; // from bucket
-	void *funcThCollide;
+	P32(struct Thread *) threadHit; // from bucket
+	P32(void *) funcThCollide;
 };
 
 struct MaskHeadScratch
@@ -40,7 +40,7 @@ struct MaskHeadWeapon
 	s16 duration;
 
 	// 0x8
-	struct Instance *maskBeamInst;
+	P32(struct Instance *) maskBeamInst;
 
 	// 0xC
 	SVec3 pos;
@@ -89,16 +89,16 @@ CTR_STATIC_ASSERT(TRACKER_FLAG_WARPBALL_MASK_REPATH == 0x0010);
 struct TrackerWeapon
 {
 	// 0x0
-	struct Driver *driverTarget; // being chased
+	P32(struct Driver *) driverTarget; // being chased
 
 	// 0x4
-	struct Driver *driverParent; // who shot me
+	P32(struct Driver *) driverParent; // who shot me
 
 	// 0x8
-	struct Instance *instParent; // of driver who shot me
+	P32(struct Instance *) instParent; // of driver who shot me
 
 	// 0xC
-	struct Particle *ptrParticle;
+	P32(struct Particle *) ptrParticle;
 
 	// 0x10
 	SVec3 vel;
@@ -140,10 +140,10 @@ struct TrackerWeapon
 	int distFromGround;
 
 	// 0x3C
-	struct CheckpointNode *ptrNodeCurr;
+	P32(struct CheckpointNode *) ptrNodeCurr;
 
 	// 0x40
-	struct CheckpointNode *ptrNodeNext;
+	P32(struct CheckpointNode *) ptrNodeNext;
 
 	// 0x44
 	u8 nodeCurrIndex;
@@ -187,8 +187,8 @@ CTR_STATIC_ASSERT(sizeof(struct TrackerWeapon) == 0x58);
 struct RainLocal
 {
 	// 0x0
-	struct RainLocal *next;
-	struct RainLocal *prev;
+	P32(struct RainLocal *) next;
+	P32(struct RainLocal *) prev;
 
 	// 0x8
 	int frameCount;
@@ -206,7 +206,7 @@ struct RainLocal
 	s16 _pad_pos;
 
 	// 0x24
-	struct Instance *cloudInst;
+	P32(struct Instance *) cloudInst;
 
 	// 0x28 -- size
 };
@@ -218,7 +218,7 @@ CTR_STATIC_ASSERT(sizeof(struct RainLocal) == 0x28);
 struct RainCloud
 {
 	// 0x0
-	struct RainLocal *rainLocal;
+	P32(struct RainLocal *) rainLocal;
 
 	// 0x4
 	s16 timeMS;
@@ -253,10 +253,10 @@ struct Shield
 	ShieldFlags flags;
 
 	// 0x8
-	struct Instance *instColor;
+	P32(struct Instance *) instColor;
 
 	// 0xC
-	struct Instance *instHighlight;
+	P32(struct Instance *) instHighlight;
 
 	// 0x10
 	SVec3 highlightRot;
@@ -279,13 +279,13 @@ struct WeaponSlot231
 		struct
 		{
 			// 0x0
-			struct WeaponSlot231 *next;
-			struct WeaponSlot231 *prev;
+			P32(struct WeaponSlot231 *) next;
+			P32(struct WeaponSlot231 *) prev;
 		};
 	};
 
 	// 0x8
-	struct MineWeapon *mineWeapon;
+	P32(struct MineWeapon *) mineWeapon;
 };
 CTR_STATIC_ASSERT(sizeof(struct WeaponSlot231) == 0xc);
 
@@ -301,13 +301,13 @@ enum
 struct MineWeapon
 {
 	// 0x0
-	struct Driver *driverTarget; // who hit me
+	P32(struct Driver *) driverTarget; // who hit me
 
 	// 0x4
-	struct Instance *instParent; // of driver who placed me
+	P32(struct Instance *) instParent; // of driver who placed me
 
 	// 0x8
-	struct Instance *crateInst; // if colliding with one
+	P32(struct Instance *) crateInst; // if colliding with one
 
 	// 0xc
 	SVec3 velocity;
@@ -326,7 +326,7 @@ struct MineWeapon
 	s16 numFramesOnHead;
 
 	// 0x18
-	struct WeaponSlot231 *weaponSlot231;
+	P32(struct WeaponSlot231 *) weaponSlot231;
 
 	// 0x1C
 	// relative to driver
@@ -379,7 +379,7 @@ struct Baron
 
 	// 0x28
 	// unused, for baron
-	struct Instance *otherInst;
+	P32(struct Instance *) otherInst;
 
 	// 0x2c
 	s16 pointIndex;
@@ -542,8 +542,8 @@ CTR_STATIC_ASSERT(sizeof(struct FlameJet) == 0x14);
 struct Follower
 {
 	int frameCount;
-	struct Driver *driver;
-	struct Thread *mineTh;
+	P32(struct Driver *) driver;
+	P32(struct Thread *) mineTh;
 	int backupTimesDestroyed;
 
 	SVec3 realPos;
@@ -553,7 +553,7 @@ CTR_STATIC_ASSERT(sizeof(struct Follower) == 0x18);
 
 struct Fruit
 {
-	struct Driver *driver;
+	P32(struct Driver *) driver;
 };
 CTR_STATIC_ASSERT(sizeof(struct Fruit) == 0x4);
 
@@ -735,7 +735,7 @@ struct Spider
 	s16 padding;
 
 	// 0xC
-	struct Instance *shadowInst;
+	P32(struct Instance *) shadowInst;
 
 	// 0x10 bytes large
 };

@@ -1077,7 +1077,12 @@ int VSync(int mode)
 	}
 #endif
 
-	emittedVBlanks += Native_CatchUpDueVBlanks();
+#if defined(CTR_INTERNAL)
+	if (!NativeReplayScheduler_DeterministicBoot())
+#endif
+	{
+		emittedVBlanks += Native_CatchUpDueVBlanks();
+	}
 
 	if (mode == 0 && emittedVBlanks > 0)
 	{
@@ -1127,7 +1132,12 @@ void Platform_WaitUntilVBlank(int targetVBlank)
 	}
 #endif
 
-	emittedVBlanks += Native_CatchUpDueVBlanks();
+#if defined(CTR_INTERNAL)
+	if (!NativeReplayScheduler_DeterministicBoot())
+#endif
+	{
+		emittedVBlanks += Native_CatchUpDueVBlanks();
+	}
 
 	while (s_nativeVBlankCount < targetVBlank)
 	{

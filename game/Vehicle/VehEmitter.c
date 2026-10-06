@@ -168,8 +168,8 @@ CTR_STATIC_ASSERT(VEH_EMITTER_JOG_AIR_DURATION == 0x20);
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80059100-0x80059344.
 struct Particle *VehEmitter_Exhaust(struct Driver *d, VECTOR *exhaustPos, VECTOR *exhaustVel)
 {
-	struct GameTracker *gGT = sdata->gGT;
-	struct Instance *dInst = d->instSelf;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct Instance *dInst = P32_GET(struct Instance *, d->instSelf);
 
 	// At high frame rates, Particle_Init and the 30 FPS frame index in
 	// VehEmitter_ShouldSkipExhaust keep exhaust at the retail emission rate.
@@ -193,7 +193,7 @@ struct Particle *VehEmitter_Exhaust(struct Driver *d, VECTOR *exhaustPos, VECTOR
 	// equivalent of (d->driverID < numPlyr),
 	// because modelIndex is not set to DYNAMIC_ROBOT_CAR
 	// for human players after BOTS_Driver_Convert is called
-	if (dInst->thread->modelIndex != DYNAMIC_ROBOT_CAR)
+	if (P32_GET(struct Thread *, dInst->thread)->modelIndex != DYNAMIC_ROBOT_CAR)
 	{
 		switch (numPlyr)
 		{
@@ -215,7 +215,7 @@ struct Particle *VehEmitter_Exhaust(struct Driver *d, VECTOR *exhaustPos, VECTOR
 		emSet = &data.emSet_Exhaust_Water[0];
 	}
 
-	struct Particle *p = Particle_Init(0, gGT->iconGroup[exhaustType], emSet);
+	struct Particle *p = Particle_Init(0, P32_GET(struct IconGroup *, gGT->iconGroup[exhaustType]), emSet);
 
 	if (p == NULL)
 	{
@@ -229,12 +229,12 @@ struct Particle *VehEmitter_Exhaust(struct Driver *d, VECTOR *exhaustPos, VECTOR
 	p->axis[2].startVal += exhaustPos->vz - exhaustVel->vz;
 	p->axis[2].velocity = (s16)exhaustVel->vz;
 
-	p->driverInst = dInst;
+	P32_SET(p->driverInst, dInst);
 	p->otIndexOffset = dInst->depthBiasNormal;
 
 	if (exhaustType == VEH_EMITTER_EXHAUST_ICON_WATER)
 	{
-		p->funcPtr = Particle_FuncPtr_ExhaustUnderwater;
+		P32_SET(p->funcPtr, Particle_FuncPtr_ExhaustUnderwater);
 	}
 
 	// if engine revving
@@ -270,7 +270,7 @@ static const SVECTOR sparkGround_inZ2 = {0, 0, -0x200, 0};
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80059344-0x80059558.
 void VehEmitter_Sparks_Ground(struct Driver *d, struct ParticleEmitter *emSet)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	Vec3 outX;
 	Vec3 outZ;
@@ -291,7 +291,7 @@ void VehEmitter_Sparks_Ground(struct Driver *d, struct ParticleEmitter *emSet)
 	for (int i = 0; i < VEH_EMITTER_GROUND_SPARK_COUNT; i++)
 	{
 		// Create instance in particle pool
-		struct Particle *p = Particle_Init(0, gGT->iconGroup[0], emSet);
+		struct Particle *p = Particle_Init(0, P32_GET(struct IconGroup *, gGT->iconGroup[0]), emSet);
 
 		if (p == NULL)
 		{
@@ -311,8 +311,8 @@ void VehEmitter_Sparks_Ground(struct Driver *d, struct ParticleEmitter *emSet)
 			p->axis[j].startVal += outZ.v[j] + p->axis[j].velocity;
 		}
 
-		p->driverInst = d->instSelf;
-		p->otIndexOffset = d->instSelf->depthBiasNormal;
+		P32_SET(p->driverInst, P32_GET(struct Instance *, d->instSelf));
+		p->otIndexOffset = P32_GET(struct Instance *, d->instSelf)->depthBiasNormal;
 	}
 }
 
@@ -364,8 +364,8 @@ void VehEmitter_Terrain_Ground(struct Driver *d, struct ParticleEmitter *emSet)
 	// if sliding, spawn on 4 tires, otherwise just 2
 	numTires = (d->kartState == KS_DRIFTING) ? VEH_EMITTER_TERRAIN_DRIFT_TIRE_COUNT : VEH_EMITTER_TERRAIN_NORMAL_TIRE_COUNT;
 
-	struct Instance *dInst = d->instSelf;
-	struct IconGroup *ig = sdata->gGT->iconGroup[0];
+	struct Instance *dInst = P32_GET(struct Instance *, d->instSelf);
+	struct IconGroup *ig = P32_GET(struct IconGroup *, P32_GET(struct GameTracker *, sdata->gGT)->iconGroup[0]);
 
 	// spawn particles on wheels
 	for (; numTires != 0; numTires--)
@@ -393,7 +393,7 @@ void VehEmitter_Terrain_Ground(struct Driver *d, struct ParticleEmitter *emSet)
 			p->axis[i].velocity = (s16)vel.v[i];
 		}
 
-		p->driverInst = dInst;
+		P32_SET(p->driverInst, dInst);
 		p->otIndexOffset = dInst->depthBiasNormal;
 	}
 }
@@ -504,7 +504,7 @@ void VehEmitter_Sparks_Wall(struct Driver *d, struct ParticleEmitter *emSet)
 	}
 
 	// Create instance in particle pool
-	struct Particle *p = Particle_Init(0, sdata->gGT->iconGroup[0], emSet);
+	struct Particle *p = Particle_Init(0, P32_GET(struct IconGroup *, P32_GET(struct GameTracker *, sdata->gGT)->iconGroup[0]), emSet);
 
 	if (p == NULL)
 	{
@@ -526,7 +526,7 @@ void VehEmitter_Sparks_Wall(struct Driver *d, struct ParticleEmitter *emSet)
 	p->axis[1].velocity = (s16)distOut4[1];
 	p->axis[2].velocity = (s16)distOut4[2];
 
-	p->driverInst = d->instSelf;
+	P32_SET(p->driverInst, P32_GET(struct Instance *, d->instSelf));
 }
 
 static void VehEmitter_SetRotTransMatrix(MATRIX *m)
@@ -583,7 +583,7 @@ static void VehEmitter_WriteSkidmarkPair(struct Driver *d, int tireIndex, int x,
 
 static void VehEmitter_Skidmarks(struct Thread *thread, struct Driver *d, TerrainFlags terrainFlags)
 {
-	struct Instance *inst = thread->inst;
+	struct Instance *inst = P32_GET(struct Instance *, thread->inst);
 	MATRIX *m = &inst->matrix;
 	u8 color = ((inst->flags & SPLIT_LINE) == 0) ? inst->depthBiasNormal : inst->depthBiasSecondary;
 	u8 flags = ((terrainFlags & TERRAIN_FLAG_FORCE_SKIDMARKS) == 0) ? 0 : 1;
@@ -636,7 +636,7 @@ static void VehEmitter_Skidmarks(struct Thread *thread, struct Driver *d, Terrai
 
 static void VehEmitter_MudSplash(struct Driver *d)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	int landing = (d->actionsFlagSet & ACTION_STARTED_TOUCH_GROUND) != 0;
 	int count = landing ? VEH_EMITTER_MUD_SPLASH_LANDING_COUNT : VEH_EMITTER_MUD_SPLASH_NORMAL_COUNT;
 
@@ -648,15 +648,15 @@ static void VehEmitter_MudSplash(struct Driver *d)
 
 	for (; count != 0; count--)
 	{
-		struct Particle *p = Particle_Init(0, gGT->iconGroup[VEH_EMITTER_MUD_SPLASH_ICON], &data.emSet_MudSplash[0]);
+		struct Particle *p = Particle_Init(0, P32_GET(struct IconGroup *, gGT->iconGroup[VEH_EMITTER_MUD_SPLASH_ICON]), &data.emSet_MudSplash[0]);
 
 		if (p == NULL)
 		{
 			continue;
 		}
 
-		p->otIndexOffset = d->instSelf->depthBiasNormal;
-		p->driverInst = d->instSelf;
+		p->otIndexOffset = P32_GET(struct Instance *, d->instSelf)->depthBiasNormal;
+		P32_SET(p->driverInst, P32_GET(struct Instance *, d->instSelf));
 		p->driverID = d->driverID;
 
 		p->axis[0].startVal += (int)p->axis[0].velocity * VEH_EMITTER_MUD_SPLASH_VELOCITY_SCALE;
@@ -670,8 +670,8 @@ static void VehEmitter_MudSplash(struct Driver *d)
 
 static void VehEmitter_TerrainEffects(struct Thread *thread, struct Driver *d, struct Terrain *terrain, TerrainFlags terrainFlags, int absSpeedApprox)
 {
-	struct GameTracker *gGT = sdata->gGT;
-	struct Instance *inst = thread->inst;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct Instance *inst = P32_GET(struct Instance *, thread->inst);
 	MATRIX *m = &inst->matrix;
 
 	if (gGT->numPlyrCurrGame >= 2)
@@ -708,13 +708,13 @@ static void VehEmitter_TerrainEffects(struct Thread *thread, struct Driver *d, s
 		}
 	}
 
-	if (terrain->em_OddFrame != NULL)
+	if (P32_GET(struct ParticleEmitter *, terrain->em_OddFrame) != NULL)
 	{
-		struct ParticleEmitter *emSet = terrain->em_OddFrame;
+		struct ParticleEmitter *emSet = P32_GET(struct ParticleEmitter *, terrain->em_OddFrame);
 
-		if ((terrain->em_EvenFrame != NULL) && ((CTR_RETAIL_FRAME_INDEX(gGT->timer) & 1) != 0))
+		if ((P32_GET(struct ParticleEmitter *, terrain->em_EvenFrame) != NULL) && ((CTR_RETAIL_FRAME_INDEX(gGT->timer) & 1) != 0))
 		{
-			emSet = terrain->em_EvenFrame;
+			emSet = P32_GET(struct ParticleEmitter *, terrain->em_EvenFrame);
 		}
 
 		VehEmitter_SetRotTransMatrix(m);
@@ -894,7 +894,7 @@ static void VehEmitter_SkidmarkAudio(struct Thread *thread, struct Driver *d, st
 
 static int VehEmitter_ShouldSkipExhaust(struct Thread *thread, struct Driver *d)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	u32 retailFrame = (u32)CTR_RETAIL_FRAME_INDEX(gGT->timer);
 
 	if (thread->modelIndex == DYNAMIC_ROBOT_CAR)
@@ -928,7 +928,7 @@ static int VehEmitter_ShouldSkipExhaust(struct Thread *thread, struct Driver *d)
 			if ((meterLeft < VEH_EMITTER_TURBO_METER_COLOR_MIN) ||
 			    (((d->const_turboLowRoomWarning + VEH_EMITTER_TURBO_ROOM_WARNING_PAD) * VEH_EMITTER_TURBO_ROOM_WARNING_SCALE) < meterLeft))
 			{
-				if (PROC_SearchForModel(thread->childThread, STATIC_TURBO_EFFECT) != NULL)
+				if (PROC_SearchForModel(P32_GET(struct Thread *, thread->childThread), STATIC_TURBO_EFFECT) != NULL)
 				{
 					return 1;
 				}
@@ -947,7 +947,7 @@ static int VehEmitter_ShouldSkipExhaust(struct Thread *thread, struct Driver *d)
 
 static void VehEmitter_ExhaustPair(struct Thread *thread, struct Driver *d)
 {
-	struct Instance *inst = thread->inst;
+	struct Instance *inst = P32_GET(struct Instance *, thread->inst);
 	MATRIX *m = &inst->matrix;
 	SVECTOR local;
 	VECTOR exhaustPos;
@@ -975,7 +975,7 @@ static void VehEmitter_ExhaustPair(struct Thread *thread, struct Driver *d)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80059a18-0x8005ab24
 void VehEmitter_DriverMain(struct Thread *thread, struct Driver *d)
 {
-	struct Terrain *terrain = d->terrainMeta1;
+	struct Terrain *terrain = P32_GET(struct Terrain *, d->terrainMeta1);
 	TerrainFlags terrainFlags = terrain->flags;
 	int absSpeedApprox = d->speedApprox;
 
@@ -1015,12 +1015,12 @@ void VehEmitter_DriverMain(struct Thread *thread, struct Driver *d)
 	if (d->burnTimer != 0)
 	{
 		d->alphaScaleBackup = VEH_EMITTER_ALPHA_FULL;
-		d->instSelf->alphaScale = VEH_EMITTER_ALPHA_FULL;
+		P32_GET(struct Instance *, d->instSelf)->alphaScale = VEH_EMITTER_ALPHA_FULL;
 	}
 
 	if (d->invisibleTimer != 0)
 	{
-		thread->inst->alphaScale = VEH_EMITTER_ALPHA_FULL;
+		P32_GET(struct Instance *, thread->inst)->alphaScale = VEH_EMITTER_ALPHA_FULL;
 	}
 
 	if ((d->kartState != KS_NORMAL) && (d->kartState != KS_DRIFTING))
@@ -1037,7 +1037,7 @@ void VehEmitter_DriverMain(struct Thread *thread, struct Driver *d)
 			return;
 		}
 
-		int jogValue = ((sdata->gGT->timer & VEH_EMITTER_JOG_WOBBLE_TIMER_MASK) == 0) ? VEH_EMITTER_JOG_GROUND : VEH_EMITTER_JOG_WOBBLE_ALT;
+		int jogValue = ((P32_GET(struct GameTracker *, sdata->gGT)->timer & VEH_EMITTER_JOG_WOBBLE_TIMER_MASK) == 0) ? VEH_EMITTER_JOG_GROUND : VEH_EMITTER_JOG_WOBBLE_ALT;
 		GAMEPAD_JogCon2(d, jogValue, VEH_EMITTER_JOG_WOBBLE_DURATION);
 		return;
 	}

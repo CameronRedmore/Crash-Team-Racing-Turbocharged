@@ -181,7 +181,7 @@ typedef struct
 struct ChannelAttr
 {
 	// 0x0
-	void *spuStartAddr;
+	u32 spuStartAddr; // SPU RAM address, not a host pointer
 
 	// as + dr = ASDR (envelope standard)
 
@@ -215,10 +215,10 @@ struct ChannelStats
 		struct
 		{
 			// 0x0
-			struct ChannelStats *next;
+			P32(struct ChannelStats *) next;
 
 			// 0x4
-			struct ChannelStats *prev;
+			P32(struct ChannelStats *) prev;
 		};
 	};
 
@@ -427,7 +427,7 @@ struct CseqSongHeader
 	// each seq is an array of SongNote
 	// s16 seqOffsetArr[0];
 };
-#define SONGHEADER_GETSEQOFFARR(x) ((u32)x + sizeof(struct CseqSongHeader))
+#define SONGHEADER_GETSEQOFFARR(x) ((uintptr_t)(x) + sizeof(struct CseqSongHeader))
 
 // right before first note
 struct SongNoteHeader
@@ -439,7 +439,7 @@ struct SongNoteHeader
 
 	// char notes[0];
 };
-#define NOTEHEADER_GETNOTES(x) ((u32)x + sizeof(struct SongNoteHeader))
+#define NOTEHEADER_GETNOTES(x) ((uintptr_t)(x) + sizeof(struct SongNoteHeader))
 
 struct SongSeq
 {
@@ -495,10 +495,10 @@ struct SongSeq
 	int NoteTimeElapsed;
 
 	// 0x14
-	u8 *firstNote;
+	P32(u8 *) firstNote;
 
 	// 0x18
-	u8 *currNote;
+	P32(u8 *) currNote;
 
 	// 0x1C -- size
 };
@@ -550,13 +550,13 @@ struct Song
 	u8 numSequences;
 
 	// 0x1c array of all cseq sequences in song
-	struct SongSeq *CseqSequences[0x18];
+	P32(struct SongSeq *) CseqSequences[0x18];
 };
 
 struct SongSet
 {
 	int numSeqs;
-	u8 *ptrSongSetBits;
+	P32(u8 *) ptrSongSetBits;
 };
 
 struct SampleBlockHeader
@@ -565,7 +565,7 @@ struct SampleBlockHeader
 
 	// s16 spuIndexArr[0];
 };
-#define SBHEADER_GETARR(x) (s16 *)((u32)x + sizeof(struct SampleBlockHeader))
+#define SBHEADER_GETARR(x) (s16 *)((uintptr_t)(x) + sizeof(struct SampleBlockHeader))
 
 struct SpuAddrEntry
 {

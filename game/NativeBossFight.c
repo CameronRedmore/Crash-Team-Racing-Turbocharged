@@ -38,18 +38,18 @@ void NativeBossFight_SelectBoss(int bossID)
     }
 
     gNativeBossFightBossID = bossID;
-    sdata->gGT->bossID = bossID;
+    P32_GET(struct GameTracker *, sdata->gGT)->bossID = bossID;
     data.characterIDs[1] = NativeBossFight_GetBossCharacter(bossID);
 }
 
 void NativeBossFight_ArmGameplay(void)
 {
-    if ((gNativeBossFightMode == 0) || (sdata == NULL) || (sdata->gGT == NULL))
+    if ((gNativeBossFightMode == 0) || (sdata == NULL) || (P32_GET(struct GameTracker *, sdata->gGT) == NULL))
     {
         return;
     }
 
-    struct GameTracker *gGT = sdata->gGT;
+    struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
     gGT->gameMode1 &= ~ARCADE_MODE;
     gGT->gameMode1 |= ADVENTURE_BOSS;
     gGT->bossID = gNativeBossFightBossID;
@@ -58,13 +58,13 @@ void NativeBossFight_ArmGameplay(void)
 
 void NativeBossFight_BeginPostRace(void)
 {
-    if ((gNativeBossFightMode == 0) || (sdata == NULL) || (sdata->gGT == NULL))
+    if ((gNativeBossFightMode == 0) || (sdata == NULL) || (P32_GET(struct GameTracker *, sdata->gGT) == NULL))
     {
         return;
     }
 
-    sdata->gGT->gameMode1 &= ~ADVENTURE_BOSS;
-    sdata->gGT->gameMode1 |= ARCADE_MODE;
+    P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 &= ~ADVENTURE_BOSS;
+    P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 |= ARCADE_MODE;
 }
 
 void NativeBossFight_Clear(void)
@@ -72,9 +72,9 @@ void NativeBossFight_Clear(void)
     gNativeBossFightMode = 0;
     gNativeBossFightBossID = 0;
 
-    if ((sdata != NULL) && (sdata->gGT != NULL))
+    if ((sdata != NULL) && (P32_GET(struct GameTracker *, sdata->gGT) != NULL))
     {
-        sdata->gGT->gameMode1 &= ~(ADVENTURE_BOSS | ARCADE_MODE);
+        P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 &= ~(ADVENTURE_BOSS | ARCADE_MODE);
     }
 }
 
@@ -87,10 +87,10 @@ struct MetaDataBOSS *NativeBossFight_GetWeaponMeta(int bossID)
 
     if (bossID >= 4)
     {
-        return data.bossWeaponMetaPtr[0];
+        return P32_GET(struct MetaDataBOSS *, data.bossWeaponMetaPtr[0]);
     }
 
-    return data.bossWeaponMetaPtr[bossID + 1];
+    return P32_GET(struct MetaDataBOSS *, data.bossWeaponMetaPtr[bossID + 1]);
 }
 
 int NativeBossFight_GetWeaponMetaCount(int bossID)

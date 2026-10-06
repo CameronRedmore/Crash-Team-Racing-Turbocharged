@@ -114,15 +114,15 @@ int VehPickState_NewState(struct Driver *victimDriver, int damageType, struct Dr
 		return 0;
 	}
 
-	if (victimDriver->instBubbleHold != NULL)
+	if (P32_GET(struct Instance *, victimDriver->instBubbleHold) != NULL)
 	{
-		struct Shield *shieldObj = victimDriver->instBubbleHold->thread->object;
+		struct Shield *shieldObj = P32_GET(void *, P32_GET(struct Thread *, P32_GET(struct Instance *, victimDriver->instBubbleHold)->thread)->object);
 
 		shieldObj->flags |= SHIELD_FLAG_POP_ON_DAMAGE;
 
 		victimDriver->invincibleTimer = VEH_PICK_SHIELD_DAMAGE_INVINCIBLE_TIMER;
 
-		victimDriver->instBubbleHold = NULL;
+		P32_SET(victimDriver->instBubbleHold, NULL);
 
 		goto VictimLaugh;
 	}
@@ -143,8 +143,8 @@ int VehPickState_NewState(struct Driver *victimDriver, int damageType, struct Dr
 		if (victimState != KS_SPINNING)
 		{
 		SPINOUT:
-			victimDriver->pendingDamageAttacker = attackDriver;
-			victimDriver->funcPtrs[DRIVER_FUNC_INIT] = VehPhysProc_SpinFirst_Init;
+			P32_SET(victimDriver->pendingDamageAttacker, attackDriver);
+			P32_SET(victimDriver->funcPtrs[DRIVER_FUNC_INIT], VehPhysProc_SpinFirst_Init);
 		}
 	}
 
@@ -158,12 +158,12 @@ int VehPickState_NewState(struct Driver *victimDriver, int damageType, struct Dr
 		}
 
 		// quit if already blasted
-		if (victimDriver->funcPtrs[DRIVER_FUNC_INIT] == VehStuckProc_Tumble_Init)
+		if (P32_GET(DriverFunc, victimDriver->funcPtrs[DRIVER_FUNC_INIT]) == VehStuckProc_Tumble_Init)
 		{
 			return 0;
 		}
 
-		victimDriver->funcPtrs[DRIVER_FUNC_INIT] = VehStuckProc_Tumble_Init;
+		P32_SET(victimDriver->funcPtrs[DRIVER_FUNC_INIT], VehStuckProc_Tumble_Init);
 
 		// 2.4s
 		victimDriver->NoInputTimer = VEH_PICK_BLAST_NO_INPUT_TIMER;
@@ -221,7 +221,7 @@ int VehPickState_NewState(struct Driver *victimDriver, int damageType, struct Dr
 		// 3.36s
 		victimDriver->NoInputTimer = VEH_PICK_MASK_GRAB_NO_INPUT_TIMER;
 
-		victimDriver->funcPtrs[DRIVER_FUNC_INIT] = VehStuckProc_PlantEaten_Init;
+		P32_SET(victimDriver->funcPtrs[DRIVER_FUNC_INIT], VehStuckProc_PlantEaten_Init);
 
 		voice = VEH_PICK_VOICELINE_COMMON_DAMAGE;
 	}
@@ -318,14 +318,14 @@ int VehPickState_NewState(struct Driver *victimDriver, int damageType, struct Dr
 	GAMEPAD_ShockFreq(victimDriver, VEH_PICK_RUMBLE_FRAMES, 0);
 	GAMEPAD_ShockForce1(victimDriver, VEH_PICK_RUMBLE_FRAMES, VEH_PICK_RUMBLE_FORCE);
 
-	int gameMode1 = sdata->gGT->gameMode1;
+	int gameMode1 = P32_GET(struct GameTracker *, sdata->gGT)->gameMode1;
 
 	if ((attackDriver != NULL) && ((gameMode1 & END_OF_RACE) == 0))
 	{
-		struct PushBuffer *pb = &sdata->gGT->pushBuffer[attackDriver->driverID];
+		struct PushBuffer *pb = &P32_GET(struct GameTracker *, sdata->gGT)->pushBuffer[attackDriver->driverID];
 
 		SVec2 posScreen;
-		RB_Fruit_GetScreenCoords(pb, attackDriver->instSelf, posScreen.v);
+		RB_Fruit_GetScreenCoords(pb, P32_GET(struct Instance *, attackDriver->instSelf), posScreen.v);
 
 		// screenPosXY
 		attackDriver->BattleHUD.startX = pb->rect.x + posScreen.x;
@@ -336,13 +336,13 @@ int VehPickState_NewState(struct Driver *victimDriver, int damageType, struct Dr
 
 		// NOTE(aalhendi): Retail rechecks END_OF_RACE after RB_Player_KillPlayer,
 		// which can transition battle finish state inside this block.
-		if ((sdata->gGT->gameMode1 & END_OF_RACE) != 0)
+		if ((P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 & END_OF_RACE) != 0)
 		{
 			attackDriver->quip1 = (s16)reason;
 			victimDriver->quip3 = (s16)reason;
 		}
 
-		if ((attackDriver == victimDriver) && ((sdata->gGT->gameMode1 & POINT_LIMIT) != 0))
+		if ((attackDriver == victimDriver) && ((P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 & POINT_LIMIT) != 0))
 		{
 			if (victimDriver->BattleHUD.cooldown == VEH_PICK_BATTLE_HUD_COOLDOWN)
 			{
@@ -375,8 +375,8 @@ int VehPickState_NewState(struct Driver *victimDriver, int damageType, struct Dr
 		}
 	}
 
-	victimDriver->instSelf->thread->flags &= ~THREAD_FLAG_DISABLE_COLLISION;
-	victimDriver->instSelf->flags &= ~HIDE_MODEL;
+	P32_GET(struct Thread *, P32_GET(struct Instance *, victimDriver->instSelf)->thread)->flags &= ~THREAD_FLAG_DISABLE_COLLISION;
+	P32_GET(struct Instance *, victimDriver->instSelf)->flags &= ~HIDE_MODEL;
 
 	return 1;
 }

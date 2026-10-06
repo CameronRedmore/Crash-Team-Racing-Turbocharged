@@ -3,22 +3,22 @@
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800ae81c-0x800ae834
 void CS_LoadBossCallback(struct LoadQueueSlot *lqs)
 {
-	void *ptr = lqs->ptrDestination;
+	void *ptr = P32_GET(void *, lqs->ptrDestination);
 	sdata->load_inProgress = 0;
-	D233.ptrModelBossHead = ptr;
+	P32_SET(D233.ptrModelBossHead, ptr);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800ae834-0x800ae9a8
 void CS_LoadBoss(const struct BossCutsceneData *bcd)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	int otherHubMempack = LOAD_HUB_MEMPACK_PAIR_INDEX_SUM - gGT->activeMempackIndex;
 
 	CDSYS_XAPauseRequest();
 
 	// erase HEAD + BODY
-	D233.ptrModelBossBody = 0;
-	D233.ptrModelBossHead = 0;
+	P32_SET(D233.ptrModelBossBody, 0);
+	P32_SET(D233.ptrModelBossHead, 0);
 
 	// invalidate alternative-hub, because
 	// the boss will load in that level's RAM

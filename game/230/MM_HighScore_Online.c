@@ -25,8 +25,14 @@ static struct RectMenu s_onlineGhostMenu =
     .posX_curr = 0x17c,
     .posY_curr = 0xaf,
     .state = USE_SMALL_FONT | CENTER_ON_X,
-    .rows = s_onlineGhostRows,
+    .rows = P32_DEFER(s_onlineGhostRows),
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(s_onlineGhostMenu)
+{
+	P32_SET(s_onlineGhostMenu.rows, s_onlineGhostRows);
+}
+#endif
 
 static int s_onlineHighScoreState;
 enum NativeHighScoreOnlineCategory
@@ -106,7 +112,7 @@ static void MM_HighScore_OnlineClampSelection(void)
 
 static void MM_HighScore_OnlineDraw(u16 trackIndex, s16 offsetX)
 {
-    struct GameTracker *gGT = sdata->gGT;
+    struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
     s16 logicalTrackId = MM_HighScore_GetLogicalTrackId(trackIndex);
     int arcadeTrackIndex = MM_HighScore_GetArcadeIndexForLogical(logicalTrackId);
     char trackName[64];
@@ -117,29 +123,29 @@ static void MM_HighScore_OnlineDraw(u16 trackIndex, s16 offsetX)
 
     s16 lineWidth = DecalFont_GetLineWidth(trackName, FONT_BIG) >> 1;
     s16 numColor = ((FPS_HALF(sdata->frameCounter) & MM_HIGHSCORE_FLASH_TIMER_BIT) == 0) ? RED : ORANGE;
-    u32 *colorPtr = data.ptrColor[numColor];
-    struct Icon **iconPtrArray = ICONGROUP_GETICONS(gGT->iconGroup[MM_HIGHSCORE_ARROW_ICON_GROUP]);
+    u32 *colorPtr = P32_GET(u32 *, data.ptrColor[numColor]);
+    P32(struct Icon *) *iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[MM_HIGHSCORE_ARROW_ICON_GROUP]));
     const struct TransitionMeta *titleMeta = &D230.transitionMeta_HighScores[MM_HIGHSCORE_TITLE_META_INDEX];
     const struct TransitionMeta *bestTrackMeta = &D230.transitionMeta_HighScores[MM_HIGHSCORE_BEST_TRACK_META_INDEX];
     const struct TransitionMeta *bestLapLabelMeta = &D230.transitionMeta_HighScores[MM_HIGHSCORE_BEST_LAP_LABEL_META_INDEX];
     const struct TransitionMeta *bestLapEntryMeta = &D230.transitionMeta_HighScores[MM_HIGHSCORE_BEST_LAP_ENTRY_META_INDEX];
     Color iconColor = D230.highscore_iconColor;
 
-    DecalHUD_Arrow2D(iconPtrArray[MM_HIGHSCORE_ARROW_ICON_ID], titleMeta->currX + offsetX - lineWidth + MM_HIGHSCORE_ARROW_LEFT_X_OFFSET,
-                     titleMeta->currY + MM_HIGHSCORE_ARROW_Y_OFFSET, &gGT->backBuffer->primMem, gGT->pushBuffer_UI.ptrOT,
+    DecalHUD_Arrow2D(P32_GET(struct Icon *, iconPtrArray[MM_HIGHSCORE_ARROW_ICON_ID]), titleMeta->currX + offsetX - lineWidth + MM_HIGHSCORE_ARROW_LEFT_X_OFFSET,
+                     titleMeta->currY + MM_HIGHSCORE_ARROW_Y_OFFSET, &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT),
                      colorPtr[0], colorPtr[1], colorPtr[2], colorPtr[3], 0, MM_HIGHSCORE_ARROW_SCALE, MM_HIGHSCORE_ARROW_LEFT_ROTATION);
-    DecalHUD_Arrow2D(iconPtrArray[MM_HIGHSCORE_ARROW_ICON_ID], titleMeta->currX + offsetX + lineWidth + MM_HIGHSCORE_ARROW_RIGHT_X_OFFSET,
-                     titleMeta->currY + MM_HIGHSCORE_ARROW_Y_OFFSET, &gGT->backBuffer->primMem, gGT->pushBuffer_UI.ptrOT,
+    DecalHUD_Arrow2D(P32_GET(struct Icon *, iconPtrArray[MM_HIGHSCORE_ARROW_ICON_ID]), titleMeta->currX + offsetX + lineWidth + MM_HIGHSCORE_ARROW_RIGHT_X_OFFSET,
+                     titleMeta->currY + MM_HIGHSCORE_ARROW_Y_OFFSET, &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT),
                      colorPtr[0], colorPtr[1], colorPtr[2], colorPtr[3], 0, MM_HIGHSCORE_ARROW_SCALE, 0);
 
     DecalFont_DrawLine(trackName, titleMeta->currX + offsetX + MM_HIGHSCORE_TITLE_X_OFFSET,
                        titleMeta->currY + MM_HIGHSCORE_TITLE_Y_OFFSET, FONT_BIG, JUSTIFY_CENTER);
-    MM_HighScore_Text3D(sdata->lngStrings[(s_onlineCategory == MM_HIGHSCORE_ONLINE_RELIC) ? LNG_RELIC_RACE : LNG_BEST_TRACK_TIMES],
+    MM_HighScore_Text3D(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[(s_onlineCategory == MM_HIGHSCORE_ONLINE_RELIC) ? LNG_RELIC_RACE : LNG_BEST_TRACK_TIMES]),
                         bestTrackMeta->currX + offsetX + MM_HIGHSCORE_BEST_TRACK_LABEL_X_OFFSET,
                         bestTrackMeta->currY + MM_HIGHSCORE_BEST_TRACK_LABEL_Y_OFFSET, FONT_SMALL, 0);
     if (s_onlineCategory == MM_HIGHSCORE_ONLINE_COURSE)
     {
-        MM_HighScore_Text3D(sdata->lngStrings[LNG_BEST_LAP_TIME], bestLapLabelMeta->currX + offsetX + MM_HIGHSCORE_BEST_LAP_LABEL_X_OFFSET,
+        MM_HighScore_Text3D(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_BEST_LAP_TIME]), bestLapLabelMeta->currX + offsetX + MM_HIGHSCORE_BEST_LAP_LABEL_X_OFFSET,
                             bestLapLabelMeta->currY + MM_HIGHSCORE_BEST_LAP_LABEL_Y_OFFSET, FONT_SMALL, 0);
     }
 
@@ -151,10 +157,10 @@ static void MM_HighScore_OnlineDraw(u16 trackIndex, s16 offsetX)
                             lap->characterId + MM_HIGHSCORE_DRIVER_COLOR_OFFSET);
         MM_HighScore_Text3D(RECTMENU_DrawTime(lap->timeMs), bestLapEntryMeta->currX + offsetX + MM_HIGHSCORE_BEST_LAP_TEXT_X_OFFSET,
                             bestLapEntryMeta->currX + MM_HIGHSCORE_BEST_LAP_TIME_Y_OFFSET, FONT_SMALL, 0);
-        RECTMENU_DrawPolyGT4(gGT->ptrIcons[data.MetaDataCharacters[lap->characterId].iconID],
+        RECTMENU_DrawPolyGT4(P32_GET(struct Icon *, gGT->ptrIcons[data.MetaDataCharacters[lap->characterId].iconID]),
                              bestLapEntryMeta->currX + offsetX + MM_HIGHSCORE_BEST_LAP_ICON_X_OFFSET,
-                             bestLapEntryMeta->currY + MM_HIGHSCORE_BEST_LAP_ICON_Y_OFFSET, &gGT->backBuffer->primMem,
-                             gGT->pushBuffer_UI.ptrOT, iconColor.self, iconColor.self, iconColor.self, iconColor.self,
+                             bestLapEntryMeta->currY + MM_HIGHSCORE_BEST_LAP_ICON_Y_OFFSET, &P32_GET(struct DB *, gGT->backBuffer)->primMem,
+                             P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), iconColor.self, iconColor.self, iconColor.self, iconColor.self,
                              MM_HIGHSCORE_ICON_TRANSPARENCY, MM_HIGHSCORE_ICON_SCALE);
     }
 
@@ -164,10 +170,10 @@ static void MM_HighScore_OnlineDraw(u16 trackIndex, s16 offsetX)
         struct NativeLeaderboardEntry *entry = MM_HighScore_OnlineRecordAt(&track, row);
         int metaIndex = row + MM_HIGHSCORE_FIRST_VISIBLE_META_INDEX;
 
-        RECTMENU_DrawPolyGT4(gGT->ptrIcons[data.MetaDataCharacters[entry->characterId].iconID],
+        RECTMENU_DrawPolyGT4(P32_GET(struct Icon *, gGT->ptrIcons[data.MetaDataCharacters[entry->characterId].iconID]),
                              D230.transitionMeta_HighScores[metaIndex].currX + offsetX + MM_HIGHSCORE_SCORE_ICON_X_OFFSET,
                              D230.transitionMeta_HighScores[metaIndex].currY + row * MM_HIGHSCORE_SCORE_ROW_Y_STEP + MM_HIGHSCORE_SCORE_NAME_Y_OFFSET,
-                             &gGT->backBuffer->primMem, gGT->pushBuffer_UI.ptrOT, iconColor.self, iconColor.self, iconColor.self, iconColor.self,
+                             &P32_GET(struct DB *, gGT->backBuffer)->primMem, P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), iconColor.self, iconColor.self, iconColor.self, iconColor.self,
                              MM_HIGHSCORE_ICON_TRANSPARENCY, MM_HIGHSCORE_ICON_SCALE);
         MM_HighScore_Text3D(entry->nickname, D230.transitionMeta_HighScores[metaIndex].currX + offsetX + MM_HIGHSCORE_SCORE_NAME_X_OFFSET,
                             D230.transitionMeta_HighScores[metaIndex].currY + row * MM_HIGHSCORE_SCORE_ROW_Y_STEP + MM_HIGHSCORE_SCORE_NAME_Y_OFFSET,
@@ -186,7 +192,7 @@ static void MM_HighScore_OnlineDraw(u16 trackIndex, s16 offsetX)
             highlight.y = D230.transitionMeta_HighScores[metaIndex].currY + row * MM_HIGHSCORE_SCORE_ROW_Y_STEP + MM_HIGHSCORE_SCORE_NAME_Y_OFFSET - 2;
             highlight.w = 0xe8;
             highlight.h = MM_HIGHSCORE_SCORE_ROW_Y_STEP;
-            CTR_Box_DrawClearBox(&highlight, &sdata->menuRowHighlight_Normal, TRANS_50_DECAL, gGT->backBuffer->otMem.uiOT);
+            CTR_Box_DrawClearBox(&highlight, &sdata->menuRowHighlight_Normal, TRANS_50_DECAL, P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT));
         }
     }
 
@@ -215,7 +221,7 @@ static void MM_HighScore_OnlineStartGhostReplay(void)
 
     NativeGhostInput_SetLeaderboardReplaySource(s_onlineGhostNickname);
 
-    struct GameTracker *gGT = sdata->gGT;
+    struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
     gNativeGhostReplayMode = 1;
     gNativeOnlineLeaderboardMode = 0;
     NativeReverseTrack_SelectLogical(s_onlineGhostTrackId);
@@ -237,7 +243,7 @@ static void MM_HighScore_OnlineStartGhostReplay(void)
     gGT->currLEV = s_onlineGhostTrackId;
     sdata->boolReplayHumanGhost = 0;
     MM_Title_KillThread();
-    sdata->ptrDesiredMenu = QueueLoadTrack_GetMenuPtr();
+    P32_SET(sdata->ptrDesiredMenu, QueueLoadTrack_GetMenuPtr());
 }
 
 static void MM_HighScore_OnlineInit(void)
@@ -456,7 +462,7 @@ static void MM_HighScore_OnlineMenuProc(void)
         }
     }
     // track slide steps at 30 Hz; its offsets rely on whole-step positions
-    else if (CTR_RETAIL_FRAME_TICK(sdata->gGT->timer))
+    else if (CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer))
     {
         u8 reachedTarget = D230.highScoreTransition.trackFrame == 1;
         D230.highScoreTransition.trackFrame--;
@@ -518,7 +524,7 @@ static void MM_HighScore_OnlineMenuProc(void)
     wipeRect.h = MM_HIGHSCORE_WIPE_RECT_H;
     wipeRect.x = titleMeta->currX + MM_HIGHSCORE_WIPE_RECT_X_OFFSET;
     wipeRect.y = titleMeta->currY + MM_HIGHSCORE_WIPE_RECT_Y_OFFSET;
-    RECTMENU_DrawInnerRect(&wipeRect, 0, sdata->gGT->backBuffer->otMem.uiOT);
+    RECTMENU_DrawInnerRect(&wipeRect, 0, P32_GET(uint32_t *, P32_GET(struct DB *, P32_GET(struct GameTracker *, sdata->gGT)->backBuffer)->otMem.uiOT));
 
     if (s_onlineHighScoreState == MM_HIGHSCORE_ONLINE_GHOST_MENU)
     {

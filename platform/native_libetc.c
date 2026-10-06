@@ -12,7 +12,7 @@ global_variable int s_videoMode = -1;
 
 int VSyncCallback(void (*func)(void))
 {
-	int old = (int)vsync_callback;
+	int old = (int)(intptr_t)vsync_callback;
 
 	vsync_callback = func;
 	return old;
@@ -25,7 +25,7 @@ int StopCallback(void)
 
 int ResetCallback(void)
 {
-	int old = (int)vsync_callback;
+	int old = (int)(intptr_t)vsync_callback;
 
 	vsync_callback = NULL;
 	return old;

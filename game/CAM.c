@@ -82,7 +82,7 @@ static s32 CAM_SkyboxGlow_CalcTilt(struct PushBuffer *pb)
 
 static void CAM_SkyboxGlow_EmitG3(struct PrimMem *primMem, uint32_t *ot, u32 color0, u32 xy0, u32 color1, u32 xy1, u32 color2, u32 xy2)
 {
-	POLY_G3 *poly = primMem->cursor;
+	POLY_G3 *poly = P32_GET(void *, primMem->cursor);
 
 	CtrGpu_WriteColorCode(&poly->r0, CtrGpu_PackColorCode(color0, 0x30));
 	CtrGpu_WritePackedXY(&poly->x0, xy0);
@@ -93,12 +93,12 @@ static void CAM_SkyboxGlow_EmitG3(struct PrimMem *primMem, uint32_t *ot, u32 col
 	poly->tag = CtrGpu_PackOTTag(*ot, 0x06000000);
 	*ot = CAM_SkyboxGlow_PrimAddr(poly);
 
-	primMem->cursor = poly + 1;
+	P32_SET(primMem->cursor, poly + 1);
 }
 
 static void CAM_SkyboxGlow_EmitG4(struct PrimMem *primMem, uint32_t *ot, u32 color0, u32 xy0, u32 color1, u32 xy1, u32 color2, u32 xy2, u32 color3, u32 xy3)
 {
-	POLY_G4 *poly = primMem->cursor;
+	POLY_G4 *poly = P32_GET(void *, primMem->cursor);
 
 	CtrGpu_WriteColorCode(&poly->r0, CtrGpu_PackColorCode(color0, 0x38));
 	CtrGpu_WritePackedXY(&poly->x0, xy0);
@@ -111,12 +111,12 @@ static void CAM_SkyboxGlow_EmitG4(struct PrimMem *primMem, uint32_t *ot, u32 col
 	poly->tag = CtrGpu_PackOTTag(*ot, 0x08000000);
 	*ot = CAM_SkyboxGlow_PrimAddr(poly);
 
-	primMem->cursor = poly + 1;
+	P32_SET(primMem->cursor, poly + 1);
 }
 
 static void CAM_SkyboxGlow_EmitF3(struct PrimMem *primMem, uint32_t *ot, u32 color, u32 xy0, u32 xy1, u32 xy2)
 {
-	POLY_F3 *poly = primMem->cursor;
+	POLY_F3 *poly = P32_GET(void *, primMem->cursor);
 
 	CtrGpu_WriteColorCode(&poly->r0, CtrGpu_PackColorCode(color, 0x20));
 	CtrGpu_WritePackedXY(&poly->x0, xy0);
@@ -125,12 +125,12 @@ static void CAM_SkyboxGlow_EmitF3(struct PrimMem *primMem, uint32_t *ot, u32 col
 	poly->tag = CtrGpu_PackOTTag(*ot, 0x04000000);
 	*ot = CAM_SkyboxGlow_PrimAddr(poly);
 
-	primMem->cursor = poly + 1;
+	P32_SET(primMem->cursor, poly + 1);
 }
 
 static void CAM_SkyboxGlow_EmitF4(struct PrimMem *primMem, uint32_t *ot, u32 color, u32 xy0, u32 xy1, u32 xy2, u32 xy3)
 {
-	POLY_F4 *poly = primMem->cursor;
+	POLY_F4 *poly = P32_GET(void *, primMem->cursor);
 
 	CtrGpu_WriteColorCode(&poly->r0, CtrGpu_PackColorCode(color, 0x28));
 	CtrGpu_WritePackedXY(&poly->x0, xy0);
@@ -140,17 +140,17 @@ static void CAM_SkyboxGlow_EmitF4(struct PrimMem *primMem, uint32_t *ot, u32 col
 	poly->tag = CtrGpu_PackOTTag(*ot, 0x05000000);
 	*ot = CAM_SkyboxGlow_PrimAddr(poly);
 
-	primMem->cursor = poly + 1;
+	P32_SET(primMem->cursor, poly + 1);
 }
 
 static s32 CAM_SkyboxGlow_HasClearGradient(s32 gradientIndex)
 {
-	return gradientIndex == 0 && sdata->gGT->level1->clearColor[2].enable != 0;
+	return gradientIndex == 0 && P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->clearColor[2].enable != 0;
 }
 
 static u32 CAM_SkyboxGlow_ClearGradientColor(void)
 {
-	return *(u32 *)&sdata->gGT->level1->clearColor[2].rgb[0] & 0xffffff;
+	return *(u32 *)&P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->clearColor[2].rgb[0] & 0xffffff;
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800175cc-0x8001861c
@@ -311,9 +311,9 @@ void CAM_ClearScreen(struct GameTracker *gGT)
 {
 	s8 numPlyr = gGT->numPlyrCurrGame;
 	s8 swap = gGT->swapchainIndex;
-	struct Level *level1 = gGT->level1;
-	struct DB *backDB = gGT->backBuffer;
-	TILE *tile = backDB->primMem.cursor;
+	struct Level *level1 = P32_GET(struct Level *, gGT->level1);
+	struct DB *backDB = P32_GET(struct DB *, gGT->backBuffer);
+	TILE *tile = P32_GET(void *, backDB->primMem.cursor);
 
 #if defined(__vita__)
 	if (NativeAdhoc_IsSingleViewRenderActive())
@@ -329,7 +329,7 @@ void CAM_ClearScreen(struct GameTracker *gGT)
 #else
 		struct PushBuffer *pb = &gGT->pushBuffer[loop];
 #endif
-		uint32_t *endOT = &pb->ptrOT[0x3FF];
+		uint32_t *endOT = &P32_GET(uint32_t *, pb->ptrOT)[0x3FF];
 
 		s16 x = pb->rect.x;
 		s16 y = pb->rect.y + swap * 0x128;
@@ -386,7 +386,7 @@ void CAM_ClearScreen(struct GameTracker *gGT)
 		}
 	}
 
-	backDB->primMem.cursor = tile;
+	P32_SET(backDB->primMem.cursor, tile);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80018818-0x800188a8
@@ -397,7 +397,7 @@ void CAM_Init(struct CameraDC *cDC, s32 cameraID, struct Driver *d, struct PushB
 	printf("camera init\n");
 #endif
 
-	PROC_BirthWithObject(0x30f, CAM_ThTick, sdata->s_camera, NULL)->inst = (struct Instance *)cDC;
+	P32_SET(PROC_BirthWithObject(0x30f, CAM_ThTick, sdata->s_camera, NULL)->inst, (struct Instance *)cDC);
 
 	memset(cDC, 0, sizeof(struct CameraDC));
 
@@ -409,8 +409,8 @@ void CAM_Init(struct CameraDC *cDC, s32 cameraID, struct Driver *d, struct PushB
 	// needed or L2 breaks
 	cDC->cameraID = cameraID;
 
-	cDC->driverToFollow = d;
-	cDC->pushBuffer = pb;
+	P32_SET(cDC->driverToFollow, d);
+	P32_SET(cDC->pushBuffer, pb);
 
 	// dont set cameraMode to zero,
 	// memset makes it already zero
@@ -429,21 +429,21 @@ s32 CAM_Path_GetNumPoints(void)
 
 	uVar4 = 0;
 
-	gGT = sdata->gGT;
-	level1 = gGT->level1;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	level1 = P32_GET(struct Level *, gGT->level1);
 	if (level1 == NULL)
 	{
 		return 0;
 	}
 
-	ptrSpawnType1 = level1->ptrSpawnType1;
+	ptrSpawnType1 = P32_GET(struct SpawnType1 *, level1->ptrSpawnType1);
 	if (ptrSpawnType1->count < 3)
 	{
 		return 0;
 	}
 
-	void **ptrs = ST1_GETPOINTERS(ptrSpawnType1);
-	introCam = ptrs[ST1_CAMERA_PATH];
+	P32(void *) *ptrs = ST1_GETPOINTERS(ptrSpawnType1);
+	introCam = P32_GET(void *, ptrs[ST1_CAMERA_PATH]);
 	if (introCam == NULL)
 	{
 		return 0;
@@ -477,8 +477,8 @@ u8 CAM_Path_Move(s32 frameIndex, s16 *position, s16 *rotation, s16 *pathFlagsOut
 		return 0;
 	}
 
-	void **ptrs = ST1_GETPOINTERS(sdata->gGT->level1->ptrSpawnType1);
-	s16 *ptrCam = ptrs[ST1_CAMERA_PATH];
+	P32(void *) *ptrs = ST1_GETPOINTERS(P32_GET(struct SpawnType1 *, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->ptrSpawnType1));
+	s16 *ptrCam = P32_GET(void *, ptrs[ST1_CAMERA_PATH]);
 
 	u16 pathNumNode = (u16)ptrCam[0];
 	u16 pathFlags = (u16)ptrCam[1];
@@ -513,15 +513,15 @@ u8 CAM_Path_Move(s32 frameIndex, s16 *position, s16 *rotation, s16 *pathFlagsOut
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80018d20-0x80018d9c
 void CAM_StartOfRace(struct CameraDC *cDC)
 {
-	struct GameTracker *gGT = sdata->gGT;
-	struct Level *level1 = gGT->level1;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct Level *level1 = P32_GET(struct Level *, gGT->level1);
 
 	// if fly-in camera data exists and there is only one screen
 	s32 hasFlyInCamera = (2 < level1->cnt_restart_points);
 
 	if (hasFlyInCamera)
 	{
-		s32 flyInData = (s32)level1->ptr_restart_points;
+		char *flyInData = P32_GET(char *, level1->ptr_restart_points);
 		cDC->trackPathProgress = 0;
 		cDC->transitionBlend = 0;
 
@@ -535,7 +535,7 @@ void CAM_StartOfRace(struct CameraDC *cDC)
 
 		// when camera reaches player, use the configured default distance
 		cDC->cameraMode = 0;
-		cDC->trackPathNode = (struct CheckpointNode *)(flyInData + 0x18);
+		P32_SET(cDC->trackPathNode, (struct CheckpointNode *)(flyInData + 0x18));
 
 		// if 1 or less screens
 		cDC->transitionFrame = FPS_DOUBLE(0xA5);
@@ -557,7 +557,7 @@ void CAM_StartOfRace(struct CameraDC *cDC)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80018d9c-0x80018e38.
 void CAM_EndOfRace_Battle(struct CameraDC *cDC, struct Driver *d)
 {
-	s32 height = data.Spin360_heightOffset_cameraPos[(s32)sdata->gGT->numPlyrCurrGame];
+	s32 height = data.Spin360_heightOffset_cameraPos[(s32)P32_GET(struct GameTracker *, sdata->gGT)->numPlyrCurrGame];
 	cDC->transitionTo.pos.x = 0xffe5;
 	cDC->transitionTo.pos.y = height;
 	cDC->transitionTo.pos.z = 0xc0;
@@ -568,7 +568,7 @@ void CAM_EndOfRace_Battle(struct CameraDC *cDC, struct Driver *d)
 	cDC->transitionFrame = FPS_DOUBLE(60);
 	cDC->transitionFrameCount = FPS_DOUBLE(60);
 
-	struct PushBuffer *pb = cDC->pushBuffer;
+	struct PushBuffer *pb = P32_GET(struct PushBuffer *, cDC->pushBuffer);
 	s32 dx = CTR_MipsSubLo(pb->pos.x, CTR_MipsSra(d->posCurr.x, 8));
 	s32 dz = CTR_MipsSubLo(pb->pos.z, CTR_MipsSra(d->posCurr.z, 8));
 	cDC->spin360Angle = ratan2(dx, dz);
@@ -577,12 +577,12 @@ void CAM_EndOfRace_Battle(struct CameraDC *cDC, struct Driver *d)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80018e38-0x80018ec0.
 void CAM_EndOfRace(struct CameraDC *cDC, struct Driver *d)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 #if BUILD > SepReview
 
 	// If not in Battle Mode and track path points exist and game is on 1P or 2P mode
-	if (((gGT->gameMode1 & BATTLE_MODE) == 0) && (1 < gGT->level1->ptrSpawnType1->count) && (gGT->numPlyrCurrGame < 3))
+	if (((gGT->gameMode1 & BATTLE_MODE) == 0) && (1 < P32_GET(struct SpawnType1 *, P32_GET(struct Level *, gGT->level1)->ptrSpawnType1)->count) && (gGT->numPlyrCurrGame < 3))
 	{
 		// Activate end-of-race cDC flag in CameraDC struct
 		cDC->flags |= CAMERA_FLAG_ARCADE_END_OF_RACE_REQUESTED;
@@ -705,25 +705,25 @@ void CAM_FindClosestQuadblock(struct ScratchpadStruct *sps, struct CameraDC *cDC
 	sps->Union.QuadBlockColl.searchFlags = 0;
 	cDC->quadBlockSearchHit = false;
 
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
-	if ((gGT->level1 == NULL) || (gGT->level1->ptr_mesh_info == NULL) || (gGT->level1->ptr_mesh_info->bspRoot == NULL))
+	if ((P32_GET(struct Level *, gGT->level1) == NULL) || (P32_GET(struct mesh_info *, P32_GET(struct Level *, gGT->level1)->ptr_mesh_info) == NULL) || (P32_GET(struct BSP *, P32_GET(struct mesh_info *, P32_GET(struct Level *, gGT->level1)->ptr_mesh_info)->bspRoot) == NULL))
 	{
-		sps->ptr_mesh_info = NULL;
+		P32_SET(sps->ptr_mesh_info, NULL);
 		return;
 	}
 
-	meshInfo = gGT->level1->ptr_mesh_info;
-	sps->ptr_mesh_info = meshInfo;
+	meshInfo = P32_GET(struct mesh_info *, P32_GET(struct Level *, gGT->level1)->ptr_mesh_info);
+	P32_SET(sps->ptr_mesh_info, meshInfo);
 
-	if (cDC->ptrQuadBlock != NULL)
+	if (P32_GET(struct QuadBlock *, cDC->ptrQuadBlock) != NULL)
 	{
-		COLL_FIXED_QUADBLK_TestTriangles(cDC->ptrQuadBlock, sps);
+		COLL_FIXED_QUADBLK_TestTriangles(P32_GET(struct QuadBlock *, cDC->ptrQuadBlock), sps);
 	}
 
 	if (sps->boolDidTouchQuadblock == 0)
 	{
-		COLL_SearchBSP_CallbackPARAM(meshInfo->bspRoot, &sps->bbox, COLL_FIXED_BSPLEAF_TestQuadblocks, sps);
+		COLL_SearchBSP_CallbackPARAM(P32_GET(struct BSP *, meshInfo->bspRoot), &sps->bbox, COLL_FIXED_BSPLEAF_TestQuadblocks, sps);
 	}
 
 	if (sps->boolDidTouchQuadblock == 0)
@@ -734,9 +734,9 @@ void CAM_FindClosestQuadblock(struct ScratchpadStruct *sps, struct CameraDC *cDC
 
 	cDC->quadBlockSearchHit = true;
 
-	quad = sps->hit.ptrQuadblock;
-	cDC->ptrQuadBlock = quad;
-	gGT->unk1cac[0] = quad - meshInfo->ptrQuadBlockArray;
+	quad = P32_GET(struct QuadBlock *, sps->hit.ptrQuadblock);
+	P32_SET(cDC->ptrQuadBlock, quad);
+	gGT->unk1cac[0] = quad - P32_GET(struct QuadBlock *, meshInfo->ptrQuadBlockArray);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80018ec0-0x80018fec.
@@ -749,7 +749,7 @@ void CAM_StartLine_FlyIn_FixY(SVec3 *posRot)
 	sps->Union.QuadBlockColl.quadFlagsWanted = QUADBLOCK_FLAG_GROUND | QUADBLOCK_FLAG_COLLISION_SURFACE;
 	sps->Union.QuadBlockColl.quadFlagsIgnored = 0;
 	sps->Union.QuadBlockColl.searchFlags = COLL_SEARCH_HIGH_LOD;
-	sps->ptr_mesh_info = sdata->gGT->level1->ptr_mesh_info;
+	P32_SET(sps->ptr_mesh_info, P32_GET(struct mesh_info *, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->ptr_mesh_info));
 
 	pos.x = posRot->x;
 	pos.y = posRot->y;
@@ -797,7 +797,7 @@ static s32 CAM_FollowDriver_AngleAxis_Lerp256(s32 current, s32 previous, s32 rat
 static void CAM_FollowDriver_AngleAxis_LoadGteMatrix(MATRIX *axisMatrix, struct Driver *d)
 {
 	gte_SetRotMatrix(axisMatrix);
-	gte_SetTransVector(d->instSelf->matrix.t);
+	gte_SetTransVector(P32_GET(struct Instance *, d->instSelf)->matrix.t);
 }
 
 static void CAM_FollowDriver_AngleAxis_TransformOffset(const SVec3 *offset, Vec3 *out)
@@ -872,7 +872,7 @@ void CAM_FollowDriver_AngleAxis(struct CameraDC *cDC, struct Driver *d, struct C
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800194c8-0x800198f8.
 void CAM_StartLine_FlyIn(struct FlyInData *flyInData, s16 maxFrames, s32 frame, SVec3 *desiredPos, SVec3 *desiredRot)
 {
-	struct Level *lev = sdata->gGT->level1;
+	struct Level *lev = P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1);
 	s32 frameIndex = (frame << 0x10) >> 4;
 	s32 frameRatio = frameIndex / maxFrames;
 	s32 countEnd = flyInData->frameCount1;
@@ -895,22 +895,22 @@ void CAM_StartLine_FlyIn(struct FlyInData *flyInData, s16 maxFrames, s32 frame, 
 	s16 pathIndex = (s16)(count * frameRatio >> 0xc);
 	if (pathIndex < countEnd - 1)
 	{
-		pathEnd = (s16 *)(flyInData->ptrEnd + pathIndex * 6);
+		pathEnd = (s16 *)(P32_GET(u8 *, flyInData->ptrEnd) + pathIndex * 6);
 		pathRatioEnd = frameRatio;
 	}
 	else
 	{
-		pathEnd = (s16 *)(flyInData->ptrEnd + countEnd * 6 - 0xc);
+		pathEnd = (s16 *)(P32_GET(u8 *, flyInData->ptrEnd) + countEnd * 6 - 0xc);
 		pathRatioEnd = 0;
 	}
 
 	if (pathIndex < flyInData->frameCount2 - 1)
 	{
-		pathStart = (s16 *)(flyInData->ptrStart + pathIndex * 6);
+		pathStart = (s16 *)(P32_GET(u8 *, flyInData->ptrStart) + pathIndex * 6);
 	}
 	else
 	{
-		pathStart = (s16 *)(flyInData->ptrStart + flyInData->frameCount2 * 6 - 0xc);
+		pathStart = (s16 *)(P32_GET(u8 *, flyInData->ptrStart) + flyInData->frameCount2 * 6 - 0xc);
 		frameRatio = 0;
 	}
 
@@ -969,17 +969,17 @@ static s32 CAM_RetailFrameStep(s32 step)
 		return step;
 	}
 
-	return CTR_FRAME_STEP(step, sdata->gGT->timer);
+	return CTR_FRAME_STEP(step, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 }
 
 static b32 CAM_RetailFrameTick(void)
 {
-	return CTR_RETAIL_FRAME_TICK(sdata->gGT->timer);
+	return CTR_RETAIL_FRAME_TICK(P32_GET(struct GameTracker *, sdata->gGT)->timer);
 }
 
 static struct CheckpointNode *CAM_FollowDriver_TrackPath_GetNode(struct CameraDC *cDC, struct CheckpointNode *node, s32 speed)
 {
-	struct CheckpointNode *nodes = sdata->gGT->level1->ptr_restart_points;
+	struct CheckpointNode *nodes = P32_GET(struct CheckpointNode *, P32_GET(struct Level *, P32_GET(struct GameTracker *, sdata->gGT)->level1)->ptr_restart_points);
 	u8 nodeIndex;
 
 	if (speed > 0)
@@ -1015,7 +1015,7 @@ static s32 CAM_FollowDriver_TrackPath_Length(struct CheckpointNode *from, struct
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800198f8-0x80019e7c.
 u32 CAM_FollowDriver_TrackPath(struct CameraDC *cDC, SVec3 *pos, s32 speed, s32 update)
 {
-	struct CheckpointNode *curr = cDC->trackPathNode;
+	struct CheckpointNode *curr = P32_GET(struct CheckpointNode *, cDC->trackPathNode);
 	struct CheckpointNode *next = CAM_FollowDriver_TrackPath_GetNode(cDC, curr, speed);
 	struct CheckpointNode *angleNext;
 	s32 pathProgress;
@@ -1031,7 +1031,7 @@ u32 CAM_FollowDriver_TrackPath(struct CameraDC *cDC, SVec3 *pos, s32 speed, s32 
 
 	segmentLength = CAM_FollowDriver_TrackPath_Length(curr, next, &dx, &dy, &dz);
 
-	if ((sdata->gGT->gameMode1 & PAUSE_ALL) != 0)
+	if ((P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 & PAUSE_ALL) != 0)
 	{
 		pathProgress = 0;
 	}
@@ -1055,7 +1055,7 @@ u32 CAM_FollowDriver_TrackPath(struct CameraDC *cDC, SVec3 *pos, s32 speed, s32 
 	if (update)
 	{
 		cDC->trackPathProgress = pathProgress;
-		cDC->trackPathNode = curr;
+		P32_SET(cDC->trackPathNode, curr);
 	}
 
 	if (segmentLength != 0)
@@ -1090,7 +1090,7 @@ void CAM_LookAtPosition(struct CameraScratchWork *scratchWork, Vec3 *positions, 
 	struct CameraScratch *cam = &scratchWork->camera;
 
 	s32 dirX = desiredPos->x - (positions->x >> 8);
-	s32 dirY = desiredPos->y - ((positions->y >> 8) + data.Spin360_heightOffset_driverPos[(s32)sdata->gGT->numPlyrCurrGame]);
+	s32 dirY = desiredPos->y - ((positions->y >> 8) + data.Spin360_heightOffset_driverPos[(s32)P32_GET(struct GameTracker *, sdata->gGT)->numPlyrCurrGame]);
 	s32 dirZ = desiredPos->z - (positions->z >> 8);
 
 	cam->dir.x = dirX;
@@ -1164,8 +1164,8 @@ void CAM_FollowDriver_Normal(struct CameraDC *cDC, struct Driver *d, SVec3 *push
 	struct PushBuffer *pb = (struct PushBuffer *)pushBufferPos;
 	struct ScratchpadStruct *sps = (struct ScratchpadStruct *)scratchWork;
 	struct CameraScratch *cam = &scratchWork->camera;
-	struct GameTracker *gGT = sdata->gGT;
-	struct GamepadBuffer *pad = &sdata->gGamepads->gamepad[d->driverID];
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct GamepadBuffer *pad = &P32_GET(struct GamepadSystem *, sdata->gGamepads)->gamepad[d->driverID];
 	s8 state;
 	s16 uVar8;
 	s16 sVar10;
@@ -1527,13 +1527,13 @@ void CAM_FollowDriver_Normal(struct CameraDC *cDC, struct Driver *d, SVec3 *push
 		// if frame countdown is not finished
 		if (cDC->BlastedLerp.framesRemaining != 0)
 		{
-			cam->pos.x += CTR_FRAME_STEP((cDC->BlastedLerp.desiredPos.x * cDC->BlastedLerp.framesRemaining) >> 3, sdata->gGT->timer);
-			cam->pos.y += CTR_FRAME_STEP((cDC->BlastedLerp.desiredPos.y * cDC->BlastedLerp.framesRemaining) >> 3, sdata->gGT->timer);
-			cam->pos.z += CTR_FRAME_STEP((cDC->BlastedLerp.desiredPos.z * cDC->BlastedLerp.framesRemaining) >> 3, sdata->gGT->timer);
+			cam->pos.x += CTR_FRAME_STEP((cDC->BlastedLerp.desiredPos.x * cDC->BlastedLerp.framesRemaining) >> 3, P32_GET(struct GameTracker *, sdata->gGT)->timer);
+			cam->pos.y += CTR_FRAME_STEP((cDC->BlastedLerp.desiredPos.y * cDC->BlastedLerp.framesRemaining) >> 3, P32_GET(struct GameTracker *, sdata->gGT)->timer);
+			cam->pos.z += CTR_FRAME_STEP((cDC->BlastedLerp.desiredPos.z * cDC->BlastedLerp.framesRemaining) >> 3, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 
-			cam->delta.x += CTR_FRAME_STEP((cDC->BlastedLerp.desiredRot.x * cDC->BlastedLerp.framesRemaining) >> 3, sdata->gGT->timer);
-			cam->delta.y += CTR_FRAME_STEP((cDC->BlastedLerp.desiredRot.y * cDC->BlastedLerp.framesRemaining) >> 3, sdata->gGT->timer);
-			cam->delta.z += CTR_FRAME_STEP((cDC->BlastedLerp.desiredRot.z * cDC->BlastedLerp.framesRemaining) >> 3, sdata->gGT->timer);
+			cam->delta.x += CTR_FRAME_STEP((cDC->BlastedLerp.desiredRot.x * cDC->BlastedLerp.framesRemaining) >> 3, P32_GET(struct GameTracker *, sdata->gGT)->timer);
+			cam->delta.y += CTR_FRAME_STEP((cDC->BlastedLerp.desiredRot.y * cDC->BlastedLerp.framesRemaining) >> 3, P32_GET(struct GameTracker *, sdata->gGT)->timer);
+			cam->delta.z += CTR_FRAME_STEP((cDC->BlastedLerp.desiredRot.z * cDC->BlastedLerp.framesRemaining) >> 3, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 
 			// decrease frame countdown
 			cDC->BlastedLerp.framesRemaining--;
@@ -1542,7 +1542,7 @@ void CAM_FollowDriver_Normal(struct CameraDC *cDC, struct Driver *d, SVec3 *push
 
 	CAM_FindClosestQuadblock(sps, cDC, d, &cam->pos);
 
-	struct QuadBlock *quad = sps->hit.ptrQuadblock;
+	struct QuadBlock *quad = P32_GET(struct QuadBlock *, sps->hit.ptrQuadblock);
 	if ((sps->boolDidTouchQuadblock == 0) || ((quad->quadFlags & CAM_FOLLOW_DRIVER_QUAD_FLAGS_SKIP_TERRAIN_HEIGHT) != 0))
 	{
 		if (cam->pos.y < (s32)cDC->heightSmoothing.currentOffset + CTR_MipsSra(d->posCurr.y, 8))
@@ -1588,14 +1588,14 @@ void CAM_FollowDriver_Normal(struct CameraDC *cDC, struct Driver *d, SVec3 *push
 LAB_8001ab04:
 
 	// if mask grabs you when you're underwater
-	if (((gGT->level1->configFlags & 2) != 0) && (cam->pos.y < zoom->vertDistance))
+	if (((P32_GET(struct Level *, gGT->level1)->configFlags & 2) != 0) && (cam->pos.y < zoom->vertDistance))
 	{
 		cam->pos.y = zoom->vertDistance;
 	}
 
 	if (cDC->BlastedLerp.boolLerpPending != 0)
 	{
-		cam->delta.y = cam->pos.y + (s32) * (s16 *)((s32)cDC + 0xc8);
+		cam->delta.y = cam->pos.y + (s32) * (s16 *)((char *)cDC + 0xc8);
 	}
 
 	if (d->kartState == KS_MASK_GRABBED)
@@ -1613,7 +1613,7 @@ LAB_8001ab04:
 
 		if (pb->rot.x < 0x800)
 		{
-			pb->rot.x += CTR_FRAME_STEP(0x10, sdata->gGT->timer);
+			pb->rot.x += CTR_FRAME_STEP(0x10, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 			if (pb->rot.x > 0x800)
 			{
 				pb->rot.x = 0x800;
@@ -1761,9 +1761,9 @@ LAB_8001ab04:
 		// if startline camera
 		else
 		{
-			struct SpawnType1 *st1 = gGT->level1->ptrSpawnType1;
-			void **pointers = ST1_GETPOINTERS(st1);
-			u8 *cameraPath = pointers[ST1_CAMERA_PATH];
+			struct SpawnType1 *st1 = P32_GET(struct SpawnType1 *, P32_GET(struct Level *, gGT->level1)->ptrSpawnType1);
+			P32(void *) *pointers = ST1_GETPOINTERS(st1);
+			u8 *cameraPath = P32_GET(void *, pointers[ST1_CAMERA_PATH]);
 			s32 flyInDone = 0;
 
 			// No camera + No ghosts (battle maps)
@@ -1777,8 +1777,8 @@ LAB_8001ab04:
 			// run fly-in animation
 			else
 			{
-				flyInData.ptrEnd = cameraPath + 0x354;
-				flyInData.ptrStart = cameraPath;
+				P32_SET(flyInData.ptrEnd, cameraPath + 0x354);
+				P32_SET(flyInData.ptrStart, cameraPath);
 				flyInData.frameCount1 = 0x96;
 				flyInData.frameCount2 = 0x8e;
 
@@ -1955,7 +1955,7 @@ void CAM_ThTick(struct Thread *t)
 	u32 uVar10;
 	struct PVS *psVar11;
 	s32 *piVar12;
-	struct Instance **ppsVar13;
+	P32(struct Instance *) *ppsVar13;
 	struct SpawnType1 *psVar14;
 	struct CheckpointNode *psVar15;
 	u32 uVar16;
@@ -1973,23 +1973,23 @@ void CAM_ThTick(struct Thread *t)
 	s32 iVar24;
 	s32 iVar25;
 
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	struct CameraScratchWork *scratchWork = CTR_SCRATCHPAD_PTR(struct CameraScratchWork, 0x108);
 	scratchpad = (s16 *)scratchWork;
 	struct CameraScratch *camThTick = &scratchWork->camera;
-	cDC = (struct CameraDC *)t->inst;
-	d = cDC->driverToFollow;
-	pb = cDC->pushBuffer;
+	cDC = (struct CameraDC *)P32_GET(struct Instance *, t->inst);
+	d = P32_GET(struct Driver *, cDC->driverToFollow);
+	pb = P32_GET(struct PushBuffer *, cDC->pushBuffer);
 
 	if ((cDC->flags & CAMERA_FLAG_FROZEN) != 0)
 	{
 		return;
 	}
 
-	if (((((gGT->gameMode1 & (PAUSE_ALL | START_OF_RACE | MAIN_MENU | GAME_CUTSCENE)) == 0) && (d->instSelf->thread->funcThTick == 0)) &&
+	if (((((gGT->gameMode1 & (PAUSE_ALL | START_OF_RACE | MAIN_MENU | GAME_CUTSCENE)) == 0) && (P32_GET(ThreadFunc, P32_GET(struct Thread *, P32_GET(struct Instance *, d->instSelf)->thread)->funcThTick) == 0)) &&
 	     ((d->actionsFlagSet & ACTION_BOT) == 0)) &&
 	    (((d->kartState != KS_WARP_PAD && (d->kartState != KS_FREEZE)) &&
-	      (((gGT->gameMode2 & 4) == 0 && ((sdata->gGamepads->gamepad[cDC->cameraID].buttonsTapped & BTN_L2_one) != 0))))))
+	      (((gGT->gameMode2 & 4) == 0 && ((P32_GET(struct GamepadSystem *, sdata->gGamepads)->gamepad[cDC->cameraID].buttonsTapped & BTN_L2_one) != 0))))))
 	{
 		uVar4 = cDC->zoomToggleState + 1;
 		cDC->zoomToggleState = uVar4;
@@ -2028,7 +2028,7 @@ void CAM_ThTick(struct Thread *t)
 		goto SkipNewCameraEOR;
 	}
 
-	psVar14 = gGT->level1->ptrSpawnType1;
+	psVar14 = P32_GET(struct SpawnType1 *, P32_GET(struct Level *, gGT->level1)->ptrSpawnType1);
 
 	psVar21 = 0;
 	if (psVar14->count < 3)
@@ -2036,8 +2036,8 @@ void CAM_ThTick(struct Thread *t)
 		goto SkipNewCameraEOR;
 	}
 
-	void **ptrs = ST1_GETPOINTERS(psVar14);
-	psVar19 = ptrs[ST1_CAMERA_EOR];
+	P32(void *) *ptrs = ST1_GETPOINTERS(psVar14);
+	psVar19 = P32_GET(void *, ptrs[ST1_CAMERA_EOR]);
 
 	// number of EOR cameras
 	sVar6 = *psVar19;
@@ -2065,9 +2065,9 @@ void CAM_ThTick(struct Thread *t)
 			uVar16 = (u32)*psVar20;
 
 			// +2 to include respawnPoint and modeID
-			psVar20 = (s16 *)((s32)psVar19 + data.EndOfRace_Camera_Size[iVar7] + 2);
+			psVar20 = (s16 *)((char *)psVar19 + data.EndOfRace_Camera_Size[iVar7] + 2);
 
-			psVar15 = &gGT->level1->ptr_restart_points[uVar16];
+			psVar15 = &P32_GET(struct CheckpointNode *, P32_GET(struct Level *, gGT->level1)->ptr_restart_points)[uVar16];
 
 			if ((uVar22 == uVar16) || (uVar22 == psVar15->nextIndex_forward) || (uVar22 == psVar15->nextIndex_left) ||
 			    (uVar22 == psVar15->nextIndex_backward) || (uVar22 == psVar15->nextIndex_right))
@@ -2079,12 +2079,12 @@ void CAM_ThTick(struct Thread *t)
 	}
 
 	// if no EOR found, or EOR is already in-use
-	if ((psVar21 == 0) || (psVar21 == cDC->currEOR))
+	if ((psVar21 == 0) || (psVar21 == P32_GET(void *, cDC->currEOR)))
 	{
 		goto SkipNewCameraEOR;
 	}
 
-	cDC->currEOR = (void *)psVar21;
+	P32_SET(cDC->currEOR, (void *)psVar21);
 
 	sVar6 = *psVar21;
 	psVar19 = psVar21 + 1;
@@ -2105,9 +2105,9 @@ void CAM_ThTick(struct Thread *t)
 	switch (cDC->cameraMode)
 	{
 	case 0:
-		pb->pos.x = (s16)d->instSelf->matrix.t[0];
-		pb->pos.y = (s16)d->instSelf->matrix.t[1];
-		pb->pos.z = (s16)d->instSelf->matrix.t[2];
+		pb->pos.x = (s16)P32_GET(struct Instance *, d->instSelf)->matrix.t[0];
+		pb->pos.y = (s16)P32_GET(struct Instance *, d->instSelf)->matrix.t[1];
+		pb->pos.z = (s16)P32_GET(struct Instance *, d->instSelf)->matrix.t[2];
 		pb->rot.x = d->rotCurr.x;
 		pb->rot.y = d->rotCurr.y;
 		pb->rot.z = d->rotCurr.z;
@@ -2165,9 +2165,9 @@ void CAM_ThTick(struct Thread *t)
 	case 9:
 	case 13:
 		sVar6 = *psVar19;
-		psVar15 = gGT->level1->ptr_restart_points;
+		psVar15 = P32_GET(struct CheckpointNode *, P32_GET(struct Level *, gGT->level1)->ptr_restart_points);
 		cDC->trackPathProgress = 0;
-		cDC->trackPathNode = psVar15 + sVar6;
+		P32_SET(cDC->trackPathNode, psVar15 + sVar6);
 		(cDC->transitionTo).pos.x = psVar21[2];
 		(cDC->transitionTo).pos.y = psVar21[3];
 		(cDC->transitionTo).pos.z = psVar21[4];
@@ -2378,7 +2378,7 @@ SkipNewCameraEOR:
 						}
 						if ((cDC->cameraMode == 9) || (psVar21 = scratchpad, cDC->cameraMode == 0xd))
 						{
-							if ((gGT->level1->cnt_restart_points != 0) && ((gGT->gameMode1 & PAUSE_ALL) == 0))
+							if ((P32_GET(struct Level *, gGT->level1)->cnt_restart_points != 0) && ((gGT->gameMode1 & PAUSE_ALL) == 0))
 							{
 								SVec3 *trackPathPos = &scratchWork->trackPathPos;
 								SVec3 *trackPathLookaheadPos = &scratchWork->trackPathLookaheadPos;
@@ -2478,37 +2478,37 @@ SkipNewCameraEOR:
 LAB_8001c150:
 	cDC->cameraModePrev = cDC->cameraMode;
 
-	if (cDC->ptrQuadBlock != 0)
+	if (P32_GET(struct QuadBlock *, cDC->ptrQuadBlock) != 0)
 	{
-		psVar11 = cDC->ptrQuadBlock->pvs;
-		if ((psVar11 != 0) && (piVar12 = psVar11->visLeafSrc, piVar12 != 0))
+		psVar11 = P32_GET(struct PVS *, P32_GET(struct QuadBlock *, cDC->ptrQuadBlock)->pvs);
+		if ((psVar11 != 0) && (piVar12 = P32_GET(int *, psVar11->visLeafSrc), piVar12 != 0))
 		{
-			cDC->visLeafSrc = piVar12;
-			gGT->unk1cac[1] = cDC->ptrQuadBlock - gGT->level1->ptr_mesh_info->ptrQuadBlockArray;
+			P32_SET(cDC->visLeafSrc, piVar12);
+			gGT->unk1cac[1] = P32_GET(struct QuadBlock *, cDC->ptrQuadBlock) - P32_GET(struct QuadBlock *, P32_GET(struct mesh_info *, P32_GET(struct Level *, gGT->level1)->ptr_mesh_info)->ptrQuadBlockArray);
 		}
-		if (cDC->ptrQuadBlock != 0)
+		if (P32_GET(struct QuadBlock *, cDC->ptrQuadBlock) != 0)
 		{
-			psVar11 = cDC->ptrQuadBlock->pvs;
-			if ((psVar11 != 0) && (piVar12 = psVar11->visFaceSrc, piVar12 != 0))
+			psVar11 = P32_GET(struct PVS *, P32_GET(struct QuadBlock *, cDC->ptrQuadBlock)->pvs);
+			if ((psVar11 != 0) && (piVar12 = P32_GET(int *, psVar11->visFaceSrc), piVar12 != 0))
 			{
-				cDC->visFaceSrc = piVar12;
+				P32_SET(cDC->visFaceSrc, piVar12);
 			}
-			if (cDC->ptrQuadBlock != 0)
+			if (P32_GET(struct QuadBlock *, cDC->ptrQuadBlock) != 0)
 			{
-				psVar11 = cDC->ptrQuadBlock->pvs;
-				if ((psVar11 != 0) && (ppsVar13 = psVar11->visInstSrc, ppsVar13 != 0))
+				psVar11 = P32_GET(struct PVS *, P32_GET(struct QuadBlock *, cDC->ptrQuadBlock)->pvs);
+				if ((psVar11 != 0) && (ppsVar13 = P32_GET(P32(struct Instance *) *, psVar11->visInstSrc), ppsVar13 != 0))
 				{
-					cDC->visInstSrc = ppsVar13;
+					P32_SET(cDC->visInstSrc, ppsVar13);
 				}
-				if (((cDC->ptrQuadBlock != 0) && (psVar11 = cDC->ptrQuadBlock->pvs, psVar11 != 0)) && (piVar12 = psVar11->visExtraSrc, piVar12 != 0))
+				if (((P32_GET(struct QuadBlock *, cDC->ptrQuadBlock) != 0) && (psVar11 = P32_GET(struct PVS *, P32_GET(struct QuadBlock *, cDC->ptrQuadBlock)->pvs), psVar11 != 0)) && (piVar12 = P32_GET(int *, psVar11->visExtraSrc), piVar12 != 0))
 				{
-					if ((gGT->level1->configFlags & 4) == 0)
+					if ((P32_GET(struct Level *, gGT->level1)->configFlags & 4) == 0)
 					{
-						cDC->visOVertSrc = piVar12;
+						P32_SET(cDC->visOVertSrc, piVar12);
 					}
 					else
 					{
-						cDC->visSCVertSrc = piVar12;
+						P32_SET(cDC->visSCVertSrc, piVar12);
 					}
 				}
 			}
@@ -2517,8 +2517,8 @@ LAB_8001c150:
 
 	if (cDC->quadBlockSearchHit == false)
 	{
-		cDC->visLeafSrc = 0;
-		cDC->visFaceSrc = 0;
+		P32_SET(cDC->visLeafSrc, 0);
+		P32_SET(cDC->visFaceSrc, 0);
 	}
 
 	if ((cDC->flags & CAMERA_FLAG_RESET_RAIN_POS) != 0)

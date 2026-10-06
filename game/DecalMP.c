@@ -7,7 +7,7 @@ struct DecalMPEntry
 	u8 kartState;
 	u8 pad3[3];
 	s16 boolUpdatedThisFrame;
-	struct Instance *inst;
+	P32(struct Instance *) inst;
 	u8 padC[4];
 	s16 renderW;
 	s16 renderH;
@@ -44,13 +44,13 @@ void DecalMP_01(struct GameTracker *gGT)
 
 		for (int driverID = 0; driverID < 8; driverID++)
 		{
-			struct Driver *driver = gGT->drivers[driverID];
+			struct Driver *driver = P32_GET(struct Driver *, gGT->drivers[driverID]);
 			if (driver == NULL)
 			{
 				continue;
 			}
 
-			struct Instance *inst = driver->instSelf;
+			struct Instance *inst = P32_GET(struct Instance *, driver->instSelf);
 			inst->flags |= PUSHBUFFER_EXISTS | PIXEL_LOD;
 
 			if (driverID == cameraID)
@@ -74,12 +74,12 @@ void DecalMP_01(struct GameTracker *gGT)
 			entry->pb.pos = pb->pos;
 			entry->pb.distanceToScreen_PREV = pb->distanceToScreen_PREV;
 			entry->pb.rect = pb->rect;
-			entry->pb.ptrOT = pb->ptrOT;
+			P32_SET(entry->pb.ptrOT, P32_GET(uint32_t *, pb->ptrOT));
 			entry->pb.cameraID = pb->cameraID;
 
 			struct InstDrawPerPlayer *idpp = DecalMP_GetIdpp(inst, cameraID);
-			idpp->pushBuffer = &entry->pb;
-			entry->inst = inst;
+			P32_SET(idpp->pushBuffer, &entry->pb);
+			P32_SET(entry->inst, inst);
 		}
 	}
 }
@@ -91,13 +91,13 @@ void DecalMP_02(struct GameTracker *gGT)
 	for (int index = 0; index < 12; index++)
 	{
 		struct DecalMPEntry *entry = DecalMP_GetEntry(gGT, index);
-		if (entry->inst == NULL)
+		if (P32_GET(struct Instance *, entry->inst) == NULL)
 		{
 			return;
 		}
 
 		int cameraID = entry->pb.cameraID;
-		struct InstDrawPerPlayer *idpp = DecalMP_GetIdpp(entry->inst, cameraID);
+		struct InstDrawPerPlayer *idpp = DecalMP_GetIdpp(P32_GET(struct Instance *, entry->inst), cameraID);
 		s16 timer = 1000;
 
 		if ((idpp->instFlags & 0x140) == 0x140)
@@ -118,11 +118,11 @@ void DecalMP_02(struct GameTracker *gGT)
 			{
 				entry->boolUpdatedThisFrame = 1;
 
-				if ((entry->pb.ptrOT != NULL) && (entry->pb.renderBucketOTRangeEnd != NULL))
+				if ((P32_GET(uint32_t *, entry->pb.ptrOT) != NULL) && (P32_GET(uint32_t *, entry->pb.renderBucketOTRangeEnd) != NULL))
 				{
-					uint32_t *cameraOT = gGT->pushBuffer[cameraID].ptrOT;
-					*entry->pb.ptrOT = cameraOT[0x3ff];
-					cameraOT[0x3ff] = CtrGpu_PrimToOTLink24(entry->pb.renderBucketOTRangeEnd);
+					uint32_t *cameraOT = P32_GET(uint32_t *, gGT->pushBuffer[cameraID].ptrOT);
+					*P32_GET(uint32_t *, entry->pb.ptrOT) = cameraOT[0x3ff];
+					cameraOT[0x3ff] = CtrGpu_PrimToOTLink24(P32_GET(uint32_t *, entry->pb.renderBucketOTRangeEnd));
 				}
 			}
 
@@ -161,13 +161,13 @@ void DecalMP_03(struct GameTracker *gGT)
 		}
 
 		struct DecalMPEntry *entry = DecalMP_GetEntry(gGT, index);
-		if (entry->inst == NULL)
+		if (P32_GET(struct Instance *, entry->inst) == NULL)
 		{
 			return;
 		}
 
 		int cameraID = entry->pb.cameraID;
-		struct InstDrawPerPlayer *idpp = DecalMP_GetIdpp(entry->inst, cameraID);
+		struct InstDrawPerPlayer *idpp = DecalMP_GetIdpp(P32_GET(struct Instance *, entry->inst), cameraID);
 
 		if ((idpp->instFlags & 0x140) != 0x140)
 		{
@@ -184,11 +184,11 @@ void DecalMP_03(struct GameTracker *gGT)
 			viewport.x = (s16)texX;
 			viewport.y = (s16)texY;
 
-			PushBuffer_SetDrawEnv_DecalMP(entry->pb.renderBucketOTRangeEnd, gGT->backBuffer, &viewport, (s16)(texX - (s16)entry->pb.renderBucketScreenPos),
+			PushBuffer_SetDrawEnv_DecalMP(P32_GET(uint32_t *, entry->pb.renderBucketOTRangeEnd), P32_GET(struct DB *, gGT->backBuffer), &viewport, (s16)(texX - (s16)entry->pb.renderBucketScreenPos),
 			                              (s16)(texY - (s16)(entry->pb.renderBucketScreenPos >> 16)), 0, 0, 0, 0, 1);
 		}
 
-		POLY_FT4 *poly = gGT->backBuffer->primMem.cursor;
+		POLY_FT4 *poly = P32_GET(void *, P32_GET(struct DB *, gGT->backBuffer)->primMem.cursor);
 		poly->code = 0x2d;
 
 		s16 x = (s16)entry->pb.renderBucketScreenPos;
@@ -217,9 +217,9 @@ void DecalMP_03(struct GameTracker *gGT)
 
 		poly->tpage = (u16)getTPage(TEXPAGE_COLOR_15BIT, TRANS_50, (u32)texX, (u32)texY);
 
-		uint32_t *ot = gGT->pushBuffer[cameraID].ptrOT + (entry->pb.renderBucketOTByteOffset >> 2);
+		uint32_t *ot = P32_GET(uint32_t *, gGT->pushBuffer[cameraID].ptrOT) + (entry->pb.renderBucketOTByteOffset >> 2);
 		poly->tag = CtrGpu_PackOTTag(*ot, 0x09000000);
 		CtrGpu_LinkPrimToOT(ot, poly);
-		gGT->backBuffer->primMem.cursor = poly + 1;
+		P32_SET(P32_GET(struct DB *, gGT->backBuffer)->primMem.cursor, poly + 1);
 	}
 }

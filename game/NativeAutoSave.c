@@ -151,7 +151,7 @@ b32 NativeAutoSave_Read(struct AdvProgress *adv)
 // SelectProfile_LoadAdvProfile for a normal slot.
 b32 NativeAutoSave_Apply(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	if (!s_nativeAutoSaveValid)
 	{
@@ -172,7 +172,7 @@ b32 NativeAutoSave_Apply(void)
 // profile screen (mirrors SelectProfile_FinalizeAdventure for ADV_LOAD).
 b32 NativeAutoSave_QuickLoad(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	if (!NativeAutoSave_Apply())
 	{
@@ -184,7 +184,7 @@ b32 NativeAutoSave_QuickLoad(void)
 	gGT->currLEV = (sdata->advProgress.HubLevYouSavedOn != 0) ? sdata->advProgress.HubLevYouSavedOn : N_SANITY_BEACH;
 	memmove(gGT->prevNameEntered, sdata->advProgress.name, sizeof(gGT->prevNameEntered));
 	memmove(gGT->currNameEntered, sdata->advProgress.name, sizeof(gGT->currNameEntered));
-	sdata->ptrDesiredMenu = QueueLoadTrack_GetMenuPtr();
+	P32_SET(sdata->ptrDesiredMenu, QueueLoadTrack_GetMenuPtr());
 	return true;
 }
 
@@ -228,7 +228,7 @@ b32 NativeAutoSave_Write(void)
 // menu/garage and cutscenes are ignored.
 void NativeAutoSave_OnHubLoaded(void)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	if (((gGT->gameMode1 & ADVENTURE_MODE) == 0) || ((gGT->gameMode1 & ADVENTURE_ARENA) == 0) || ((gGT->gameMode1 & (MAIN_MENU | GAME_CUTSCENE)) != 0))
 	{

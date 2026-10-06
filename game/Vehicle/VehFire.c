@@ -140,7 +140,7 @@ void VehFire_Increment(struct Driver *driver, int reserves, u32 type, int fireLe
 	struct Instance *turboInst1;
 	struct Instance *turboInst2;
 
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	b32 firstPadBoost = (driver->actionsFlagSetPrevFrame & ACTION_NEW_BOOST) == 0;
 	if (
 	    // if this is a turbo pad
@@ -160,7 +160,7 @@ void VehFire_Increment(struct Driver *driver, int reserves, u32 type, int fireLe
 	    (driver->driverID == '\0') &&
 
 	    // player of any kind
-	    (driver->instSelf->thread->modelIndex == DYNAMIC_PLAYER))
+	    (P32_GET(struct Thread *, P32_GET(struct Instance *, driver->instSelf)->thread)->modelIndex == DYNAMIC_PLAYER))
 	{
 		// Add Reserves to ghost buffer
 		GhostTape_WriteBoosts(reserves, (u8)type, fireLevel);
@@ -183,7 +183,7 @@ void VehFire_Increment(struct Driver *driver, int reserves, u32 type, int fireLe
 
 #if defined(CTR_NATIVE) && !defined(__vita__)
 	if ((type & (TURBO_PAD | FREEZE_RESERVES_ON_TURBO_PAD)) == (TURBO_PAD | FREEZE_RESERVES_ON_TURBO_PAD) &&
-	    driver->instSelf->thread->modelIndex == DYNAMIC_PLAYER && (driver->actionsFlagSet & ACTION_BOT) == 0)
+	    P32_GET(struct Thread *, P32_GET(struct Instance *, driver->instSelf)->thread)->modelIndex == DYNAMIC_PLAYER && (driver->actionsFlagSet & ACTION_BOT) == 0)
 		firstPadBoost = NativePhysics_ConsumeTurboPadEntry(driver);
 #endif
 
@@ -191,20 +191,20 @@ void VehFire_Increment(struct Driver *driver, int reserves, u32 type, int fireLe
 	driver->actionsFlagSet = (driver->actionsFlagSet & ~ACTION_TURBO_INPUT_LATCH) | ACTION_NEW_BOOST;
 
 	// turbo thread bucket
-	turboThread = gGT->threadBuckets[TURBO].thread;
+	turboThread = P32_GET(struct Thread *, gGT->threadBuckets[TURBO].thread);
 
 	// check all turbo threads
 	while (turboThread != 0)
 	{
 		// if this turbo thread is owned by this driver
-		if (((struct Turbo *)turboThread->object)->driver == driver)
+		if (P32_GET(struct Driver *, ((struct Turbo *)P32_GET(void *, turboThread->object))->driver) == driver)
 		{
 			// quit, turboThread is now this driver's turbo thread
 			break;
 		}
 
 		// next turbo thread in bucket
-		turboThread = turboThread->siblingThread;
+		turboThread = P32_GET(struct Thread *, turboThread->siblingThread);
 	}
 
 	// if no turbo exists, create one
@@ -244,12 +244,12 @@ void VehFire_Increment(struct Driver *driver, int reserves, u32 type, int fireLe
 		if (turboInst1 != 0)
 		{
 			// get thread, ignore all collisions
-			turboThread = turboInst1->thread;
+			turboThread = P32_GET(struct Thread *, turboInst1->thread);
 			turboThread->flags |= THREAD_FLAG_DISABLE_COLLISION;
 
 			// get object, set essentials
-			turboObj = turboThread->object;
-			turboObj->driver = driver;
+			turboObj = P32_GET(void *, turboThread->object);
+			P32_SET(turboObj->driver, driver);
 			turboObj->fireVisibilityCooldown = 0;
 
 			// make flame disappear after
@@ -266,7 +266,7 @@ void VehFire_Increment(struct Driver *driver, int reserves, u32 type, int fireLe
 			turboObj->fireDisappearCountdown = count;
 
 			// player of any kind
-			if (driver->instSelf->thread->modelIndex == DYNAMIC_PLAYER)
+			if (P32_GET(struct Thread *, P32_GET(struct Instance *, driver->instSelf)->thread)->modelIndex == DYNAMIC_PLAYER)
 			{
 				turboObj->fireAudioDistort = 0;
 
@@ -276,10 +276,10 @@ void VehFire_Increment(struct Driver *driver, int reserves, u32 type, int fireLe
 				}
 			}
 
-			turboThread->funcThDestroy = VehTurbo_ThDestroy;
+			P32_SET(turboThread->funcThDestroy, VehTurbo_ThDestroy);
 
 			// turbo #2
-			turboInst2 = INSTANCE_Birth3D(gGT->modelPtr[STATIC_TURBO_EFFECT], // model
+			turboInst2 = INSTANCE_Birth3D(P32_GET(struct Model *, gGT->modelPtr[STATIC_TURBO_EFFECT]), // model
 			                              &sdata->s_turbo2[0],                // name
 			                              turboThread                         // parent thread
 			);
@@ -287,7 +287,7 @@ void VehFire_Increment(struct Driver *driver, int reserves, u32 type, int fireLe
 			// 2P 3P 4P flags
 			addFlags = 0;
 
-			turboObj->inst = turboInst2;
+			P32_SET(turboObj->inst, turboInst2);
 			turboObj->fireAnimIndex = 0;
 
 			// 1P flags
@@ -310,11 +310,11 @@ void VehFire_Increment(struct Driver *driver, int reserves, u32 type, int fireLe
 	else
 	{
 		// get the turbo's object
-		turboObj = turboThread->object;
+		turboObj = P32_GET(void *, turboThread->object);
 
 		// get the turbo's instances
-		turboInst1 = turboThread->inst;
-		turboInst2 = turboObj->inst;
+		turboInst1 = P32_GET(struct Instance *, turboThread->inst);
+		turboInst2 = P32_GET(struct Instance *, turboObj->inst);
 
 		// remove "dead thread" flag
 		turboThread->flags &= ~THREAD_FLAG_DEAD;
@@ -361,7 +361,7 @@ void VehFire_Increment(struct Driver *driver, int reserves, u32 type, int fireLe
 		turboInst2->alphaScale = 0;
 
 		// player of any kind
-		if (driver->instSelf->thread->modelIndex == DYNAMIC_PLAYER)
+		if (P32_GET(struct Thread *, P32_GET(struct Instance *, driver->instSelf)->thread)->modelIndex == DYNAMIC_PLAYER)
 		{
 			if (
 			    // if racer is not getting an Outside turbo (turbo pad or powerup),
@@ -454,7 +454,7 @@ void VehFire_Increment(struct Driver *driver, int reserves, u32 type, int fireLe
 	}
 
 	// player of any kind
-	if (driver->instSelf->thread->modelIndex == DYNAMIC_PLAYER)
+	if (P32_GET(struct Thread *, P32_GET(struct Instance *, driver->instSelf)->thread)->modelIndex == DYNAMIC_PLAYER)
 	{
 		// CameraDC flag
 		gGT->cameraDC[driver->driverID].flags |= VEH_FIRE_CAMERA_SHAKE_FLAG;

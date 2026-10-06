@@ -17,7 +17,7 @@ void RaceConfig_LoadGameOptions(void)
 		memcpy(&data.rwd[0], &sdata->gameOptions.rwd[0], sizeof(data.rwd));
 	}
 
-	sdata->gGT->gameMode1 |= sdata->gameOptions.gameMode1_vibrationFlags & GAME_MODE_VIBRATION_MASK;
+	P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 |= sdata->gameOptions.gameMode1_vibrationFlags & GAME_MODE_VIBRATION_MASK;
 	howl_ModeSet((u8)sdata->gameOptions.audioMode & 1);
 }
 
@@ -32,6 +32,6 @@ void RaceConfig_SaveGameOptions(void)
 	}
 
 	memcpy(&sdata->gameOptions.rwd[0], &data.rwd[0], sizeof(data.rwd));
-	sdata->gameOptions.gameMode1_vibrationFlags = sdata->gGT->gameMode1 & GAME_MODE_VIBRATION_MASK;
+	sdata->gameOptions.gameMode1_vibrationFlags = P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 & GAME_MODE_VIBRATION_MASK;
 	CTR_WriteU16LE(&sdata->gameOptions.audioMode, (u16)(howl_ModeGet() != 0));
 }

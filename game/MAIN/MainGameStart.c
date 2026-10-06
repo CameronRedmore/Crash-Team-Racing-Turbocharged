@@ -12,7 +12,7 @@ void MainGameStart_Initialize(struct GameTracker *gGT, b32 boolStopAudio)
 	// when spawning in the adventure arena
 
 	// if you're not in cutscene and not in main menu
-	if ((sdata->gGT->gameMode1 & (GAME_CUTSCENE | MAIN_MENU)) == 0)
+	if ((P32_GET(struct GameTracker *, sdata->gGT)->gameMode1 & (GAME_CUTSCENE | MAIN_MENU)) == 0)
 	{
 		// traffic light countdown
 		gGT->trafficLightsTimer = 0xf00;

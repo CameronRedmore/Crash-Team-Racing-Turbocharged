@@ -6,7 +6,7 @@ void LOAD_OvrLOD(u32 numPlyrCurrGame)
 	// change {1-4} -> {0-3}
 	u32 overlayIndex = numPlyrCurrGame - 1;
 
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// if new LOD overlay needs to load
 	if ((u32)gGT->overlayIndex_LOD != overlayIndex)
@@ -27,7 +27,7 @@ void LOAD_OvrLOD(u32 numPlyrCurrGame)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800334f4-0x80033570.
 void LOAD_OvrEndRace(u32 overlayIndex)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// if new EndOfRace overlay needs to load
 	if ((u32)gGT->overlayIndex_EndOfRace != overlayIndex)
@@ -70,7 +70,7 @@ static void LOAD_NativeResetThreadsOverlay(enum OverlayIndex overlayIndex)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80033570-0x800335dc.
 void LOAD_OvrThreads(u32 overlayIndex)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	// if new Threads overlay needs to load
 	if ((u32)gGT->overlayIndex_Threads != overlayIndex)
@@ -85,7 +85,7 @@ void LOAD_OvrThreads(u32 overlayIndex)
 		// overlay-owned data that retail would refresh by streaming into OVR_Region3.
 		gGT->overlayIndex_Threads = OVERLAY_INDEX_NONE;
 		LOAD_NativeResetThreadsOverlay((enum OverlayIndex)overlayIndex);
-		((void (*)())data.overlayCallbackFuncs[overlayIndex])();
+		((void (*)())P32_GET(void *, data.overlayCallbackFuncs[overlayIndex]))();
 #endif
 	}
 }
@@ -93,7 +93,7 @@ void LOAD_OvrThreads(u32 overlayIndex)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800335dc-0x80033610.
 int LOAD_GetAdvPackIndex(void)
 {
-	int levelID = sdata->gGT->levelID;
+	int levelID = P32_GET(struct GameTracker *, sdata->gGT)->levelID;
 
 	if ((levelID != GEM_STONE_VALLEY) && (levelID != GLACIER_PARK))
 	{

@@ -3,7 +3,7 @@
 // Returns the CseqSongHeader for the given song ID from the parsed song data buffer.
 static struct CseqSongHeader *GetCseqSongHeader(u16 songID)
 {
-	return (struct CseqSongHeader *)&sdata->ptrCseqSongData[sdata->ptrCseqSongStartOffset[songID]];
+	return (struct CseqSongHeader *)&P32_GET(char *, sdata->ptrCseqSongData)[P32_GET(s16 *, sdata->ptrCseqSongStartOffset)[songID]];
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8002a63c-0x8002a678
@@ -95,7 +95,7 @@ void SongPool_Start(struct Song *song, u16 songID, s16 deltaBPM, b32 boolLoopAtE
 	song->vol_New = vol;
 
 	// Naughty Dog Box
-	if (sdata->gGT->levelID == NAUGHTY_DOG_CRATE)
+	if (P32_GET(struct GameTracker *, sdata->gGT)->levelID == NAUGHTY_DOG_CRATE)
 	{
 		song->vol_Curr = 0xbe;
 		song->vol_New = 0xbe;
@@ -157,7 +157,7 @@ void SongPool_Start(struct Song *song, u16 songID, s16 deltaBPM, b32 boolLoopAtE
 		if (songSet != 0)
 		{
 			// if seq is not in current songSet
-			if ((songSet->ptrSongSetBits[i] & song->songSetActiveBits) == 0)
+			if ((P32_GET(u8 *, songSet->ptrSongSetBits)[i] & song->songSetActiveBits) == 0)
 			{
 				// disable the volume from the song
 				seqCurr->vol_Curr = 0;
@@ -176,11 +176,11 @@ void SongPool_Start(struct Song *song, u16 songID, s16 deltaBPM, b32 boolLoopAtE
 		seqCurr->NoteLength = 0;
 		seqCurr->NoteTimeElapsed = 0;
 
-		seqCurr->firstNote = (u8 *)NOTEHEADER_GETNOTES(cnhCurr);
+		P32_SET(seqCurr->firstNote, (u8 *)NOTEHEADER_GETNOTES(cnhCurr));
 
-		seqCurr->currNote = howl_GetNextNote(seqCurr->firstNote, &seqCurr->NoteLength);
+		P32_SET(seqCurr->currNote, howl_GetNextNote(P32_GET(u8 *, seqCurr->firstNote), &seqCurr->NoteLength));
 
-		song->CseqSequences[song->numSequences++] = seqCurr;
+		P32_SET(song->CseqSequences[song->numSequences++], seqCurr);
 	}
 }
 
@@ -210,7 +210,7 @@ void SongPool_AdvHub1(struct Song *song, int seqID, int vol, b32 boolImm)
 		return;
 	}
 
-	seq = song->CseqSequences[seqID];
+	seq = P32_GET(struct SongSeq *, song->CseqSequences[seqID]);
 
 	// if immediate change
 	if (boolImm != 0)
@@ -245,7 +245,7 @@ void SongPool_AdvHub2(struct Song *song, struct SongSet *songSet, int songSetAct
 		// volume on
 		vol = 0xff;
 
-		if ((songSet->ptrSongSetBits[i] & song->songSetActiveBits) == 0)
+		if ((P32_GET(u8 *, songSet->ptrSongSetBits)[i] & song->songSetActiveBits) == 0)
 		{
 			vol = 0;
 		}
@@ -260,9 +260,9 @@ void SongPool_StopCseq(struct SongSeq *seq)
 	struct ChannelStats *curr, *backupNext;
 	u32 *flagPtr;
 
-	for (curr = (struct ChannelStats *)sdata->channelTaken.first; curr != NULL; curr = backupNext)
+	for (curr = (struct ChannelStats *)P32_GET(struct Item *, sdata->channelTaken.first); curr != NULL; curr = backupNext)
 	{
-		backupNext = curr->next;
+		backupNext = P32_GET(struct ChannelStats *, curr->next);
 
 		if (curr->type != HOWL_CHANNEL_TYPE_MUSIC)
 		{
@@ -303,7 +303,7 @@ void SongPool_StopAllCseq(struct Song *song)
 
 	for (i = 0; i < song->numSequences; i++)
 	{
-		SongPool_StopCseq(song->CseqSequences[i]);
+		SongPool_StopCseq(P32_GET(struct SongSeq *, song->CseqSequences[i]));
 	}
 
 	// stop song

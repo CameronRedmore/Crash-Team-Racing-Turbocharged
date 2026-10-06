@@ -621,7 +621,7 @@ void Torch_Main(void *particleList_heatWarp, struct PushBuffer *pb, struct PrimM
 {
 	struct Particle *firstParticle = particleList_heatWarp;
 	struct TorchScratch *scratch = Torch_Scratch();
-	u32 *prim = (u32 *)primMem->cursor;
+	u32 *prim = (u32 *)P32_GET(void *, primMem->cursor);
 
 	// NOTE(aalhendi): PSX-backfeed blocker: retail saves callee registers and pointer cursors in scratchpad 0x00-0x38.
 	// Native C keeps host-width pointers as locals, while preserving retail data temporaries from 0x44 up.
@@ -630,7 +630,7 @@ void Torch_Main(void *particleList_heatWarp, struct PushBuffer *pb, struct PrimM
 		int playerPassesLeft = (s32)(s8)numPlyr - 1;
 		int particlesLeft = 12;
 
-		scratch->firstParticlePtr32 = (u32)(uintptr_t)firstParticle;
+		scratch->firstParticlePtr32 = P32_ENC(firstParticle);
 		scratch->swapchainIndex = (u32)swapchainIndex;
 		scratch->uv0.clut = 0;
 
@@ -654,7 +654,7 @@ void Torch_Main(void *particleList_heatWarp, struct PushBuffer *pb, struct PrimM
 			scratch->maxY = (u16)(pb->rect.h - 1);
 
 			screenSize = Torch_ReadWord(pb, 0x20);
-			otBase = pb->ptrOT;
+			otBase = P32_GET(uint32_t *, pb->ptrOT);
 			particle = firstParticle;
 
 			while (particle != NULL)
@@ -767,7 +767,7 @@ void Torch_Main(void *particleList_heatWarp, struct PushBuffer *pb, struct PrimM
 				}
 
 				particlesLeft--;
-				particle = particle->next;
+				particle = P32_GET(struct Particle *, particle->next);
 				if (particlesLeft < 1)
 				{
 					goto done;
@@ -785,5 +785,5 @@ void Torch_Main(void *particleList_heatWarp, struct PushBuffer *pb, struct PrimM
 	}
 
 done:
-	primMem->cursor = prim;
+	P32_SET(primMem->cursor, prim);
 }

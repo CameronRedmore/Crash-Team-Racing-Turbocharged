@@ -7,14 +7,14 @@ void RB_Blade_ThTick(struct Thread *t)
 	struct Instance *bladeInst;
 	SVec3 rot;
 
-	bladeObj = (struct Blade *)t->object;
-	bladeInst = t->inst;
+	bladeObj = (struct Blade *)P32_GET(void *, t->object);
+	bladeInst = P32_GET(struct Instance *, t->inst);
 
-	rot.x = bladeInst->instDef->rot.x;
-	rot.y = bladeInst->instDef->rot.y + 0x400;
+	rot.x = P32_GET(struct InstDef *, bladeInst->instDef)->rot.x;
+	rot.y = P32_GET(struct InstDef *, bladeInst->instDef)->rot.y + 0x400;
 	rot.z = bladeObj->angle;
 
-	bladeObj->angle += CTR_FRAME_STEP(0x100, sdata->gGT->timer);
+	bladeObj->angle += CTR_FRAME_STEP(0x100, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 
 	// converted to TEST in rebuildPS1
 	ConvertRotToMatrix(&bladeInst->matrix, &rot);
@@ -35,7 +35,7 @@ void RB_Blade_LInB(struct Instance *inst)
 	// One "blade" is a group of three fins,
 
 	struct Blade *bladeObj;
-	if (inst->thread != NULL)
+	if (P32_GET(struct Thread *, inst->thread) != NULL)
 	{
 		return;
 	}
@@ -54,9 +54,9 @@ void RB_Blade_LInB(struct Instance *inst)
 		return;
 	}
 
-	inst->thread = t;
-	t->inst = inst;
+	P32_SET(inst->thread, t);
+	P32_SET(t->inst, inst);
 
-	bladeObj = ((struct Blade *)t->object);
+	bladeObj = ((struct Blade *)P32_GET(void *, t->object));
 	bladeObj->angle = 0;
 }

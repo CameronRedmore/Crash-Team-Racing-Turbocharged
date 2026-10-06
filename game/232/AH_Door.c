@@ -40,18 +40,18 @@ enum AHDoorConstants
 void AH_Door_ThDestroy(struct Thread *t)
 {
 	int i;
-	struct WoodDoor *woodDoor = t->object;
+	struct WoodDoor *woodDoor = P32_GET(void *, t->object);
 
-	if (woodDoor->otherDoor != NULL)
+	if (P32_GET(struct Instance *, woodDoor->otherDoor) != NULL)
 	{
-		INSTANCE_Death(woodDoor->otherDoor);
-		woodDoor->otherDoor = NULL;
+		INSTANCE_Death(P32_GET(struct Instance *, woodDoor->otherDoor));
+		P32_SET(woodDoor->otherDoor, NULL);
 	}
 
 	for (i = 0; i < AH_WOOD_DOOR_KEY_COUNT; i++)
 	{
-		INSTANCE_Death(woodDoor->keyInst[i]);
-		woodDoor->keyInst[i] = NULL;
+		INSTANCE_Death(P32_GET(struct Instance *, woodDoor->keyInst[i]));
+		P32_SET(woodDoor->keyInst[i], NULL);
 	}
 	return;
 }
@@ -106,11 +106,11 @@ void AH_Door_ThTick(struct Thread *t)
 	SVec3 keyLightDir;
 	const s16 *scaler;
 
-	struct GameTracker *gGT = sdata->gGT;
-	struct WoodDoor *door = t->object;
-	struct Instance *doorInst = t->inst;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
+	struct WoodDoor *door = P32_GET(void *, t->object);
+	struct Instance *doorInst = P32_GET(struct Instance *, t->inst);
 	struct Instance *keyInst;
-	struct Driver *driver = gGT->drivers[0];
+	struct Driver *driver = P32_GET(struct Driver *, gGT->drivers[0]);
 	struct Instance *driverInst;
 	struct CameraDC *cDC = gGT->cameraDC;
 
@@ -125,19 +125,19 @@ void AH_Door_ThTick(struct Thread *t)
 	doorIsOpen = AH_Door_IsOpenByRewards(lev, doorID);
 
 	// Cosine(angle)
-	ratio = MATH_Cos((int)doorInst->instDef->rot.y);
+	ratio = MATH_Cos((int)P32_GET(struct InstDef *, doorInst->instDef)->rot.y);
 
 	// X distance of player and door
-	distX = doorInst->matrix.t[0] + (ratio * AH_DOOR_INTERACTION_FORWARD_OFFSET >> 0xc) - driver->instSelf->matrix.t[0];
+	distX = doorInst->matrix.t[0] + (ratio * AH_DOOR_INTERACTION_FORWARD_OFFSET >> 0xc) - P32_GET(struct Instance *, driver->instSelf)->matrix.t[0];
 
 	// Y distance of player and door
-	distY = doorInst->matrix.t[1] - driver->instSelf->matrix.t[1];
+	distY = doorInst->matrix.t[1] - P32_GET(struct Instance *, driver->instSelf)->matrix.t[1];
 
 	// Sine(angle)
-	ratio = MATH_Sin((int)doorInst->instDef->rot.y);
+	ratio = MATH_Sin((int)P32_GET(struct InstDef *, doorInst->instDef)->rot.y);
 
 	// Z distance of player and door
-	distZ = doorInst->matrix.t[2] + (ratio * AH_DOOR_INTERACTION_FORWARD_OFFSET >> 0xc) - driver->instSelf->matrix.t[2];
+	distZ = doorInst->matrix.t[2] + (ratio * AH_DOOR_INTERACTION_FORWARD_OFFSET >> 0xc) - P32_GET(struct Instance *, driver->instSelf)->matrix.t[2];
 
 	// distance from player and door
 	dist = distX * distX + distY * distY + distZ * distZ;
@@ -269,7 +269,7 @@ void AH_Door_ThTick(struct Thread *t)
 
 		if (((cDC->flags & CAMERA_FLAG_TRANSITION_AWAY) == 0) && ((door->camFlags & WdCam_FlyingIn) == 0))
 		{
-			driver->funcPtrs[DRIVER_FUNC_INIT] = VehPhysProc_Driving_Init;
+			P32_SET(driver->funcPtrs[DRIVER_FUNC_INIT], VehPhysProc_Driving_Init);
 			door->camFlags |= WdCam_FlyingIn;
 		}
 		else if (((cDC->flags & CAMERA_FLAG_TRANSITION_HOLD) != 0) && ((door->camFlags & WdCam_FullyOut) == 0))
@@ -293,7 +293,7 @@ void AH_Door_ThTick(struct Thread *t)
 
 		// If you are here, game must not be paused
 
-		driver->funcPtrs[DRIVER_FUNC_INIT] = VehPhysProc_FreezeEndEvent_Init;
+		P32_SET(driver->funcPtrs[DRIVER_FUNC_INIT], VehPhysProc_FreezeEndEvent_Init);
 
 		door->camFlags |= WdCam_CutscenePlaying;
 
@@ -307,7 +307,7 @@ void AH_Door_ThTick(struct Thread *t)
 				keyLightDir.z = AH_DOOR_KEY_LIGHT_Z;
 
 				// if keys are not spawned, create them
-				if (door->keyInst[0] == NULL)
+				if (P32_GET(struct Instance *, door->keyInst[0]) == NULL)
 				{
 					// if number of keys is more than zero
 					if (numKeys > 0)
@@ -318,7 +318,7 @@ void AH_Door_ThTick(struct Thread *t)
 						for (i = 0; i < numKeys; i++)
 						{
 							// name = "key"
-							keyInst = INSTANCE_Birth3D(gGT->modelPtr[STATIC_KEY], R232.s_key, t);
+							keyInst = INSTANCE_Birth3D(P32_GET(struct Model *, gGT->modelPtr[STATIC_KEY]), R232.s_key, t);
 
 							// Set Key Color
 							keyInst->colorRGBA = INST_COLOR_KEY;
@@ -326,7 +326,7 @@ void AH_Door_ThTick(struct Thread *t)
 							keyInst->flags |= USE_SPECULAR_LIGHT;
 							door->frameCount_unused++;
 
-							driverInst = driver->instSelf;
+							driverInst = P32_GET(struct Instance *, driver->instSelf);
 							keyInst->matrix = driverInst->matrix;
 
 							// set scale to zero
@@ -334,7 +334,7 @@ void AH_Door_ThTick(struct Thread *t)
 							keyInst->scale.y = 0;
 							keyInst->scale.z = 0;
 
-							door->keyInst[i] = keyInst;
+							P32_SET(door->keyInst[i], keyInst);
 						}
 					}
 
@@ -353,23 +353,23 @@ void AH_Door_ThTick(struct Thread *t)
 					// loop through all keys
 					for (i = 0; i < numKeys; i++)
 					{
-						keyInst = door->keyInst[i];
+						keyInst = P32_GET(struct Instance *, door->keyInst[i]);
 						if (keyInst != NULL)
 						{
 							// if key is still growing to full display scale
 							if (keyInst->scale.x < AH_DOOR_KEY_TARGET_SCALE)
 							{
 								// increase scale on X, Y, Z
-								keyInst->scale.x += CTR_FRAME_STEP(AH_DOOR_KEY_SCALE_STEP, sdata->gGT->timer);
-								keyInst->scale.y += CTR_FRAME_STEP(AH_DOOR_KEY_SCALE_STEP, sdata->gGT->timer);
-								keyInst->scale.z += CTR_FRAME_STEP(AH_DOOR_KEY_SCALE_STEP, sdata->gGT->timer);
+								keyInst->scale.x += CTR_FRAME_STEP(AH_DOOR_KEY_SCALE_STEP, P32_GET(struct GameTracker *, sdata->gGT)->timer);
+								keyInst->scale.y += CTR_FRAME_STEP(AH_DOOR_KEY_SCALE_STEP, P32_GET(struct GameTracker *, sdata->gGT)->timer);
+								keyInst->scale.z += CTR_FRAME_STEP(AH_DOOR_KEY_SCALE_STEP, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 							}
 
 							// if key posY is below its hover height over the player
-							if (keyInst->matrix.t[1] < (driver->instSelf->matrix.t[1] + AH_DOOR_KEY_RAISE_HEIGHT))
+							if (keyInst->matrix.t[1] < (P32_GET(struct Instance *, driver->instSelf)->matrix.t[1] + AH_DOOR_KEY_RAISE_HEIGHT))
 							{
 								// increase key posY
-								keyInst->matrix.t[1] += CTR_FRAME_STEP(AH_DOOR_KEY_RAISE_STEP, sdata->gGT->timer);
+								keyInst->matrix.t[1] += CTR_FRAME_STEP(AH_DOOR_KEY_RAISE_STEP, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 							}
 
 							if (1 < numKeys)
@@ -386,11 +386,11 @@ void AH_Door_ThTick(struct Thread *t)
 
 								ratio = MATH_Sin(door->keyOrbit + keyOrbitOffset);
 
-								keyInst->matrix.t[0] = driver->instSelf->matrix.t[0] + (keyOrbitRadius * ratio >> 0xc);
+								keyInst->matrix.t[0] = P32_GET(struct Instance *, driver->instSelf)->matrix.t[0] + (keyOrbitRadius * ratio >> 0xc);
 
 								ratio = MATH_Cos(door->keyOrbit + keyOrbitOffset);
 
-								keyInst->matrix.t[2] = driver->instSelf->matrix.t[2] + (keyOrbitRadius * ratio >> 0xc);
+								keyInst->matrix.t[2] = P32_GET(struct Instance *, driver->instSelf)->matrix.t[2] + (keyOrbitRadius * ratio >> 0xc);
 							}
 
 							Vector_SpecLightSpin3D(keyInst, &door->keyRot, &keyLightDir);
@@ -398,15 +398,15 @@ void AH_Door_ThTick(struct Thread *t)
 							// convert 3 rotation shorts into rotation matrix
 							ConvertRotToMatrix(&keyInst->matrix, &door->keyRot);
 						}
-						door->keyInst[i] = keyInst;
+						P32_SET(door->keyInst[i], keyInst);
 					}
 				}
 
 				door->keyRot.x = 0;
-				door->keyRot.y += CTR_FRAME_STEP(AH_DOOR_KEY_ROT_STEP, sdata->gGT->timer);
+				door->keyRot.y += CTR_FRAME_STEP(AH_DOOR_KEY_ROT_STEP, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 				door->keyRot.z = 0;
 
-				door->keyOrbit += CTR_FRAME_STEP(AH_DOOR_KEY_ORBIT_STEP, sdata->gGT->timer);
+				door->keyOrbit += CTR_FRAME_STEP(AH_DOOR_KEY_ORBIT_STEP, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 
 				door->frameCount_doorOpenAnim++;
 
@@ -442,26 +442,26 @@ void AH_Door_ThTick(struct Thread *t)
 
 		// == After 4 seconds ==
 
-		ratio = MATH_Cos((int)doorInst->instDef->rot.y);
+		ratio = MATH_Cos((int)P32_GET(struct InstDef *, doorInst->instDef)->rot.y);
 
-		i = MATH_Cos((int)doorInst->instDef->rot.y + AH_DOOR_OPEN_ROTATION);
+		i = MATH_Cos((int)P32_GET(struct InstDef *, doorInst->instDef)->rot.y + AH_DOOR_OPEN_ROTATION);
 
 		// desired posX for transition
 		desiredPos.x = doorInst->matrix.t[0] + (s16)(ratio * AH_DOOR_CAMERA_FORWARD_OFFSET >> 0xc) + (s16)(i * AH_DOOR_CAMERA_SIDE_OFFSET >> 0xc);
 		// desired posY for transition
 		desiredPos.y = doorInst->matrix.t[1] + AH_DOOR_CAMERA_HEIGHT_OFFSET;
 
-		ratio = MATH_Sin((int)doorInst->instDef->rot.y);
+		ratio = MATH_Sin((int)P32_GET(struct InstDef *, doorInst->instDef)->rot.y);
 
-		i = MATH_Sin((int)doorInst->instDef->rot.y + AH_DOOR_OPEN_ROTATION);
+		i = MATH_Sin((int)P32_GET(struct InstDef *, doorInst->instDef)->rot.y + AH_DOOR_OPEN_ROTATION);
 
 		// desired posZ for transition
 		desiredPos.z = doorInst->matrix.t[2] + (s16)(ratio * AH_DOOR_CAMERA_FORWARD_OFFSET >> 0xc) + (s16)(i * AH_DOOR_CAMERA_SIDE_OFFSET >> 0xc);
 
 		// desired rotation for transition
-		desiredRot.x = doorInst->instDef->rot.x + AH_DOOR_CAMERA_PITCH_OFFSET;
-		desiredRot.y = doorInst->instDef->rot.y;
-		desiredRot.z = doorInst->instDef->rot.z;
+		desiredRot.x = P32_GET(struct InstDef *, doorInst->instDef)->rot.x + AH_DOOR_CAMERA_PITCH_OFFSET;
+		desiredRot.y = P32_GET(struct InstDef *, doorInst->instDef)->rot.y;
+		desiredRot.z = P32_GET(struct InstDef *, doorInst->instDef)->rot.z;
 
 		// set desired position and rotation for CamerDC transition
 		CAM_SetDesiredPosRot(&gGT->cameraDC[0], &desiredPos, &desiredRot);
@@ -478,18 +478,18 @@ void AH_Door_ThTick(struct Thread *t)
 
 	if (door->doorRot.y < AH_DOOR_OPEN_ROTATION)
 	{
-		door->doorRot.y += CTR_FRAME_STEP(AH_DOOR_OPEN_ROTATION_STEP, sdata->gGT->timer);
+		door->doorRot.y += CTR_FRAME_STEP(AH_DOOR_OPEN_ROTATION_STEP, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 
 		// right-hand door rot[x,y,z]
 		desiredRot.x = door->doorRot.x;
-		desiredRot.y = doorInst->instDef->rot.y - door->doorRot.y;
+		desiredRot.y = P32_GET(struct InstDef *, doorInst->instDef)->rot.y - door->doorRot.y;
 		desiredRot.z = door->doorRot.z;
 
 		// converted to TEST in rebuildPS1
-		ConvertRotToMatrix(&door->otherDoor->matrix, &desiredRot);
+		ConvertRotToMatrix(&P32_GET(struct Instance *, door->otherDoor)->matrix, &desiredRot);
 
 		// left-hand door rot[x,y,z]
-		desiredRot.y = doorInst->instDef->rot.y + door->doorRot.y;
+		desiredRot.y = P32_GET(struct InstDef *, doorInst->instDef)->rot.y + door->doorRot.y;
 
 		// converted to TEST in rebuildPS1
 		ConvertRotToMatrix(&doorInst->matrix, &desiredRot);
@@ -503,7 +503,7 @@ void AH_Door_ThTick(struct Thread *t)
 			// loop through door key slots
 			for (i = 0; i < AH_WOOD_DOOR_KEY_COUNT; i++)
 			{
-				keyInst = door->keyInst[i];
+				keyInst = P32_GET(struct Instance *, door->keyInst[i]);
 				// if instance exists
 				if (keyInst != NULL)
 				{
@@ -522,8 +522,8 @@ void AH_Door_ThTick(struct Thread *t)
 		// loop through door key slots
 		for (i = 0; i < AH_WOOD_DOOR_KEY_COUNT; i++)
 		{
-			INSTANCE_Death(door->keyInst[i]);
-			door->keyInst[i] = NULL;
+			INSTANCE_Death(P32_GET(struct Instance *, door->keyInst[i]));
+			P32_SET(door->keyInst[i], NULL);
 		}
 
 		return;
@@ -572,7 +572,7 @@ void AH_Door_ThTick(struct Thread *t)
 
 	cDC->flags |= CAMERA_FLAG_TRANSITION_BACK;
 
-	driver->funcPtrs[DRIVER_FUNC_INIT] = VehPhysProc_Driving_Init;
+	P32_SET(driver->funcPtrs[DRIVER_FUNC_INIT], VehPhysProc_Driving_Init);
 
 	// cutscene over
 	door->camFlags = (door->camFlags & ~WdCam_CutscenePlaying) | WdCam_FlyingIn;
@@ -595,13 +595,13 @@ void AH_Door_LInB(struct Instance *inst)
 	struct Model *m;
 	struct ModelHeader *headers;
 	struct WoodDoor *woodDoor;
-	struct Instance **instPtrArr;
+	P32(struct Instance *) *instPtrArr;
 
-	gGT = sdata->gGT;
+	gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	levelID = gGT->levelID;
 
 	// If this Instance already has a thread
-	if (inst->thread != NULL)
+	if (P32_GET(struct Thread *, inst->thread) != NULL)
 	{
 		return;
 	}
@@ -612,7 +612,7 @@ void AH_Door_LInB(struct Instance *inst)
 	                         0               // thread relative
 	);
 
-	inst->thread = t;
+	P32_SET(inst->thread, t);
 
 	// if the thread failed to build
 	if (t == NULL)
@@ -620,11 +620,11 @@ void AH_Door_LInB(struct Instance *inst)
 		return;
 	}
 
-	woodDoor = t->object;
+	woodDoor = P32_GET(void *, t->object);
 
-	t->inst = inst;
+	P32_SET(t->inst, inst);
 
-	t->funcThDestroy = AH_Door_ThDestroy;
+	P32_SET(t->funcThDestroy, AH_Door_ThDestroy);
 
 	// this instance is always the left-hand door,
 	// and every left-hand door has one key hole
@@ -634,7 +634,7 @@ void AH_Door_LInB(struct Instance *inst)
 	instPtrArr = &woodDoor->keyInst[0];
 	for (int i = 0; i < AH_WOOD_DOOR_KEY_COUNT; i++)
 	{
-		instPtrArr[i] = NULL;
+		P32_SET(instPtrArr[i], NULL);
 	}
 
 	woodDoor->frameCount_unused = 0;
@@ -657,7 +657,7 @@ void AH_Door_LInB(struct Instance *inst)
 	if (levelID == GLACIER_PARK)
 	{
 		// door with two key holes
-		m = gGT->modelPtr[STATIC_DOOR3];
+		m = P32_GET(struct Model *, gGT->modelPtr[STATIC_DOOR3]);
 	}
 
 	// Level ID is not Glacier Park
@@ -669,14 +669,14 @@ void AH_Door_LInB(struct Instance *inst)
 	    (woodDoor->doorID == AH_DOOR_BEACH_TO_GEMSTONE_VALLEY))
 	{
 		// door with no key holes
-		m = gGT->modelPtr[STATIC_DOOR2];
+		m = P32_GET(struct Model *, gGT->modelPtr[STATIC_DOOR2]);
 	}
 
 	// if not that door
 	else
 	{
 		// door with one key hole
-		m = gGT->modelPtr[STATIC_DOOR];
+		m = P32_GET(struct Model *, gGT->modelPtr[STATIC_DOOR]);
 	}
 
 	// DAT_800abaa4
@@ -687,7 +687,7 @@ void AH_Door_LInB(struct Instance *inst)
 
 	// spawn instance of right-hand door,
 	// which is not in LEV file, only built in thread
-	woodDoor->otherDoor = otherDoorInst;
+	P32_SET(woodDoor->otherDoor, otherDoorInst);
 
 	// NOTE(aalhendi): Native low-RAM audit candidate only. Retail uses the
 	// generated right-door instance before any null fallback; keep unpatched
@@ -702,22 +702,22 @@ void AH_Door_LInB(struct Instance *inst)
 	// set scaleX to -0x1000
 	otherDoorInst->scale.x = -0x1000;
 
-	ratio = MATH_Cos((int)inst->instDef->rot.y);
+	ratio = MATH_Cos((int)P32_GET(struct InstDef *, inst->instDef)->rot.y);
 
 	otherDoorInst->matrix.t[0] += (ratio * AH_DOOR_PAIR_OFFSET >> 0xc);
 
 	otherDoorInst->matrix.t[1] = inst->matrix.t[1];
 
-	ratio = MATH_Sin((int)inst->instDef->rot.y);
+	ratio = MATH_Sin((int)P32_GET(struct InstDef *, inst->instDef)->rot.y);
 
 	otherDoorInst->matrix.t[2] += (ratio * AH_DOOR_PAIR_OFFSET >> 0xc);
 
 	// both doors always face camera
-	headers = inst->model->headers;
+	headers = P32_GET(struct ModelHeader *, P32_GET(struct Model *, inst->model)->headers);
 
 	headers->flags |= 2;
 
-	headers = otherDoorInst->model->headers;
+	headers = P32_GET(struct ModelHeader *, P32_GET(struct Model *, otherDoorInst->model)->headers);
 
 	headers->flags |= 2;
 
@@ -743,11 +743,11 @@ void AH_Door_LInB(struct Instance *inst)
 		woodDoor->doorRot.y = AH_DOOR_OPEN_ROTATION;
 
 		leftRot.x = woodDoor->doorRot.x;
-		leftRot.y = inst->instDef->rot.y + woodDoor->doorRot.y;
+		leftRot.y = P32_GET(struct InstDef *, inst->instDef)->rot.y + woodDoor->doorRot.y;
 		leftRot.z = woodDoor->doorRot.z;
 
 		rightRot.x = woodDoor->doorRot.x;
-		rightRot.y = inst->instDef->rot.y - woodDoor->doorRot.y;
+		rightRot.y = P32_GET(struct InstDef *, inst->instDef)->rot.y - woodDoor->doorRot.y;
 		rightRot.z = woodDoor->doorRot.z;
 
 		// make matrices for both doors rotated open

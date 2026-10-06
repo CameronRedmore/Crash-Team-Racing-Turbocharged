@@ -21,7 +21,7 @@ static u32 s_mainDbNativePrimMem[2][MAINDB_NATIVE_PRIMMEM_CAPACITY / sizeof(u32)
 
 static int MainDB_NativePrimMemIndex(const struct PrimMem *primMem)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	if (gGT == NULL)
 	{
 		return -1;
@@ -41,11 +41,11 @@ static void MainDB_NativePrimMemBind(struct PrimMem *primMem, int index)
 {
 	void *start = s_mainDbNativePrimMem[index];
 	primMem->capacityBytes = MAINDB_NATIVE_PRIMMEM_CAPACITY;
-	primMem->allocationStart = start;
-	primMem->start = start;
-	primMem->cursor = start;
-	primMem->end = (void *)((char *)start + MAINDB_NATIVE_PRIMMEM_CAPACITY);
-	primMem->guardEnd = (void *)((char *)primMem->end - 0x100);
+	P32_SET(primMem->allocationStart, start);
+	P32_SET(primMem->start, start);
+	P32_SET(primMem->cursor, start);
+	P32_SET(primMem->end, (void *)((char *)start + MAINDB_NATIVE_PRIMMEM_CAPACITY));
+	P32_SET(primMem->guardEnd, (void *)((char *)P32_GET(void *, primMem->end) - 0x100));
 	primMem->primitiveCount = 0;
 	NativePgxp_SetPrimRegion(s_mainDbNativePrimMem, sizeof(s_mainDbNativePrimMem));
 }
@@ -115,14 +115,14 @@ void MainDB_PrimMem(struct PrimMem *primMem, u32 size)
 #endif
 
 	primMem->capacityBytes = size;
-	primMem->allocationStart = pvVar1;
-	primMem->cursor = pvVar1;
-	primMem->start = pvVar1;
+	P32_SET(primMem->allocationStart, pvVar1);
+	P32_SET(primMem->cursor, pvVar1);
+	P32_SET(primMem->start, pvVar1);
 
 	alignedSize = (size >> 2) << 2;
-	pvVar1 = (void *)((int)pvVar1 + alignedSize);
-	primMem->end = pvVar1;
-	primMem->guardEnd = (void *)((int)pvVar1 - 0x100);
+	pvVar1 = (char *)pvVar1 + alignedSize;
+	P32_SET(primMem->end, pvVar1);
+	P32_SET(primMem->guardEnd, (char *)pvVar1 - 0x100);
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80034a28-0x80034a80.
@@ -133,9 +133,9 @@ void MainDB_OTMem(struct OTMem *otMem, u32 size)
 
 	pvVar1 = MEMPACK_AllocMem(size);
 	otMem->capacityBytes = size;
-	otMem->cursor = pvVar1;
-	otMem->start = pvVar1;
+	P32_SET(otMem->cursor, pvVar1);
+	P32_SET(otMem->start, pvVar1);
 
 	alignedSize = (size >> 2) << 2;
-	otMem->end = (void *)((int)pvVar1 + alignedSize);
+	P32_SET(otMem->end, (void *)((char *)pvVar1 + alignedSize));
 }

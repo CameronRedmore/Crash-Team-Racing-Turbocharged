@@ -6,7 +6,7 @@
 
 static void RB_MovingExplosive_CallThCollide(struct Thread *hitTh, struct Thread *sourceTh)
 {
-	void *funcThCollide = hitTh->funcThCollide;
+	void *funcThCollide = P32_GET(void *, hitTh->funcThCollide);
 	((ThreadScratchCollideFunc)funcThCollide)(hitTh, sourceTh, funcThCollide, NULL);
 }
 
@@ -15,7 +15,7 @@ static void RB_MovingExplosive_CallThCollide(struct Thread *hitTh, struct Thread
 void RB_MovingExplosive_ThTick(struct Thread *t)
 {
 	s16 desiredRotY;
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	s16 modelID;
 	int deltaX;
 	int deltaZ;
@@ -25,10 +25,10 @@ void RB_MovingExplosive_ThTick(struct Thread *t)
 	SVec3 posA;
 	SVec3 posB;
 
-	inst = t->inst;
-	modelID = inst->model->id;
+	inst = P32_GET(struct Instance *, t->inst);
+	modelID = P32_GET(struct Model *, inst->model)->id;
 
-	tw = t->object;
+	tw = P32_GET(void *, t->object);
 	tw->timeAlive += gGT->elapsedTimeMS;
 
 	// NOTE(aalhendi): Retail starts/updates the bomb, missile, and shield loop SFX here.
@@ -68,7 +68,7 @@ void RB_MovingExplosive_ThTick(struct Thread *t)
 
 LAB_800adc08:;
 
-	struct Driver *driverTarget = tw->driverTarget;
+	struct Driver *driverTarget = P32_GET(struct Driver *, tw->driverTarget);
 
 	// NOTE(aalhendi): Native guard for retail's PS1 null-space shieldbomb path.
 	// driver not invisible
@@ -89,10 +89,10 @@ LAB_800adc08:;
 	{
 		// erase pointer to driver,
 		// cause tracker can't find invisible driver
-		tw->driverTarget = 0;
+		P32_SET(tw->driverTarget, 0);
 	}
 
-	driverTarget = tw->driverTarget;
+	driverTarget = P32_GET(struct Driver *, tw->driverTarget);
 
 	if (
 	    // if driver is invalid
@@ -124,7 +124,7 @@ LAB_800adc08:;
 			tw->framesSeekTargetTnt--;
 
 			// if target shot a TNT
-			struct Instance *instTNT = tw->driverTarget->instTntSend;
+			struct Instance *instTNT = P32_GET(struct Instance *, P32_GET(struct Driver *, tw->driverTarget)->instTntSend);
 
 			if (instTNT != 0)
 			{
@@ -210,13 +210,13 @@ LAB_800adc08:;
 		// if bomb is forwards
 		if ((tw->flags & TRACKER_FLAG_BOMB_BACKWARD) == 0)
 		{
-			tw->dir.x += CTR_FRAME_STEP(0x200, sdata->gGT->timer);
+			tw->dir.x += CTR_FRAME_STEP(0x200, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 		}
 
 		// if bomb is backwards
 		else
 		{
-			tw->dir.x -= CTR_FRAME_STEP(0x200, sdata->gGT->timer);
+			tw->dir.x -= CTR_FRAME_STEP(0x200, P32_GET(struct GameTracker *, sdata->gGT)->timer);
 		}
 
 		// convert 3 rotation shorts into rotation matrix
@@ -242,7 +242,7 @@ LAB_800adc08:;
 		sps->Union.QuadBlockColl.searchFlags = COLL_SEARCH_TEST_INSTANCES | COLL_SEARCH_HIGH_LOD | COLL_SEARCH_FORCE_INSTANCE_HIT;
 	}
 
-	sps->ptr_mesh_info = gGT->level1->ptr_mesh_info;
+	P32_SET(sps->ptr_mesh_info, P32_GET(struct mesh_info *, P32_GET(struct Level *, gGT->level1)->ptr_mesh_info));
 
 	COLL_SearchBSP_CallbackQUADBLK(&posA, &posB, sps, 0);
 
@@ -330,14 +330,14 @@ LAB_800adc08:;
 		if (ret == 1)
 		{
 			struct InstDef *instDef;
-			struct BSP *bspHitbox = sps->bspHitbox;
+			struct BSP *bspHitbox = P32_GET(struct BSP *, sps->bspHitbox);
 
 			// copy/paste from Potion_InAir
-			if ((((bspHitbox->flag & 0x80) != 0) && (instDef = bspHitbox->data.hitbox.instDef, instDef != 0)) &&
+			if ((((bspHitbox->flag & 0x80) != 0) && (instDef = P32_GET(struct InstDef *, bspHitbox->data.hitbox.instDef), instDef != 0)) &&
 
-			    (((instDef->ptrInstance != 0) && (instDef->modelID == STATIC_TEETH))))
+			    (((P32_GET(struct Instance *, instDef->ptrInstance) != 0) && (instDef->modelID == STATIC_TEETH))))
 			{
-				RB_Teeth_OpenDoor(instDef->ptrInstance);
+				RB_Teeth_OpenDoor(P32_GET(struct Instance *, instDef->ptrInstance));
 			}
 			goto LAB_800ae42c;
 		}
@@ -345,13 +345,13 @@ LAB_800adc08:;
 
 	struct Instance *hitInst;
 
-	hitInst = RB_Hazard_CollideWithDrivers(inst, tw->parentSafetyFrames, 0x2400, tw->instParent);
+	hitInst = RB_Hazard_CollideWithDrivers(inst, tw->parentSafetyFrames, 0x2400, P32_GET(struct Instance *, tw->instParent));
 
 	// if no driver hit
 	if (hitInst == 0)
 	{
 		// check Mine threadbucket
-		hitInst = RB_Hazard_CollideWithBucket(inst, t, gGT->threadBuckets[MINE].thread, tw->parentSafetyFrames, 0x2400, tw->instParent);
+		hitInst = RB_Hazard_CollideWithBucket(inst, t, P32_GET(struct Thread *, gGT->threadBuckets[MINE].thread), tw->parentSafetyFrames, 0x2400, P32_GET(struct Instance *, tw->instParent));
 
 		// if mine was not hit
 		if (hitInst == 0)
@@ -371,7 +371,7 @@ LAB_800adc08:;
 			// === Assume Bomb ===
 
 			// check Tracking threadbucket
-			hitInst = RB_Hazard_CollideWithBucket(inst, t, gGT->threadBuckets[TRACKING].thread, tw->parentSafetyFrames, 0x2400, tw->instParent);
+			hitInst = RB_Hazard_CollideWithBucket(inst, t, P32_GET(struct Thread *, gGT->threadBuckets[TRACKING].thread), tw->parentSafetyFrames, 0x2400, P32_GET(struct Instance *, tw->instParent));
 
 			// if no collision
 			if (hitInst == 0)
@@ -386,14 +386,14 @@ LAB_800adc08:;
 			else
 			{
 				// not a missile
-				if (hitInst->model->id != DYNAMIC_ROCKET)
+				if (P32_GET(struct Model *, hitInst->model)->id != DYNAMIC_ROCKET)
 				{
 					// quit, warpball collisions dont matter
 					return;
 				}
 
 				// === missile ===
-				struct Thread *hitTh = hitInst->thread;
+				struct Thread *hitTh = P32_GET(struct Thread *, hitInst->thread);
 
 				RB_MovingExplosive_CallThCollide(hitTh, t);
 			}
@@ -402,7 +402,7 @@ LAB_800adc08:;
 		// if mine was hit
 		else
 		{
-			struct Thread *hitTh = hitInst->thread;
+			struct Thread *hitTh = P32_GET(struct Thread *, hitInst->thread);
 
 			RB_MovingExplosive_CallThCollide(hitTh, t);
 		}
@@ -411,13 +411,13 @@ LAB_800adc08:;
 	// if driver was hit
 	else
 	{
-		struct Thread *hitTh = hitInst->thread;
+		struct Thread *hitTh = P32_GET(struct Thread *, hitInst->thread);
 
-		struct Driver *hitD = hitTh->object;
+		struct Driver *hitD = P32_GET(void *, hitTh->object);
 
 		hitD->damageColorTimer = 0x1e;
 
-		if (hitD == tw->driverTarget)
+		if (hitD == P32_GET(struct Driver *, tw->driverTarget))
 		{
 			// flags
 			tw->flags |= 0x10;
@@ -436,17 +436,17 @@ void RB_MovingExplosive_Explode(struct Thread *t, struct Instance *inst, struct 
 	struct Driver *d;
 
 	// bomb
-	if (inst->model->id == DYNAMIC_BOMB)
+	if (P32_GET(struct Model *, inst->model)->id == DYNAMIC_BOMB)
 	{
 		// bomb explode
 		soundId = 0x49;
-		tw->driverParent->instBombThrow = NULL;
+		P32_SET(P32_GET(struct Driver *, tw->driverParent)->instBombThrow, NULL);
 	}
 
 	// missile
 	else
 	{
-		d = tw->driverTarget;
+		d = P32_GET(struct Driver *, tw->driverTarget);
 		if (d != NULL)
 		{
 			// remove 2D square-target being drawn on the player's screen

@@ -70,13 +70,19 @@ static struct RectMenu s_nativeCupLapMenu =
 	.posX_curr = 0x100,
 	.posY_curr = 0x6c,
 	.state = CENTER_ON_COORDS | USE_SMALL_FONT | BIG_TEXT_IN_TITLE | EXECUTE_FUNCPTR,
-	.rows = NULL,
-	.funcPtr = MM_CupSelect_LapMenuProc,
+	.rows = P32_DEFER(NULL),
+	.funcPtr = P32_DEFER(MM_CupSelect_LapMenuProc),
 };
+#if defined(CTR_NATIVE_64BIT)
+CTR_P32_STATIC_FIXUP(s_nativeCupLapMenu)
+{
+	P32_SET(s_nativeCupLapMenu.funcPtr, MM_CupSelect_LapMenuProc);
+}
+#endif
 
 static void MM_CupSelect_StartPendingCup(struct RectMenu *lapMenu)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	sdata->uselessLapRowCopy = lapMenu->rowSelected;
 	gGT->numLaps = MM_NativeLapSelect_GetLapCount(lapMenu->rowSelected);
@@ -89,7 +95,7 @@ static void MM_CupSelect_StartPendingCup(struct RectMenu *lapMenu)
 	}
 
 	gGT->currLEV = data.ArcadeCups[gGT->cup.cupID].CupTrack[0].trackID;
-	sdata->ptrDesiredMenu = &data.menuQueueLoadTrack;
+	P32_SET(sdata->ptrDesiredMenu, &data.menuQueueLoadTrack);
 }
 
 static void MM_CupSelect_LapMenuProc(struct RectMenu *menu)
@@ -103,7 +109,7 @@ static void MM_CupSelect_LapMenuProc(struct RectMenu *menu)
 	{
 		D230.menuCupSelect.rowSelected = s_nativeCupPendingId;
 		MM_CupSelect_Init();
-		sdata->ptrDesiredMenu = &D230.menuCupSelect;
+		P32_SET(sdata->ptrDesiredMenu, &D230.menuCupSelect);
 		return;
 	}
 
@@ -186,7 +192,7 @@ static void MM_CupSelect_CustomCups_Randomize(u8 cupIndex)
 
 static void MM_CupSelect_CustomCups_Update(struct RectMenu *menu)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 	const struct MMCupSelectCustomCupsText *customText = MM_CupSelect_CustomCups_GetText();
 
 	DecalFont_DrawLine((char *)customText->openEditor, 0x100, 0x4, FONT_SMALL, JUSTIFY_CENTER | ORANGE);
@@ -196,7 +202,7 @@ static void MM_CupSelect_CustomCups_Update(struct RectMenu *menu)
 		return;
 	}
 
-	u32 buttonTap = sdata->gGamepads->gamepad[0].buttonsTapped;
+	u32 buttonTap = P32_GET(struct GamepadSystem *, sdata->gGamepads)->gamepad[0].buttonsTapped;
 
 	if (buttonTap & BTN_SELECT)
 	{
@@ -284,7 +290,7 @@ static void MM_CupSelect_CustomCups_Update(struct RectMenu *menu)
 	{
 		s16 trackID = data.ArcadeCups[customCups.modifiedCup].CupTrack[trackIndex].trackID;
 
-		DecalFont_DrawLine(sdata->lngStrings[data.metaDataLEV[trackID].name_LNG], textX, textY + 0x10 * trackIndex, FONT_SMALL, ORANGE);
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.metaDataLEV[trackID].name_LNG]), textX, textY + 0x10 * trackIndex, FONT_SMALL, ORANGE);
 	}
 
 	RECT selectedCupWindow = {
@@ -304,8 +310,8 @@ static void MM_CupSelect_CustomCups_Update(struct RectMenu *menu)
 	DecalFont_DrawLine((char *)customText->editCup, 0x100, helpWindow.y + 0x18, FONT_SMALL, JUSTIFY_CENTER | PERIWINKLE);
 	DecalFont_DrawLine((char *)customText->randomize, 0x100, helpWindow.y + 0x30, FONT_SMALL, JUSTIFY_CENTER | PERIWINKLE);
 
-	RECTMENU_DrawInnerRect(&selectedCupWindow, 1, gGT->backBuffer->otMem.uiOT);
-	RECTMENU_DrawInnerRect(&helpWindow, 1, gGT->backBuffer->otMem.uiOT);
+	RECTMENU_DrawInnerRect(&selectedCupWindow, 1, P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT));
+	RECTMENU_DrawInnerRect(&helpWindow, 1, P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT));
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x800b0eb8-0x800b0eec.
@@ -326,7 +332,7 @@ void MM_CupSelect_Init(void)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 overlay 230 0x800b0eec-0x800b164c.
 void MM_CupSelect_MenuProc(struct RectMenu *menu)
 {
-	struct GameTracker *gGT = sdata->gGT;
+	struct GameTracker *gGT = P32_GET(struct GameTracker *, sdata->gGT);
 
 	MM_CupSelect_CustomCups_Update(menu);
 
@@ -382,10 +388,10 @@ void MM_CupSelect_MenuProc(struct RectMenu *menu)
 #if defined(CTR_NATIVE)
 					s_nativeCupPendingId = menu->rowSelected;
 					s_nativeCupLapMenu.state = CENTER_ON_COORDS | USE_SMALL_FONT | BIG_TEXT_IN_TITLE | EXECUTE_FUNCPTR;
-					s_nativeCupLapMenu.ptrNextBox_InHierarchy = NULL;
-					s_nativeCupLapMenu.ptrPrevBox_InHierarchy = NULL;
+					P32_SET(s_nativeCupLapMenu.ptrNextBox_InHierarchy, NULL);
+					P32_SET(s_nativeCupLapMenu.ptrPrevBox_InHierarchy, NULL);
 					MM_NativeLapSelect_Prepare(&s_nativeCupLapMenu);
-					sdata->ptrDesiredMenu = &s_nativeCupLapMenu;
+					P32_SET(sdata->ptrDesiredMenu, &s_nativeCupLapMenu);
 #else
 					// set cupID to the cup selected
 					gGT->cup.cupID = menu->rowSelected;
@@ -410,7 +416,7 @@ void MM_CupSelect_MenuProc(struct RectMenu *menu)
 				}
 
 				// return to character selection
-				sdata->ptrDesiredMenu = &D230.menuCharacterSelect;
+				P32_SET(sdata->ptrDesiredMenu, &D230.menuCharacterSelect);
 
 				MM_Characters_RestoreIDs();
 				return;
@@ -420,7 +426,7 @@ void MM_CupSelect_MenuProc(struct RectMenu *menu)
 
 	D230.cupSelectTransition.frame = elapsedFrames;
 
-	DecalFont_DrawLine(sdata->lngStrings[LNG_SELECT_CUP_RACE], D230.transitionMeta_cupSel[MM_CUP_SELECT_TITLE_META_INDEX].currX + MM_CUP_SELECT_TITLE_X_OFFSET,
+	DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[LNG_SELECT_CUP_RACE]), D230.transitionMeta_cupSel[MM_CUP_SELECT_TITLE_META_INDEX].currX + MM_CUP_SELECT_TITLE_X_OFFSET,
 	                   D230.transitionMeta_cupSel[MM_CUP_SELECT_TITLE_META_INDEX].currY + MM_CUP_SELECT_TITLE_Y_OFFSET, FONT_BIG, MM_CUP_SELECT_TEXT_COLOR);
 
 	// Loop through all four cups
@@ -443,7 +449,7 @@ void MM_CupSelect_MenuProc(struct RectMenu *menu)
 		int startY = (s16)D230.transitionMeta_cupSel[cupIndex].currY + (cupIndex >> 1) * MM_CUP_SELECT_ROW_HEIGHT;
 
 		// draw the name of the cup
-		DecalFont_DrawLine(sdata->lngStrings[data.ArcadeCups[cupIndex].lngIndex_CupName], startX + MM_CUP_SELECT_NAME_X_OFFSET,
+		DecalFont_DrawLine(P32_GET(char *, P32_GET(P32(char *) *, sdata->lngStrings)[data.ArcadeCups[cupIndex].lngIndex_CupName]), startX + MM_CUP_SELECT_NAME_X_OFFSET,
 		                   startY + MM_CUP_SELECT_NAME_Y_OFFSET, FONT_CREDITS, txtColor);
 
 		startX = startX + MM_CUP_SELECT_CONTENT_X_OFFSET;
@@ -455,14 +461,14 @@ void MM_CupSelect_MenuProc(struct RectMenu *menu)
 			int cupWinBitIndex = D230.cupSelectStars.winBitBase[starIndex] + cupIndex;
 			if (CHECK_ADV_BIT(sdata->gameProgress.unlocks, cupWinBitIndex))
 			{
-				u32 *starColor = data.ptrColor[D230.cupSelectStars.colorIndex[starIndex]];
+				u32 *starColor = P32_GET(u32 *, data.ptrColor[D230.cupSelectStars.colorIndex[starIndex]]);
 
-				struct Icon **iconPtrArray = ICONGROUP_GETICONS(gGT->iconGroup[MM_CUP_SELECT_STAR_ICON_GROUP]);
+				P32(struct Icon *) *iconPtrArray = ICONGROUP_GETICONS(P32_GET(struct IconGroup *, gGT->iconGroup[MM_CUP_SELECT_STAR_ICON_GROUP]));
 
-				DecalHUD_DrawPolyGT4(iconPtrArray[MM_CUP_SELECT_STAR_ICON_ID],
+				DecalHUD_DrawPolyGT4(P32_GET(struct Icon *, iconPtrArray[MM_CUP_SELECT_STAR_ICON_ID]),
 				                     startX + (cupIndex & 1) * MM_CUP_SELECT_STAR_COLUMN_BIAS + MM_CUP_SELECT_STAR_X_OFFSET,
-				                     startY + starIndex * MM_CUP_SELECT_STAR_Y_STEP + MM_CUP_SELECT_STAR_Y_OFFSET, &gGT->backBuffer->primMem,
-				                     gGT->pushBuffer_UI.ptrOT, starColor[0], starColor[1], starColor[2], starColor[3], 0, FP(1.0));
+				                     startY + starIndex * MM_CUP_SELECT_STAR_Y_STEP + MM_CUP_SELECT_STAR_Y_OFFSET, &P32_GET(struct DB *, gGT->backBuffer)->primMem,
+				                     P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), starColor[0], starColor[1], starColor[2], starColor[3], 0, FP(1.0));
 			}
 		}
 
@@ -473,8 +479,8 @@ void MM_CupSelect_MenuProc(struct RectMenu *menu)
 			int posY = startY + (trackIndex >> 1) * MM_CUP_SELECT_TRACK_Y_STEP;
 
 			// Draw Icon of each track
-			RECTMENU_DrawPolyGT4(gGT->ptrIcons[data.ArcadeCups[cupIndex].CupTrack[trackIndex].iconID], posX, posY, &gGT->backBuffer->primMem,
-			                     gGT->pushBuffer_UI.ptrOT, D230.cupSel_Color.self, D230.cupSel_Color.self, D230.cupSel_Color.self, D230.cupSel_Color.self, 0,
+			RECTMENU_DrawPolyGT4(P32_GET(struct Icon *, gGT->ptrIcons[data.ArcadeCups[cupIndex].CupTrack[trackIndex].iconID]), posX, posY, &P32_GET(struct DB *, gGT->backBuffer)->primMem,
+			                     P32_GET(uint32_t *, gGT->pushBuffer_UI.ptrOT), D230.cupSel_Color.self, D230.cupSel_Color.self, D230.cupSel_Color.self, D230.cupSel_Color.self, 0,
 			                     FP(0.5));
 		}
 
@@ -488,7 +494,7 @@ void MM_CupSelect_MenuProc(struct RectMenu *menu)
 			cupBox.w = MM_CUP_SELECT_HIGHLIGHT_WIDTH;
 			cupBox.h = MM_CUP_SELECT_HIGHLIGHT_HEIGHT;
 
-			CTR_Box_DrawClearBox(&cupBox, &sdata->menuRowHighlight_Normal, TRANS_50_DECAL, gGT->backBuffer->otMem.uiOT);
+			CTR_Box_DrawClearBox(&cupBox, &sdata->menuRowHighlight_Normal, TRANS_50_DECAL, P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT));
 		}
 
 		// background box
@@ -497,6 +503,6 @@ void MM_CupSelect_MenuProc(struct RectMenu *menu)
 		cupBox.w = MM_CUP_SELECT_BACKGROUND_WIDTH;
 		cupBox.h = MM_CUP_SELECT_BACKGROUND_HEIGHT;
 
-		RECTMENU_DrawInnerRect(&cupBox, 0, gGT->backBuffer->otMem.uiOT);
+		RECTMENU_DrawInnerRect(&cupBox, 0, P32_GET(uint32_t *, P32_GET(struct DB *, gGT->backBuffer)->otMem.uiOT));
 	}
 }

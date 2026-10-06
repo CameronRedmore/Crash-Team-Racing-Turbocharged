@@ -57,7 +57,7 @@ double NativePhysics_ElapsedMS(double elapsedMS)
 	// The shared integer clock distributes milliseconds over successive frames.
 	// Continuous solvers keep the exact duration of an ordinary high-rate step;
 	// unusual elapsed times (pause, slow motion or replay) retain their input.
-	if (CTR_FRAMES_PER_SECOND > 60 && elapsedMS == CTR_FRAME_STEP(32, sdata->gGT->timer))
+	if (CTR_FRAMES_PER_SECOND > 60 && elapsedMS == CTR_FRAME_STEP(32, P32_GET(struct GameTracker *, sdata->gGT)->timer))
 		return 32.0 * NativePhysics_FrameScale();
 	return elapsedMS;
 }
@@ -94,7 +94,7 @@ void NativePhysics_UpdateTurboPadContact(struct Driver *d, u32 stepFlags)
 		state->turboPadAbsentMS = 0;
 	else
 	{
-		state->turboPadAbsentMS += NativePhysics_ElapsedMS(sdata->gGT->elapsedTimeMS);
+		state->turboPadAbsentMS += NativePhysics_ElapsedMS(P32_GET(struct GameTracker *, sdata->gGT)->elapsedTimeMS);
 		// Require a full retail step away from the pad to rearm. Short contact
 		// gaps at high FPS are still part of the same crossing.
 		if (state->turboPadAbsentMS >= 32.0 - 1e-9)
