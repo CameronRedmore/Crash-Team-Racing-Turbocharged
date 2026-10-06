@@ -13,7 +13,7 @@ int gNativeForce30Fps;
 int gNativeGhostReplayFpsOverride = -1;
 static struct GameTracker tracker;
 static struct DB db;
-static char *strings[LNG_SCRAPBOOK + 1];
+static P32(char *) strings[LNG_SCRAPBOOK + 1];
 static char rewardNames[LNG_SCRAPBOOK + 1][24];
 static int chimes, lines, boxes;
 static char *drawnName;
@@ -94,13 +94,13 @@ static void test_grants_and_save_import(void)
 	assert(s_nativeUnlockCount == 3);
 	drawFrames(150);
 	assert(s_nativeUnlockCount == 2 && chimes == 1);
-	assert(drawnName == strings[LNG_PENTA_PENGUIN]);
+	assert(drawnName == P32_GET(char *, strings[LNG_PENTA_PENGUIN]));
 	drawFrames(150);
 	assert(s_nativeUnlockCount == 1 && chimes == 2);
-	assert(drawnName == strings[LNG_RIPPER_ROO]);
+	assert(drawnName == P32_GET(char *, strings[LNG_RIPPER_ROO]));
 	drawFrames(150);
 	assert(s_nativeUnlockCount == 0 && chimes == 3);
-	assert(drawnName == strings[LNG_N_OXIDE_FULL]);
+	assert(drawnName == P32_GET(char *, strings[LNG_N_OXIDE_FULL]));
 	NativeUnlock_Draw();
 	assert(chimes == 3 && boxes == 450 && lines == 1350);
 }
@@ -116,7 +116,7 @@ static void test_queue_capacity_and_reward_types(void)
 	assert(s_nativeUnlockCount == NATIVE_UNLOCK_REWARD_COUNT);
 	drawFrames(150 * NATIVE_UNLOCK_REWARD_COUNT);
 	assert(s_nativeUnlockCount == 0 && chimes == NATIVE_UNLOCK_REWARD_COUNT);
-	assert(drawnName == strings[LNG_SLIDE_COLISEUM]);
+	assert(drawnName == P32_GET(char *, strings[LNG_SLIDE_COLISEUM]));
 }
 
 static void test_deferred_display_and_frame_rates(void)
@@ -159,7 +159,7 @@ int main(void)
 	for (unsigned int i = 0; i < sizeof(strings) / sizeof(strings[0]); i++)
 	{
 		snprintf(rewardNames[i], sizeof(rewardNames[i]), "REWARD %u", i);
-		strings[i] = rewardNames[i];
+		P32_SET(strings[i], rewardNames[i]);
 	}
 	test_grants_and_save_import();
 	test_queue_capacity_and_reward_types();
