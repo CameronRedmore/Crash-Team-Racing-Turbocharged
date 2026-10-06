@@ -2539,7 +2539,7 @@ static void RenderBucket_RefreshUiProjection(void)
 	{
 		// The shared fruit preview owns a copy of this view, with its own rect
 		// and OT metadata. Carry the precise sidecar as well as the retail matrix.
-		struct PushBuffer *copy = (struct PushBuffer *)(uintptr_t)sdata->ptrPushBufferUI;
+		struct PushBuffer *copy = P32_DEC(struct PushBuffer *, sdata->ptrPushBufferUI);
 		copy->matrix_ViewProj = ui->matrix_ViewProj;
 		double rotation[9], translation[3];
 		NativePgxp_GetTransform(&ui->matrix_ViewProj, &ui->matrix_ViewProj.m[0][0], ui->matrix_ViewProj.t, rotation, translation);
