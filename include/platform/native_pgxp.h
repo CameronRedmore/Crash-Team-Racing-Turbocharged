@@ -6,7 +6,9 @@
 #include <stddef.h>
 #include <platform/native_draw3d.h>
 
-// NOTE: Precision geometry transform pipeline, modelled on DuckStation's PGXP.
+// NOTE: Precision geometry transform pipeline, modelled on DuckStation's PGXP
+// (Stenzek, https://github.com/stenzek/duckstation), itself descended from
+// iCatButler's original PGXP. This is a separate implementation.
 // RTPS/RTPT truncate every projected vertex to an integer SXY before the CPU
 // writes it into a GPU packet. That truncation is what makes PS1 polygons
 // wobble as the camera moves, and the missing depth is why the GPU can only

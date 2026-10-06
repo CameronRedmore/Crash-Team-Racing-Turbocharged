@@ -395,3 +395,4 @@ cmake --preset linux-gcc-i686-release && cmake --build build-linux-gcc-i686-rele
 
 - robin994 for helping testing splitscreen implementation.
 - All the folks involved in ctr-native and the decompilation efforts of CTR.
+- [DuckStation](https://github.com/stenzek/duckstation) by Stenzek, whose PGXP implementation the PGXP option is modelled on, and iCatButler for the original PGXP. Turbocharged's PGXP is a separate implementation written for the decompiled source.
