@@ -5,6 +5,11 @@
 
 static int GhostReplay_GetEngineProfile(const struct GhostHeader *gh)
 {
+	if (gh == NULL)
+	{
+		return NativeEngine_GetDefaultProfile(0);
+	}
+
 	int profile = NativeEngineMetadata_LoadRetail(gh->emptyPadding);
 	if (profile >= 0)
 	{
@@ -399,9 +404,10 @@ void GhostReplay_Init1(void)
 		tape->gh_again = gh;
 		tape->ptrStart = &recordBuffer[0];
 		tape->constDEADC0ED = 0xDEADC0ED;
-		tape->ptrEnd = &recordBuffer[gh->size];
+		// Retail reads address 0 harmlessly on PS1; a missing tape must yield ptrEnd == ptrStart (no ghost).
+		tape->ptrEnd = (gh != NULL) ? &recordBuffer[gh->size] : &recordBuffer[0];
 
-		if (i == 1)
+		if (i == 1 && gh != NULL)
 		{
 			gGT->timeToBeatInTimeTrial_ForCurrentEvent = gh->timeElapsedInRace;
 		}
