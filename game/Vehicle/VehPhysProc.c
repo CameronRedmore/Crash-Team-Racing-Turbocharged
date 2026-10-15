@@ -2501,13 +2501,13 @@ void VehPhysProc_SpinFirst_Init(struct Thread *t, struct Driver *d)
 
 	// if spinning left
 	d->KartStates.Spinning.spinDir = 1;
-	d->KartStates.Spinning.driftSpinRate = VEH_PHYS_PROC_SPIN_INITIAL_RATE;
+	d->KartStates.Spinning.driftSpinRate = FPS_HALF(VEH_PHYS_PROC_SPIN_INITIAL_RATE);
 
 	if (d->ampTurnState < 0)
 	{
 		// if spinning right
 		d->KartStates.Spinning.spinDir = -1;
-		d->KartStates.Spinning.driftSpinRate = -VEH_PHYS_PROC_SPIN_INITIAL_RATE;
+		d->KartStates.Spinning.driftSpinRate = -FPS_HALF(VEH_PHYS_PROC_SPIN_INITIAL_RATE);
 	}
 
 	if ((s8)d->simpTurnState < 1)
@@ -2702,6 +2702,12 @@ void VehPhysProc_SpinStop_PhysAngular(struct Thread *t, struct Driver *d)
 void VehPhysProc_SpinStop_Animate(struct Thread *t, struct Driver *d)
 {
 	struct Instance *inst = t->inst;
+	// TEMP-DEBUG(spin-anim): remove once the player hurt animation timing is understood
+	printf("[SPIN-ANIM] SpinStop drv=%d timer=%u elapsedMS=%d ks=%d animIdx=%d animFrame=%d numFrames=%d scaled=%d spinDir=%d turnAngle=%d noInput=%d\n",
+	       d->driverID, (u32)sdata->gGT->timer, sdata->gGT->elapsedTimeMS, d->kartState, inst->animIndex, inst->animFrame,
+	       VehFrameInst_GetNumAnimFrames(inst, inst->animIndex), INSTANCE_AnimFramesScaled(inst, inst->animIndex),
+	       d->KartStates.Spinning.spinDir, d->turnAngleCurr, d->NoInputTimer);
+
 
 	int numFrames = VehFrameInst_GetNumAnimFrames(inst, inst->animIndex);
 
