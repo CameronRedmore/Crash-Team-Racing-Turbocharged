@@ -15,6 +15,15 @@ void LOAD_Hub_ReadFile(struct BigHeader *bigfile, int levID, int packID)
 		return;
 	}
 
+#if defined(CTR_NATIVE)
+	// NOTE: Called every frame while in the gate trigger, so deferring is free. Don't
+	// wipe a pack under an in-flight read (e.g. the Aku Aku mask loading into the same pack).
+	if (LOAD_NativeQueueBusy())
+	{
+		return;
+	}
+#endif
+
 	sdata->modelMaskHints3D = 0;
 
 	// Swap to pack of hub you're NOT on,
@@ -31,6 +40,45 @@ void LOAD_Hub_ReadFile(struct BigHeader *bigfile, int levID, int packID)
 	LOAD_AppendQueue(bigfile, LT_SETADDR, LOAD_GetBigfileIndex(levID, LOAD_LEVEL_LOD_1P, LVI_PTR), sdata->PatchMem_Ptr, LOAD_HubCallback);
 }
 
+#if defined(CTR_NATIVE)
+// NOTE: A hub preloaded into a pack can be wiped by the Aku Aku mask before it is swapped
+// in. The mask records what it destroyed; SwapNow reloads it instead of stalling forever on level2.
+static struct
+{
+	int packID;
+	int levID;
+} s_clobberedHub = {0, -1};
+
+void LOAD_Hub_NoteClobbered(int packID, int levID)
+{
+	s_clobberedHub.packID = packID;
+	s_clobberedHub.levID = levID;
+}
+
+static void LOAD_Hub_ReloadClobbered(struct GameTracker *gGT)
+{
+	if (s_clobberedHub.levID < 0)
+	{
+		return;
+	}
+
+	// already reloaded (e.g. by the gate trigger), or the pack was reused for something else
+	if (gGT->levID_in_each_mempack[s_clobberedHub.packID] != -1)
+	{
+		s_clobberedHub.levID = -1;
+		return;
+	}
+
+	// ReadFile defers while the mask is still loading, so this retries each iteration
+	LOAD_Hub_ReadFile(sdata->ptrBigfile1, s_clobberedHub.levID, s_clobberedHub.packID);
+
+	if (gGT->levID_in_each_mempack[s_clobberedHub.packID] == s_clobberedHub.levID)
+	{
+		s_clobberedHub.levID = -1;
+	}
+}
+#endif
+
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80033108-0x80033318.
 void LOAD_Hub_SwapNow()
 {
@@ -42,6 +90,9 @@ void LOAD_Hub_SwapNow()
 	// stall until load is done
 	while (gGT->level2 == 0)
 	{
+#if defined(CTR_NATIVE)
+		LOAD_Hub_ReloadClobbered(gGT);
+#endif
 		LOAD_NextQueuedFile();
 		VSync(0);
 	}

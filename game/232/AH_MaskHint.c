@@ -380,6 +380,9 @@ void AH_MaskHint_Update()
 		// NOTE(aalhendi): Retail only waits for the mask model pointer.
 		if (sdata->modelMaskHints3D == 0)
 		{
+#if defined(CTR_NATIVE)
+			LOAD_TalkingMask_Retry();
+#endif
 			AH_MaskHint_LerpVol(AH_MASKHINT_FULL_BLEND);
 			break;
 		}

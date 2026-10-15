@@ -4,9 +4,64 @@
 // Dont get confused, packID is LOAD_GetAdvPackIndex(),
 // which gives the pack of the hub you're NOT on, because the
 // game does 3-GetAdvPackIndex to load the hub you ARE on
+
+#if defined(CTR_NATIVE)
+// NOTE: The mask loads into the hub pack you are NOT on, which is the pack a hub
+// preload targets. Native CD is fast enough that both can land together, so a request that
+// finds the queue busy is parked and retried by the mask hint while it waits for the model.
+static struct
+{
+	b32 pending;
+	int packID;
+	int maskID;
+} s_pendingTalkingMask;
+
+static void LOAD_TalkingMask_Now(int packID, int maskID);
+
 void LOAD_TalkingMask(int packID, int maskID)
 {
+	if (LOAD_NativeQueueBusy())
+	{
+		s_pendingTalkingMask.pending = 1;
+		s_pendingTalkingMask.packID = packID;
+		s_pendingTalkingMask.maskID = maskID;
+		return;
+	}
+
+	s_pendingTalkingMask.pending = 0;
+	LOAD_TalkingMask_Now(packID, maskID);
+}
+
+void LOAD_TalkingMask_Retry(void)
+{
+	if (s_pendingTalkingMask.pending && !LOAD_NativeQueueBusy())
+	{
+		s_pendingTalkingMask.pending = 0;
+		LOAD_TalkingMask_Now(s_pendingTalkingMask.packID, s_pendingTalkingMask.maskID);
+	}
+}
+
+static void LOAD_TalkingMask_Now(int packID, int maskID)
+#else
+void LOAD_TalkingMask(int packID, int maskID)
+#endif
+{
 	sdata->modelMaskHints3D = 0;
+
+#if defined(CTR_NATIVE)
+	// NOTE: If the hub preloaded into this pack is still waiting to be swapped in, the
+	// wipe below destroys it while gGT->level2 points at it. Drop level2 and let SwapNow reload it.
+	{
+		struct GameTracker *gGT = sdata->gGT;
+		const struct Mempack *pack = &sdata->mempack[packID];
+
+		if ((gGT->level2 != NULL) && ((u32)gGT->level2 >= (u32)pack->start) && ((u32)gGT->level2 < (u32)pack->endOfMemory))
+		{
+			LOAD_Hub_NoteClobbered(packID, gGT->levID_in_each_mempack[packID]);
+			gGT->level2 = NULL;
+		}
+	}
+#endif
 
 	// invalidate alternative-hub, because
 	// the mask will load in that level's RAM

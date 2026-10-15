@@ -40,6 +40,15 @@ void LOAD_CDRequestCallback(struct LoadQueueSlot *lqs)
 	sdata->queueReady = 1;
 }
 
+#if defined(CTR_NATIVE)
+// NOTE: Native CD completions fire from VSync, so a mempack must not be
+// cleared or swapped while the queue has work pending or a read in flight.
+b32 LOAD_NativeQueueBusy(void)
+{
+	return (sdata->queueLength != 0) || (sdata->queueReady == 0) || (sdata->frameFinishedVRAM != 0) || (sdata->load_inProgress != 0);
+}
+#endif
+
 // NOTE(aalhendi): ASM-verified NTSC-U 926 PS1 path 0x80032dc0-0x80032ffc.
 void LOAD_NextQueuedFile()
 {
