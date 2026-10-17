@@ -241,8 +241,14 @@ static void NativeDrawLevel_SetUv(NativeDraw3DVertex *vertex, u16 uv)
 // faces behind walls they poke through (hub tunnel mouths), so those move back
 // (NativeDraw3D_GetDrawOrderSlotDepth). A forward pull would cut through karts
 // beside the face, so negative values keep the small coplanar bias.
-static void NativeDrawLevel_SetDrawOrder(NativeDraw3DMaterial *material, s8 drawOrder)
+static void NativeDrawLevel_SetDrawOrder(NativeDraw3DMaterial *material, const struct QuadBlock *block, s8 drawOrder)
 {
+	// A flush turbo pad sorts +5 slots behind, but the floor faces under it can be 0
+	// and would cover it, so it is not pushed back.
+	if (drawOrder > 0 && LevInstDef_GetTurboPadLift(block) != 0)
+	{
+		drawOrder = 0;
+	}
 	material->depthBias = drawOrder;
 	material->depthSlots = drawOrder > 0 ? (u8)drawOrder : 0;
 }
@@ -411,10 +417,13 @@ static void NativeDrawLevel_EmitMosaic(const struct NativeDrawLevelContext *ctx,
 // The quadblock's nine vertices in retail grid order.
 static void NativeDrawLevel_LoadGrid(const struct NativeDrawLevelContext *ctx, const struct QuadBlock *block, NativeDraw3DVertex *grid)
 {
+	// A few turbo pads sit exactly on the floor and z-fight with it.
+	const float lift = (float)LevInstDef_GetTurboPadLift(block);
 	for (int i = 0; i < NATIVE_DRAW_LEVEL_GRID_VERTICES; i++)
 	{
 		const struct LevVertex *vertex = &ctx->vertices[block->index[i]];
 		grid[i] = NativeDrawLevel_Vertex(vertex, vertex->color_hi);
+		grid[i].y += lift;
 	}
 }
 
@@ -469,7 +478,7 @@ static void NativeDrawLevel_EmitFace(const struct NativeDrawLevelContext *ctx, c
 	{
 		material.flags |= NATIVE_DRAW3D_REVERSE_WINDING;
 	}
-	NativeDrawLevel_SetDrawOrder(&material, (s8)(block->draw_order_high >> (faceIndex * 8)));
+	NativeDrawLevel_SetDrawOrder(&material, block, (s8)(block->draw_order_high >> (faceIndex * 8)));
 
 	if (mosaic != NULL)
 	{
@@ -607,7 +616,7 @@ static void NativeDrawLevel_EmitFullDynamic(const struct NativeDrawLevelContext 
 	material.tpage = texture->tpage;
 	material.clut = texture->clut;
 	material.flags = NativeDrawLevel_BaseFlags(block, texture);
-	NativeDrawLevel_SetDrawOrder(&material, (s8)(block->draw_order_low & 0xff));
+	NativeDrawLevel_SetDrawOrder(&material, block, (s8)(block->draw_order_low & 0xff));
 
 	if (nearSet == 0)
 	{
@@ -694,7 +703,7 @@ static void NativeDrawLevel_EmitWater(const struct NativeDrawLevelContext *ctx, 
 	for (int face = 0; face < 4; face++)
 	{
 		const u8 *f = sNativeDrawLevelGridFaces[face];
-		NativeDrawLevel_SetDrawOrder(&material, (s8)(block->draw_order_high >> (face * 8)));
+		NativeDrawLevel_SetDrawOrder(&material, block, (s8)(block->draw_order_high >> (face * 8)));
 		// Retail skips triangles whose corners have all faded out.
 		if (lit[f[0]] || lit[f[1]] || lit[f[2]])
 		{

@@ -152,6 +152,41 @@ static b32 LevInstDef_IsMarkedTurboVisualQuad(const struct QuadBlock *quad, cons
 	return (bits[quadIndex >> 5] & (1u << (quadIndex & 31))) != 0;
 }
 
+// Turbo pads authored exactly flush with the floor under them. The native depth
+// buffer has no ordering-table tiebreak, so they z-fight and need a small lift.
+struct LevInstDefFlushTurboPad
+{
+	u8 levelID;
+	u16 quadIndex;
+};
+
+static const struct LevInstDefFlushTurboPad s_flushTurboPads[] = {
+	{SEWER_SPEEDWAY, 1649},
+};
+
+enum
+{
+	LEV_INST_DEF_FLUSH_TURBO_PAD_LIFT = 1,
+};
+
+int LevInstDef_GetTurboPadLift(const struct QuadBlock *quad)
+{
+	if ((quad == NULL) || (s_nativeTurboQuadBase == NULL) || (sdata == NULL) || (sdata->gGT == NULL))
+	{
+		return 0;
+	}
+
+	const ptrdiff_t quadIndex = quad - s_nativeTurboQuadBase;
+	for (size_t i = 0; i < sizeof(s_flushTurboPads) / sizeof(s_flushTurboPads[0]); i++)
+	{
+		if ((sdata->gGT->levelID == s_flushTurboPads[i].levelID) && (quadIndex == s_flushTurboPads[i].quadIndex))
+		{
+			return LEV_INST_DEF_FLUSH_TURBO_PAD_LIFT;
+		}
+	}
+	return 0;
+}
+
 b32 LevInstDef_IsTurboVisualQuad(const struct QuadBlock *quad)
 {
 	return LevInstDef_IsMarkedTurboVisualQuad(quad, s_nativeTurboVisualBits);
